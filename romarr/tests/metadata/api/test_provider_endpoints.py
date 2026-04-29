@@ -186,12 +186,16 @@ async def test_test_endpoint_for_unimplemented_provider(
     api_engine: AsyncEngine,
     metadata_env: Any,
 ) -> None:
-    """Provider rows exist for nine names but only IGDB has a class."""
+    """Provider rows exist for nine names but only some have a class.
+
+    LaunchBox / Hasheous / PlayMatch land in later slices; the test
+    endpoint surfaces ``provider_not_implemented`` for them.
+    """
     await seed_provider_rows(api_engine)
     await _login_admin(api_engine, api_client)
 
     response = await api_client.post(
-        "/api/v3/metadata/provider/screenscraper/test"
+        "/api/v3/metadata/provider/launchbox/test"
     )
     assert response.status_code == 200
     body = response.json()

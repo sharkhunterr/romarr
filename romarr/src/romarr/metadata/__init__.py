@@ -47,7 +47,9 @@ from romarr.metadata.providers import (
 # tests/metadata/providers/.
 from romarr.metadata.providers import howlongtobeat as _howlongtobeat  # noqa: F401
 from romarr.metadata.providers import igdb as _igdb  # noqa: F401
+from romarr.metadata.providers import mobygames as _mobygames  # noqa: F401
 from romarr.metadata.providers import retroachievements as _retroachievements  # noqa: F401
+from romarr.metadata.providers import screenscraper as _screenscraper  # noqa: F401
 from romarr.metadata.providers import steamgriddb as _steamgriddb  # noqa: F401
 from romarr.metadata.refresh import refresh_game_metadata
 from romarr.metadata.registry import load_enabled_providers
