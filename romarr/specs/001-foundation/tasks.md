@@ -41,18 +41,18 @@ and Alembic skeleton. No domain logic yet.
       `asyncio_mode = "auto"`, `addopts = "--cov=romarr --cov-report=term-missing"`,
       coverage thresholds via `[tool.coverage.report]`.
 - [X] T005 [SCAF] Create `src/romarr/__init__.py` exposing `__version__`.
-- [ ] T006 [SCAF] Create `src/romarr/config/settings.py` — Pydantic `BaseSettings` with
+- [X] T006 [SCAF] Create `src/romarr/config/settings.py` — Pydantic `BaseSettings` with
       `database_url` (default `sqlite+aiosqlite:///./romarr.db`), `hasheous_base_url`,
       `playmatch_base_url`, `hash_buffer_bytes` (default 1 MiB), env prefix `ROMARR_`.
 - [ ] T007 [SCAF] Create `src/romarr/db/base.py` — `DeclarativeBase` subclass with the
       SQLAlchemy naming convention dict (`ix`, `uq`, `ck`, `fk`, `pk` patterns) so
       Alembic generates portable, predictable constraint names.
-- [ ] T008 [SCAF] Create `src/romarr/db/session.py` — async engine factory + async
+- [X] T008 [SCAF] Create `src/romarr/db/session.py` — async engine factory + async
       sessionmaker, configurable from `Settings.database_url`.
-- [ ] T009 [SCAF] Initialize Alembic at `src/romarr/db/alembic/` (`alembic init`),
+- [X] T009 [SCAF] Initialize Alembic at `src/romarr/db/alembic/` (`alembic init`),
       configure `env.py` for async (`run_async_migrations`) and to import the
       `DeclarativeBase` metadata.
-- [ ] T010 [SCAF] Create `tests/conftest.py` — async event-loop policy, in-memory
+- [X] T010 [SCAF] Create `tests/conftest.py` — async event-loop policy, in-memory
       SQLite fixture (`async_session`), DAT fixture loader, ROM fixture path helpers.
 
 **Checkpoint**: `pip install -e .[dev]`, `ruff check .`, `mypy`, and `pytest --collect-only`
@@ -67,20 +67,20 @@ and cross-table invariant validators.
 
 ### Tests (write first; must fail)
 
-- [ ] T011 [P] [DOM] `tests/domain/test_invariants.py` — assert that creating a Release
+- [X] T011 [P] [DOM] `tests/domain/test_invariants.py` — assert that creating a Release
       with `disc_number = 2` and no `parent_release_id` raises a validation error;
       that creating a Game with an empty/invalid slug raises; that creating a `dat_entry`
       with no hashes raises (FR-004, FR-006, FR-007).
-- [ ] T012 [P] [DOM] `tests/domain/test_platform_model.py` — round-trip a Platform
+- [X] T012 [P] [DOM] `tests/domain/test_platform_model.py` — round-trip a Platform
       with formats and naming tokens through the async session; verify
       `UNIQUE (platform_id, extension)`.
-- [ ] T013 [P] [DOM] `tests/domain/test_game_model.py` — verify `(platform_id, slug)`
+- [X] T013 [P] [DOM] `tests/domain/test_game_model.py` — verify `(platform_id, slug)`
       uniqueness; verify `(platform_id, igdb_id)` partial unique.
-- [ ] T014 [P] [DOM] `tests/domain/test_release_model.py` — verify CASCADE on game
+- [X] T014 [P] [DOM] `tests/domain/test_release_model.py` — verify CASCADE on game
       delete; verify multi-disc parent/child invariants.
-- [ ] T015 [P] [DOM] `tests/domain/test_dump_model.py` — verify globally unique `path`;
+- [X] T015 [P] [DOM] `tests/domain/test_dump_model.py` — verify globally unique `path`;
       verify FK cascade from Release.
-- [ ] T016 [P] [DOM] `tests/domain/test_schemas.py` — `*Read`/`*Create`/`*Update`
+- [X] T016 [P] [DOM] `tests/domain/test_schemas.py` — `*Read`/`*Create`/`*Update`
       shapes for each entity; `extra='forbid'`; computed properties.
 
 ### Implementation
@@ -88,7 +88,7 @@ and cross-table invariant validators.
 - [X] T017 [DOM] Create `src/romarr/domain/enums.py` — `DumpStatus`, `NamingConvention`,
       `ReleaseStatus`, `GameStatus`, `PackSource`, `FormatType`, `TokenMeaning`,
       `DatSource`, `ImportedVia` as `enum.StrEnum` subclasses.
-- [ ] T018 [DOM] Create `src/romarr/domain/validators.py` — slug regex, hex hash
+- [X] T018 [DOM] Create `src/romarr/domain/validators.py` — slug regex, hex hash
       validators (8/32/40/64), ISO-3166-1 alpha-2 list validator, ISO-639-1 list
       validator, multi-disc cross-field invariant helper.
 - [X] T019 [P] [DOM] Create `src/romarr/domain/models/platform.py` — `Platform`,
@@ -101,23 +101,23 @@ and cross-table invariant validators.
       `UnidentifiedDump` models.
 - [X] T023 [P] [DOM] Create `src/romarr/domain/models/dat.py` — `DatEntry` model with
       composite indexes.
-- [ ] T024 [DOM] Create `src/romarr/domain/models/__init__.py` exporting every model
+- [X] T024 [DOM] Create `src/romarr/domain/models/__init__.py` exporting every model
       (so Alembic autogenerate sees them all).
-- [ ] T025 [P] [DOM] Create `src/romarr/domain/schemas/platform.py` — `PlatformRead`,
+- [X] T025 [P] [DOM] Create `src/romarr/domain/schemas/platform.py` — `PlatformRead`,
       `PlatformCreate`, `PlatformUpdate` and the same triplet for Format and
       NamingToken.
-- [ ] T026 [P] [DOM] Create `src/romarr/domain/schemas/game.py` — `GameRead`,
+- [X] T026 [P] [DOM] Create `src/romarr/domain/schemas/game.py` — `GameRead`,
       `GameCreate`, `GameUpdate`.
-- [ ] T027 [P] [DOM] Create `src/romarr/domain/schemas/release.py` — `ReleaseRead`,
+- [X] T027 [P] [DOM] Create `src/romarr/domain/schemas/release.py` — `ReleaseRead`,
       `ReleaseCreate`, `ReleaseUpdate`.
-- [ ] T028 [P] [DOM] Create `src/romarr/domain/schemas/dump.py` — `DumpRead`,
+- [X] T028 [P] [DOM] Create `src/romarr/domain/schemas/dump.py` — `DumpRead`,
       `DumpCreate`, `DumpUpdate`, plus `UnidentifiedDumpRead/Create/Update`.
-- [ ] T029 [P] [DOM] Create `src/romarr/domain/schemas/dat.py` — `DatEntryRead/Create/Update`.
-- [ ] T030 [DOM] Author `src/romarr/db/alembic/versions/0001_initial_schema.py` —
+- [X] T029 [P] [DOM] Create `src/romarr/domain/schemas/dat.py` — `DatEntryRead/Create/Update`.
+- [X] T030 [DOM] Author `src/romarr/db/alembic/versions/0001_initial_schema.py` —
       create all 9 tables with the exact constraints from `data-model.md`; insert
       one `platform_pack` row (`builtin-2026.04.001`) and the 5 MVP platforms with
       their formats marked `pack_source='builtin'`.
-- [ ] T031 [DOM] Add `tests/domain/test_migration_baseline.py` — apply migration to
+- [X] T031 [DOM] Add `tests/domain/test_migration_baseline.py` — apply migration to
       a temp SQLite, assert all 9 tables exist, assert the 5 platforms are seeded
       with the expected slugs and primary formats.
 
@@ -219,11 +219,11 @@ hash/name lookups.
 
 ### Implementation
 
-- [ ] T050 [FN] Create `src/romarr/identification/filename/base.py` — abstract
+- [X] T050 [FN] Create `src/romarr/identification/filename/base.py` — abstract
       `FilenameParser` with `parse(filename: str) -> ParsedFilename | None`, plus
       a shared region/language code-translation table (`USA → US`, `EUR → EU`,
       `JPN → JP`, ISO-639-1 mapping, etc.).
-- [ ] T051 [P] [FN] Create `src/romarr/identification/filename/nointro.py` —
+- [X] T051 [P] [FN] Create `src/romarr/identification/filename/nointro.py` —
       regex `^(?P<title>.+?) \((?P<regions>[^)]+)\)(?: \((?P<langs>[^)]+)\))?(?: \((?P<rev>[^)]+)\))?(?: \[(?P<tags>[^\]]+)\])?\.(?P<ext>\w+)$`,
       confidence 0.95 on full match, 0.7 on partial.
 - [ ] T052 [P] [FN] Create `src/romarr/identification/filename/goodtools.py` —
@@ -234,7 +234,7 @@ hash/name lookups.
       `Title (Year)(Publisher)(Country)(Lang)(Other).ext` form.
 - [ ] T054 [P] [FN] Create `src/romarr/identification/filename/scene.py` —
       `Title.Region.GROUP-style.ext` form.
-- [ ] T055 [FN] Create `src/romarr/identification/filename/dispatcher.py` — try
+- [X] T055 [FN] Create `src/romarr/identification/filename/dispatcher.py` — try
       No-Intro → Redump-aware path → TOSEC → GoodTools → Scene; return the first
       `ParsedFilename` whose `confidence > 0.7`; otherwise return one with
       `convention = 'unknown'`, `confidence = 0.0`.

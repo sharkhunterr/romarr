@@ -1,0 +1,48 @@
+"""Shared pytest fixtures.
+
+The default ``async_session`` fixture spins up an in-memory SQLite
+database with the full foundation schema applied (bypassing Alembic
+for speed — Alembic is exercised separately by the migration test).
+"""
+
+from __future__ import annotations
+
+from collections.abc import AsyncIterator
+
+import pytest_asyncio
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+
+from romarr.db.session import create_engine, create_sessionmaker
+
+# Importing the models module ensures every model class is registered
+# with the metadata before create_all runs.
+from romarr.domain import (
+    Base,
+    models,  # noqa: F401
+)
+
+
+@pytest_asyncio.fixture
+async def async_engine() -> AsyncIterator[AsyncEngine]:
+    """Build a fresh in-memory SQLite engine per-test."""
+    engine = create_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield engine
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def async_sessionmaker_factory(
+    async_engine: AsyncEngine,
+) -> async_sessionmaker[AsyncSession]:
+    return create_sessionmaker(async_engine)
+
+
+@pytest_asyncio.fixture
+async def async_session(
+    async_sessionmaker_factory: async_sessionmaker[AsyncSession],
+) -> AsyncIterator[AsyncSession]:
+    """A fresh AsyncSession per-test — auto-rolls-back on teardown."""
+    async with async_sessionmaker_factory() as session:
+        yield session

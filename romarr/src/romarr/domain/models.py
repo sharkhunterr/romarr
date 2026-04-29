@@ -18,7 +18,11 @@ Conventions:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+# SQLAlchemy 2.0 introspects Mapped[...] annotations at class-creation
+# time, so types referenced in those annotations MUST be importable at
+# runtime — they cannot live behind TYPE_CHECKING.
+from datetime import datetime
+from typing import Any
 
 from sqlalchemy import (
     JSON,
@@ -36,9 +40,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from romarr.domain.base import Base, TimestampMixin
 from romarr.domain.enums import DumpStatus, NamingConvention
-
-if TYPE_CHECKING:
-    from datetime import datetime
 
 
 class Platform(Base, TimestampMixin):
