@@ -30,7 +30,7 @@ session → forms → API keys → OIDC → trusted proxy → chained dependency
       `redis>=5` (optional but install in MVP).
 - [X] T002 [P] [SCAF] Create `src/romarr/auth/__init__.py` exposing
       `get_current_user`, `require_role`, `AuthChain`.
-- [ ] T003 [P] [SCAF] Create `src/romarr/auth/errors.py` —
+- [X] T003 [P] [SCAF] Create `src/romarr/auth/errors.py` —
       `AuthError`, `UnauthenticatedError`, `PermissionDenied`,
       `ApiKeyExpired`, `ApiKeyRevoked`, `OidcReplayError`,
       `SetupAlreadyCompleted`.
@@ -109,37 +109,37 @@ tests green including the FK conversion test.
 
 ### Tests
 
-- [ ] T020 [P] [SETUP] `tests/auth/test_setup.py::test_token_generated_on_empty_table`
+- [X] T020 [P] [SETUP] `tests/auth/test_setup.py::test_token_generated_on_empty_table`
       — fresh DB; on application startup the `setup_token` row is
       created; the plaintext is logged once (capture via caplog)
       with the expected prefix (FR-019).
-- [ ] T021 [P] [SETUP] `tests/auth/test_setup.py::test_token_not_regenerated_on_restart`
+- [X] T021 [P] [SETUP] `tests/auth/test_setup.py::test_token_not_regenerated_on_restart`
       — populate the user table; restart; no new setup token.
-- [ ] T022 [P] [SETUP] `tests/auth/test_setup.py::test_token_consumed_on_success`
+- [X] T022 [P] [SETUP] `tests/auth/test_setup.py::test_token_consumed_on_success`
       — POST `/api/v3/auth/setup` with valid token + payload;
       assert user created with `is_superuser = true`; replay; assert
       HTTP 401 with reason `setup_already_completed` (FR-020,
       FR-021).
-- [ ] T023 [P] [SETUP] `tests/auth/test_setup.py::test_token_expired`
+- [X] T023 [P] [SETUP] `tests/auth/test_setup.py::test_token_expired`
       — freezegun-advance time 25 hours; replay setup with the
       original token; assert HTTP 401 with reason
       `setup_token_expired`.
-- [ ] T024 [P] [SETUP] `tests/auth/test_setup.py::test_concurrent_setup_serialised`
+- [X] T024 [P] [SETUP] `tests/auth/test_setup.py::test_concurrent_setup_serialised`
       — 5 concurrent POST `/api/v3/auth/setup` calls; only one
       succeeds; the other 4 get HTTP 401 with
       `setup_already_completed`.
 
 ### Implementation
 
-- [ ] T025 [SETUP] Create `src/romarr/auth/setup.py` — state machine
+- [X] T025 [SETUP] Create `src/romarr/auth/setup.py` — state machine
       `bootstrap_at_startup(session)` that checks the user table and
       writes a setup-token row if empty;
       `consume_setup_token(session, token, payload) -> User` that
       validates and creates the first admin.
-- [ ] T026 [SETUP] Create `src/romarr/auth/locks.py` — async
+- [X] T026 [SETUP] Create `src/romarr/auth/locks.py` — async
       advisory lock keyed on the literal string `"setup"` so
       concurrent setup attempts serialise.
-- [ ] T027 [SETUP] Wire `bootstrap_at_startup(session)` into the
+- [X] T027 [SETUP] Wire `bootstrap_at_startup(session)` into the
       application lifespan startup handler.
 
 **Checkpoint**: SETUP tests green; the one-shot semantics hold under
@@ -151,26 +151,26 @@ concurrency.
 
 ### Tests
 
-- [ ] T028 [P] [SESSION] `tests/auth/session/test_redis_backend.py::test_create_get_revoke`
+- [X] T028 [P] [SESSION] `tests/auth/session/test_redis_backend.py::test_create_get_revoke`
       — happy path against a fakeredis instance.
-- [ ] T029 [P] [SESSION] `tests/auth/session/test_redis_backend.py::test_ttl_aligned`
+- [X] T029 [P] [SESSION] `tests/auth/session/test_redis_backend.py::test_ttl_aligned`
       — created session expires at `expires_at`; freezegun + TTL
       check.
-- [ ] T030 [P] [SESSION] `tests/auth/session/test_db_backend.py::test_fallback_path`
+- [X] T030 [P] [SESSION] `tests/auth/session/test_db_backend.py::test_fallback_path`
       — DB fallback works identically; expired rows are pruned by a
       lazy cleanup helper.
-- [ ] T031 [P] [SESSION] `tests/auth/session/test_redis_backend.py::test_redis_unavailable_falls_back_to_db`
+- [X] T031 [P] [SESSION] `tests/auth/session/test_redis_backend.py::test_redis_unavailable_falls_back_to_db`
       — patch the Redis client to raise; assert subsequent calls go
       to the DB backend AND an `OnHealthIssue` event is emitted.
 
 ### Implementation
 
-- [ ] T032 [SESSION] Create `src/romarr/auth/session/__init__.py`
+- [X] T032 [SESSION] Create `src/romarr/auth/session/__init__.py`
       with the `SessionStore` ABC (`create`, `get`, `revoke`,
       `extend_ttl`).
-- [ ] T033 [P] [SESSION] Create `src/romarr/auth/session/redis_backend.py`.
-- [ ] T034 [P] [SESSION] Create `src/romarr/auth/session/db_backend.py`.
-- [ ] T035 [SESSION] Add a small composer that picks Redis at
+- [X] T033 [P] [SESSION] Create `src/romarr/auth/session/redis_backend.py`.
+- [X] T034 [P] [SESSION] Create `src/romarr/auth/session/db_backend.py`.
+- [X] T035 [SESSION] Add a small composer that picks Redis at
       startup (probes connectivity once) and falls back to DB on
       runtime failure with the documented health event.
 
@@ -182,22 +182,22 @@ concurrency.
 
 ### Tests
 
-- [ ] T036 [P] [FORMS] `tests/auth/api/test_auth_endpoints.py::test_login_sets_cookie`
+- [X] T036 [P] [FORMS] `tests/auth/api/test_auth_endpoints.py::test_login_sets_cookie`
       — POST login with valid creds; assert HTTP 204; cookie carries
       `HttpOnly`, `SameSite=Lax`, and `Secure` (when HTTPS).
-- [ ] T037 [P] [FORMS] `tests/auth/api/test_auth_endpoints.py::test_login_wrong_password`
+- [X] T037 [P] [FORMS] `tests/auth/api/test_auth_endpoints.py::test_login_wrong_password`
       — wrong password; assert HTTP 401 with the canonical
       `unauthenticated` shape; bcrypt is invoked even on
       "user not found" (constant-time).
-- [ ] T038 [P] [FORMS] `tests/auth/api/test_auth_endpoints.py::test_logout_revokes_session`
+- [X] T038 [P] [FORMS] `tests/auth/api/test_auth_endpoints.py::test_logout_revokes_session`
       — POST logout; assert next request returns HTTP 401.
 
 ### Implementation
 
-- [ ] T039 [FORMS] Create `src/romarr/auth/methods/cookie.py` —
+- [X] T039 [FORMS] Create `src/romarr/auth/methods/cookie.py` —
       cookie session resolver: extract session id, look up via the
       session store, return `AuthContext`.
-- [ ] T040 [FORMS] Create `src/romarr/auth/api/auth.py` — FastAPI
+- [X] T040 [FORMS] Create `src/romarr/auth/api/auth.py` — FastAPI
       router for `/api/v3/auth/login`, `/logout`, `/me`,
       `/me/preferences`. The login handler uses bcrypt
       `verify_password`; the logout handler revokes the session.
@@ -211,33 +211,33 @@ on every failure path.
 
 ### Tests
 
-- [ ] T041 [P] [APIKEY] `tests/auth/api/test_api_key_endpoints.py::test_create_returns_plaintext_once`
+- [X] T041 [P] [APIKEY] `tests/auth/api/test_api_key_endpoints.py::test_create_returns_plaintext_once`
       — POST creates the key; response carries `plaintext_key`;
       subsequent GET returns only `key_prefix`, no plaintext (SC-004).
-- [ ] T042 [P] [APIKEY] `tests/auth/methods/test_api_key.py::test_lookup_by_hash`
+- [X] T042 [P] [APIKEY] `tests/auth/methods/test_api_key.py::test_lookup_by_hash`
       — incoming key in `X-Api-Key`; resolved via BLAKE2b lookup;
       authenticates the owning user.
-- [ ] T043 [P] [APIKEY] `tests/auth/methods/test_api_key.py::test_revoked_key_fails`
+- [X] T043 [P] [APIKEY] `tests/auth/methods/test_api_key.py::test_revoked_key_fails`
       — DELETE the key; immediate next request fails (SC-005).
-- [ ] T044 [P] [APIKEY] `tests/auth/methods/test_api_key.py::test_expired_key_fails`
+- [X] T044 [P] [APIKEY] `tests/auth/methods/test_api_key.py::test_expired_key_fails`
       — `expires_at` past; reason `api_key_expired`.
-- [ ] T045 [P] [APIKEY] `tests/auth/methods/test_api_key.py::test_constant_time_compare`
+- [X] T045 [P] [APIKEY] `tests/auth/methods/test_api_key.py::test_constant_time_compare`
       — assert that `verify_api_key` uses
       `secrets.compare_digest` (introspect or time the difference
       between off-by-one and totally-wrong inputs).
-- [ ] T046 [P] [APIKEY] `tests/auth/api/test_api_key_endpoints.py::test_scope_enforcement`
+- [X] T046 [P] [APIKEY] `tests/auth/api/test_api_key_endpoints.py::test_scope_enforcement`
       — key with `scopes=["read"]`; POST endpoint requiring
       `write`; assert HTTP 403 with reason `insufficient_scope`.
 
 ### Implementation
 
-- [ ] T047 [APIKEY] Create `src/romarr/auth/methods/api_key.py` —
+- [X] T047 [APIKEY] Create `src/romarr/auth/methods/api_key.py` —
       `resolve_api_key(request) -> AuthContext | None`. Looks at
       `X-Api-Key` then `apikey` query param; hashes via BLAKE2b;
       single indexed lookup by `key_hash`; checks
       `expires_at`/`revoked_at`; updates `last_used_at` /
       `last_used_ip` in a fire-and-forget background task.
-- [ ] T048 [APIKEY] Create `src/romarr/auth/api/api_keys.py` —
+- [X] T048 [APIKEY] Create `src/romarr/auth/api/api_keys.py` —
       FastAPI router for `/api/v3/auth/api-key*` (per-user) plus
       the admin variant `?user_id=N`. The CREATE response uses
       `ApiKeyCreateResponse` which includes `plaintext_key`; the
@@ -252,41 +252,41 @@ plaintext is exposed exactly once.
 
 ### Tests
 
-- [ ] T049 [P] [OIDC] `tests/auth/oidc/test_client.py::test_discovery_loaded_lazily`
+- [X] T049 [P] [OIDC] `tests/auth/oidc/test_client.py::test_discovery_loaded_lazily`
       — provider's `/.well-known/openid-configuration` is cached
       after the first successful fetch.
-- [ ] T050 [P] [OIDC] `tests/auth/oidc/test_flow.py::test_full_round_trip`
+- [X] T050 [P] [OIDC] `tests/auth/oidc/test_flow.py::test_full_round_trip`
       — POST `/api/v3/auth/oidc/start`; capture state/nonce/PKCE;
       simulate provider redirect with code; GET
       `/auth/oidc/callback`; assert user created with mapped role
       and session cookie set (US4.2).
-- [ ] T051 [P] [OIDC] `tests/auth/oidc/test_flow.py::test_replay_rejected`
+- [X] T051 [P] [OIDC] `tests/auth/oidc/test_flow.py::test_replay_rejected`
       — replay the same code; HTTP 400 with reason
       `oidc_code_already_used` (FR-016).
-- [ ] T052 [P] [OIDC] `tests/auth/oidc/test_flow.py::test_existing_user_role_synced`
+- [X] T052 [P] [OIDC] `tests/auth/oidc/test_flow.py::test_existing_user_role_synced`
       — existing user; group claim changes; user's `is_superuser`
       and `role` update on next login (US4.3).
-- [ ] T053 [P] [OIDC] `tests/auth/oidc/test_flow.py::test_auto_create_disabled`
+- [X] T053 [P] [OIDC] `tests/auth/oidc/test_flow.py::test_auto_create_disabled`
       — `AUTO_CREATE = false`; first OIDC login for an unknown user
       ⇒ HTTP 403 reason `oidc_user_not_provisioned`.
-- [ ] T054 [P] [OIDC] `tests/auth/oidc/test_group_mapping.py::test_property_mapping`
+- [X] T054 [P] [OIDC] `tests/auth/oidc/test_group_mapping.py::test_property_mapping`
       — hypothesis property test: random claim shapes; map to
       role consistently; unmapped groups default to `user`.
-- [ ] T055 [P] [OIDC] `tests/auth/oidc/test_client.py::test_secret_encrypted_at_rest`
+- [X] T055 [P] [OIDC] `tests/auth/oidc/test_client.py::test_secret_encrypted_at_rest`
       — the `client_secret` env value is decrypted at call time but
       never logged.
 
 ### Implementation
 
-- [ ] T056 [OIDC] Create `src/romarr/auth/oidc/client.py` — Authlib
+- [X] T056 [OIDC] Create `src/romarr/auth/oidc/client.py` — Authlib
       `OAuth` client setup, async `discover()` with caching.
-- [ ] T057 [OIDC] Create `src/romarr/auth/oidc/group_mapping.py` —
+- [X] T057 [OIDC] Create `src/romarr/auth/oidc/group_mapping.py` —
       pure `map_groups_to_role(claims, mapping) -> Role`.
-- [ ] T058 [OIDC] Create `src/romarr/auth/oidc/flow.py` — `start()`
+- [X] T058 [OIDC] Create `src/romarr/auth/oidc/flow.py` — `start()`
       handler returning the authorization URL with state/nonce/PKCE,
       `callback(code, state)` handler that exchanges + validates +
       finds-or-creates the user.
-- [ ] T059 [OIDC] Create `src/romarr/auth/api/oidc.py` — FastAPI
+- [X] T059 [OIDC] Create `src/romarr/auth/api/oidc.py` — FastAPI
       router for `/api/v3/auth/oidc/start` and the callback at
       `/auth/oidc/callback`.
 
@@ -299,7 +299,7 @@ group-to-role sync on existing users.
 
 ### Tests
 
-- [ ] T060 [P] [PROXY] `tests/auth/methods/test_proxy.py::test_disabled_by_default`
+- [X] T060 [P] [PROXY] `tests/auth/methods/test_proxy.py::test_disabled_by_default`
       — `ROMARR_TRUST_PROXY_AUTH = false`; configured trusted header
       is ignored; chain falls through.
 - [ ] T061 [P] [PROXY] `tests/auth/methods/test_proxy.py::test_enabled_authenticates_known_user`
