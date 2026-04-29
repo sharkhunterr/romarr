@@ -165,30 +165,30 @@ hash/name lookups.
 
 ### Tests
 
-- [ ] T037 [DAT] `tests/identification/dat/test_logiqx_parser.py` — feed the
+- [X] T037 [DAT] `tests/identification/dat/test_logiqx_parser.py` — feed the
       `tests/fixtures/dats/nointro_megadrive_sample.dat` fixture, assert the parser
       yields the expected number of `<game>` entries with hashes and statuses.
-- [ ] T038 [DAT] `tests/identification/dat/test_manager.py::test_ingest_inserts_entries`
+- [X] T038 [DAT] `tests/identification/dat/test_manager.py::test_ingest_inserts_entries`
       — call `DatManager.ingest(dat_path, source='no-intro', platform_slug='megadrive')`,
       assert rows in `dat_entry`.
-- [ ] T039 [DAT] `tests/identification/dat/test_manager.py::test_ingest_is_idempotent`
+- [X] T039 [DAT] `tests/identification/dat/test_manager.py::test_ingest_is_idempotent`
       — call ingest twice with the same file; second call must insert zero rows
       (FR-019); also verify it completes in < 5 s for the sample fixture (SC-006).
-- [ ] T040 [DAT] `tests/identification/dat/test_manager.py::test_lookup_methods`
+- [X] T040 [DAT] `tests/identification/dat/test_manager.py::test_lookup_methods`
       — exercise each of `lookup_by_sha1`, `lookup_by_crc32`, `lookup_by_md5`,
       `lookup_by_name` and confirm the matching row is returned.
 
 ### Implementation
 
-- [ ] T041 [DAT] Create `src/romarr/identification/dat/parsers/logiqx.py` —
+- [X] T041 [DAT] Create `src/romarr/identification/dat/parsers/logiqx.py` —
       `iter_logiqx(path)` generator using `lxml.iterparse`, yielding plain dicts
       with `name`, `crc32`, `md5`, `sha1`, `size`, `status`. Implements the
       `elem.clear()` + ancestor-pruning idiom from research notes to avoid memory
       creep.
-- [ ] T042 [DAT] Create `src/romarr/identification/dat/sources.py` — small enum-like
+- [X] T042 [DAT] Create `src/romarr/identification/dat/sources.py` — small enum-like
       registry `KNOWN_SOURCES = {'no-intro': NoIntroSource, 'redump': RedumpStub,
       'tosec': TosecStub, ...}`. Stubs raise `NotImplementedError`.
-- [ ] T043 [DAT] Create `src/romarr/identification/dat/manager.py` — `DatManager`
+- [X] T043 [DAT] Create `src/romarr/identification/dat/manager.py` — `DatManager`
       class with `ingest(path, source, platform_slug)` (computes a `contents_hash`
       via `Hasher` and short-circuits when seen before), and the four lookups.
 - [ ] T044 [DAT] Wire DAT-related commits into bulk insert via SQLAlchemy
@@ -293,34 +293,34 @@ breaker.
 
 ### Tests
 
-- [ ] T065 [P] [HM] `tests/identification/hashmatch/test_local.py` — wrap the
+- [X] T065 [P] [HM] `tests/identification/hashmatch/test_local.py` — wrap the
       DAT manager's `lookup_by_sha1`, assert it returns a hit for a known SHA-1.
-- [ ] T066 [P] [HM] `tests/identification/hashmatch/test_hasheous.py` — respx-
+- [X] T066 [P] [HM] `tests/identification/hashmatch/test_hasheous.py` — respx-
       mocked `https://hasheous.org/api/...` happy path + 5 consecutive failures
       (within 60 s) → circuit opens.
-- [ ] T067 [P] [HM] `tests/identification/hashmatch/test_playmatch.py` — same
+- [X] T067 [P] [HM] `tests/identification/hashmatch/test_playmatch.py` — same
       shape as Hasheous, different base URL.
-- [ ] T068 [HM] `tests/identification/hashmatch/test_circuit_breaker.py` —
+- [X] T068 [HM] `tests/identification/hashmatch/test_circuit_breaker.py` —
       open after 5 failures within 60 s, half-open after the cooldown window,
       reset on a successful call.
-- [ ] T069 [HM] `tests/identification/hashmatch/test_cascade.py` — kick all
+- [X] T069 [HM] `tests/identification/hashmatch/test_cascade.py` — kick all
       three sources in parallel; first authoritative match wins; with both
       remotes down, local DAT still serves (FR-028).
 
 ### Implementation
 
-- [ ] T070 [HM] Create `src/romarr/identification/hashmatch/circuit_breaker.py`
+- [X] T070 [HM] Create `src/romarr/identification/hashmatch/circuit_breaker.py`
       — small async-friendly state machine (`closed → open → half_open`) with
       configurable threshold (default 5), window (default 60 s), cooldown
       (default 60 s).
-- [ ] T071 [P] [HM] Create `src/romarr/identification/hashmatch/local.py` —
+- [X] T071 [P] [HM] Create `src/romarr/identification/hashmatch/local.py` —
       thin wrapper over `DatManager` that returns an `IdentificationSource`.
-- [ ] T072 [P] [HM] Create `src/romarr/identification/hashmatch/hasheous.py` —
+- [X] T072 [P] [HM] Create `src/romarr/identification/hashmatch/hasheous.py` —
       async httpx client calling `/api/v1/lookup/hash`, tenacity retry with
       jittered backoff, wrapped by the circuit breaker.
-- [ ] T073 [P] [HM] Create `src/romarr/identification/hashmatch/playmatch.py` —
+- [X] T073 [P] [HM] Create `src/romarr/identification/hashmatch/playmatch.py` —
       same shape, different endpoint.
-- [ ] T074 [HM] Create `src/romarr/identification/hashmatch/cascade.py` —
+- [X] T074 [HM] Create `src/romarr/identification/hashmatch/cascade.py` —
       `HashMatchCascade.lookup(crc32=..., md5=..., sha1=...) -> list[IdentificationSource]`,
       uses `asyncio.gather(..., return_exceptions=True)` and never raises out
       of a partial-failure scenario.
@@ -368,13 +368,13 @@ breaker.
 
 **Purpose**: end-to-end Identifier façade, perf checks, type & lint cleanliness.
 
-- [ ] T082 [HARD] Create `src/romarr/identification/identifier.py` — public
+- [X] T082 [HARD] Create `src/romarr/identification/identifier.py` — public
       `Identifier` façade with `async def identify(path: Path | None = None,
       filename: str | None = None, torznab_attrs: dict | None = None) ->
       Identification`. Orchestrates Hasher → HashMatchCascade → HeaderReader
       (looked up from `platform_format.header_signature_hex`) → FilenameParser
       → Matcher.
-- [ ] T083 [HARD] `tests/identification/test_identifier.py` — five end-to-end
+- [X] T083 [HARD] `tests/identification/test_identifier.py` — five end-to-end
       scenarios from spec.md (clean DAT-matched, garbage filename + DAT,
       filename only, filename/DAT conflict, multi-disc) using fixture files
       end-to-end.

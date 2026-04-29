@@ -114,6 +114,13 @@ module = ["romarr.domain.*", "romarr.identification.*"]
 disallow_any_generics = true
 disallow_untyped_defs = true
 
+[[tool.mypy.overrides]]
+# lxml ships its own stubs as ``lxml-stubs`` but they're optional and
+# add startup cost. We import only ``etree.iterparse`` whose return
+# shape we hand-narrow inside :mod:`romarr.identification.dat.logiqx`.
+module = ["lxml.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
