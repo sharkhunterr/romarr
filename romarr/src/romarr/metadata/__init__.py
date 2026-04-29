@@ -45,9 +45,12 @@ from romarr.metadata.providers import (
 # PROVIDER_REGISTRY at import time. Adding a provider in a future
 # slice means dropping its module here AND adding the test under
 # tests/metadata/providers/.
+from romarr.metadata.providers import hasheous as _hasheous  # noqa: F401
 from romarr.metadata.providers import howlongtobeat as _howlongtobeat  # noqa: F401
 from romarr.metadata.providers import igdb as _igdb  # noqa: F401
+from romarr.metadata.providers import launchbox as _launchbox  # noqa: F401
 from romarr.metadata.providers import mobygames as _mobygames  # noqa: F401
+from romarr.metadata.providers import playmatch as _playmatch  # noqa: F401
 from romarr.metadata.providers import retroachievements as _retroachievements  # noqa: F401
 from romarr.metadata.providers import screenscraper as _screenscraper  # noqa: F401
 from romarr.metadata.providers import steamgriddb as _steamgriddb  # noqa: F401

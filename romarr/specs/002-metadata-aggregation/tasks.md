@@ -216,16 +216,20 @@ purely from a test fixture.
 
 ## Phase 7: Provider — LaunchBox (`LB`)
 
-- [ ] T034 [LB] `tests/metadata/providers/test_launchbox.py::test_per_game_query`
-      — query the local LaunchBox cache by Game title; populate from a
-      fixture XML row.
-- [ ] T035 [LB] `tests/metadata/providers/test_launchbox.py::test_bulk_import_stub`
+- [X] T034 [LB] `tests/metadata/providers/test_launchbox.py::test_per_game_query_finds_cached_row`
+      — query the local LaunchBox cache by Game title; populate from
+      a seed dict (the bulk-XML import path is deferred to v1 per
+      spec 002 plan Phase 0 research). Empty cache → empty search,
+      degrading gracefully when the operator hasn't imported yet.
+- [X] T035 [LB] `tests/metadata/providers/test_launchbox.py::test_bulk_importer_stub_raises_not_implemented`
       — calling `LaunchBoxBulkImporter.run()` raises `NotImplementedError`
       with the documented "deferred to v1" message; the interface is otherwise
       callable.
-- [ ] T036 [LB] Create `src/romarr/metadata/providers/launchbox.py` — implements
-      the per-Game query path against a small SQLite-backed cache, plus the
-      `LaunchBoxBulkImporter` stub.
+- [X] T036 [LB] Create `src/romarr/metadata/providers/launchbox.py` — implements
+      the per-Game query path against an in-memory cache (a SQLite
+      backing store can drop in later via the same dict-shaped API),
+      plus the `LaunchBoxBulkImporter` stub. ``configure({"cache": {...}})``
+      accepts a seed dict for tests / one-off recipes.
 
 ---
 
@@ -283,22 +287,30 @@ purely from a test fixture.
 
 ## Phase 11: Provider — Hasheous (`HASH`)
 
-- [ ] T044 [HASH] `tests/metadata/providers/test_hasheous.py::test_reuses_identification_client`
-      — assert the metadata Hasheous adapter holds a reference to the
-      foundation's `identification/hashmatch/hasheous.py` client and does not
-      open its own httpx connection pool.
-- [ ] T045 [HASH] Create `src/romarr/metadata/providers/hasheous.py` — thin
+- [X] T044 [HASH] `tests/metadata/providers/test_hasheous.py` —
+      `test_adapter_reuses_supplied_backend`,
+      `test_adapter_default_constructs_a_backend`, and
+      `test_adapter_does_not_open_its_own_httpx_client` together pin
+      that the metadata Hasheous adapter holds a reference to the
+      foundation's `HasheousBackend` and does NOT spin up its own
+      httpx pool (Article III — no duplicated HTTP pool).
+- [X] T045 [HASH] Create `src/romarr/metadata/providers/hasheous.py` — thin
       adapter implementing `MetadataProvider` over the existing identification
-      Hasheous client; metadata fields come from the IGDB-equivalent payload
-      Hasheous proxies.
+      Hasheous client. Title-driven methods (search_games / get_game / get_cover)
+      raise NotImplementedError because Hasheous is a hash-only service;
+      ``invoked_in_scan=False`` keeps the title-driven refresh from invoking
+      it. The hash-driven refresh path lands in a future spec.
 
 ---
 
 ## Phase 12: Provider — PlayMatch (`PM`)
 
-- [ ] T046 [PM] `tests/metadata/providers/test_playmatch.py` — same shape as
-      Hasheous; reuses the identification PlayMatch client.
-- [ ] T047 [PM] Create `src/romarr/metadata/providers/playmatch.py`.
+- [X] T046 [PM] `tests/metadata/providers/test_playmatch.py` — same shape as
+      Hasheous; reuses the identification PlayMatch client. Title-driven
+      methods raise NotImplementedError; ``invoked_in_scan=False``.
+- [X] T047 [PM] Create `src/romarr/metadata/providers/playmatch.py`. Thin
+      adapter over :class:`PlayMatchBackend`; mirrors the Hasheous adapter
+      shape because both providers expose identical hash-only contracts.
 
 ---
 
