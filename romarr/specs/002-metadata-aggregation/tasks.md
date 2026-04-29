@@ -311,13 +311,15 @@ constitutional invariant.
       `needs_metadata_refresh` flag. Also accepts an optional ``existing``
       mapping so the FR-009 additive-invariant carries pre-existing
       non-locked values forward when no provider contributes.
-- [ ] T055 [AGG] Create `src/romarr/metadata/refresh.py` — async
+- [X] T055 [AGG] Create `src/romarr/metadata/refresh.py` — async
       `refresh_game_metadata(session, game_id, *, force=False) -> AggregationResult`
       orchestrating: load locked fields + game; for each enabled provider,
       look up cache; if missing or expired or `force=True`, call provider's
       `search_games + get_game + get_cover`; persist cache row; finally call
       pure `aggregate(...)`; persist non-locked changes onto the Game; persist
-      cover bytes via `covers.write_cover`.
+      cover bytes via `covers.write_cover`. Per-Game asyncio.Lock coalesces
+      concurrent refreshes (FR-013a in-process; cross-process via Redis is
+      deferred to v1+).
 
 **Checkpoint**: aggregator tests green including the property-based
 additive-merge invariant; refresh function ties it together.
@@ -329,26 +331,28 @@ additive-merge invariant; refresh function ties it together.
 **Purpose**: wire the metadata layer to the FastAPI app and expose the six
 endpoint stubs.
 
-- [ ] T056 [P] [INT] `tests/metadata/api/test_provider_endpoints.py` — TestClient
+- [X] T056 [P] [INT] `tests/metadata/api/test_provider_endpoints.py` — TestClient
       hits each of `GET/POST/test` on `/api/v3/metadata/provider`; encrypted
       `config` round-trips via the configure endpoint.
-- [ ] T057 [P] [INT] `tests/metadata/api/test_field_priority_endpoints.py` —
+- [X] T057 [P] [INT] `tests/metadata/api/test_field_priority_endpoints.py` —
       `GET /api/v3/metadata/field-priority` returns the seeded layout;
       `PUT /api/v3/metadata/field-priority/{field_name}` updates the order.
-- [ ] T058 [P] [INT] `tests/metadata/api/test_refresh_endpoint.py` —
+- [X] T058 [P] [INT] `tests/metadata/api/test_refresh_endpoint.py` —
       `POST /api/v3/game/{id}/refresh-metadata` triggers `refresh.py` and
-      returns the resulting `AggregationResult` JSON.
-- [ ] T059 [INT] Create `src/romarr/metadata/api/providers.py` — FastAPI
+      returns the resulting `AggregationResult` JSON. Covers happy path
+      (IGDB end-to-end), locked-field protection, no-providers fallback,
+      and cache hit (second call → zero extra IGDB POSTs).
+- [X] T059 [INT] Create `src/romarr/metadata/api/providers.py` — FastAPI
       router stubs for the 3 provider endpoints.
-- [ ] T060 [INT] Create `src/romarr/metadata/api/field_priority.py` — FastAPI
+- [X] T060 [INT] Create `src/romarr/metadata/api/field_priority.py` — FastAPI
       router for the 2 field-priority endpoints.
-- [ ] T061 [INT] Create `src/romarr/metadata/api/refresh.py` — FastAPI router
+- [X] T061 [INT] Create `src/romarr/metadata/api/refresh.py` — FastAPI router
       for the refresh endpoint.
-- [ ] T062 [INT] Wire the three routers into the application factory under
-      `/api/v3/metadata/*` and `/api/v3/game/{id}/refresh-metadata`. NOTE:
-      **authentication wiring is deferred to the Auth spec**; this feature
-      uses a development-only no-op dependency that always returns an
-      `is_admin=True` user.
+- [X] T062 [INT] Wire the three routers into the application factory under
+      `/api/v3/metadata/*` and `/api/v3/game/{id}/refresh-metadata`.
+      Auth uses the real `require_admin` dependency from spec 010 — the
+      tasks.md "no-op dev-only dependency" note is obsoleted by the
+      auth spec landing first.
 
 **Checkpoint**: each endpoint returns a sensible response from a test client
 against an in-memory DB.

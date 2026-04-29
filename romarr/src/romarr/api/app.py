@@ -22,6 +22,11 @@ from romarr.api.error_handlers import register_error_handlers
 from romarr.api.routers.auth import router as auth_router
 from romarr.api.routers.users import router as users_router
 from romarr.db.session import create_engine, create_sessionmaker
+from romarr.metadata.api import (
+    field_priority_router,
+    providers_router,
+    refresh_router,
+)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -75,4 +80,7 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     register_error_handlers(app)
     app.include_router(auth_router)
     app.include_router(users_router)
+    app.include_router(providers_router)
+    app.include_router(field_priority_router)
+    app.include_router(refresh_router)
     return app

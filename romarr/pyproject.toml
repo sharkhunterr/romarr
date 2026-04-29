@@ -102,6 +102,7 @@ ignore = [
 # runtime to build the OpenAPI schema, so router/dependency types
 # (AsyncSession, response models, etc.) MUST be live imports.
 "src/romarr/api/**" = ["TC001", "TC002", "TC003"]
+"src/romarr/metadata/api/**" = ["TC001", "TC002", "TC003"]
 
 [tool.ruff.format]
 quote-style = "double"

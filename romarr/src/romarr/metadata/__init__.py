@@ -46,6 +46,7 @@ from romarr.metadata.providers import (
 # slice means dropping its module here AND adding the test under
 # tests/metadata/providers/.
 from romarr.metadata.providers import igdb as _igdb  # noqa: F401
+from romarr.metadata.refresh import refresh_game_metadata
 from romarr.metadata.registry import load_enabled_providers
 from romarr.metadata.types import (
     AggregationResult,
@@ -78,6 +79,7 @@ __all__ = [
     "invalidate_cached",
     "load_enabled_providers",
     "put_cached",
+    "refresh_game_metadata",
     "register_provider",
     "write_cover",
 ]
