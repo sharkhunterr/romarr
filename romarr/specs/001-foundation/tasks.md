@@ -149,7 +149,7 @@ pass. Async-safe.
       `hash_file(path, *, want_sha256=False)` (sync, streaming) and
       `async_hash_file(path, *, want_sha256=False)` that delegates to a
       threadpool. Buffer size from `Settings.hash_buffer_bytes`.
-- [ ] T036 [HASH] Add a tiny CLI script `scripts/hash.py` (≤ 30 lines) that hashes a
+- [X] T036 [HASH] Add a tiny CLI script `scripts/hash.py` (≤ 30 lines) that hashes a
       given file and prints CRC32/MD5/SHA-1. Used for manual perf checks
       (1 GB ROM < 10 s on local SSD — SC-002).
 
@@ -378,7 +378,7 @@ breaker.
       scenarios from spec.md (clean DAT-matched, garbage filename + DAT,
       filename only, filename/DAT conflict, multi-disc) using fixture files
       end-to-end.
-- [ ] T084 [HARD] `tests/identification/test_unidentified_persistence.py` —
+- [X] T084 [HARD] `tests/identification/test_unidentified_persistence.py` —
       when `Identifier.identify` produces `confidence < 0.5`, it must persist
       a row in `unidentified_dump` (FR-029).
 - [ ] T085 [HARD] Manual perf check: hash a 1 GB file via the CLI from T036,

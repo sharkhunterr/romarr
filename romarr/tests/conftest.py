@@ -12,10 +12,12 @@ from collections.abc import AsyncIterator
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
-from romarr.db.session import create_engine, create_sessionmaker
-
 # Importing the models module ensures every model class is registered
-# with the metadata before create_all runs.
+# with the metadata before create_all runs. Each spec's models live
+# under their own package — listing them here keeps a single
+# Base.metadata that knows about every table the test suite needs.
+from romarr.auth import models as _auth_models  # noqa: F401
+from romarr.db.session import create_engine, create_sessionmaker
 from romarr.domain import (
     Base,
     models,  # noqa: F401

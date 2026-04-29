@@ -34,14 +34,17 @@ def test_migration_creates_nine_tables_and_seeds_five_platforms(tmp_path: Path) 
     try:
         cur = conn.cursor()
 
-        tables = sorted(
+        tables = {
             r[0]
             for r in cur.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' "
                 "AND name NOT LIKE 'sqlite_%' AND name <> 'alembic_version'"
             )
-        )
-        assert tables == [
+        }
+        # Spec 001's nine foundation tables MUST all exist; later
+        # specs (e.g., 010-auth-multiuser) add their own tables on top
+        # so we assert containment rather than equality.
+        foundation_tables = {
             "dat_entry",
             "dump",
             "game",
@@ -51,7 +54,8 @@ def test_migration_creates_nine_tables_and_seeds_five_platforms(tmp_path: Path) 
             "platform_pack",
             "release",
             "unidentified_dump",
-        ]
+        }
+        assert foundation_tables.issubset(tables)
 
         platforms = cur.execute(
             "SELECT slug FROM platform ORDER BY id"

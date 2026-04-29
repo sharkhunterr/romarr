@@ -25,23 +25,23 @@ session → forms → API keys → OIDC → trusted proxy → chained dependency
 
 ## Phase 1: Scaffolding (`SCAF`)
 
-- [ ] T001 [SCAF] Update `pyproject.toml` — add runtime deps
+- [X] T001 [SCAF] Update `pyproject.toml` — add runtime deps
       `fastapi-users[sqlalchemy,oauth]>=13`, `authlib>=1.3`,
       `redis>=5` (optional but install in MVP).
-- [ ] T002 [P] [SCAF] Create `src/romarr/auth/__init__.py` exposing
+- [X] T002 [P] [SCAF] Create `src/romarr/auth/__init__.py` exposing
       `get_current_user`, `require_role`, `AuthChain`.
 - [ ] T003 [P] [SCAF] Create `src/romarr/auth/errors.py` —
       `AuthError`, `UnauthenticatedError`, `PermissionDenied`,
       `ApiKeyExpired`, `ApiKeyRevoked`, `OidcReplayError`,
       `SetupAlreadyCompleted`.
-- [ ] T004 [P] [SCAF] Create `src/romarr/auth/types.py` — `Role`,
+- [X] T004 [P] [SCAF] Create `src/romarr/auth/types.py` — `Role`,
       `ROLE_HIERARCHY`, `AuthMethod`, `AuthContext`.
 - [ ] T005 [P] [SCAF] Create `src/romarr/auth/settings.py` — Pydantic
       `BaseSettings` for `ROMARR_OIDC_*`, `ROMARR_TRUST_PROXY_AUTH`,
       `ROMARR_TRUSTED_PROXY_HEADERS`, `ROMARR_BCRYPT_COST` (default
       12), `ROMARR_REDIS_URL`, `ROMARR_AUTH_SESSION_TTL_SECONDS`
       (default 86400).
-- [ ] T006 [SCAF] Extend `tests/conftest.py` with a
+- [X] T006 [SCAF] Extend `tests/conftest.py` with a
       `mock_oidc_provider` fixture (respx + a fixture id_token
       JSON); create `tests/auth/conftest.py` with module-local
       fixtures (TestClient, in-memory fake Redis).
@@ -54,23 +54,23 @@ session → forms → API keys → OIDC → trusted proxy → chained dependency
 
 ### Tests (write first; must fail)
 
-- [ ] T007 [P] [PERS] `tests/auth/test_models.py` — round-trip a
+- [X] T007 [P] [PERS] `tests/auth/test_models.py` — round-trip a
       `User` and an `ApiKey` row; CHECK constraints on `role`,
       `setup_token.id = 1`.
-- [ ] T008 [P] [PERS] `tests/auth/test_models.py::test_unique_username`
+- [X] T008 [P] [PERS] `tests/auth/test_models.py::test_unique_username`
       — duplicate `username` raises `IntegrityError`.
-- [ ] T009 [P] [PERS] `tests/auth/test_models.py::test_email_unique_when_set`
+- [X] T009 [P] [PERS] `tests/auth/test_models.py::test_email_unique_when_set`
       — partial unique `email`: two rows with `email = NULL` allowed,
       two with the same email rejected.
-- [ ] T010 [P] [PERS] `tests/auth/test_models.py::test_apikey_unique_hash`
+- [X] T010 [P] [PERS] `tests/auth/test_models.py::test_apikey_unique_hash`
       — duplicate `key_hash` rejected.
-- [ ] T011 [P] [PERS] `tests/auth/test_models.py::test_passwordless_user_validator`
+- [X] T011 [P] [PERS] `tests/auth/test_models.py::test_passwordless_user_validator`
       — Pydantic-level: a user with `hashed_password = NULL` AND
       `oidc_subject = NULL` AND `is_active = true` is rejected.
-- [ ] T012 [P] [PERS] `tests/auth/test_migration_0010.py::test_creates_tables`
+- [X] T012 [P] [PERS] `tests/auth/test_migration_0010.py::test_creates_tables`
       — applying the migration creates `user`, `api_key`, `session`,
       `setup_token`.
-- [ ] T013 [P] [PERS] `tests/auth/test_migration_0010.py::test_system_sentinel`
+- [X] T013 [P] [PERS] `tests/auth/test_migration_0010.py::test_system_sentinel`
       — sentinel user `(id=1, username='system', is_active=false,
       is_superuser=true, role='admin')` exists post-migration.
 - [ ] T014 [P] [PERS] `tests/auth/test_migration_0010.py::test_by_columns_fk_conversion`
@@ -82,7 +82,7 @@ session → forms → API keys → OIDC → trusted proxy → chained dependency
 
 ### Implementation
 
-- [ ] T015 [PERS] Create `src/romarr/auth/hashing.py` —
+- [X] T015 [PERS] Create `src/romarr/auth/hashing.py` —
       `hash_password(plain: str) -> str` (bcrypt cost from
       settings), `verify_password(plain: str, hashed: str) -> bool`,
       `hash_api_key(plaintext: str) -> bytes` (BLAKE2b 32-byte),
@@ -92,11 +92,11 @@ session → forms → API keys → OIDC → trusted proxy → chained dependency
       `generate_api_key() -> tuple[str, bytes, str]` (returns
       `(plaintext, hash, prefix)`), `generate_setup_token() ->
       tuple[str, bytes]`, helpers for prefix derivation.
-- [ ] T017 [P] [PERS] Create `src/romarr/auth/models.py` — `User`,
+- [X] T017 [P] [PERS] Create `src/romarr/auth/models.py` — `User`,
       `ApiKey`, `Session`, `SetupToken` SQLAlchemy 2.0 models.
 - [ ] T018 [P] [PERS] Create `src/romarr/auth/schemas.py` — every
       Pydantic schema from `data-model.md`.
-- [ ] T019 [PERS] Author `src/romarr/db/alembic/versions/0010_auth.py`
+- [X] T019 [PERS] Author `src/romarr/db/alembic/versions/0010_auth.py`
       — DDL for the four new tables + sentinel user insert + the
       four `*_by` FK conversions per the Strategy in `data-model.md`.
 
