@@ -1,0 +1,24 @@
+pack_version: "2026.04.099"
+schema_version: 1
+platforms:
+  - slug: a
+    name: A
+    manufacturer: ACME
+    parent_platform_slug: b
+    formats:
+      - extension: ".a"
+        format_type: cartridge
+  - slug: b
+    name: B
+    manufacturer: ACME
+    parent_platform_slug: c
+    formats:
+      - extension: ".b"
+        format_type: cartridge
+  - slug: c
+    name: C
+    manufacturer: ACME
+    parent_platform_slug: a
+    formats:
+      - extension: ".c"
+        format_type: cartridge

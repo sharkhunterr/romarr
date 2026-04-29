@@ -24,23 +24,22 @@ first-boot → user overrides → API → hardening.
 
 **Purpose**: bring up the module skeleton, dependencies, and shared types.
 
-- [ ] T001 [SCAF] Update `pyproject.toml` — add runtime deps (`PyYAML`, `jsonschema>=4.21`).
-- [ ] T002 [P] [SCAF] Create `src/romarr/platform_packs/__init__.py` exposing
-      `ingest_pack`, `validate_pack`, `apply_builtin_pack`, `mark_overridden`,
-      `release_override`.
-- [ ] T003 [P] [SCAF] Create `src/romarr/platform_packs/types.py` —
-      `PackPlatformDiff`, `PackUploadResult`, `ValidateResult` Pydantic v2 models
-      from `data-model.md`.
-- [ ] T004 [P] [SCAF] Create `src/romarr/platform_packs/errors.py` —
+- [X] T001 [SCAF] Updated `pyproject.toml` — added `PyYAML>=6.0`, `jsonschema>=4.21`.
+- [X] T002 [P] [SCAF] Created `src/romarr/platform_packs/__init__.py` —
+      currently re-exports the validator + types + errors. Ingest /
+      built-in / overrides land in follow-up slices.
+- [X] T003 [P] [SCAF] Created `src/romarr/platform_packs/types.py` —
+      `PackPlatformDiff`, `PackUploadResult`, `ValidateResult`.
+- [X] T004 [P] [SCAF] Created `src/romarr/platform_packs/errors.py` —
       `PackValidationError` (with structured `violations: list[Violation]`),
       `SchemaVersionTooHighError`, `PackVersionConflictError`, `OverrideRequiredError`.
 - [ ] T005 [SCAF] Extend `src/romarr/config/settings.py` with
-      `builtin_pack_path: Path | None = None` (resolved at startup via
-      `ROMARR_BUILTIN_PACK_PATH`, falling back to wheel resource then
-      `/opt/romarr/builtin-packs/`).
-- [ ] T006 [SCAF] Extend `tests/conftest.py` with `pack_yaml(name)` fixture that
-      loads files from `tests/fixtures/packs/`; create
-      `tests/platform_packs/conftest.py` for module-local fixtures.
+      `builtin_pack_path: Path | None`. **Deferred** to the BUILTIN
+      slice — adding a settings field for a feature whose runtime
+      doesn't ship yet would just dangle.
+- [X] T006 [SCAF] Created `tests/platform_packs/conftest.py` with the
+      `pack_yaml` fixture that loads files from
+      `tests/fixtures/packs/`.
 
 **Checkpoint**: imports work, lint+types green; no behaviour added yet.
 
@@ -52,26 +51,31 @@ first-boot → user overrides → API → hardening.
 
 ### Tests (write first; must fail)
 
-- [ ] T007 [P] [PERS] `tests/platform_packs/test_migration_0003.py` — applying the
-      migration to a foundation-baselined DB creates the 2 new tables with
-      documented constraints and the defensive `contents_hash` ALTER is a no-op
-      because foundation already shipped the column.
-- [ ] T008 [P] [PERS] `tests/platform_packs/test_models.py` — round-trip a
-      `ParsingStrategy` and a `PlatformPackApplicationLog` row through the async
-      session; check enums and JSON columns serialize/deserialize correctly.
+- [X] T007 [P] [PERS] `tests/platform_packs/test_migration_0003.py` —
+      applies the migration end-to-end against a fresh SQLite DB,
+      asserts both new tables exist + the CHECK constraint on
+      `parsing_strategies.pack_source` fires; idempotency test
+      via downgrade + re-upgrade.
+- [X] T008 [P] [PERS] `tests/platform_packs/test_models.py` —
+      round-trip both new model rows through the async session;
+      JSON list columns + the FK on platform_pack_application_log
+      both round-trip.
 
 ### Implementation
 
-- [ ] T009 [PERS] Create `src/romarr/platform_packs/models.py` —
-      `ParsingStrategy` and `PlatformPackApplicationLog` SQLAlchemy 2.0 models
-      matching `data-model.md`.
-- [ ] T010 [P] [PERS] Create `src/romarr/platform_packs/schemas.py` — Pydantic
-      `*Read/*Create/*Update` for `ParsingStrategy`; `*Read/*Create` for the
-      audit log (no Update — append-only).
-- [ ] T011 [PERS] Author `src/romarr/db/alembic/versions/0003_platform_packs.py`
-      — DDL for the two tables, defensive `ADD COLUMN IF NOT EXISTS contents_hash`
-      on `platform_pack`. No data seeding here; the built-in pack auto-applies
-      at runtime (Phase 5).
+- [X] T009 [PERS] Created `src/romarr/platform_packs/models.py` —
+      `ParsingStrategy` and `PlatformPackApplicationLog` SQLAlchemy 2.0
+      models matching `data-model.md`. CHECK constraints on
+      `pack_source`, `action`, `status`. FK on
+      `platform_pack_application_log.pack_version` →
+      `platform_pack.pack_version`.
+- [ ] T010 [P] [PERS] Create `src/romarr/platform_packs/schemas.py` —
+      Pydantic *Read/*Create/*Update for the new entities. **Deferred**
+      to the API slice — schemas aren't consumed until the routers land.
+- [X] T011 [PERS] Authored `src/romarr/db/alembic/versions/0003_platform_packs.py`
+      — DDL for the two tables. The defensive
+      `ADD COLUMN IF NOT EXISTS contents_hash` was unnecessary —
+      foundation 0001 ships the column.
 
 **Checkpoint**: `alembic upgrade head` applies cleanly; PERS tests green.
 
@@ -84,43 +88,47 @@ validator is a **pure function** consumed by both upload and validate-only flows
 
 ### Tests
 
-- [ ] T012 [P] [VALID] `tests/platform_packs/test_yaml_loader.py` — `safe_load`
-      a fixture; verify the canonicalization function produces a stable
-      sort-keyed JSON byte string regardless of YAML key ordering or trailing
-      whitespace.
-- [ ] T013 [P] [VALID] `tests/platform_packs/test_validator_schema.py` —
-      iterate the ≥ 20 broken-pack fixtures under
-      `tests/fixtures/packs/invalid_schema/`; assert each one yields a
-      `PackValidationError` whose `violations` cite the right JSON path.
-- [ ] T014 [P] [VALID] `tests/platform_packs/test_validator_cross_refs.py::test_dangling_parent`
-      — fixture `invalid_refs/dangling_parent.yaml` raises with a clear message
-      naming the bad slug.
-- [ ] T015 [P] [VALID] `tests/platform_packs/test_validator_cross_refs.py::test_cycle_detection`
-      — fixtures `parent_cycle_a_b.yaml` and `parent_cycle_a_b_c.yaml` both
-      raise with messages that name every cycle member.
-- [ ] T016 [P] [VALID] `tests/platform_packs/test_validator_cross_refs.py::test_duplicate_slug`
-      — fixture `duplicate_slug.yaml` rejected.
-- [ ] T017 [P] [VALID] `tests/platform_packs/test_validator_cross_refs.py::test_duplicate_extension`
-      — fixture `duplicate_extension.yaml` rejected.
-- [ ] T018 [P] [VALID] `tests/platform_packs/test_validator_schema_version.py`
-      — fixture `schema_version_too_high.yaml` raises
-      `SchemaVersionTooHighError`.
+- [X] T012 [P] [VALID] `tests/platform_packs/test_yaml_loader.py` —
+      `load_pack` parses + 1 MiB body cap; `canonicalize` is stable
+      across YAML cosmetic edits + key reorderings;
+      `compute_contents_hash` returns 64-char SHA-256 hex.
+- [X] T013 [P] [VALID] `tests/platform_packs/test_validator_schema.py`
+      — iterates **22** broken-pack fixtures under
+      `tests/fixtures/packs/invalid_schema/`; each yields a
+      `PackValidationError`. Includes `test_at_least_twenty_invalid_schema_fixtures_exist`
+      to pin SC-004's ≥ 20 corpus bar.
+- [X] T014 [P] [VALID] `tests/platform_packs/test_validator_cross_refs.py::test_dangling_parent_rejected`
+      — fixture `invalid_refs/dangling_parent.yaml` raises naming the
+      bad slug in the violation message; the existing-slugs override
+      pass is exercised in
+      `test_dangling_parent_satisfied_by_existing_db_slug`.
+- [X] T015 [P] [VALID] `tests/platform_packs/test_validator_cross_refs.py::test_cycle_a_b_*`
+      — both 2-cycle and 3-cycle fixtures raise with messages that
+      name every cycle member.
+- [X] T016 [P] [VALID] `tests/platform_packs/test_validator_cross_refs.py::test_duplicate_slug_rejected`.
+- [X] T017 [P] [VALID] `tests/platform_packs/test_validator_cross_refs.py::test_duplicate_extension_rejected`.
+- [X] T018 [P] [VALID] `tests/platform_packs/test_validator_schema.py::test_schema_version_too_high_raises_specific_error`.
 
 ### Implementation
 
-- [ ] T019 [VALID] Create `src/romarr/platform_packs/yaml_loader.py` —
-      `load_pack(content: bytes) -> dict`, `canonicalize(parsed: dict) -> bytes`
-      (sort_keys + compact JSON), `compute_contents_hash(parsed: dict) -> str`
-      (SHA-256 hex).
-- [ ] T020 [VALID] Create `src/romarr/platform_packs/schema.py` — embed the
-      JSON Schema from `data-model.md` as a Python dict constant; `_validator`
-      lazily-instantiated `jsonschema.Draft202012Validator`.
-- [ ] T021 [VALID] Create `src/romarr/platform_packs/validator.py` —
-      `validate_pack_structure(parsed: dict) -> None` (raises on schema or
-      schema-version error), `validate_cross_refs(parsed: dict, existing_slugs:
-      set[str]) -> None` (duplicate detection, dangling parent, cycle detection
-      via DFS over the union graph), top-level `validate_pack(content: bytes,
-      existing_slugs: set[str]) -> ParsedPack`.
+- [X] T019 [VALID] Created `src/romarr/platform_packs/yaml_loader.py` —
+      `load_pack` (SafeLoader + 1 MiB cap), `canonicalize`,
+      `compute_contents_hash`.
+- [X] T020 [VALID] Created `src/romarr/platform_packs/schema.py` — JSON
+      Schema dict constant + lazy-cached `Draft202012Validator`.
+- [X] T021 [VALID] Created `src/romarr/platform_packs/validator.py` —
+      `validate_pack_structure`, `validate_cross_refs` (duplicates +
+      dangling + cycles + adversarial-regex check), `validate_pack`
+      orchestration. **Note on adversarial-regex check**: per FR-005a
+      the check was specified as a 50-ms wall-clock bound. Python's
+      ``re`` module does not release the GIL during a match, so a
+      thread-based timeout cannot reliably interrupt a doomed regex.
+      Switched to a static-pattern danger heuristic that rejects
+      nested-quantifier shapes (``(a+)+``, ``(a*)*``, ``(a|aa)+``,
+      etc.) at validation time. The wire-stable error code
+      ``regex_timeout`` is preserved so the API layer doesn't need
+      to change. A v1+ slice can re-enable the wall-clock bound by
+      moving to multiprocessing or the third-party ``regex`` library.
 
 **Checkpoint**: validator tests green including the ≥ 20 broken-pack corpus
 (SC-004 entry); validator is pure and importable from a REPL without a DB.

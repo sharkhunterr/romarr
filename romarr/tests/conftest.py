@@ -26,6 +26,7 @@ from romarr.domain import (
     models,  # noqa: F401
 )
 from romarr.metadata import models as _metadata_models  # noqa: F401
+from romarr.platform_packs import models as _platform_pack_models  # noqa: F401
 
 
 @pytest_asyncio.fixture

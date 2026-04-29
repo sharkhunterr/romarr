@@ -1,0 +1,37 @@
+pack_version: "2026.04.002"
+schema_version: 1
+description: "Two-platform pack with parent linkage and naming tokens"
+parsing_strategies:
+  - id: ines-header
+    description: "iNES header reader"
+    regex: "^NES\\x1A"
+    apply_to_platforms: ["nes"]
+platforms:
+  - slug: nes
+    name: Nintendo Entertainment System
+    short_name: NES
+    manufacturer: Nintendo
+    release_year: 1983
+    is_handheld: false
+    is_disc_based: false
+    formats:
+      - extension: ".nes"
+        format_type: cartridge
+        is_primary: true
+        parser_strategy: ines-header
+    naming_tokens:
+      - pattern: "\\(USA\\)"
+        meaning: content_type
+        example: "Super Mario Bros (USA).nes"
+  - slug: snes
+    name: Super Nintendo Entertainment System
+    short_name: SNES
+    manufacturer: Nintendo
+    release_year: 1990
+    is_handheld: false
+    is_disc_based: false
+    parent_platform_slug: nes
+    formats:
+      - extension: ".sfc"
+        format_type: cartridge
+        is_primary: true

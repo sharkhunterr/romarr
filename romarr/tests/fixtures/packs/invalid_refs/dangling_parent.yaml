@@ -1,0 +1,10 @@
+pack_version: "2026.04.099"
+schema_version: 1
+platforms:
+  - slug: snes
+    name: SNES
+    manufacturer: Nintendo
+    parent_platform_slug: nes-that-doesnt-exist
+    formats:
+      - extension: ".sfc"
+        format_type: cartridge

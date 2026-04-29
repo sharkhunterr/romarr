@@ -1,0 +1,18 @@
+pack_version: "2026.04.001"
+schema_version: 1
+description: "Minimal one-platform pack"
+platforms:
+  - slug: megadrive
+    name: Sega Mega Drive
+    short_name: "Mega Drive"
+    manufacturer: Sega
+    release_year: 1988
+    is_handheld: false
+    is_disc_based: false
+    metadata_ids:
+      igdb_id: 29
+      screenscraper_id: 1
+    formats:
+      - extension: ".md"
+        format_type: cartridge
+        is_primary: true

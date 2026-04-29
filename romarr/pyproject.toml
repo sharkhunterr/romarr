@@ -43,6 +43,9 @@ dependencies = [
     # Utility
     "structlog>=24.1",
     "tenacity>=8.2",
+    # Platform Packs (spec 003)
+    "PyYAML>=6.0",
+    "jsonschema>=4.21",
 ]
 
 [project.optional-dependencies]

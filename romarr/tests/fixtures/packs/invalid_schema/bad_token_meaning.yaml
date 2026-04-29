@@ -1,0 +1,12 @@
+pack_version: "2026.04.099"
+schema_version: 1
+platforms:
+  - slug: nes
+    name: NES
+    manufacturer: Nintendo
+    formats:
+      - extension: ".nes"
+        format_type: cartridge
+    naming_tokens:
+      - pattern: "\\(USA\\)"
+        meaning: country

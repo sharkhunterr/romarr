@@ -1,0 +1,10 @@
+pack_version: "2026.04.099"
+schema_version: 1
+platforms:
+  - slug: nes
+    name: NES
+    manufacturer: Nintendo
+    release_year: 1492
+    formats:
+      - extension: ".nes"
+        format_type: cartridge
