@@ -149,22 +149,30 @@ purely from a test fixture.
 
 ## Phase 4: Provider — IGDB (`IGDB`)
 
-- [ ] T024 [IGDB] `tests/metadata/providers/test_igdb.py::test_oauth_flow` —
-      respx-mocked Twitch OAuth `client_credentials` grant; assert the access
-      token is cached in-memory; assert a 401 triggers a single re-auth and
-      retry.
-- [ ] T025 [IGDB] `tests/metadata/providers/test_igdb.py::test_search_and_get`
-      — respx-mocked `/games` and `/covers`; assert the returned
-      `GameMetadata` populates the documented fields.
-- [ ] T026 [IGDB] `tests/metadata/providers/test_igdb.py::test_platform_mapping`
-      — assert `get_platform_mapping("megadrive")` → IGDB platform id 29 (the
-      established IGDB id for Mega Drive); the mapping is read from the
-      `platform.igdb_id` column populated by foundation.
-- [ ] T027 [IGDB] Create `src/romarr/metadata/providers/igdb.py` — Twitch
-      OAuth client-credentials grant, in-memory token cache, query language
-      bodies (`fields *; search "..."; where platforms = (29);`), cover URL
-      derivation, returns `GameMetadata` populating
-      `title/summary/genres/release_date/developer/publisher/rating/themes/franchises/age_rating/cover`.
+- [X] T024 [IGDB] `tests/metadata/providers/test_igdb.py` (test_oauth_lazy_fetch_and_cache,
+      test_oauth_401_triggers_reauth_and_retry, test_oauth_refreshes_when_near_expiry,
+      test_oauth_401_response_maps_to_auth_error) — respx-mocked Twitch
+      OAuth `client_credentials` grant; bearer cached in-memory; in-flight
+      401 triggers a single re-auth + retry; near-expiry refresh fires
+      proactively at 60 s.
+- [X] T025 [IGDB] `tests/metadata/providers/test_igdb.py` (test_search_games_returns_results,
+      test_get_game_populates_documented_fields, test_get_game_unknown_id_raises_not_found,
+      test_get_cover_returns_bytes) — respx-mocked ``/games`` returns
+      a `GameMetadata` populating title / summary / genres / release_date
+      / developer / publisher / rating / themes / franchises / age_rating
+      / cover; the static-CDN cover GET round-trips bytes + Content-Type.
+- [X] T026 [IGDB] `tests/metadata/providers/test_igdb.py::test_platform_mapping_megadrive_is_29`
+      — assert `get_platform_mapping("megadrive")` → 29 (matches the
+      foundation platform.igdb_id seed). Override path covered by
+      `test_platform_mapping_can_be_overridden_via_configure`. The
+      built-in mapping mirrors the 5 MVP platforms; configure() lets
+      operators inject overrides without DB I/O at request time.
+- [X] T027 [IGDB] Create `src/romarr/metadata/providers/igdb.py` — Twitch
+      OAuth client-credentials grant, in-memory token cache, Apicalypse
+      query bodies (``fields ...; where ...; limit 20;``), cover URL
+      derivation off ``cover.image_id``, returns `GameMetadata`
+      populating every field IGDB supports. Self-registers via
+      ``register_provider("igdb", IGDBProvider)`` at module import.
 
 **Checkpoint**: IGDB tests green; module passes ruff + (optional) mypy.
 

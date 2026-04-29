@@ -40,6 +40,12 @@ from romarr.metadata.providers import (
     ProviderCapabilities,
     register_provider,
 )
+
+# Side-effect imports: each provider module registers itself in
+# PROVIDER_REGISTRY at import time. Adding a provider in a future
+# slice means dropping its module here AND adding the test under
+# tests/metadata/providers/.
+from romarr.metadata.providers import igdb as _igdb  # noqa: F401
 from romarr.metadata.registry import load_enabled_providers
 from romarr.metadata.types import (
     AggregationResult,
