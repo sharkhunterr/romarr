@@ -29,18 +29,18 @@ single coding session (≤ 2 hours).
 **Purpose**: stand up the Python package, dependency manifest, lint/type/test toolchain,
 and Alembic skeleton. No domain logic yet.
 
-- [ ] T001 [SCAF] Create `pyproject.toml` with project metadata, runtime dependencies
+- [X] T001 [SCAF] Create `pyproject.toml` with project metadata, runtime dependencies
       (sqlalchemy[asyncio]>=2, aiosqlite, asyncpg, pydantic>=2, alembic, lxml, httpx,
       tenacity, structlog, pydantic-settings) and dev dependencies (pytest, pytest-asyncio,
       pytest-cov, hypothesis, respx, freezegun, ruff, mypy).
-- [ ] T002 [P] [SCAF] Configure `[tool.ruff]` and `[tool.ruff.lint]` in `pyproject.toml`
+- [X] T002 [P] [SCAF] Configure `[tool.ruff]` and `[tool.ruff.lint]` in `pyproject.toml`
       — line length 100, select `E,F,W,I,B,UP,SIM,RUF`, target-version `py312`.
-- [ ] T003 [P] [SCAF] Configure `[tool.mypy]` in `pyproject.toml` — `strict = true`,
+- [X] T003 [P] [SCAF] Configure `[tool.mypy]` in `pyproject.toml` — `strict = true`,
       `files = ["src/romarr/domain", "src/romarr/identification"]`.
-- [ ] T004 [P] [SCAF] Configure `[tool.pytest.ini_options]` in `pyproject.toml` —
+- [X] T004 [P] [SCAF] Configure `[tool.pytest.ini_options]` in `pyproject.toml` —
       `asyncio_mode = "auto"`, `addopts = "--cov=romarr --cov-report=term-missing"`,
       coverage thresholds via `[tool.coverage.report]`.
-- [ ] T005 [SCAF] Create `src/romarr/__init__.py` exposing `__version__`.
+- [X] T005 [SCAF] Create `src/romarr/__init__.py` exposing `__version__`.
 - [ ] T006 [SCAF] Create `src/romarr/config/settings.py` — Pydantic `BaseSettings` with
       `database_url` (default `sqlite+aiosqlite:///./romarr.db`), `hasheous_base_url`,
       `playmatch_base_url`, `hash_buffer_bytes` (default 1 MiB), env prefix `ROMARR_`.
@@ -85,21 +85,21 @@ and cross-table invariant validators.
 
 ### Implementation
 
-- [ ] T017 [DOM] Create `src/romarr/domain/enums.py` — `DumpStatus`, `NamingConvention`,
+- [X] T017 [DOM] Create `src/romarr/domain/enums.py` — `DumpStatus`, `NamingConvention`,
       `ReleaseStatus`, `GameStatus`, `PackSource`, `FormatType`, `TokenMeaning`,
       `DatSource`, `ImportedVia` as `enum.StrEnum` subclasses.
 - [ ] T018 [DOM] Create `src/romarr/domain/validators.py` — slug regex, hex hash
       validators (8/32/40/64), ISO-3166-1 alpha-2 list validator, ISO-639-1 list
       validator, multi-disc cross-field invariant helper.
-- [ ] T019 [P] [DOM] Create `src/romarr/domain/models/platform.py` — `Platform`,
+- [X] T019 [P] [DOM] Create `src/romarr/domain/models/platform.py` — `Platform`,
       `PlatformFormat`, `PlatformNamingToken`, `PlatformPack` SQLAlchemy 2.0 models.
-- [ ] T020 [P] [DOM] Create `src/romarr/domain/models/game.py` — `Game` model with
+- [X] T020 [P] [DOM] Create `src/romarr/domain/models/game.py` — `Game` model with
       relationship back to Platform.
-- [ ] T021 [P] [DOM] Create `src/romarr/domain/models/release.py` — `Release` model
+- [X] T021 [P] [DOM] Create `src/romarr/domain/models/release.py` — `Release` model
       with self-FK for `parent_release_id`.
-- [ ] T022 [P] [DOM] Create `src/romarr/domain/models/dump.py` — `Dump` and
+- [X] T022 [P] [DOM] Create `src/romarr/domain/models/dump.py` — `Dump` and
       `UnidentifiedDump` models.
-- [ ] T023 [P] [DOM] Create `src/romarr/domain/models/dat.py` — `DatEntry` model with
+- [X] T023 [P] [DOM] Create `src/romarr/domain/models/dat.py` — `DatEntry` model with
       composite indexes.
 - [ ] T024 [DOM] Create `src/romarr/domain/models/__init__.py` exporting every model
       (so Alembic autogenerate sees them all).
@@ -133,19 +133,19 @@ pass. Async-safe.
 
 ### Tests
 
-- [ ] T032 [HASH] `tests/identification/test_hasher.py` — assert correct CRC32, MD5,
+- [X] T032 [HASH] `tests/identification/test_hasher.py` — assert correct CRC32, MD5,
       SHA-1 for a 1 MiB fixture (`tests/fixtures/roms/known_hash_1mb.bin`) with known
       precomputed hashes; assert the same call also returns SHA-256 when requested.
-- [ ] T033 [HASH] `tests/identification/test_hasher.py::test_buffer_size_respected`
+- [X] T033 [HASH] `tests/identification/test_hasher.py::test_buffer_size_respected`
       — patch the read buffer and assert the file is read in the configured chunk
       size, never larger.
-- [ ] T034 [HASH] `tests/identification/test_hasher.py::test_runs_off_event_loop`
+- [X] T034 [HASH] `tests/identification/test_hasher.py::test_runs_off_event_loop`
       — call from an async test, assert `asyncio.get_running_loop()` is unblocked
       during the hash via `loop.run_in_executor` or equivalent.
 
 ### Implementation
 
-- [ ] T035 [HASH] Create `src/romarr/identification/hasher.py` — `Hasher` class with
+- [X] T035 [HASH] Create `src/romarr/identification/hasher.py` — `Hasher` class with
       `hash_file(path, *, want_sha256=False)` (sync, streaming) and
       `async_hash_file(path, *, want_sha256=False)` that delegates to a
       threadpool. Buffer size from `Settings.hash_buffer_bytes`.

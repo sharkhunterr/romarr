@@ -1,0 +1,124 @@
+[project]
+name = "romarr"
+version = "0.0.1"
+description = "Self-hosted ROM acquisition manager for the *arr ecosystem"
+license = { text = "GPL-3.0-or-later" }
+authors = [{ name = "Jérémie Dathée" }]
+requires-python = ">=3.12"
+readme = { file = "README.md", content-type = "text/markdown" }
+
+dependencies = [
+    # Web framework + ASGI
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    # Data & validation
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    # Database
+    "sqlalchemy[asyncio]>=2.0.27",
+    "alembic>=1.13",
+    "aiosqlite>=0.19",
+    "asyncpg>=0.29",
+    # HTTP client
+    "httpx>=0.27",
+    # XML parsing (DAT files, Torznab)
+    "lxml>=5.1",
+    # ROM-specific helpers
+    "rarfile>=4.1",
+    "py7zr>=0.21",
+    # Hash performance
+    "xxhash>=3.4",
+    # Auth + crypto
+    "cryptography>=42.0",
+    "passlib[bcrypt]>=1.7.4",
+    "authlib>=1.3",
+    # Notifications
+    "apprise>=1.7",
+    # Scheduler
+    "apscheduler>=3.10",
+    # Templating (Jinja2 sandbox for naming + notification templates)
+    "jinja2>=3.1",
+    # Fuzzy matching
+    "rapidfuzz>=3.6",
+    # Utility
+    "structlog>=24.1",
+    "tenacity>=8.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=4.1",
+    "pytest-mock>=3.12",
+    "respx>=0.20",
+    "ruff>=0.3",
+    "mypy>=1.8",
+    "freezegun>=1.4",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/romarr"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",        # pycodestyle + pyflakes
+    "I",                  # isort
+    "N",                  # pep8-naming
+    "UP",                 # pyupgrade
+    "B",                  # bugbear
+    "C4",                 # comprehensions
+    "PIE",                # misc lint
+    "SIM",                # simplify
+    "RUF",                # ruff-specific
+    "TCH",                # type-checking imports
+]
+ignore = [
+    "E501",  # line length handled by formatter
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+# Strict on the bedrock; relaxed elsewhere until those layers ship.
+module = ["romarr.domain.*", "romarr.identification.*"]
+disallow_any_generics = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra --strict-markers --cov=romarr --cov-report=term-missing --cov-report=html"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks integration tests requiring external services",
+]
+
+[tool.coverage.run]
+source = ["src/romarr"]
+omit = ["src/romarr/migrations/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
