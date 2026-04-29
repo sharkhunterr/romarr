@@ -1,0 +1,712 @@
+---
+
+description: "Granular task list for the React 18 + TypeScript PWA frontend — organized by page + reusable components phase"
+---
+
+# Tasks: Frontend (React PWA)
+
+**Input**: Design documents from `specs/014-frontend-pwa/`
+**Prerequisites**: spec 013 (REST API & WebSocket) shipped — the OpenAPI
+spec at `/api/v3/openapi.json` is the codegen source.
+**Tests**: MANDATORY (Constitution Article XVI; SC-006: ≥ 60% coverage on
+critical paths)
+
+**Organization**: 16 phases — scaffolding, codegen, shared + ROM
+components, routing/auth/theme, WebSocket, PWA, then **one phase per
+page** (11 pages), then global search, i18n, accessibility, E2E,
+hardening.
+
+## Format: `[ID] [P?] [Phase] Description`
+
+- `[P]` = parallelizable with other `[P]` tasks in the same phase.
+- Phase tag short codes: `SCAF`, `CODEGEN`, `SHARED`, `ROM`,
+  `ROUTING`, `WS`, `PWA`, `P-DASH`, `P-LIB`, `P-ADD`, `P-GAME`,
+  `P-WANT`, `P-ACT`, `P-CAL`, `P-SET`, `P-SYS`, `P-AUTH`,
+  `P-SETUP`, `SEARCH`, `I18N`, `A11Y`, `E2E`, `HARD`. (16 phases
+  total — `P-AUTH` covers Login + the auth-guard for all pages,
+  and the eight Settings sub-pages share `P-SET`.)
+
+---
+
+## Phase 1: Scaffolding (`SCAF`)
+
+- [ ] T001 [SCAF] Initialise the `web/` workspace with Vite (React +
+      TypeScript template) and pnpm.
+- [ ] T002 [P] [SCAF] Configure `tsconfig.json` with `strict: true`
+      and the documented path aliases (`@/components`, `@/lib`, etc.).
+- [ ] T003 [P] [SCAF] Install Tailwind 3.x + PostCSS + Autoprefixer;
+      configure `tailwind.config.ts` with shadcn/ui variables.
+- [ ] T004 [P] [SCAF] Install shadcn/ui CLI; run `init` to drop the
+      core primitives (Button, Dialog, DropdownMenu, Tabs, etc.) into
+      `src/components/ui/`.
+- [ ] T005 [P] [SCAF] Install runtime deps:
+      `@tanstack/react-query`, `@tanstack/react-virtual`, `zustand`,
+      `react-router-dom@6`, `i18next` + `react-i18next`,
+      `i18next-browser-languagedetector`, `i18next-http-backend`,
+      `date-fns`, `recharts`, `@use-gesture/react`,
+      `framer-motion`, `vite-plugin-pwa`, `workbox-window`.
+- [ ] T006 [P] [SCAF] Install dev deps: `vitest`,
+      `@testing-library/react`, `@testing-library/jest-dom`,
+      `@testing-library/user-event`, `@playwright/test`,
+      `@axe-core/playwright`, `@axe-core/react`,
+      `eslint-plugin-react`, `eslint-plugin-jsx-a11y`,
+      `eslint-plugin-i18next`, `openapi-typescript`, `orval`.
+- [ ] T007 [SCAF] Author `eslint.config.js` enforcing
+      `react/jsx-no-literals` on `src/components/**` and
+      `src/pages/**`, plus `jsx-a11y/*` and `react-hooks/*`
+      defaults.
+- [ ] T008 [SCAF] Author `vite.config.ts` with `vite-plugin-pwa`
+      registered (Workbox runtime caching: NetworkFirst on
+      `/api/v3/*`, CacheFirst on assets, no caching for
+      mutations).
+- [ ] T009 [SCAF] Wire `web/` build into the Docker image: add a
+      multi-stage build that runs `pnpm install && pnpm build` and
+      copies `dist/web/` into `/opt/romarr/web/`. The backend's
+      `StaticFiles` mount serves it at `/`.
+
+**Checkpoint**: `pnpm dev` brings up a working Vite dev server;
+`pnpm build` produces a deployable artifact.
+
+---
+
+## Phase 2: OpenAPI Codegen (`CODEGEN`)
+
+### Tests
+
+- [ ] T010 [P] [CODEGEN] `tests/unit/api/test_codegen_smoke.test.ts`
+      — import a generated type (e.g., `GameRead`); assert it
+      compiles + has the expected fields.
+
+### Implementation
+
+- [ ] T011 [CODEGEN] Add `npm run codegen` script that runs
+      `openapi-typescript http://localhost:8585/api/v3/openapi.json
+      -o src/types/api/schema.ts` followed by
+      `orval --config orval.config.ts`.
+- [ ] T012 [CODEGEN] Author `orval.config.ts` configured to emit
+      TanStack Query hooks under `src/lib/api/generated/`. Group
+      by tag (Game, Release, etc.).
+- [ ] T013 [CODEGEN] Run `pnpm codegen` once against the running
+      backend (or a committed `web/openapi.json` snapshot) and
+      commit the output.
+- [ ] T014 [CODEGEN] Add a CI step that runs `pnpm codegen` against
+      a freshly-built backend's spec; assert the working tree is
+      clean (i.e., the committed codegen matches the spec).
+
+**Checkpoint**: every backend resource has at least one generated
+hook; TypeScript compiles.
+
+---
+
+## Phase 3: Shared Layout & Components (`SHARED`)
+
+### Tests
+
+- [ ] T015 [P] [SHARED] `tests/components/shared/test_BottomNav.tsx`
+      — renders the 5 documented entries; on a 360 px viewport it
+      is visible; on ≥ 768 px viewport it is hidden.
+- [ ] T016 [P] [SHARED] `tests/components/shared/test_OfflineIndicator.tsx`
+      — appears after 10 s of disconnection (freezegun-equivalent
+      via `vi.useFakeTimers`).
+- [ ] T017 [P] [SHARED] `tests/components/shared/test_ActionSheet.tsx`
+      — opens from the bottom on mobile; standard Dialog on
+      desktop.
+- [ ] T018 [P] [SHARED] `tests/components/shared/test_PullToRefresh.tsx`
+      — gesture triggers the documented refetch callback.
+
+### Implementation
+
+- [ ] T019 [SHARED] Create `src/components/shared/Header.tsx` —
+      app title, theme toggle, language toggle, profile menu,
+      OfflineIndicator slot, ⌘+K hint.
+- [ ] T020 [P] [SHARED] Create `src/components/shared/BottomNav.tsx`
+      — Library / Wanted / Activity / Settings / Search. Hidden
+      ≥ 768 px.
+- [ ] T021 [P] [SHARED] Create
+      `src/components/shared/OfflineIndicator.tsx` — appears when
+      WebSocket is offline > 10 s OR navigator.onLine is false.
+- [ ] T022 [P] [SHARED] Create
+      `src/components/shared/EmptyState.tsx` — illustration +
+      i18n message + optional CTA.
+- [ ] T023 [P] [SHARED] Create
+      `src/components/shared/LoadingSkeleton.tsx` — shimmer for
+      list/card/detail variants.
+- [ ] T024 [P] [SHARED] Create
+      `src/components/shared/ActionSheet.tsx` — wraps shadcn/ui
+      Dialog with bottom-sheet animation on mobile via Framer
+      Motion.
+- [ ] T025 [P] [SHARED] Create
+      `src/components/shared/FloatingActionButton.tsx`.
+- [ ] T026 [P] [SHARED] Create
+      `src/components/shared/PullToRefresh.tsx` — `@use-gesture/react`
+      pan-y handler.
+
+**Checkpoint**: every component renders correctly on 360 px AND
+≥ 768 px in Storybook (or in the test suite's RTL snapshots).
+
+---
+
+## Phase 4: ROM-specific Components (`ROM`)
+
+**Purpose**: the 10 first-class reusable pieces consumed across pages.
+
+### Tests
+
+- [ ] T027 [P] [ROM] `tests/components/rom/test_RegionBadge.tsx`
+      — renders flag emoji + ISO code with the documented colors.
+- [ ] T028 [P] [ROM] `tests/components/rom/test_ConventionBadge.tsx`
+      — table-driven over the 5 conventions; each renders the
+      documented color.
+- [ ] T029 [P] [ROM] `tests/components/rom/test_DumpStatusIcon.tsx`
+      — table-driven; correct icon per status.
+- [ ] T030 [P] [ROM] `tests/components/rom/test_MultiDiscAccordion.tsx`
+      — collapses/expands; header shows "Disc 1/3".
+- [ ] T031 [P] [ROM] `tests/components/rom/test_HashBadge.tsx`
+      — copy-to-clipboard fires; toast appears.
+- [ ] T032 [P] [ROM] `tests/components/rom/test_ScoreBadge.tsx`
+      — tooltip shows the per-CustomFormat breakdown.
+- [ ] T033 [P] [ROM] `tests/components/rom/test_LanguagePills.tsx`
+      — flag + ISO code per language.
+- [ ] T034 [P] [ROM] `tests/components/rom/test_DatVerifiedBadge.tsx`
+      — "DAT ✓" / "DAT ?" with linked tooltip.
+- [ ] T035 [P] [ROM] `tests/components/rom/test_PlatformIcon.tsx`
+      — SVG sprite resolves correctly.
+- [ ] T036 [P] [ROM] `tests/components/rom/test_CoverImage.tsx`
+      — lazy-loads; fallback gradient on missing.
+
+### Implementation
+
+- [ ] T037 [P] [ROM] Create the ten components verbatim per the
+      spec (one file each under `src/components/rom/`). Each
+      component is fully type-checked, accepts the documented
+      Props, exports both the component and its `Props` type.
+
+**Checkpoint**: every ROM component test passes; the components are
+imported by at least two pages each (verified by a static check in
+T172).
+
+---
+
+## Phase 5: Routing, Auth Guard, Theme (`ROUTING`)
+
+### Tests
+
+- [ ] T038 [P] [ROUTING] `tests/unit/routing/test_auth_guard.tsx`
+      — protected route + unauthenticated state redirects to
+      `/login` with `returnTo` query param.
+- [ ] T039 [P] [ROUTING] `tests/unit/routing/test_theme_provider.tsx`
+      — initial theme reads from localStorage; switching persists.
+- [ ] T040 [P] [ROUTING] `tests/unit/routing/test_no_flash.tsx`
+      — synchronous theme application before first paint.
+
+### Implementation
+
+- [ ] T041 [ROUTING] Create `src/App.tsx` — root with
+      `<QueryClientProvider>`, `<I18nextProvider>`,
+      `<ThemeProvider>`, `<RouterProvider>`, `<Toaster>`.
+- [ ] T042 [ROUTING] Create `src/components/shared/AuthGuard.tsx`
+      — TanStack Query reads `/api/v3/auth/me`; on 401, navigate
+      to `/login?returnTo=...`; on `is_active=false`, show "Account
+      deactivated".
+- [ ] T043 [ROUTING] Create
+      `src/components/shared/ThemeProvider.tsx` — applies dark/
+      light/auto via `class="dark"` on `<html>`. Auto follows
+      `prefers-color-scheme`. Inline script in `index.html` reads
+      the persisted choice before React hydration to avoid flash.
+- [ ] T044 [ROUTING] Create the route table in `App.tsx` (data
+      router) declaring all 11 pages plus their sub-routes plus a
+      `NotFound` catch-all.
+
+**Checkpoint**: `/login` and the protected routes correctly route
+based on auth state.
+
+---
+
+## Phase 6: WebSocket Client (`WS`)
+
+### Tests
+
+- [ ] T045 [P] [WS] `tests/unit/ws/test_reconnect_backoff.test.ts`
+      — disconnect; assert reconnection at 1 s → 2 → 4 → 8 → 30 s
+      cap.
+- [ ] T046 [P] [WS] `tests/unit/ws/test_invalidations.test.ts`
+      — `releaseImported` event triggers
+      `queryClient.invalidateQueries(['releases'])`.
+- [ ] T047 [P] [WS] `tests/unit/ws/test_offline_indicator.test.ts`
+      — disconnection > 10 s flips the offline state in the
+      Zustand UI store.
+
+### Implementation
+
+- [ ] T048 [WS] Create `src/lib/ws/client.ts` — `WebSocketClient`
+      class. Connects on app load; reconnects with exponential
+      backoff; dispatches typed events.
+- [ ] T049 [WS] Create `src/lib/ws/invalidations.ts` — pure
+      `eventToInvalidations(messageType, data) ->
+      QueryKey[]` table. Consumed by the client's event handler.
+- [ ] T050 [WS] Wire the client into `App.tsx` so it boots after
+      auth resolves.
+
+**Checkpoint**: WS client tests green; events trigger the right
+invalidations.
+
+---
+
+## Phase 7: PWA & Service Worker (`PWA`)
+
+### Tests
+
+- [ ] T051 [P] [PWA] `tests/unit/pwa/test_install_prompt.test.tsx`
+      — `beforeinstallprompt` handler captured; the Install button
+      appears.
+- [ ] T052 [P] [PWA] `tests/unit/pwa/test_offline_reads.test.tsx`
+      — simulate offline; the Library page renders from cache.
+- [ ] T053 [P] [PWA] Lighthouse CI gate in
+      `tests/e2e/lighthouse.spec.ts` — production build scores
+      ≥ 90 on Performance, Accessibility, Best Practices, PWA
+      (SC-003).
+
+### Implementation
+
+- [ ] T054 [PWA] Configure `vite-plugin-pwa` with the Workbox
+      runtime caching rules: `NetworkFirst` for `/api/v3/*`
+      (with a 5-minute cache fallback), `CacheFirst` for
+      `/static/*` and `/icons/*`. Exclude POST/PUT/PATCH/DELETE
+      from any cache.
+- [ ] T055 [PWA] Author `public/manifest.webmanifest` with the
+      documented icon sizes (192, 512, maskable) and theme color.
+- [ ] T056 [PWA] Implement `beforeinstallprompt` handler in
+      `src/lib/pwa/install.ts`; surface the install button in
+      Header on the second visit.
+- [ ] T057 [PWA] Implement Web Push registration scaffolding in
+      `src/lib/pwa/push.ts`. Subscribe to push only when the
+      operator opts in via Settings (UI lives in P-SET phase).
+- [ ] T058 [PWA] Create `src/pages/Offline.tsx` — graceful page
+      shown when navigation lands without a cache hit; "Try
+      again" button.
+
+**Checkpoint**: Lighthouse PWA gate passes on the production build.
+
+---
+
+## Phase 8: Page — Dashboard (`P-DASH`)
+
+### Tests
+
+- [ ] T059 [P] [P-DASH] `tests/unit/pages/test_Dashboard.tsx::test_renders_stats`
+      — fixture stats; assert each card shows the expected number.
+- [ ] T060 [P] [P-DASH] `tests/unit/pages/test_Dashboard.tsx::test_health_panel_appears`
+      — fixture health snapshot with one warning; the health
+      panel renders with the documented message.
+- [ ] T061 [P] [P-DASH] `tests/unit/pages/test_Dashboard.tsx::test_quick_actions`
+      — clicking "Trigger Missing Search" fires the documented
+      command POST.
+
+### Implementation
+
+- [ ] T062 [P-DASH] Create `src/pages/Dashboard/index.tsx` and its
+      sub-components (StatCard, HealthPanel, ActivityFeed,
+      QuickActions). Live-updates via WebSocket invalidations.
+
+**Checkpoint**: Dashboard renders correctly on 360 px and 1920 px.
+
+---
+
+## Phase 9: Page — Library (`P-LIB`)
+
+### Tests
+
+- [ ] T063 [P] [P-LIB] `tests/unit/pages/test_Library.tsx::test_360px_no_horizontal_scroll`
+      — Playwright viewport 360 × 640; assert
+      `document.body.scrollWidth === viewport.width`.
+- [ ] T064 [P] [P-LIB] `tests/unit/pages/test_Library.tsx::test_filters`
+      — apply platform + region filters; assert the API call
+      receives the right query params; the list updates.
+- [ ] T065 [P] [P-LIB] `tests/unit/pages/test_Library.tsx::test_virtual_scroll_10k`
+      — generate 10 000 fixture games; scroll; assert ≤ 30
+      DOM nodes in the list at any time (TanStack Virtual).
+- [ ] T066 [P] [P-LIB] `tests/unit/pages/test_Library.tsx::test_long_press_bulk_select`
+      — long-press a card on touch emulation; assert bulk-select
+      mode opens; ActionSheet appears with bulk actions.
+- [ ] T067 [P] [P-LIB] `tests/unit/pages/test_Library.tsx::test_search_debounce`
+      — type fast; assert one network call for the final query
+      (debounced ≤ 200 ms).
+
+### Implementation
+
+- [ ] T068 [P-LIB] Create `src/pages/Library/index.tsx` — grid
+      layout (1 / 2 / 4 / 6 columns by viewport).
+- [ ] T069 [P] [P-LIB] Create
+      `src/pages/Library/components/GameCard.tsx` using the ROM
+      components (CoverImage, RegionBadge, DumpStatusIcon,
+      PlatformIcon).
+- [ ] T070 [P] [P-LIB] Create
+      `src/pages/Library/components/FilterBar.tsx` with debounced
+      search + platform/library/profile/tag/genre/year/region
+      filters.
+- [ ] T071 [P-LIB] Wire the page to the generated `useGames` hook
+      with TanStack Virtual for the grid.
+- [ ] T072 [P-LIB] Add the FAB for "Add New" → navigate to
+      `/add`.
+
+**Checkpoint**: Library renders correctly at every documented
+viewport; SC-002 (60 fps on 10 000 items) is met in a perf test.
+
+---
+
+## Phase 10: Page — Add New (`P-ADD`)
+
+### Tests
+
+- [ ] T073 [P] [P-ADD] `tests/unit/pages/test_Add.tsx::test_lookup_query`
+      — type a query; assert `GET /api/v3/game/lookup?term=`
+      called.
+- [ ] T074 [P] [P-ADD] `tests/unit/pages/test_Add.tsx::test_add_modal`
+      — click Add; modal opens; submit; assert
+      `POST /api/v3/game` payload shape.
+
+### Implementation
+
+- [ ] T075 [P-ADD] Create `src/pages/Add/index.tsx` with the
+      lookup search bar and the platform multi-select.
+- [ ] T076 [P] [P-ADD] Create
+      `src/pages/Add/components/AddGameModal.tsx` with the
+      library/profile/monitored choices.
+
+**Checkpoint**: Add tests green.
+
+---
+
+## Phase 11: Page — Game Detail (`P-GAME`)
+
+### Tests
+
+- [ ] T077 [P] [P-GAME] `tests/unit/pages/test_GameDetail.tsx::test_six_tabs`
+      — assert all six tabs render and are reachable via
+      keyboard.
+- [ ] T078 [P] [P-GAME] `tests/unit/pages/test_GameDetail.tsx::test_edit_in_place`
+      — click pencil; type new value; submit; PATCH fires.
+- [ ] T079 [P] [P-GAME] `tests/unit/pages/test_GameDetail.tsx::test_lock_field`
+      — toggle lock on `title`; subsequent metadata refresh
+      preserves the value.
+- [ ] T080 [P] [P-GAME] `tests/unit/pages/test_GameDetail.tsx::test_multi_disc_accordion`
+      — fixture 3-disc Game; the Releases tab groups them in a
+      MultiDiscAccordion.
+
+### Implementation
+
+- [ ] T081 [P-GAME] Create
+      `src/pages/GameDetail/index.tsx` with the tab router.
+- [ ] T082 [P] [P-GAME] Create
+      `src/pages/GameDetail/tabs/Overview.tsx` with EditableField
+      + LockToggle + AttributionBadge.
+- [ ] T083 [P] [P-GAME] Create
+      `src/pages/GameDetail/tabs/Releases.tsx` using
+      MultiDiscAccordion + ROM badges.
+- [ ] T084 [P] [P-GAME] Create
+      `src/pages/GameDetail/tabs/History.tsx`.
+- [ ] T085 [P] [P-GAME] Create
+      `src/pages/GameDetail/tabs/Files.tsx` (HashBadge per dump).
+- [ ] T086 [P] [P-GAME] Create
+      `src/pages/GameDetail/tabs/ManualSearch.tsx` (live indexer
+      search results with ScoreBadge).
+- [ ] T087 [P] [P-GAME] Create
+      `src/pages/GameDetail/tabs/Notes.tsx`.
+
+**Checkpoint**: every tab renders; edit-in-place persists.
+
+---
+
+## Phase 12: Page — Wanted (`P-WANT`)
+
+### Tests
+
+- [ ] T088 [P] [P-WANT] `tests/unit/pages/test_Wanted.tsx::test_two_tabs`
+      — Missing + Cutoff each load their respective endpoints.
+- [ ] T089 [P] [P-WANT] `tests/unit/pages/test_Wanted.tsx::test_bulk_search`
+      — select 3 rows; click "Search Selected"; the documented
+      bulk command POST fires.
+
+### Implementation
+
+- [ ] T090 [P-WANT] Create `src/pages/Wanted/index.tsx` with the
+      Missing/Cutoff tabs; bulk-select state; FAB for
+      bulk-search trigger.
+
+**Checkpoint**: bulk-search workflow works end-to-end.
+
+---
+
+## Phase 13: Page — Activity (`P-ACT`)
+
+### Tests
+
+- [ ] T091 [P] [P-ACT] `tests/unit/pages/test_Activity.tsx::test_queue_live_updates`
+      — fixture queue rows; emit a `queueUpdated` WS event;
+      assert the row updates.
+- [ ] T092 [P] [P-ACT] `tests/unit/pages/test_Activity.tsx::test_swipe_remove`
+      — swipe-left on a queue card; remove action fires.
+
+### Implementation
+
+- [ ] T093 [P-ACT] Create `src/pages/Activity/index.tsx` with the
+      Queue + History tabs; live progress bars; swipe gestures.
+
+**Checkpoint**: Activity page mobile-friendly with swipe gestures.
+
+---
+
+## Phase 14: Pages — Calendar, Settings, System, Login, Setup (`P-CAL` / `P-SET` / `P-SYS` / `P-AUTH` / `P-SETUP`)
+
+The remaining five pages share a single phase to keep the count
+manageable; each ships ≥ 1 test + an implementation.
+
+### Tests
+
+- [ ] T094 [P] [P-CAL] `tests/unit/pages/test_Calendar.tsx::test_empty_state`
+      — no calendar source configured; EmptyState renders
+      gracefully.
+- [ ] T095 [P] [P-SET] `tests/unit/pages/test_Settings.tsx::test_sidebar_nav`
+      — every documented sub-route is reachable from the sidebar.
+- [ ] T096 [P] [P-SET] `tests/unit/pages/Settings/test_Profiles.tsx::test_six_subtabs`
+      — Quality / Region / Dump / Language / Naming / CustomFormats
+      each render; the Naming tab shows a live preview.
+- [ ] T097 [P] [P-SET] `tests/unit/pages/Settings/test_CustomFormats.tsx::test_visual_builder`
+      — operator can add an OR-grouped condition via the visual
+      builder.
+- [ ] T098 [P] [P-SET] `tests/unit/pages/Settings/test_Indexers.tsx::test_test_button`
+      — test button fires the documented endpoint and shows
+      success/error.
+- [ ] T099 [P] [P-SYS] `tests/unit/pages/System/test_Tasks.tsx::test_trigger_button`
+      — trigger button POSTs to the documented endpoint.
+- [ ] T100 [P] [P-AUTH] `tests/unit/pages/test_Login.tsx::test_forms_login`
+      — submit credentials; cookie set; redirect to `returnTo`.
+- [ ] T101 [P] [P-AUTH] `tests/unit/pages/test_Login.tsx::test_oidc_button`
+      — OIDC enabled; "Sign in with SSO" button visible and
+      redirects to `/api/v3/auth/oidc/start`.
+- [ ] T102 [P] [P-SETUP] `tests/unit/pages/test_Setup.tsx::test_five_steps`
+      — Welcome → CreateAdmin → Library → DownloadClient →
+      Indexer → Done; navigation is one-way; back is allowed
+      within step n only.
+- [ ] T103 [P] [P-SETUP] `tests/unit/pages/test_Setup.tsx::test_skip_indexer`
+      — Skip button advances to Done without creating an
+      indexer.
+
+### Implementation
+
+- [ ] T104 [P-CAL] Create `src/pages/Calendar/index.tsx` (MVP =
+      EmptyState + month grid skeleton).
+- [ ] T105 [P-SET] Create `src/pages/Settings/index.tsx` with the
+      sidebar nav.
+- [ ] T106 [P] [P-SET] Create the 11 sub-pages under
+      `src/pages/Settings/` per the spec.
+- [ ] T107 [P-SYS] Create `src/pages/System/index.tsx` with the
+      five sub-pages (Status, Logs, Tasks, Backup, Updates).
+- [ ] T108 [P-AUTH] Create `src/pages/Login/index.tsx`.
+- [ ] T109 [P-SETUP] Create `src/pages/Setup/index.tsx` with the
+      5-step wizard.
+
+**Checkpoint**: every page in the documented set renders; key
+flows tested.
+
+---
+
+## Phase 15: Global Search ⌘+K (`SEARCH`)
+
+### Tests
+
+- [ ] T110 [P] [SEARCH] `tests/unit/components/test_GlobalSearch.tsx::test_keyboard_shortcut`
+      — `Ctrl+K`; modal opens with input focused.
+- [ ] T111 [P] [SEARCH] `tests/unit/components/test_GlobalSearch.tsx::test_groups_results`
+      — Games / Releases / Settings categories.
+- [ ] T112 [P] [SEARCH] `tests/unit/components/test_GlobalSearch.tsx::test_recent_searches`
+      — last 5 in localStorage.
+
+### Implementation
+
+- [ ] T113 [SEARCH] Create
+      `src/components/shared/GlobalSearch.tsx` — modal + keyboard
+      navigation + recent-searches store.
+
+**Checkpoint**: ⌘+K opens; navigates by keyboard.
+
+---
+
+## Phase 16: i18n + Theme + Accessibility + E2E + Hardening (`I18N` / `A11Y` / `E2E` / `HARD`)
+
+The closing four bundles are merged into a single phase since each
+is small but cross-cutting.
+
+### i18n (`I18N`)
+
+- [ ] T114 [P] [I18N] Author `public/locales/en/common.json` with
+      ~40 base strings (nav, errors, status).
+- [ ] T115 [P] [I18N] Author `public/locales/en/library.json`,
+      `library.json`, `settings.json`, `profiles.json`,
+      `indexers.json`, `downloaders.json`, `errors.json`,
+      `validation.json`.
+- [ ] T116 [P] [I18N] Author the parallel
+      `public/locales/fr/*.json` set (≈ 200 keys per language at
+      MVP).
+- [ ] T117 [P] [I18N] Configure i18next (lib/i18n/index.ts) with
+      `i18next-http-backend` to load JSON on demand.
+- [ ] T118 [P] [I18N] Configure date-fns locale switching in
+      `lib/i18n/dates.ts`.
+- [ ] T119 [P] [I18N] Add the language switcher to
+      `pages/Settings/Ui.tsx`.
+- [ ] T120 [I18N] CI gate: `eslint react/jsx-no-literals` zero
+      warnings on `components/` and `pages/` (FR-011).
+
+### Accessibility (`A11Y`)
+
+- [ ] T121 [P] [A11Y] `tests/a11y/critical-pages.spec.ts` — axe-core
+      against Dashboard, Library, GameDetail, Settings; assert
+      zero errors (FR-037, SC-007).
+- [ ] T122 [P] [A11Y] Add `aria-label` to every icon-only button
+      (sweep + lint rule `jsx-a11y/icon-button-needs-label`).
+- [ ] T123 [P] [A11Y] Honour `prefers-reduced-motion` in
+      `globals.css` — disable transitions when set.
+
+### E2E (`E2E`) — Playwright critical paths
+
+- [ ] T124 [P] [E2E] `tests/e2e/search-grab-import.spec.ts` —
+      operator searches manually, grabs a result, the import
+      pipeline lands a Dump.
+- [ ] T125 [P] [E2E] `tests/e2e/profile-edit.spec.ts` — operator
+      edits a Quality profile and reruns search; only matching
+      releases are visible.
+- [ ] T126 [P] [E2E] `tests/e2e/library-scan.spec.ts` — operator
+      triggers a library scan; progress bars on Activity update.
+- [ ] T127 [P] [E2E] `tests/e2e/setup-wizard.spec.ts` — fresh
+      database; the wizard flows end-to-end.
+- [ ] T128 [P] [E2E] `tests/e2e/bulk-missing-search.spec.ts` —
+      operator selects all wanted + triggers search; toasts fire
+      on grab.
+
+### Hardening (`HARD`)
+
+- [ ] T129 [HARD] Run `pnpm test --coverage`; verify ≥ 60% on
+      critical paths (SC-006).
+- [ ] T130 [HARD] Run `pnpm lint`; zero warnings on
+      `src/components/` and `src/pages/` (FR-011).
+- [ ] T131 [HARD] Run `pnpm tsc --noEmit`; zero errors (FR-039,
+      SC-008).
+- [ ] T132 [HARD] Run `pnpm build`; assert the initial-route gzip
+      bundle ≤ 500 KB (FR-040, SC-009).
+- [ ] T133 [HARD] Lighthouse CI — assert score ≥ 90 across
+      Performance / Accessibility / Best Practices / PWA (SC-003).
+- [ ] T134 [HARD] Static check — every ROM component is imported
+      by ≥ 2 pages (SC-009-equivalent for the components layer).
+- [ ] T135 [HARD] Update repo `CHANGELOG.md`: "0.14.0a1 — Frontend
+      (React PWA): mobile-first, installable PWA, FR + EN, 11
+      pages, 10 ROM components, OpenAPI codegen, SignalR-compat
+      WebSocket consumer."
+- [ ] T136 [HARD] Final review: tick every Functional Requirement
+      (FR-001 → FR-041) against a task ID; record gaps as follow-
+      up items.
+
+---
+
+## Dependencies & Execution Order
+
+### Phase Dependencies
+
+- **Phase 1 (SCAF)**: spec 013 shipped (so codegen has a target).
+- **Phase 2 (CODEGEN)**: depends on Phase 1.
+- **Phase 3 (SHARED)**: depends on Phase 1 (uses shadcn/ui
+  primitives).
+- **Phase 4 (ROM)**: depends on Phase 1; can run in parallel with
+  Phase 3.
+- **Phase 5 (ROUTING)**: depends on Phases 1, 2, 3.
+- **Phase 6 (WS)**: depends on Phases 1, 2.
+- **Phase 7 (PWA)**: depends on Phase 1.
+- **Phases 8–14 (pages)**: depend on Phases 2, 3, 4, 5, 6.
+- **Phase 15 (SEARCH)**: depends on Phases 2, 3.
+- **Phase 16 (I18N + A11Y + E2E + HARD)**: depends on every page
+  phase being green.
+
+### Within-Phase Parallelism
+
+- Phase 1: T002–T006 in parallel.
+- Phase 2: T010 sequential after T011-T014 mostly serial.
+- Phase 3: T015–T018 in parallel; T019–T026 in parallel.
+- Phase 4: T027–T036 in parallel; T037 in one batch.
+- Phase 5: T038–T040 in parallel.
+- Phase 6: T045–T047 in parallel.
+- Phase 7: T051–T053 in parallel.
+- Pages 8–14: each phase's tests + implementation parallel.
+- Phase 16: T114–T123 in parallel; T124–T128 in parallel.
+
+### Critical Path
+
+`SCAF → CODEGEN → SHARED → ROUTING → P-LIB → I18N → HARD`. The
+remaining pages and the WS / PWA work develop in parallel.
+
+### Implementation Strategy
+
+- **Day 1**: Phase 1 (SCAF) + Phase 2 (CODEGEN).
+- **Day 2**: Phase 3 (SHARED) + Phase 4 (ROM) in parallel.
+- **Day 3**: Phase 5 (ROUTING) + Phase 6 (WS) + Phase 7 (PWA) in
+  parallel.
+- **Day 4**: Phase 8 (Dashboard) + Phase 9 (Library — heaviest
+  page).
+- **Day 5**: Phases 10, 11 (Add + GameDetail).
+- **Day 6**: Phases 12, 13 (Wanted + Activity).
+- **Day 7**: Phase 14 (the remaining five pages).
+- **Day 8**: Phase 15 (Global Search).
+- **Day 9**: Phase 16 (i18n + a11y + E2E + hardening).
+
+This sizing assumes one developer working full-time. With two,
+P-LIB and the page-cluster in Phase 14 split cleanly across them.
+
+---
+
+## Notes
+
+- `[P]` tasks change different files only.
+- Tests are written BEFORE implementation in every phase.
+- Stop at any phase checkpoint — pages are independently
+  shippable. The minimum useful frontend is `SCAF + CODEGEN +
+  SHARED + ROM + ROUTING + WS + P-LIB + P-AUTH + I18N + HARD`,
+  which gives the operator a working Library + Login.
+- Avoid: native mobile apps (firm out — PWA suffices); plugin /
+  extension system (firm out); theme builder beyond dark/light/
+  auto (firm out); offline-first writes (deferred to v1+);
+  server-side rendering (firm out — private network).
+- Constitutional invariants under test:
+  - **Article XV (UI Discipline)** — 360 px functional everywhere
+    (T063, SC-001); installable PWA (T053, SC-003); ROM-specific
+    components first-class (T027–T037, FR-027); FR + EN day one
+    (T114-T120, FR-012); dark/light/auto with no flash (T039-T040,
+    FR-015-016).
+  - **Article IV (API Conventions)** — frontend consumes only the
+    documented `/api/v3/*` and `/signalr/messages` from spec 013
+    (CODEGEN gate via T014).
+  - **Article XVI (Quality Gates)** — ≥ 60% coverage on critical
+    paths (T129); axe-core zero errors (T121); ≤ 500 KB gzip
+    bundle (T132); TypeScript strict zero errors (T131);
+    Lighthouse PWA ≥ 90 (T133).
+  - **Article III (Locked Stack)** — React 18 + TypeScript strict
+    + Vite + Tailwind + shadcn/ui + TanStack Query v5 + Zustand;
+    no other frontend frameworks introduced.
+
+## Phase: Clarification Tasks (Session 2026-04-29)
+
+- [ ] CL001 [P] [US4] Configure `vite-plugin-pwa` with `registerType: 'prompt'` in `vite.config.ts` — service-worker auto-update is opt-in (FR-007a)
+- [ ] CL002 [P] [US4] Implement SW-update toast component in `src/components/shared/SwUpdateToast.tsx` — surfaces "New version available — Reload" CTA; `skipWaiting` + `clients.claim` + `window.location.reload()` fire ONLY on user click
+- [ ] CL003 [P] [US4] Wire `registerSW`'s `onNeedRefresh` callback in `src/main.tsx` to populate a Zustand `swUpdateStore` that the toast subscribes to
+- [ ] CL004 [P] [US2] Update Game Detail Overview tab in `src/pages/GameDetail/tabs/Overview.tsx` to call ONLY backend-proxied cover-swap endpoints — `GET /api/v3/cover/{game_id}/sources` to list candidates, `POST /api/v3/cover/{game_id}` to commit. NO direct calls to `steamgriddb.com` (FR-025a)
+- [ ] CL005 [P] [US2] Update CSP configuration to NOT allowlist any third-party origin for cover swap (the SteamGridDB CDN is reached only via backend proxy)
+- [ ] CL006 [P] Implement `<PageErrorBoundary>` component in `src/components/shared/PageErrorBoundary.tsx` per FR-038a — localized title via i18n, Retry action that resets the boundary, "Back to Dashboard" link, copyable short error id (hash of error message + chunk name); shell remains interactive
+- [ ] CL007 [P] Mount `<PageErrorBoundary>` around `<Outlet/>` in the router config in `src/App.tsx` so each top-level page is independently protected
+- [ ] CL008 [P] [US7] Implement preferences hydration order in `src/lib/auth/init.tsx` (FR-013b):
+  1. Hydrate auth via `GET /api/v3/auth/me`
+  2. Overwrite `localStorage` with `user.preferences`
+  3. Apply theme + language from preferences before first render
+  Optimistic UI on PATCH failure rolls back local change
+- [ ] CL009 [P] [US7] Add window-level error handler in `src/main.tsx` that logs unhandled errors to `console.error` and surfaces a generic localized toast — NO POST to any remote endpoint, NO third-party SDK (FR-038b)
+- [ ] CL010 [P] **Cross-spec consistency** (already applied to spec.md): the FR-009a body confirms the SPA uses cookie-only auth; CLIs/scripts use API keys per spec 010 FR-005. NO Bearer JWT in the chain at MVP
+- [ ] CL011 [P] Add tests in `tests/components/PageErrorBoundary.test.tsx` covering: descendant throws → fallback renders with localized title + Retry + Back to Dashboard + error id; Retry resets the boundary; shell (header, bottom nav) stays interactive
+- [ ] CL012 [P] Add tests in `tests/lib/sw-update.test.ts` covering: new SW detected → toast appears; user clicks Reload → `skipWaiting` fires + page reloads; user dismisses → existing SW continues
+- [ ] CL013 [P] Add tests in `tests/lib/preferences-hydration.test.ts` covering: device A sets theme=dark + PATCHes; device B opens app → server-wins overwrites local; PATCH failure → optimistic rollback
+- [ ] CL014 [P] Add tests in `tests/lib/cover-swap.test.tsx` covering: cover-swap UI calls only the proxied endpoints; no `steamgriddb.com` requests in network mock

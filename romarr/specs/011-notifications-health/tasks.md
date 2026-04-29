@@ -1,0 +1,499 @@
+---
+
+description: "Granular task list for notifications & health"
+---
+
+# Tasks: Notifications & Health
+
+**Input**: Design documents from `specs/011-notifications-health/`
+**Prerequisites**: `001-foundation`, `002-metadata-aggregation`, `004-indexers`,
+`005-download-clients`, `006-profiles`, `008-import-pipeline`,
+`009-library-exporters`, `010-auth-multiuser` shipped.
+**Tests**: MANDATORY (Constitution Article XVI; SC-009: ≥ 75% on
+notifications/)
+
+**Organization**: 10 phases. Scaffolding → persistence → channel + Apprise
+wrapper → webhook target → templates → dispatcher → health engine →
+test endpoint → API → hardening.
+
+## Format: `[ID] [P?] [Phase] Description`
+
+- `[P]` = parallelizable with other `[P]` tasks in the same phase.
+- Phase tag short codes: `SCAF`, `PERS`, `CHANNEL`, `WEBHOOK`,
+  `TEMPLATES`, `DISPATCH`, `HEALTH`, `TESTEP`, `API`, `HARD`.
+
+---
+
+## Phase 1: Scaffolding (`SCAF`)
+
+- [ ] T001 [SCAF] Update `pyproject.toml` — add runtime dep
+      `apprise>=1.8`. The Sonarr-format webhook re-uses the existing
+      `httpx` dependency.
+- [ ] T002 [P] [SCAF] Create `src/romarr/notifications/__init__.py`
+      exposing `NotificationEngine`, `HealthEngine`,
+      `dispatch_event`, `start_health_loop`.
+- [ ] T003 [P] [SCAF] Create `src/romarr/notifications/errors.py` —
+      `NotificationError`, `AppriseInvalidUrl`, `TemplateError`,
+      `WebhookRetryExhausted`, `HealthCheckTimeout`.
+- [ ] T004 [P] [SCAF] Create `src/romarr/notifications/types.py` —
+      every Pydantic / StrEnum from `data-model.md`'s "Value Types"
+      section: `EventType`, `HealthStatus`, `ComponentCategory`,
+      `HealthCheckResult`, `HealthSnapshot`, the seven event
+      payload models, the discriminated `EventPayload` union.
+- [ ] T005 [SCAF] Extend `tests/conftest.py` with `respx_apprise_mock`
+      and `mock_event_channel` fixtures; create
+      `tests/notifications/conftest.py` for module-local fixtures
+      (sample notifications, captured Sonarr webhook fixtures).
+
+**Checkpoint**: imports work; lint+types green; no behaviour added.
+
+---
+
+## Phase 2: Persistence (`PERS`)
+
+### Tests (write first; must fail)
+
+- [ ] T006 [P] [PERS] `tests/notifications/test_models.py` —
+      round-trip `Notification` and `HealthCheck` rows; verify
+      CHECK constraints on `last_status` and `health_check.status`.
+- [ ] T007 [P] [PERS] `tests/notifications/test_models.py::test_unique_notification_name`
+      — duplicate `name` raises.
+- [ ] T008 [P] [PERS] `tests/notifications/test_models.py::test_unique_health_component`
+      — duplicate `component` raises.
+- [ ] T009 [P] [PERS] `tests/notifications/test_models.py::test_at_least_one_event_subscribed`
+      — Pydantic-level validator rejects all `on_* = false`.
+- [ ] T010 [P] [PERS] `tests/notifications/test_models.py::test_template_validates_at_save`
+      — `on_import_format` referencing an unknown variable
+      rejected at save time (re-uses spec 006's renderer).
+- [ ] T011 [P] [PERS] `tests/notifications/test_migration_0011.py`
+      — applying the migration creates both tables with documented
+      constraints.
+
+### Implementation
+
+- [ ] T012 [PERS] Create `src/romarr/notifications/models.py` —
+      `Notification` and `HealthCheck` SQLAlchemy 2.0 models.
+- [ ] T013 [P] [PERS] Create `src/romarr/notifications/schemas.py`
+      — `NotificationRead/Create/Update`, `HealthCheckRead`,
+      `TestNotificationResponse`, `HealthSnapshotResponse`.
+      `NotificationRead` MUST omit `apprise_url_encrypted` and
+      expose `apprise_url_redacted: str` derived from
+      `apprise_url_scheme` (e.g., `discord://...`).
+- [ ] T014 [PERS] Author `src/romarr/db/alembic/versions/0011_notifications.py`
+      — DDL for both tables.
+
+**Checkpoint**: `alembic upgrade head` clean; PERS tests green.
+
+---
+
+## Phase 3: Channel + Apprise Wrapper (`CHANNEL`)
+
+### Tests
+
+- [ ] T015 [P] [CHANNEL] `tests/notifications/test_channel.py::test_back_pressure_caps_at_10k`
+      — emit 10 001 events; assert oldest is dropped and a
+      structured warning recorded (FR-026, SC-008).
+- [ ] T016 [P] [CHANNEL] `tests/notifications/test_channel.py::test_serial_per_notification`
+      — two notifications subscribe; events are serial per-
+      notification and parallel across notifications (FR-027).
+- [ ] T017 [P] [CHANNEL] `tests/notifications/test_apprise_wrapper.py::test_5_services`
+      — respx-mocked Discord, Telegram, ntfy, Slack, Gotify;
+      each delivers correctly with the encrypted URL decrypted
+      at call time.
+- [ ] T018 [P] [CHANNEL] `tests/notifications/test_apprise_wrapper.py::test_invalid_url_400`
+      — `Apprise.add(...)` returns False; the wrapper raises
+      `AppriseInvalidUrl` carrying Apprise's own message
+      (FR-004).
+
+### Implementation
+
+- [ ] T019 [CHANNEL] Create `src/romarr/notifications/channel.py`
+      — async pub/sub with a 10 000-event ceiling and an
+      overflow-drops-oldest policy; serial-per-notification dispatch.
+- [ ] T020 [CHANNEL] Create `src/romarr/notifications/apprise_wrapper.py`
+      — `send(notification, message_body)` async helper that
+      decrypts the URL, instantiates an Apprise object,
+      `Apprise.notify(...)` in a threadpool, returns success/error.
+
+**Checkpoint**: channel back-pressure works; Apprise wrapper
+delivers 5 services in mock tests.
+
+---
+
+## Phase 4: Webhook Target (Sonarr/Radarr-compat) (`WEBHOOK`)
+
+### Tests
+
+- [ ] T021 [P] [WEBHOOK] `tests/notifications/test_webhook_sonarr_compat.py::test_grab_payload_matches_fixture`
+      — fixture `sonarr_webhook_fixtures/grab_payload.json`;
+      build payload from our `OnGrabPayload`; assert byte-for-byte
+      match modulo optional-field order (SC-003).
+- [ ] T022 [P] [WEBHOOK] `tests/notifications/test_webhook_sonarr_compat.py::test_download_payload_matches_fixture`
+      — same shape for `OnImport` (Sonarr calls it `Download`).
+- [ ] T023 [P] [WEBHOOK] `tests/notifications/test_webhook_sonarr_compat.py::test_isupgrade_flag`
+      — payload from `OnUpgradePayload`; `isUpgrade = true`.
+- [ ] T024 [P] [WEBHOOK] `tests/notifications/test_webhook_retry.py::test_503_retries_with_backoff`
+      — respx-mocked 503; assert 3 attempts at 1 s / 5 s / 30 s
+      via freezegun (SC-002).
+- [ ] T025 [P] [WEBHOOK] `tests/notifications/test_webhook_retry.py::test_after_three_failures_marks_failed`
+      — final failure: `last_status = "failed"` and `last_error`
+      structured.
+- [ ] T026 [P] [WEBHOOK] `tests/notifications/test_webhook_retry.py::test_immediate_success_no_backoff`
+      — first attempt succeeds; no backoff inserted.
+
+### Implementation
+
+- [ ] T027 [WEBHOOK] Create `src/romarr/notifications/webhook.py` —
+      async `send_webhook(notification, payload_dict)` using
+      httpx with tenacity retry (3 attempts, 1 s / 5 s / 30 s
+      backoff). On final failure update notification's
+      `last_status` and `last_error`.
+- [ ] T028 [WEBHOOK] Create
+      `src/romarr/notifications/templates/payload_builders.py` —
+      pure functions
+      `build_apprise_message(payload, notification) -> str` and
+      `build_sonarr_webhook_body(payload, notification) -> dict`
+      that map an `EventPayload` to a Sonarr-shaped JSON body.
+
+**Checkpoint**: WEBHOOK tests green; the Sonarr fixtures match
+byte-for-byte.
+
+---
+
+## Phase 5: Templates (`TEMPLATES`)
+
+### Tests
+
+- [ ] T029 [P] [TEMPLATES] `tests/notifications/templates/test_defaults.py::test_all_seven_render`
+      — render each of the seven default templates against fixture
+      `EventPayload`s; assert the documented expected strings.
+- [ ] T030 [P] [TEMPLATES] `tests/notifications/templates/test_renderer.py::test_uses_spec_006_sandbox`
+      — confirm the renderer imports
+      `romarr.profiles.naming.engine.NamingTemplateEngine`-style
+      sandbox primitives; static-analysis-style assertion.
+- [ ] T031 [P] [TEMPLATES] `tests/notifications/templates/test_unknown_variable.py::test_corpus_of_10_bad_templates`
+      — at least 10 templates from
+      `tests/fixtures/notifications/bad_templates/`; each is
+      rejected at save with the documented structured error
+      (SC-007).
+- [ ] T032 [P] [TEMPLATES] `tests/notifications/templates/test_payload_builders.py::test_apprise_vs_webhook_differ`
+      — same `OnImportPayload` produces a string for Apprise and
+      a dict for Sonarr-webhook; the dict matches the fixture.
+
+### Implementation
+
+- [ ] T033 [TEMPLATES] Create
+      `src/romarr/notifications/templates/defaults.py` — Python
+      strings for the 7 default templates (verbatim from
+      `data-model.md`).
+- [ ] T034 [TEMPLATES] Create
+      `src/romarr/notifications/templates/renderer.py` —
+      `render_event(notification, payload) -> str` consulting
+      `notification.<event>_format` first, falling back to the
+      default. Uses spec 006's sandbox.
+
+**Checkpoint**: TEMPLATES tests green; the bad-template corpus is
+all rejected.
+
+---
+
+## Phase 6: Dispatcher (`DISPATCH`)
+
+### Tests
+
+- [ ] T035 [P] [DISPATCH] `tests/notifications/test_dispatcher.py::test_event_flag_filter`
+      — notification with `on_import = true`, `on_grab = false`;
+      OnGrab event ⇒ NOT delivered; OnImport ⇒ delivered.
+- [ ] T036 [P] [DISPATCH] `tests/notifications/test_dispatcher.py::test_tag_filter_intersection`
+      — notification with `tags = ["family-friendly"]`;
+      Game tags `["family-friendly", "platformer"]` ⇒ delivered;
+      empty Game tags ⇒ NOT delivered (FR-014).
+- [ ] T037 [P] [DISPATCH] `tests/notifications/test_dispatcher.py::test_empty_tags_match_all`
+      — notification with `tags = []`; every event ⇒ delivered
+      (FR-015).
+- [ ] T038 [P] [DISPATCH] `tests/notifications/test_dispatcher.py::test_disabled_skipped`
+      — notification with `enabled = false` ⇒ never delivered.
+- [ ] T039 [P] [DISPATCH] `tests/notifications/test_dispatcher.py::test_upgrade_fires_both_events`
+      — `OnUpgrade` is emitted alongside `OnImport` for an upgrade;
+      a notification subscribed to both flags receives **two**
+      messages (US8.1).
+- [ ] T040 [P] [DISPATCH] `tests/notifications/test_dispatcher.py::test_records_last_status`
+      — successful delivery sets `last_status = "success"`;
+      failure sets `"failed"` with `last_error` populated.
+
+### Implementation
+
+- [ ] T041 [DISPATCH] Create `src/romarr/notifications/dispatcher.py`
+      — async dispatcher loop:
+      1. dequeue event from channel;
+      2. for each enabled notification: check event flag → check
+         tag intersection → render template → call
+         `apprise_wrapper.send` OR `webhook.send_webhook`;
+      3. update `last_used_at`, `last_status`, `last_error` in
+         a fire-and-forget background task.
+
+**Checkpoint**: dispatcher tests green; tag and event filtering
+work; double-event for upgrades works.
+
+---
+
+## Phase 7: Health Engine (`HEALTH`)
+
+### Tests
+
+- [ ] T042 [P] [HEALTH] `tests/notifications/health/test_engine.py::test_runs_all_categories`
+      — populate the DB with one indexer, one download client,
+      one library; run `HealthEngine.refresh()`; assert per-
+      category results recorded in `health_check`.
+- [ ] T043 [P] [HEALTH] `tests/notifications/health/checks/test_indexer.py::test_caps_reachable`
+      — respx-mocked indexer caps endpoint returns valid XML ⇒
+      status `ok`; returns malformed XML ⇒ `error` with
+      `category='indexer'`.
+- [ ] T044 [P] [HEALTH] `tests/notifications/health/checks/test_download_client.py::test_connection_test`
+      — calls spec 005's `test_connection`; success → `ok`;
+      auth-error → `error`.
+- [ ] T045 [P] [HEALTH] `tests/notifications/health/checks/test_dat_freshness.py::test_30_day_threshold`
+      — DAT 31 days old → `warning`; 91 days old → `error`
+      (FR-019).
+- [ ] T046 [P] [HEALTH] `tests/notifications/health/checks/test_disk_space.py::test_thresholds`
+      — free space at `min_disk_free_gb * 1.2` → `warning`;
+      free space at `min_disk_free_gb * 0.5` → `error`
+      (FR-020).
+- [ ] T047 [P] [HEALTH] `tests/notifications/health/checks/test_db.py::test_round_trip_under_1s`
+      — inject a slow query (freezegun + monkeypatch) → `warning`.
+- [ ] T048 [P] [HEALTH] `tests/notifications/health/checks/test_metadata_provider.py::test_each_provider_health_check`
+      — invokes spec 002's per-provider `health_check()`; failure
+      → `error`.
+- [ ] T049 [P] [HEALTH] `tests/notifications/health/checks/test_library_path.py::test_stat_within_5s`
+      — stat takes 6 s (freezegun) → `error` with reason
+      `timeout`.
+- [ ] T050 [P] [HEALTH] `tests/notifications/health/test_debouncer.py::test_emit_only_on_transition`
+      — same component, 10 cycles all `error` ⇒ exactly **one**
+      `OnHealthIssue` emitted (SC-004).
+- [ ] T051 [P] [HEALTH] `tests/notifications/health/test_debouncer.py::test_recovery_event`
+      — error → ok transition emits exactly one event with
+      `severity = 'recovered'` (FR-022).
+- [ ] T052 [P] [HEALTH] `tests/notifications/health/test_debouncer.py::test_warning_to_error_emits`
+      — escalation transitions emit one event per transition
+      (FR-021).
+- [ ] T053 [P] [HEALTH] `tests/notifications/health/test_snapshot.py::test_overall_status_worst_component`
+      — one `error` + several `ok`/`warning` ⇒ snapshot's
+      `overall_status = "error"`.
+
+### Implementation
+
+- [ ] T054 [HEALTH] Create
+      `src/romarr/notifications/health/checks/__init__.py` and
+      one file per check category (indexer, download_client,
+      dat_freshness, disk_space, db, metadata_provider,
+      library_path).
+- [ ] T055 [HEALTH] Create `src/romarr/notifications/health/debouncer.py`
+      — pure `compute_transitions(prev: dict[str, HealthStatus],
+      curr: dict[str, HealthStatus]) -> list[Transition]` and
+      `should_emit(transition) -> bool`.
+- [ ] T056 [HEALTH] Create `src/romarr/notifications/health/engine.py`
+      — `HealthEngine.refresh() -> HealthSnapshot` orchestrates
+      all checks, persists to `health_check`, runs the debouncer,
+      emits `OnHealthIssue` events for transitions only.
+- [ ] T057 [HEALTH] Wire a periodic `HealthEngine.refresh()` cron
+      stub (the actual schedule lives in spec 012's Tasks
+      scheduler — this spec exposes the function).
+
+**Checkpoint**: HEALTH tests green; debouncing prevents the spam
+edge case from US5; the snapshot endpoint reports the right
+overall status.
+
+---
+
+## Phase 8: Test Endpoint (`TESTEP`)
+
+### Tests
+
+- [ ] T058 [P] [TESTEP] `tests/notifications/test_test_endpoint.py::test_synthetic_event_flows_through_dispatcher`
+      — POST `/api/v3/notification/{id}/test`; the dispatcher
+      receives a synthetic `OnImportPayload` with placeholder
+      data ("Test Game", "Test Release"); the configured Apprise
+      URL receives it.
+- [ ] T059 [P] [TESTEP] `tests/notifications/test_test_endpoint.py::test_returns_structured_error`
+      — Apprise URL points to an unreachable mock; the response
+      carries `success=false` and a structured error message.
+
+### Implementation
+
+- [ ] T060 [TESTEP] Implement the synthetic-event helper in
+      `src/romarr/notifications/dispatcher.py::trigger_test(notification)`
+      and route it from `src/romarr/notifications/api/notifications.py::POST_test`.
+
+**Checkpoint**: test endpoint works for at least Discord and ntfy
+(mock-tested).
+
+---
+
+## Phase 9: API (`API`)
+
+### Tests
+
+- [ ] T061 [P] [API] `tests/notifications/api/test_notification_endpoints.py::test_full_crud`
+      — POST/GET/PUT/DELETE round-trip on
+      `/api/v3/notification`. GET responses NEVER expose the
+      plaintext Apprise URL (FR-024).
+- [ ] T062 [P] [API] `tests/notifications/api/test_notification_endpoints.py::test_get_returns_redacted_url`
+      — response includes `apprise_url_redacted = "discord://..."`
+      and never the full URL.
+- [ ] T063 [P] [API] `tests/notifications/api/test_notification_endpoints.py::test_invalid_apprise_url_400`
+      — POST with a bad URL ⇒ HTTP 400 with the underlying
+      Apprise message (FR-004).
+- [ ] T064 [P] [API] `tests/notifications/api/test_health_endpoint.py::test_unauthenticated_ok`
+      — GET `/api/v3/health` without auth ⇒ HTTP 200 with the
+      snapshot. Response is sanitized (no internal error
+      details).
+- [ ] T065 [P] [API] `tests/notifications/api/test_health_endpoint.py::test_admin_sees_full_messages`
+      — same endpoint with admin auth ⇒ full structured `message`
+      fields visible.
+- [ ] T066 [P] [API] `tests/notifications/api/test_health_refresh_admin_only.py`
+      — `POST /api/v3/health/refresh`: admin → 200; user → 403;
+      readonly → 403; unauthenticated → 401.
+- [ ] T067 [P] [API] `tests/notifications/api/test_webhook_payloads_doc.py`
+      — `GET /api/v3/notification/webhook-payloads.md` returns
+      the documented schemas in Markdown form.
+
+### Implementation
+
+- [ ] T068 [API] Create `src/romarr/notifications/api/notifications.py`
+      — FastAPI router for `/api/v3/notification*` and
+      `/api/v3/notification/{id}/test`.
+- [ ] T069 [P] [API] Create
+      `src/romarr/notifications/api/health.py` — `GET
+      /api/v3/health` (unauthenticated; sanitized response unless
+      admin-authenticated) and `POST /api/v3/health/refresh`
+      (admin-only via `require_role('admin')`).
+- [ ] T070 [P] [API] Create
+      `src/romarr/notifications/api/webhook_payloads_md.py`
+      — static doc generator returning the documented Sonarr
+      v3-format schemas as Markdown.
+- [ ] T071 [API] Wire all three routers into the application
+      factory.
+
+**Checkpoint**: API tests green; the unauthenticated health
+endpoint redacts; the refresh endpoint is admin-only.
+
+---
+
+## Phase 10: Hardening (`HARD`)
+
+- [ ] T072 [HARD] Run `pytest --cov=romarr.notifications` —
+      verify ≥ 75% coverage (SC-009). Add targeted tests for any
+      uncovered branch.
+- [ ] T073 [HARD] Run `ruff check .` — zero warnings on
+      `src/romarr/notifications/`.
+- [ ] T074 [HARD] CI smoke test that asserts the Apprise package
+      is the ONLY notification-transport dependency in
+      `src/romarr/notifications/` (no `requests`, no
+      `python-telegram-bot`, no `discord-py` — Article XIV gate).
+- [ ] T075 [HARD] Manual perf check — measure dispatcher
+      throughput (aim ≥ 100 events/sec sustained per notification);
+      `GET /api/v3/health` cached p95; `POST /health/refresh`
+      synchronous p95. Record in
+      `specs/011-notifications-health/research.md`.
+- [ ] T076 [HARD] Update `pyproject.toml` `version = "0.11.0a1"`;
+      add a one-line note to `CHANGELOG.md`: "0.11.0a1 —
+      Notifications & Health: Apprise + Sonarr-format webhooks +
+      health check engine with debounced OnHealthIssue."
+- [ ] T077 [HARD] Final review: open
+      `specs/011-notifications-health/spec.md` and tick every
+      Functional Requirement (FR-001 → FR-027) against a task
+      ID; record gaps as follow-up items.
+
+---
+
+## Dependencies & Execution Order
+
+### Phase Dependencies
+
+- **Phase 1 (SCAF)**: prerequisite specs merged.
+- **Phase 2 (PERS)**: depends on Phase 1.
+- **Phase 3 (CHANNEL)**: depends on Phase 2.
+- **Phase 4 (WEBHOOK)**: depends on Phase 2; can run in parallel
+  with Phase 3.
+- **Phase 5 (TEMPLATES)**: depends on Phase 1 + spec 006's
+  renderer; can run in parallel with Phases 3 + 4.
+- **Phase 6 (DISPATCH)**: depends on Phases 3, 4, 5.
+- **Phase 7 (HEALTH)**: depends on Phase 2 + spec 008's event
+  channel + spec 005's connection helpers + spec 002's provider
+  health helpers. Can run in parallel with Phase 6.
+- **Phase 8 (TESTEP)**: depends on Phase 6.
+- **Phase 9 (API)**: depends on Phases 7 and 8.
+- **Phase 10 (HARD)**: depends on Phase 9.
+
+### Within-Phase Parallelism
+
+- Phase 1: T002–T004 in parallel.
+- Phase 2: T006–T011 in parallel; T012 + T013 in parallel.
+- Phase 3: T015–T018 in parallel; T019 + T020 in parallel.
+- Phase 4: T021–T026 in parallel; T027 + T028 in parallel.
+- Phase 5: T029–T032 in parallel; T033 + T034 in parallel.
+- Phase 6: T035–T040 in parallel.
+- Phase 7: T042–T053 in parallel; T054 in parallel; T055 + T056
+  sequential at the end.
+- Phase 8: T058 + T059 in parallel.
+- Phase 9: T061–T067 in parallel; T068–T070 in parallel.
+
+### Critical Path
+
+`SCAF → PERS → (CHANNEL || TEMPLATES) → DISPATCH → API → HARD`.
+Health and Webhook phases run in parallel with Dispatch.
+
+### Implementation Strategy
+
+- **Day 1**: Phase 1 (SCAF) + Phase 2 (PERS) + start Phase 5
+  (TEMPLATES — pure functions).
+- **Day 2**: Phase 3 (CHANNEL) + Phase 4 (WEBHOOK) in parallel.
+- **Day 3**: Phase 5 finish + Phase 6 (DISPATCH).
+- **Day 4**: Phase 7 (HEALTH) — most diverse code, the seven
+  per-component checks.
+- **Day 5**: Phase 8 (TESTEP) + Phase 9 (API).
+- **Day 6**: Phase 10 (HARD).
+
+This sizing assumes one developer working full-time. With two,
+WEBHOOK + CHANNEL split cleanly across them on Day 2.
+
+---
+
+## Notes
+
+- `[P]` tasks change different files only.
+- Tests are written BEFORE implementation in every phase.
+- Stop at any phase checkpoint — notifications & health are
+  delivered incrementally; each phase is independently shippable.
+- Avoid: writing UI for notification config (UI spec); building a
+  custom rule engine (deferred to v1+); batching/digests (v1+);
+  Web Push to PWA (UI spec); SMTP integration beyond Apprise (firm
+  out — Article XIV); throttling per-channel (Apprise handles this).
+- Constitutional invariants under test:
+  - **Article XIV (Notifications)** — single Apprise backend; T074
+    statically asserts no other transport library in
+    `notifications/`. Sonarr-format webhook payloads validated
+    byte-for-byte against captured fixtures (T021-T023, SC-003).
+  - **Article XVII (Idempotency & Safety)** — debounced health
+    emission (T050-T052, SC-004); encrypted Apprise URLs (T062 +
+    SC-006); webhook retries bounded (T024-T025, SC-002).
+  - **Article XVI (Quality Gates)** — ≥ 75% coverage (T072); 5 s
+    p95 delivery (SC-001); 200 ms p95 cached health (SC-005).
+  - **Article XI (Naming Discipline) — sandbox carry-over** —
+    template engine re-uses spec 006's primitives; no second sandbox
+    implementation (T030).
+
+## Phase: Clarification Tasks (Session 2026-04-29)
+
+- [ ] CL001 [P] [US4] Implement tiered `GET /api/v3/health` response in `src/romarr/notifications/health_api.py` — public callers receive ONLY `{status: "ok" | "warning" | "error"}` + HTTP 200; authenticated callers (any role; `read` scope sufficient) receive the full per-component breakdown with messages (FR-024a)
+- [ ] CL002 Migration `0011_notifications.py` adds `health_check.last_emitted_state VARCHAR NULL CHECK (last_emitted_state IN (NULL, 'ok', 'warning', 'error'))` (FR-018 amended)
+- [ ] CL003 [P] [US5] Implement transition comparison against persisted `last_emitted_state` in `src/romarr/notifications/health_engine.py` — every cycle (including first post-restart) compares new check status to persisted column; updates column in same transaction as emission. NULL → emit only on non-`ok` first cycle. Restarts invisible to subscribers (FR-021a)
+- [ ] CL004 [P] Implement Sonarr v3 envelope semantic remap in `src/romarr/notifications/webhook_payloads.py` — `series.title ← game.title`; `series.tvdbId ← game.igdb_id || 0`; `series.path ← library.path`; `episodes[]` always one element representing the Release; `release.quality.quality.name ← release.format`; `release.indexer ← indexer.name`; empty fields emit as `0` / `""` never omitted (FR-006a)
+- [ ] CL005 [P] Document the full field-by-field cross-walk at `docs/api/notification/webhook-payloads.md`
+- [ ] CL006 [P] [Admin] Wire admin-role gate on every mutating notification endpoint AND on `POST /notification/{id}/test` (SSRF surface — fires outbound HTTP) in `src/romarr/notifications/api.py` (FR-024b)
+- [ ] CL007 [P] Initialize Apprise with custom-plugin loading **disabled** in `src/romarr/notifications/apprise_init.py` — read `ROMARR_APPRISE_ALLOW_CUSTOM_PLUGINS` env var (default `false`); skip `data/apprise-plugins/` discovery when off (FR-001a)
+- [ ] CL008 [P] Document the `ROMARR_APPRISE_ALLOW_CUSTOM_PLUGINS` flag in the README/quickstart with a clear "code execution surface" warning
+- [ ] CL009 [P] Add tests in `tests/notifications/test_health_tiering.py` covering: unauthenticated request → only `{status}` returned; authenticated request → full breakdown with messages
+- [ ] CL010 [P] Add tests in `tests/notifications/test_debounce_persistence.py` covering: failing component → emit once; component still failing across 10 cycles → no further emissions; restart between cycles 5-6 → still no re-emission (persistent state)
+- [ ] CL011 [P] Add tests in `tests/notifications/test_sonarr_payload_remap.py` covering: OnImport on Sonic / Mega Drive → series.title="Sonic the Hedgehog", series.tvdbId=igdb_id, episodes[0] populated; missing fields → 0/""; schema validates against fixtures `sonarr_v3_grab_payload.json` + `sonarr_v3_download_payload.json`
+- [ ] CL012 [P] Add tests in `tests/notifications/test_apprise_plugins_off.py` covering: env unset → custom plugins NOT loaded; env=true → custom plugins loaded
