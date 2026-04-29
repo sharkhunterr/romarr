@@ -20,6 +20,7 @@ from fastapi.responses import JSONResponse
 from romarr import __version__
 from romarr.api.error_handlers import register_error_handlers
 from romarr.api.routers.auth import router as auth_router
+from romarr.api.routers.users import router as users_router
 from romarr.db.session import create_engine, create_sessionmaker
 
 if TYPE_CHECKING:
@@ -73,4 +74,5 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
 
     register_error_handlers(app)
     app.include_router(auth_router)
+    app.include_router(users_router)
     return app

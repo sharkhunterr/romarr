@@ -44,6 +44,14 @@ class ChainConfig:
     ``trusted_headers`` lists the request headers that carry the
     proxy-supplied username. Default per FR-017:
     ``["X-Authentik-Username", "X-Forwarded-User", "Remote-User"]``.
+
+    ``auto_create_proxy_users`` controls FR-018: when True, a
+    trusted-proxy username that doesn't match any existing user is
+    auto-created with role ``proxy_default_role``. When False, an
+    unknown proxy username falls through (no principal returned).
+
+    ``proxy_default_role`` is the role assigned to auto-created
+    users on first contact. Default ``user`` per FR-018.
     """
 
     trust_proxy_auth: bool = False
@@ -52,6 +60,8 @@ class ChainConfig:
         "X-Forwarded-User",
         "Remote-User",
     )
+    auto_create_proxy_users: bool = True
+    proxy_default_role: str = "user"
 
 
 @dataclass(frozen=True, slots=True)
@@ -115,7 +125,12 @@ async def resolve_principal(
         for header in cfg.trusted_headers:
             value = request.headers.get(header) or request.headers.get(header.lower())
             if value:
-                principal = await _try_proxy_user(session, username=value)
+                principal = await _try_proxy_user(
+                    session,
+                    username=value,
+                    auto_create=cfg.auto_create_proxy_users,
+                    default_role=cfg.proxy_default_role,
+                )
                 if principal is not None:
                     return principal
 
@@ -158,25 +173,55 @@ async def _try_session(
 
 
 async def _try_proxy_user(
-    session: AsyncSession, *, username: str
+    session: AsyncSession,
+    *,
+    username: str,
+    auto_create: bool = True,
+    default_role: str = "user",
 ) -> Principal | None:
     """Resolve a trusted-proxy username to a Principal.
 
-    Spec 010 FR-018 says: a username that does not match any existing
-    user MUST be auto-created with role ``user`` (configurable
-    default). For now, the auto-create lives in a follow-up slice;
-    this function only resolves an *existing* user.
+    Per spec 010 FR-018: when no user matches and ``auto_create`` is
+    True, create one with ``default_role`` and return a Principal
+    for it. When ``auto_create`` is False, return ``None`` so the
+    upstream guard surfaces a 401.
+
+    A deactivated user (``is_active=False``) is treated as
+    no-such-user — the proxy header doesn't reactivate them.
     """
     if not username:
         return None
     user = (
         await session.execute(select(User).where(User.username == username))
     ).scalar_one_or_none()
-    if user is None or not user.is_active:
+
+    if user is not None and user.is_active:
+        return Principal(
+            user_id=user.id,
+            username=user.username,
+            role=user.role,
+            api_key_scopes=None,
+        )
+
+    if user is not None and not user.is_active:
+        # Deactivated — refuse, even with auto_create=True.
+        return None
+
+    if not auto_create:
+        return None
+
+    # Auto-create on first contact (FR-018).
+    from romarr.auth.users import UserCreateError, get_or_auto_create_proxy_user
+
+    try:
+        created = await get_or_auto_create_proxy_user(
+            session, username=username, default_role=default_role
+        )
+    except UserCreateError:
         return None
     return Principal(
-        user_id=user.id,
-        username=user.username,
-        role=user.role,
+        user_id=created.id,
+        username=created.username,
+        role=created.role,
         api_key_scopes=None,
     )
