@@ -226,13 +226,13 @@ hash/name lookups.
 - [X] T051 [P] [FN] Create `src/romarr/identification/filename/nointro.py` —
       regex `^(?P<title>.+?) \((?P<regions>[^)]+)\)(?: \((?P<langs>[^)]+)\))?(?: \((?P<rev>[^)]+)\))?(?: \[(?P<tags>[^\]]+)\])?\.(?P<ext>\w+)$`,
       confidence 0.95 on full match, 0.7 on partial.
-- [ ] T052 [P] [FN] Create `src/romarr/identification/filename/goodtools.py` —
+- [X] T052 [P] [FN] Create `src/romarr/identification/filename/goodtools.py` —
       single-letter region codes `(U)/(E)/(J)/(W)`, tag set `[!] [h] [T+En] [b]
       [a] [o] [f] [t] [p]`. Map `[b]` → `dump_status=baddump`, `[!]` →
       `dump_status=verified`, `[h]` → `dump_status=hack`, `[t]` → `dump_status=trainer`.
-- [ ] T053 [P] [FN] Create `src/romarr/identification/filename/tosec.py` —
+- [X] T053 [P] [FN] Create `src/romarr/identification/filename/tosec.py` —
       `Title (Year)(Publisher)(Country)(Lang)(Other).ext` form.
-- [ ] T054 [P] [FN] Create `src/romarr/identification/filename/scene.py` —
+- [X] T054 [P] [FN] Create `src/romarr/identification/filename/scene.py` —
       `Title.Region.GROUP-style.ext` form.
 - [X] T055 [FN] Create `src/romarr/identification/filename/dispatcher.py` — try
       No-Intro → Redump-aware path → TOSEC → GoodTools → Scene; return the first
@@ -259,26 +259,26 @@ green.
 - [ ] T058 [P] [HDR] Generate `tests/fixtures/headers/sample_psx.iso` (minimal
       ISO9660 PVD at sector 16 + a `SYSTEM.CNF` containing `BOOT = cdrom:\SLUS_001.23;1`)
       and `test_iso9660.py` asserting system/volume identifier + PSX serial.
-- [ ] T059 [HDR] `test_stubs.py` — instantiating each stubbed reader (3DS, NDS,
+- [X] T059 [HDR] `test_stubs.py` — instantiating each stubbed reader (3DS, NDS,
       PSP, Vita, Switch, Wii, GameCube, GBA) and calling `.read()` raises
       `NotImplementedError` with a clear "not yet supported in MVP" message.
 
 ### Implementation
 
-- [ ] T060 [HDR] Create `src/romarr/identification/header/base.py` —
+- [X] T060 [HDR] Create `src/romarr/identification/header/base.py` —
       `HeaderReader` ABC with `read(path: Path) -> HeaderInfo | None` and a
       shared dispatch table `_READERS_BY_PLATFORM`.
-- [ ] T061 [P] [HDR] Create `src/romarr/identification/header/ines.py` — read
+- [X] T061 [P] [HDR] Create `src/romarr/identification/header/ines.py` — read
       first 16 bytes, validate `4E 45 53 1A`, decode mapper, PRG-ROM banks,
       CHR-ROM banks.
-- [ ] T062 [P] [HDR] Create `src/romarr/identification/header/megadrive.py` —
+- [X] T062 [P] [HDR] Create `src/romarr/identification/header/megadrive.py` —
       seek to 0x100, validate `b"SEGA "`, read serial bytes 0x180–0x18F, region
       byte at 0x1F0.
-- [ ] T063 [P] [HDR] Create `src/romarr/identification/header/iso9660.py` — read
+- [X] T063 [P] [HDR] Create `src/romarr/identification/header/iso9660.py` — read
       sector 16 (offset 0x8000), validate PVD signature `01 'CD001' 01`,
       decode system/volume identifiers; if `SYSTEM.CNF` exists in the root dir,
       parse it for `BOOT = cdrom:\<SERIAL>;1` (PSX).
-- [ ] T064 [HDR] Create `src/romarr/identification/header/stubs.py` — eight
+- [X] T064 [HDR] Create `src/romarr/identification/header/stubs.py` — eight
       classes (3DS, NDS, PSP, Vita, Switch, Wii, GameCube, GBA) each raising
       `NotImplementedError("Header reader for <platform> deferred to v1")`.
 
@@ -337,24 +337,24 @@ breaker.
 
 ### Tests (the five spec scenarios)
 
-- [ ] T075 [P] [MATCH] `tests/identification/test_matcher.py::test_scenario_a`
+- [X] T075 [P] [MATCH] `tests/identification/test_matcher.py::test_scenario_a`
       — clean No-Intro file with DAT match → both sources used, max confidence.
-- [ ] T076 [P] [MATCH] `tests/identification/test_matcher.py::test_scenario_b`
+- [X] T076 [P] [MATCH] `tests/identification/test_matcher.py::test_scenario_b`
       — garbage filename, hash matches DAT → DAT wins, full confidence.
-- [ ] T077 [P] [MATCH] `tests/identification/test_matcher.py::test_scenario_c`
+- [X] T077 [P] [MATCH] `tests/identification/test_matcher.py::test_scenario_c`
       — no DAT match, filename clear → reduced confidence, filename used.
-- [ ] T078 [P] [MATCH] `tests/identification/test_matcher.py::test_scenario_d`
+- [X] T078 [P] [MATCH] `tests/identification/test_matcher.py::test_scenario_d`
       — filename and DAT conflict on region → DAT wins, conflict logged,
       `-10%` confidence.
-- [ ] T079 [P] [MATCH] `tests/identification/test_matcher.py::test_scenario_e`
+- [X] T079 [P] [MATCH] `tests/identification/test_matcher.py::test_scenario_e`
       — multi-disc filename → `disc_number` populated from parsed filename.
-- [ ] T080 [MATCH] `tests/identification/test_matcher.py::test_dump_status_reconciliation`
+- [X] T080 [MATCH] `tests/identification/test_matcher.py::test_dump_status_reconciliation`
       — filename `[h]` (hack) vs DAT `verified` → DAT wins, discrepancy logged
       (FR-013).
 
 ### Implementation
 
-- [ ] T081 [MATCH] Create `src/romarr/identification/matcher.py` — pure-function
+- [X] T081 [MATCH] Create `src/romarr/identification/matcher.py` — pure-function
       `merge(sources: Sequence[IdentificationSource]) -> Identification`. Per
       output field: pick the value from the highest-authority source that
       provided a non-null value; if two same-authority sources disagree, log a

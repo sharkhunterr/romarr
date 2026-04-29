@@ -1,15 +1,12 @@
 """Filename parsers for ROM identification (FR-021 / FR-022 / FR-023).
 
-Four parsers behind a common interface:
-- No-Intro (default; the most common modern convention)
-- Redump (CD/DVD-based platforms)
-- TOSEC (broad scope, ageing scene roots)
-- GoodTools (legacy)
-- Scene (NFO-style names like ``Sonic.USA-DEMENT``)
+Five parsers behind a common interface, dispatched in fixed order:
 
-The :class:`ParserDispatcher` runs each parser in fixed order and
-accepts the first whose confidence > 0.7. Ties at threshold are
-broken by parser order (deterministic Edge Case behaviour).
+    No-Intro → Redump → TOSEC → GoodTools → Scene
+
+The :func:`default_dispatcher` factory builds a :class:`ParserDispatcher`
+with all five wired in that order — the canonical configuration used by
+the identification cascade.
 """
 
 from romarr.identification.parsers.base import (
@@ -17,11 +14,38 @@ from romarr.identification.parsers.base import (
     ParsedFilename,
     ParserDispatcher,
 )
+from romarr.identification.parsers.goodtools import GoodToolsParser
 from romarr.identification.parsers.no_intro import NoIntroParser
+from romarr.identification.parsers.redump import RedumpParser
+from romarr.identification.parsers.scene import SceneParser
+from romarr.identification.parsers.tosec import TosecParser
 
 __all__ = [
     "BaseFilenameParser",
+    "GoodToolsParser",
     "NoIntroParser",
     "ParsedFilename",
     "ParserDispatcher",
+    "RedumpParser",
+    "SceneParser",
+    "TosecParser",
+    "default_dispatcher",
 ]
+
+
+def default_dispatcher() -> ParserDispatcher:
+    """Build the canonical 5-parser dispatcher per FR-023.
+
+    Order: No-Intro → Redump → TOSEC → GoodTools → Scene. The first
+    parser whose confidence > 0.7 wins; ties (rare) are broken by this
+    enumeration order (Edge Case in spec 001).
+    """
+    return ParserDispatcher(
+        [
+            NoIntroParser(),
+            RedumpParser(),
+            TosecParser(),
+            GoodToolsParser(),
+            SceneParser(),
+        ]
+    )
