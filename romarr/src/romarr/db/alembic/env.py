@@ -6,14 +6,15 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from romarr.config import get_settings
-
-# Importing the models module ensures every model class is registered
+# Importing the models modules ensures every model class is registered
 # with the metadata before autogenerate runs.
+from romarr.auth import models as _auth_models  # noqa: F401
+from romarr.config import get_settings
 from romarr.domain import (
     Base,
     models,  # noqa: F401
 )
+from romarr.metadata import models as _metadata_models  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

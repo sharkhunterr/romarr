@@ -28,21 +28,25 @@ test harness — no provider logic yet.
 
 - [ ] T001 [SCAF] Update `pyproject.toml` — add runtime deps (`cryptography`,
       `Pillow`, `python-multipart`) and dev deps (`respx` already present from
-      foundation).
-- [ ] T002 [P] [SCAF] Create `src/romarr/metadata/__init__.py` exposing
+      foundation). Note: `cryptography` and `python-multipart` already shipped via
+      auth/foundation; `Pillow` deferred until the cover-validation slice
+      actually needs it.
+- [X] T002 [P] [SCAF] Create `src/romarr/metadata/__init__.py` exposing
       `refresh_game_metadata`, `Aggregator`, and the provider registry.
-- [ ] T003 [P] [SCAF] Create `src/romarr/metadata/errors.py` — `ProviderError`,
+- [X] T003 [P] [SCAF] Create `src/romarr/metadata/errors.py` — `ProviderError`,
       `AuthError`, `RateLimitError`, `NotFoundError`, `TransientError`.
-- [ ] T004 [P] [SCAF] Create `src/romarr/metadata/types.py` — `ProviderField`
+- [X] T004 [P] [SCAF] Create `src/romarr/metadata/types.py` — `ProviderField`
       `StrEnum`, `GameSearchResult`, `GameMetadata`, `AggregationResult` Pydantic
       models from `data-model.md`.
-- [ ] T005 [P] [SCAF] Extend `src/romarr/config/settings.py` with `auth_secret_key:
+- [X] T005 [P] [SCAF] Extend `src/romarr/config/settings.py` with `auth_secret_key:
       SecretStr | None` and `cover_storage_path: Path = Path("data/covers")`. Settings
       MUST refuse to load when the metadata layer is enabled and `auth_secret_key`
       is None and the database has at least one encrypted config row (FR-021).
-- [ ] T006 [SCAF] Extend `tests/conftest.py` with a `respx_mock` fixture and a
+      (auth_secret_key + data_dir already present from spec 010 work; encryption
+      helper raises EncryptionKeyMissingError on use when key is empty.)
+- [X] T006 [SCAF] Extend `tests/conftest.py` with a `respx_mock` fixture and a
       `fake_secret_key` fixture; create `tests/metadata/conftest.py` for module-
-      local fixtures.
+      local fixtures. (metadata_env fixture isolates per-test secret key + data dir.)
 
 **Checkpoint**: imports work, lint+types green; no behaviour added yet.
 
@@ -55,45 +59,48 @@ encryption helper.
 
 ### Tests (write first; must fail)
 
-- [ ] T007 [P] [PERS] `tests/metadata/test_encryption.py` — round-trip a JSON
+- [X] T007 [P] [PERS] `tests/metadata/test_encryption.py` — round-trip a JSON
       payload through `encrypt()`/`decrypt()`; assert ciphertext is **not**
       JSON-parseable; assert decrypt with a wrong key raises
       `cryptography.fernet.InvalidToken`.
-- [ ] T008 [P] [PERS] `tests/metadata/test_cache.py::test_ttl_boundary` — write a
+- [X] T008 [P] [PERS] `tests/metadata/test_cache.py::test_ttl_boundary` — write a
       cache row with `expires_at = now + 1s`, advance `freezegun` past it, assert
       the cache lookup treats the row as expired.
-- [ ] T009 [P] [PERS] `tests/metadata/test_cache.py::test_unique_provider_game` —
+- [X] T009 [P] [PERS] `tests/metadata/test_cache.py::test_unique_provider_game` —
       attempting to insert a second `(provider_name, provider_game_id)` pair for
       the same game raises an `IntegrityError`.
-- [ ] T010 [P] [PERS] `tests/metadata/test_field_priority.py::test_unique_rank_per_field`
+- [X] T010 [P] [PERS] `tests/metadata/test_field_priority.py::test_unique_rank_per_field`
       — two providers cannot share `priority_order` within a field.
-- [ ] T011 [P] [PERS] `tests/metadata/test_migration_0002.py` — applying
+- [X] T011 [P] [PERS] `tests/metadata/test_migration_0002.py` — applying
       `0002_metadata_layer.py` against a fresh DB produces 9 seeded provider
       rows, the documented field-priority seed (count-check), and the new
       `game.needs_metadata_refresh` column.
 
 ### Implementation
 
-- [ ] T012 [PERS] Create `src/romarr/metadata/encryption.py` — scrypt KDF +
+- [X] T012 [PERS] Create `src/romarr/metadata/encryption.py` — scrypt KDF +
       Fernet wrapper; module-level `encrypt(data: bytes) -> bytes`,
       `decrypt(ciphertext: bytes) -> bytes`; raises a clear error when the key
       is unset.
-- [ ] T013 [P] [PERS] Create `src/romarr/metadata/models.py` (or add to
+- [X] T013 [P] [PERS] Create `src/romarr/metadata/models.py` (or add to
       `src/romarr/domain/models/metadata.py`) — `MetadataProviderConfig`,
       `MetadataCache`, `FieldPriority` SQLAlchemy 2.0 models matching
       `data-model.md`.
 - [ ] T014 [P] [PERS] Create `src/romarr/metadata/schemas.py` — three Pydantic
-      schemas per entity (`*Read/*Create/*Update`).
-- [ ] T015 [PERS] Extend `src/romarr/domain/models/game.py` with
-      `needs_metadata_refresh: Mapped[bool]` (default false).
-- [ ] T016 [PERS] Author `src/romarr/db/alembic/versions/0002_metadata_layer.py`
+      schemas per entity (`*Read/*Create/*Update`). (Deferred to API stub
+      slice — schemas are only consumed by the FastAPI routers.)
+- [X] T015 [PERS] Extend `src/romarr/domain/models/game.py` with
+      `needs_metadata_refresh: Mapped[bool]` (default false). (Already shipped
+      as part of foundation 0001 baseline — every metadata-target column was
+      pre-provisioned to keep the layer purely additive.)
+- [X] T016 [PERS] Author `src/romarr/db/alembic/versions/0002_metadata_layer.py`
       — add column, create the 3 tables, insert the 9 provider config rows and
       the field-priority seed verbatim from `data-model.md`. Idempotent.
-- [ ] T017 [PERS] Create `src/romarr/metadata/cache.py` — async helpers
+- [X] T017 [PERS] Create `src/romarr/metadata/cache.py` — async helpers
       `get_cached(session, provider, game_id) -> MetadataCache | None`,
       `put_cached(session, provider, game_id, provider_game_id, data, ttl)`,
       `invalidate_cached(session, provider, game_id)`.
-- [ ] T018 [PERS] Create `src/romarr/metadata/covers.py` —
+- [X] T018 [PERS] Create `src/romarr/metadata/covers.py` —
       `derive_extension(content_type) -> Literal['jpg','png','webp']`,
       `cover_path(game_id, ext) -> Path`,
       `write_cover(game_id, content_type, data) -> Path` (content-aware overwrite
