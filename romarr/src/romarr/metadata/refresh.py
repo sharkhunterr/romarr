@@ -187,6 +187,12 @@ async def _ensure_provider_payload(
         meta = await provider.get_game(provider_game_id)
     except NotFoundError:
         return None
+    except NotImplementedError:
+        # Cover-only providers (SteamGridDB) intentionally don't
+        # implement search/get_game. They're already filtered from
+        # the scan flow by ``invoked_in_scan=False`` but we guard
+        # against a misconfigured ``scan=False`` invocation too.
+        return None
     except ProviderError as exc:
         logger.warning(
             "metadata.refresh.provider_error",
@@ -285,7 +291,11 @@ async def _maybe_persist_cover(
         return
     try:
         data, content_type = await provider.get_cover(meta.provider_game_id)
-    except (NotFoundError, ProviderError):
+    except (NotFoundError, ProviderError, NotImplementedError):
+        # Providers that only contribute non-cover fields (RA, HLTB)
+        # raise NotImplementedError on get_cover. The aggregator will
+        # not normally pick them as cover winners — but if a custom
+        # field_priority does, we degrade gracefully rather than crash.
         logger.warning("metadata.refresh.cover_fetch_failed")
         return
     try:

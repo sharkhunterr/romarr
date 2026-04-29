@@ -221,33 +221,53 @@ purely from a test fixture.
 
 ## Phase 8: Provider — SteamGridDB (`SGDB`)
 
-- [ ] T037 [SGDB] `tests/metadata/providers/test_steamgriddb.py::test_cover_only`
-      — assert `search_games()` raises `NotImplementedError` (covers-only
-      provider); `get_cover()` returns bytes for a known SteamGridDB id.
-- [ ] T038 [SGDB] `tests/metadata/providers/test_steamgriddb.py::test_excluded_from_scan_flow`
+- [X] T037 [SGDB] `tests/metadata/providers/test_steamgriddb.py` —
+      ``search_games`` raises `NotImplementedError`; ``get_cover``
+      returns bytes via the SGDB grids endpoint; ``get_game`` returns
+      a cover-only GameMetadata so the manual cover-swap flow can stamp
+      ``Game.cover_path`` without a separate fetch round-trip.
+- [X] T038 [SGDB] `tests/metadata/providers/test_steamgriddb.py::test_excluded_from_scan_flow`
       — instantiate the registry and assert SteamGridDB is **excluded** from
       `load_enabled_providers(scan=True)` even when enabled (FR-005).
-- [ ] T039 [SGDB] Create `src/romarr/metadata/providers/steamgriddb.py` — only
+- [X] T039 [SGDB] Create `src/romarr/metadata/providers/steamgriddb.py` — only
       `get_cover()` is real; all other methods raise `NotImplementedError`.
+      Self-registers via ``register_provider("steamgriddb", ...)``.
 
 ---
 
 ## Phase 9: Provider — RetroAchievements (`RA`)
 
-- [ ] T040 [RA] `tests/metadata/providers/test_retroachievements.py::test_achievements_only`
-      — populates only `achievements_count`; never contributes to other fields
-      (FR-006).
-- [ ] T041 [RA] Create `src/romarr/metadata/providers/retroachievements.py`.
+- [X] T040 [RA] `tests/metadata/providers/test_retroachievements.py` —
+      ``get_game`` populates ONLY `achievements_count` (FR-006); zero
+      counts are omitted entirely; ``search_games`` filters by
+      ``platform_slug`` (RA's catalog is platform-keyed); ``get_cover``
+      raises NotImplementedError; capabilities pin
+      ``contributable_fields = {ACHIEVEMENTS_COUNT}``.
+- [X] T041 [RA] Create `src/romarr/metadata/providers/retroachievements.py`.
+      Built-in console_id mapping for the 5 MVP platforms; configure()
+      lets operators override or extend it.
 
 ---
 
 ## Phase 10: Provider — HowLongToBeat (`HLTB`)
 
-- [ ] T042 [HLTB] `tests/metadata/providers/test_howlongtobeat.py::test_durations_only`
-      — populates only `hltb_main` (FR-007).
-- [ ] T043 [HLTB] Create `src/romarr/metadata/providers/howlongtobeat.py`
-      — request body shape mirrors community Python clients; respx fixture
-      drives the test.
+- [X] T042 [HLTB] `tests/metadata/providers/test_howlongtobeat.py` —
+      ``get_game`` populates ONLY `hltb_main` (FR-007); search round-trips
+      candidates from the community ``api/search`` endpoint; zero-duration
+      results are omitted; ``get_cover`` raises NotImplementedError;
+      Chrome-like User-Agent header is asserted.
+- [X] T043 [HLTB] Create `src/romarr/metadata/providers/howlongtobeat.py`
+      — request body shape mirrors the public community-Python clients
+      (searchType / searchTerms / searchOptions); respx fixture drives
+      the test. ``comp_main`` (seconds) is converted to minutes for
+      ``HLTB_MAIN``.
+
+### Refresh-orchestrator hardening (this slice)
+
+- [X] Cover-fetch + provider-call paths in ``refresh.py`` now also catch
+      ``NotImplementedError`` so cover-only / single-field providers
+      (SGDB / RA / HLTB) can opt out of methods cleanly without
+      poisoning the orchestrator.
 
 ---
 
