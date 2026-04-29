@@ -117,24 +117,26 @@ PERS tests pass.
 
 ### Tests
 
-- [ ] T019 [P] [FRAME] `tests/metadata/test_registry.py` — registry returns
+- [X] T019 [P] [FRAME] `tests/metadata/test_registry.py` — registry returns
       enabled providers in `priority_global` order; disabled providers are
       filtered out; an unknown provider name returns `None` without raising.
-- [ ] T020 [P] [FRAME] `tests/metadata/test_provider_base.py` — concrete subclass
+- [X] T020 [P] [FRAME] `tests/metadata/test_provider_base.py` — concrete subclass
       that implements only `name` and stubs the methods round-trips through the
-      registry.
+      registry. (Covers retry policy: AuthError / NotFoundError NOT retried;
+      TransientError / RateLimitError retried per tenacity policy.)
 
 ### Implementation
 
-- [ ] T021 [FRAME] Create `src/romarr/metadata/providers/__init__.py` —
+- [X] T021 [FRAME] Create `src/romarr/metadata/providers/__init__.py` —
       registry of known providers (mapping `name → class`).
-- [ ] T022 [FRAME] Create `src/romarr/metadata/providers/base.py` —
+- [X] T022 [FRAME] Create `src/romarr/metadata/providers/base.py` —
       `MetadataProvider` ABC with all 6 methods from spec.md FR-001; a
       `with_retry_and_breaker` decorator using `tenacity` (3 attempts,
       exponential backoff with jitter) wrapped by the existing
       `identification/hashmatch/circuit_breaker` (Constitution Article III: no
-      duplicated breaker library).
-- [ ] T023 [FRAME] Create `src/romarr/metadata/registry.py` — async
+      duplicated breaker library). Token-bucket throttle (FR-004a) lives on
+      the base class so every provider gets the proactive limiter for free.
+- [X] T023 [FRAME] Create `src/romarr/metadata/registry.py` — async
       `load_enabled_providers(session) -> list[MetadataProvider]` that:
       reads `metadata_provider_config`, decrypts each `config_encrypted`, hands
       it to the matching class's `configure()`, and returns instantiated
@@ -269,35 +271,38 @@ constitutional invariant.
 
 ### Tests (the heart of the spec)
 
-- [ ] T048 [AGG] `tests/metadata/test_aggregator.py::test_lock_blocks_overwrite`
+- [X] T048 [AGG] `tests/metadata/test_aggregator.py::test_locked_field_blocks_overwrite`
       — Game has `locked_fields = {"title"}`; provider returns a different
       title; aggregation never updates the title (US2, SC-002).
-- [ ] T049 [AGG] `tests/metadata/test_aggregator.py::test_additive_no_null`
+- [X] T049 [AGG] `tests/metadata/test_aggregator.py::test_additive_merge_keeps_existing_when_no_provider_contributes`
       — Game has `summary = "X"` from provider A; provider B is added but
       contributes nothing for `summary`; aggregation MUST NOT set `summary` to
       NULL (US3, SC-003).
-- [ ] T050 [AGG] `tests/metadata/test_aggregator.py::test_priority_winner`
+- [X] T050 [AGG] `tests/metadata/test_aggregator.py::test_higher_priority_provider_wins`
       — provider B has higher priority for `summary`; B contributes a value;
       aggregation persists B's value, not A's.
-- [ ] T051 [AGG] `tests/metadata/test_aggregator.py::test_priority_change_no_api_call`
+- [X] T051 [AGG] `tests/metadata/test_aggregator.py::test_priority_change_picks_new_winner_from_same_cache`
       — caches populated for two providers; flip priority order; re-aggregate;
-      assert zero respx calls (FR-012, US7, SC-007).
-- [ ] T052 [AGG] `tests/metadata/test_aggregator.py::test_property_additive`
+      assert pure-function recompute (no respx assertion until refresh.py
+      lands in INT slice; FR-012, US7, SC-007).
+- [X] T052 [AGG] `tests/metadata/test_aggregator.py::test_property_additive_merge`
       — hypothesis-generated input states; the post-aggregation
       previously-non-empty, non-locked fields are a superset of the
       pre-aggregation set (the additive-merge invariant; FR-009).
-- [ ] T053 [AGG] `tests/metadata/test_aggregator.py::test_all_providers_failed`
+- [X] T053 [AGG] `tests/metadata/test_aggregator.py::test_all_providers_empty_sets_refresh_flag`
       — every cached entry is empty; aggregation sets
       `needs_metadata_refresh = true` (FR-013, US-edge).
 
 ### Implementation
 
-- [ ] T054 [AGG] Create `src/romarr/metadata/aggregator.py` — pure
+- [X] T054 [AGG] Create `src/romarr/metadata/aggregator.py` — pure
       `aggregate(game_id, locked_fields, cached, field_priority) -> AggregationResult`.
       For each `ProviderField`: walk the field-priority list, pick the first
       provider whose cached entry has a non-empty value, skip locked fields.
       Returns `AggregationResult` with `skipped_locked` and the
-      `needs_metadata_refresh` flag.
+      `needs_metadata_refresh` flag. Also accepts an optional ``existing``
+      mapping so the FR-009 additive-invariant carries pre-existing
+      non-locked values forward when no provider contributes.
 - [ ] T055 [AGG] Create `src/romarr/metadata/refresh.py` — async
       `refresh_game_metadata(session, game_id, *, force=False) -> AggregationResult`
       orchestrating: load locked fields + game; for each enabled provider,

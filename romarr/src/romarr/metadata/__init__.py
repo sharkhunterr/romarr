@@ -10,6 +10,7 @@ This package ships in slices: SCAF + PERS first (skeleton, encryption,
 pure aggregator), then one provider per slice, then the API stubs.
 """
 
+from romarr.metadata.aggregator import aggregate
 from romarr.metadata.cache import (
     get_cached,
     invalidate_cached,
@@ -33,6 +34,13 @@ from romarr.metadata.errors import (
     RateLimitError,
     TransientError,
 )
+from romarr.metadata.providers import (
+    PROVIDER_REGISTRY,
+    MetadataProvider,
+    ProviderCapabilities,
+    register_provider,
+)
+from romarr.metadata.registry import load_enabled_providers
 from romarr.metadata.types import (
     AggregationResult,
     GameMetadata,
@@ -42,22 +50,28 @@ from romarr.metadata.types import (
 
 __all__ = [
     "KNOWN_COVER_EXTENSIONS",
+    "PROVIDER_REGISTRY",
     "AggregationResult",
     "AuthError",
     "EncryptionKeyMissingError",
     "GameMetadata",
     "GameSearchResult",
+    "MetadataProvider",
     "NotFoundError",
+    "ProviderCapabilities",
     "ProviderError",
     "ProviderField",
     "RateLimitError",
     "TransientError",
+    "aggregate",
     "cover_path_for",
     "decrypt",
     "derive_extension",
     "encrypt",
     "get_cached",
     "invalidate_cached",
+    "load_enabled_providers",
     "put_cached",
+    "register_provider",
     "write_cover",
 ]
