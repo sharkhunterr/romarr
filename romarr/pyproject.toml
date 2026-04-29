@@ -97,6 +97,10 @@ ignore = [
 # runtime via inspect; moving those imports to TYPE_CHECKING blocks
 # breaks fixture introspection.
 "tests/**" = ["TC001", "TC002", "TC003"]
+# FastAPI introspects ``Annotated[T, Depends(...)]`` parameters at
+# runtime to build the OpenAPI schema, so router/dependency types
+# (AsyncSession, response models, etc.) MUST be live imports.
+"src/romarr/api/**" = ["TC001", "TC002", "TC003"]
 
 [tool.ruff.format]
 quote-style = "double"

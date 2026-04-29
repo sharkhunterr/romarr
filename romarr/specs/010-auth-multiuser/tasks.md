@@ -302,20 +302,20 @@ group-to-role sync on existing users.
 - [X] T060 [P] [PROXY] `tests/auth/methods/test_proxy.py::test_disabled_by_default`
       — `ROMARR_TRUST_PROXY_AUTH = false`; configured trusted header
       is ignored; chain falls through.
-- [ ] T061 [P] [PROXY] `tests/auth/methods/test_proxy.py::test_enabled_authenticates_known_user`
+- [X] T061 [P] [PROXY] `tests/auth/methods/test_proxy.py::test_enabled_authenticates_known_user`
       — `ROMARR_TRUST_PROXY_AUTH = true`; header carries known
       username; user is authenticated.
-- [ ] T062 [P] [PROXY] `tests/auth/methods/test_proxy.py::test_unknown_user_auto_creates`
+- [X] T062 [P] [PROXY] `tests/auth/methods/test_proxy.py::test_unknown_user_auto_creates`
       — header carries new username; user auto-created with role
       `user`; subsequent requests update only `last_login_at`.
-- [ ] T063 [P] [PROXY] `tests/auth/methods/test_proxy.py::test_oidc_collision_warning`
+- [X] T063 [P] [PROXY] `tests/auth/methods/test_proxy.py::test_oidc_collision_warning`
       — proxy header username collides with an OIDC-created user
       having a different `oidc_subject`; proxy auth wins for this
       request but a warning is logged.
 
 ### Implementation
 
-- [ ] T064 [PROXY] Create `src/romarr/auth/methods/proxy.py` —
+- [X] T064 [PROXY] Create `src/romarr/auth/methods/proxy.py` —
       `resolve_proxy_auth(request) -> AuthContext | None`. Reads
       the configured header list, matches against `user.username`,
       auto-creates if missing.
@@ -329,35 +329,35 @@ detection logs but does not break.
 
 ### Tests
 
-- [ ] T065 [P] [CHAIN] `tests/auth/methods/test_chain.py::test_order_api_key_first`
+- [X] T065 [P] [CHAIN] `tests/auth/methods/test_chain.py::test_order_api_key_first`
       — request has both API key and session cookie; API key wins
       per FR-022.
-- [ ] T066 [P] [CHAIN] `tests/auth/methods/test_chain.py::test_falls_through_on_failed_method`
+- [X] T066 [P] [CHAIN] `tests/auth/methods/test_chain.py::test_falls_through_on_failed_method`
       — invalid API key + valid session cookie ⇒ session wins
       (i.e., a wrong API key does not abort the chain).
-- [ ] T067 [P] [CHAIN] `tests/auth/methods/test_chain.py::test_generic_401_shape`
+- [X] T067 [P] [CHAIN] `tests/auth/methods/test_chain.py::test_generic_401_shape`
       — every failed method produces the same canonical 401
       response body; no method-specific leak (FR-023, SC-008).
-- [ ] T068 [P] [CHAIN] `tests/auth/test_rbac.py::test_admin_implies_user_implies_readonly`
+- [X] T068 [P] [CHAIN] `tests/auth/test_rbac.py::test_admin_implies_user_implies_readonly`
       — admin passes every endpoint; user passes user/readonly;
       readonly only readonly.
-- [ ] T069 [P] [CHAIN] `tests/auth/test_rbac.py::test_30_endpoint_corpus`
+- [X] T069 [P] [CHAIN] `tests/auth/test_rbac.py::test_30_endpoint_corpus`
       — fixture: 30 protected endpoints with their required role;
       exercise each as readonly/user/admin; assert the right HTTP
       status in 100% of cases (SC-006).
 
 ### Implementation
 
-- [ ] T070 [CHAIN] Create `src/romarr/auth/methods/chain.py` —
+- [X] T070 [CHAIN] Create `src/romarr/auth/methods/chain.py` —
       `AuthChain.resolve(request) -> AuthContext`. Tries each
       method in order; returns first non-None result; raises
       `UnauthenticatedError` (HTTP 401, canonical body) when all
       fail.
-- [ ] T071 [CHAIN] Create `src/romarr/auth/rbac.py` —
+- [X] T071 [CHAIN] Create `src/romarr/auth/rbac.py` —
       `require_role(role)` FastAPI dependency that wraps
       `AuthChain.resolve` and raises `PermissionDenied` (HTTP 403)
       when `ROLE_HIERARCHY[user.role] < ROLE_HIERARCHY[required]`.
-- [ ] T072 [CHAIN] **Sweep the codebase**: replace every
+- [X] T072 [CHAIN] **Sweep the codebase**: replace every
       `dev_only_admin` import in earlier specs with the real
       `require_role(...)` dependency. T087 in HARD verifies no
       `dev_only_admin` references remain.
@@ -371,25 +371,25 @@ use the real auth dependency.
 
 ### Tests
 
-- [ ] T073 [P] [USERMGMT] `tests/auth/api/test_user_endpoints.py::test_create_user`
+- [X] T073 [P] [USERMGMT] `tests/auth/api/test_user_endpoints.py::test_create_user`
       — admin creates a user; assert `last_login_at IS NULL` until
       the user actually logs in.
-- [ ] T074 [P] [USERMGMT] `tests/auth/api/test_user_endpoints.py::test_update_role`
+- [X] T074 [P] [USERMGMT] `tests/auth/api/test_user_endpoints.py::test_update_role`
       — admin PUT `is_superuser = true`; assert the user passes
       `require_role('admin')` on next request.
-- [ ] T075 [P] [USERMGMT] `tests/auth/api/test_user_endpoints.py::test_reset_password_returns_token`
+- [X] T075 [P] [USERMGMT] `tests/auth/api/test_user_endpoints.py::test_reset_password_returns_token`
       — admin POST `/api/v3/user/{id}/reset-password`; response
       carries a one-time reset token (since SMTP is OoS in MVP).
-- [ ] T076 [P] [USERMGMT] `tests/auth/api/test_user_endpoints.py::test_cannot_delete_last_admin`
+- [X] T076 [P] [USERMGMT] `tests/auth/api/test_user_endpoints.py::test_cannot_delete_last_admin`
       — only one admin in the DB; DELETE that admin; assert HTTP
       409 with reason `cannot_delete_last_admin` (US8.3).
-- [ ] T077 [P] [USERMGMT] `tests/auth/api/test_user_endpoints.py::test_non_admin_blocked`
+- [X] T077 [P] [USERMGMT] `tests/auth/api/test_user_endpoints.py::test_non_admin_blocked`
       — non-admin authenticated; GET `/api/v3/user`; assert HTTP
       403.
 
 ### Implementation
 
-- [ ] T078 [USERMGMT] Create `src/romarr/auth/api/users.py` —
+- [X] T078 [USERMGMT] Create `src/romarr/auth/api/users.py` —
       FastAPI router for `/api/v3/user*` and
       `/api/v3/user/{id}/reset-password`. Wrapped by
       `require_role('admin')`.
