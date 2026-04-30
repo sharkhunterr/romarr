@@ -28,6 +28,13 @@ from romarr.downloaders.implementations import (
     NzbgetClient,
     TransmissionClient,
 )
+from romarr.downloaders.routing import (
+    RoutingCandidate,
+    consume_decision,
+    route_release,
+    select_nzb_form,
+    select_torrent_form,
+)
 from romarr.downloaders.tags import (
     TAG_IMPORTED,
     TAG_ROMARR,
@@ -75,6 +82,7 @@ __all__ = [
     "NzbSource",
     "NzbUrl",
     "NzbgetClient",
+    "RoutingCandidate",
     "RoutingDecision",
     "SourceKind",
     "SslCertValidation",
@@ -86,7 +94,11 @@ __all__ = [
     "TransmissionClient",
     "VersionError",
     "build_httpx_verify",
+    "consume_decision",
     "is_local_host",
+    "route_release",
+    "select_nzb_form",
+    "select_torrent_form",
     "standard_tag_set",
     "tag_for_platform",
 ]

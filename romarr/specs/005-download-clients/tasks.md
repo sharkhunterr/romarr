@@ -260,32 +260,32 @@ availability and refuses.
 
 ### Tests
 
-- [ ] T045 [P] [ROUTE] `tests/downloaders/test_routing.py::test_torrent_to_torrent_client`
+- [X] T045 [P] [ROUTE] `tests/downloaders/test_routing.py::test_torrent_to_torrent_client`
       — release is a magnet; one torrent client + one Usenet client
       configured; assert torrent client is chosen, `chosen_via='priority'`.
-- [ ] T046 [P] [ROUTE] `tests/downloaders/test_routing.py::test_nzb_to_usenet_client`
+- [X] T046 [P] [ROUTE] `tests/downloaders/test_routing.py::test_nzb_to_usenet_client`
       — release is an `.nzb`; symmetric assertion.
-- [ ] T047 [P] [ROUTE] `tests/downloaders/test_routing.py::test_indexer_override_wins`
+- [X] T047 [P] [ROUTE] `tests/downloaders/test_routing.py::test_indexer_override_wins`
       — torrent release with indexer pinned to a lower-priority torrent
       client; assert pinned client wins,
       `chosen_via = 'indexer_override'` (FR-014).
-- [ ] T048 [P] [ROUTE] `tests/downloaders/test_routing.py::test_indexer_override_unsuitable_falls_back`
+- [X] T048 [P] [ROUTE] `tests/downloaders/test_routing.py::test_indexer_override_unsuitable_falls_back`
       — torrent release with indexer pinned to a Usenet-only client;
       assert routing falls back to priority and emits a structured
       warning (FR-014 mismatch path).
-- [ ] T049 [P] [ROUTE] `tests/downloaders/test_routing.py::test_no_eligible_client`
+- [X] T049 [P] [ROUTE] `tests/downloaders/test_routing.py::test_no_eligible_client`
       — no client supports the source type; assert
       `chosen_client_id = None`, `chosen_via = 'no_eligible_client'`,
       and a `NoEligibleClientError` is raised by the wrapper that
       consumes the decision (FR-016, SC-005).
-- [ ] T050 [P] [ROUTE] `tests/downloaders/test_routing.py::test_corpus_30_releases`
+- [X] T050 [P] [ROUTE] `tests/downloaders/test_routing.py::test_corpus_30_releases`
       — the JSONL fixture under `tests/fixtures/routing/` of 30 mixed
       releases; assert the chosen client matches the expected one in
       every row (SC-003).
 
 ### Implementation
 
-- [ ] T051 [ROUTE] Create `src/romarr/downloaders/routing.py` —
+- [X] T051 [ROUTE] Create `src/romarr/downloaders/routing.py` —
       pure `route_release(release, indexer, candidates) -> RoutingDecision`.
       Inputs: the release (with source kind), the originating indexer
       (with optional `download_client_id`), and the list of currently
@@ -475,7 +475,7 @@ QBIT and SAB split cleanly across contributors.
 ## Phase: Clarification Tasks (Session 2026-04-29)
 
 - [ ] CL001 [P] [US1] Implement idempotent-on-existing-info-hash add_torrent in `src/romarr/downloaders/qbit/client.py` — when info-hash already present in qBittorrent: return existing info-hash as `client_id`, additively merge `romarr` and `romarr-{platform_slug}` tags via qBit's `add tags` API, leave existing category untouched. Same contract for `add_nzb` against SAB on matching source URL (FR-004a)
-- [ ] CL002 [P] [US3] Implement source-form preference selector in `src/romarr/downloaders/routing.py` — order `.torrent` URL > raw `.torrent` bytes > magnet URL (and `.nzb` URL > raw `.nzb` bytes); record selected form on the grab event for visibility (FR-003a)
+- [X] CL002 [P] [US3] Implement source-form preference selector in `src/romarr/downloaders/routing.py` — order `.torrent` URL > raw `.torrent` bytes > magnet URL (and `.nzb` URL > raw `.nzb` bytes); record selected form on the grab event for visibility (FR-003a)
 - [ ] CL003 [P] [US4] Add minimum qBittorrent version check (>= 2.8.3 / app 4.4.0) in `src/romarr/downloaders/qbit/client.py:test_connection()` — query `/api/v2/app/webapiVersion`; reject with structured `VersionError("upgrade qBittorrent to 4.4.0 or newer")` on older versions (FR-005a)
 - [ ] CL004 [P] [US7] Implement per-client circuit breaker in `src/romarr/downloaders/circuit_breaker.py` — 5 failures within 60 s opens; auto half-open after 60 s; auth errors and 5xx count as failures; stuck-grab retries respect the breaker (when open: bump `last_attempt_at` without outbound call) (FR-022a)
 - [ ] CL005 [P] [Admin] Wire admin-role gate on every mutating download-client endpoint AND on `/test` (SSRF surface) in `src/romarr/downloaders/api.py`; reads accessible to any authenticated user; encrypted credentials NEVER appear in any read response regardless of role (FR-026a)
