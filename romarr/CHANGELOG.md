@@ -3,6 +3,34 @@
 All notable changes to Romarr land here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semver.
 
+## [0.3.0a1] — 2026-04-30
+
+### Added
+
+- **Spec 003 — Platform Packs** (full feature: validator + ingestor + built-in
+  pack + overrides + admin API + hardening)
+  - YAML pack format validated against a Draft 2020-12 JSON Schema.
+  - Pure-function validator: schema check + duplicate-slug / duplicate-extension
+    / dangling-parent / parent-graph cycle detection (iterative DFS) + ReDoS
+    static heuristic for nested-quantifier shapes.
+  - Transactional ingestor with FR-009 idempotency / FR-010 same-version-conflict
+    / FR-013a downgrade rejection / FR-011-13 per-platform rules / FR-014
+    parsing-strategies upsert / FR-024 failed-row persistence in a fresh session.
+  - Two new tables: ``parsing_strategies`` and
+    ``platform_pack_application_log`` (Alembic migration ``0003``).
+  - 20-platform built-in YAML pack auto-applied on first boot via
+    ``romarr.platform_packs.apply_builtin_pack``; resolves through
+    ``ROMARR_BUILTIN_PACK_PATH`` → wheel resource → operator drop-dir.
+  - User-override flow: ``mark_overridden`` cascades the user flag to
+    formats + tokens; ``release_override`` reads the matching
+    ``platform_pack`` row to drive the revert; format-CRUD helpers
+    enforce the FR-026 user-override precondition.
+  - Admin API at ``/api/v3/rom/platform-pack/*`` (upload + list + detail +
+    re-apply + validate-only) and ``/api/v3/rom/platform/{id}/*`` (override +
+    format-CRUD), all gated by ``require_admin`` from spec 010.
+  - Hypothesis property test for the cycle detector against a
+    ``graphlib.TopologicalSorter`` reference oracle.
+
 ## [0.2.0a1] — 2026-04-29
 
 ### Added
