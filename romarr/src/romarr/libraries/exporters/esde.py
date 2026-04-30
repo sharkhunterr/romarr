@@ -18,19 +18,18 @@ latest catalog state at lock-release time.
 
 from __future__ import annotations
 
-import contextlib
-import fcntl
-import os
 from dataclasses import dataclass
 from datetime import datetime
 from io import BytesIO
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from lxml import etree
 
+from romarr.libraries.exporters._atomic import write_atomic_with_lock
+
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Sequence
+    from pathlib import Path
 
 
 # ---------------------------------------------------------------------------
@@ -158,63 +157,20 @@ def render_gamelist_xml(games: Sequence[EsdeGame]) -> bytes:
 # Atomic writer with advisory lock
 
 
-@contextlib.contextmanager
-def _gamelist_lock(target_dir: Path) -> Iterator[bool]:
-    """Acquire the advisory lock at
-    ``<target_dir>/.gamelist.lock`` (FR-017a).
-
-    Yields ``True`` when the lock was acquired, ``False`` when it
-    couldn't be (another process is currently regenerating). The
-    writer coalesces on ``False`` so the operator never observes a
-    queue.
-
-    The lock is released automatically on ``fd.close()`` and on
-    process death (a property ``fcntl.flock`` provides natively).
-    """
-    target_dir.mkdir(parents=True, exist_ok=True)
-    lock_path = target_dir / ".gamelist.lock"
-    fd = os.open(lock_path, os.O_CREAT | os.O_RDWR)
-    try:
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            yield False
-            return
-        try:
-            yield True
-        finally:
-            fcntl.flock(fd, fcntl.LOCK_UN)
-    finally:
-        os.close(fd)
-
-
 def write_gamelist_atomic(target_dir: Path, xml_bytes: bytes) -> bool:
     """Write ``xml_bytes`` to ``<target_dir>/gamelist.xml`` atomically.
 
-    Returns:
-      ``True``  — the file was written.
-      ``False`` — coalesced because another process holds the lock.
-
-    Atomicity is provided by writing to ``gamelist.xml.tmp`` then
-    :func:`os.replace`; a crash between the two steps leaves the
-    prior ``gamelist.xml`` untouched (FR-017).
+    Returns ``True`` when written, ``False`` when another process
+    holds the advisory lock (the writer coalesces — FR-017a).
+    Atomicity comes from writing to ``gamelist.xml.tmp`` then
+    :func:`os.replace`; a crash mid-write leaves the prior
+    ``gamelist.xml`` untouched (FR-017). See
+    :func:`romarr.libraries.exporters._atomic.write_atomic_with_lock`
+    for the shared implementation.
     """
-    with _gamelist_lock(target_dir) as acquired:
-        if not acquired:
-            return False
-
-        target = target_dir / "gamelist.xml"
-        tmp = target_dir / "gamelist.xml.tmp"
-        try:
-            tmp.write_bytes(xml_bytes)
-            os.replace(tmp, target)
-        except Exception:
-            # Defensive cleanup — leave the previous gamelist.xml
-            # untouched, drop the partial .tmp.
-            with contextlib.suppress(FileNotFoundError):
-                tmp.unlink()
-            raise
-        return True
+    return write_atomic_with_lock(
+        target_dir=target_dir, filename="gamelist.xml", body=xml_bytes
+    )
 
 
 __all__ = [

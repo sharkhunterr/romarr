@@ -42,7 +42,7 @@ def test_mid_write_crash_preserves_prior_file(
         raise OSError("simulated rename failure")
 
     monkeypatch.setattr(
-        "romarr.libraries.exporters.esde.os.replace", fail_replace
+        "romarr.libraries.exporters._atomic.os.replace", fail_replace
     )
     with pytest.raises(OSError):
         write_gamelist_atomic(tmp_path, _xml_for("Streets of Rage"))
@@ -83,7 +83,7 @@ def _hold_lock_then_exit(target_dir: str, hold_seconds: float) -> None:
 
     target = Path(target_dir)
     target.mkdir(parents=True, exist_ok=True)
-    fd = os.open(target / ".gamelist.lock", os.O_CREAT | os.O_RDWR)
+    fd = os.open(target / ".gamelist.xml.lock", os.O_CREAT | os.O_RDWR)
     try:
         _fcntl.flock(fd, _fcntl.LOCK_EX)
         time.sleep(hold_seconds)

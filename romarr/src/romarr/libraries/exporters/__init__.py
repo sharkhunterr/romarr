@@ -28,6 +28,17 @@ from romarr.libraries.exporters.esde import (
     render_gamelist_xml,
     write_gamelist_atomic,
 )
+from romarr.libraries.exporters.launchbox import (
+    LaunchBoxGame,
+    render_launchbox_xml,
+    write_launchbox_atomic,
+)
+from romarr.libraries.exporters.pegasus import (
+    PegasusCollection,
+    PegasusGame,
+    render_metadata_txt,
+    write_metadata_atomic,
+)
 
 
 class ExporterBase(ABC):
@@ -50,7 +61,14 @@ class ExporterBase(ABC):
 __all__ = [
     "EsdeGame",
     "ExporterBase",
+    "LaunchBoxGame",
+    "PegasusCollection",
+    "PegasusGame",
     "materialise_cover",
     "render_gamelist_xml",
+    "render_launchbox_xml",
+    "render_metadata_txt",
     "write_gamelist_atomic",
+    "write_launchbox_atomic",
+    "write_metadata_atomic",
 ]

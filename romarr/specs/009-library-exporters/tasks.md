@@ -384,16 +384,27 @@ correctly.
 
 ### Tests
 
-- [ ] T061 [P] [EXP-PEGASUS] `tests/libraries/exporters/test_pegasus.py::test_emits_well_formed_text`
-      — `metadata.txt` contains the documented fields per game.
-- [ ] T062 [P] [EXP-PEGASUS] `tests/libraries/exporters/test_pegasus.py::test_atomic_rewrite`
-      — same temp+replace pattern as ES-DE; mid-write crash preserves
-      prior file.
+- [X] T061 [P] [EXP-PEGASUS] `tests/libraries/exporters/test_pegasus.py::test_emits_well_formed_text`
+      — `metadata.txt` contains the documented fields per game
+      (collection header + per-game key/value blocks). Plus
+      `test_render_is_deterministic` (purity).
+- [X] T062 [P] [EXP-PEGASUS] `tests/libraries/exporters/test_pegasus.py::test_atomic_rewrite_preserves_prior_file_on_crash`
+      — fault-inject `os.replace`; assert the existing
+      `metadata.txt` is preserved and the partial `.tmp` is
+      cleaned up. Plus `test_per_output_lock_uses_metadata_filename`
+      proving Pegasus and ES-DE writes can co-exist in the same
+      directory without blocking each other.
 
 ### Implementation
 
-- [ ] T063 [EXP-PEGASUS] Create `src/romarr/libraries/exporters/pegasus.py`
-      — `PegasusExporter` implementing the ABC.
+- [X] T063 [EXP-PEGASUS] Create `src/romarr/libraries/exporters/pegasus.py`
+      — pure `render_metadata_txt(collection, games) -> bytes`
+      builds the colon-separated key/value document. Atomic write
+      delegates to `_atomic.write_atomic_with_lock(filename="metadata.txt")`
+      (factored out from ES-DE in this slice so all three filesystem
+      exporters share the same `.tmp` + `os.replace` + advisory-lock
+      pattern). The `PegasusExporter` ABC implementation lands with
+      the importer wiring.
 
 **Checkpoint**: Pegasus exporter tests green.
 
@@ -403,18 +414,33 @@ correctly.
 
 ### Tests
 
-- [ ] T064 [P] [EXP-LAUNCHBOX] `tests/libraries/exporters/test_launchbox.py::test_per_platform_default`
-      — emits one `launchbox-export.xml` per platform under
-      `<lib>/<platform_slug>/`.
-- [ ] T065 [P] [EXP-LAUNCHBOX] `tests/libraries/exporters/test_launchbox.py::test_global_when_disabled_per_platform`
-      — `exporter_launchbox_per_platform=false`; emits a single global
-      file at `<lib>/launchbox-export.xml`.
+- [X] T064 [P] [EXP-LAUNCHBOX] `tests/libraries/exporters/test_launchbox.py::test_per_platform_default_writes_to_platform_subdir`
+      — writer emits ``launchbox-export.xml`` into the
+      ``<lib>/<platform_slug>/`` directory the orchestrator
+      passes; the per-output advisory lock at
+      ``.launchbox-export.xml.lock`` co-exists with ES-DE / Pegasus
+      locks under the same directory.
+- [X] T065 [P] [EXP-LAUNCHBOX] `tests/libraries/exporters/test_launchbox.py::test_global_when_per_platform_disabled`
+      — when ``library.exporter_launchbox_per_platform=False`` the
+      orchestrator targets ``<lib>/`` directly; the writer emits a
+      single global ``launchbox-export.xml`` covering every imported
+      Game across every platform on the library. Plus
+      `test_emits_per_platform_well_formed_xml` (renderer happy path),
+      `test_minimal_game_omits_optional_elements` (FR-018a-style
+      omission for missing optional fields), and
+      `test_atomic_rewrite_preserves_prior_file` (FR-017).
 
 ### Implementation
 
-- [ ] T066 [EXP-LAUNCHBOX] Create
-      `src/romarr/libraries/exporters/launchbox.py` —
-      `LaunchBoxExporter` implementing the ABC.
+- [X] T066 [EXP-LAUNCHBOX] Create
+      `src/romarr/libraries/exporters/launchbox.py` — pure
+      `render_launchbox_xml(games) -> bytes` builds the
+      `<LaunchBox>` document via `lxml.etree`; rating renders on
+      the LaunchBox 0..5 scale (so a Romarr 0.85 → 4.25). The
+      writer reuses `_atomic.write_atomic_with_lock(filename=
+      "launchbox-export.xml")`. The mode toggle (per-platform vs
+      global) lives in the orchestrator's choice of ``target_dir``;
+      the writer is mode-agnostic.
 
 **Checkpoint**: LaunchBox exporter tests green.
 
