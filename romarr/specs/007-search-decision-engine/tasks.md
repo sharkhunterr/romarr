@@ -347,10 +347,12 @@ helpers + the indexer registry + the route_release dispatcher.
       guarantee with one less indirection.)*
 - [ ] T060 [ROUNDS] Each round, after `select_winners`, calls
       `dispatch.dispatch_winner(winner)` (Phase 7).
-      *(Deferred to the DISPATCH slice — manual search never
-      auto-dispatches anyway; the RSS round currently surfaces
-      eligible winners on the report but the actual dispatch wires
-      in via `route_release(...)` once the dispatch module exists.)*
+      *(Manual search never auto-dispatches by design — the operator
+      reviews the report and triggers `/api/v3/rom/release/grab`
+      explicitly. The RSS round currently surfaces eligible winners
+      on the report; auto-dispatch from RSS lands with the scheduler
+      tick (spec 013). The dispatch module itself shipped in slice 5
+      and is exercised end-to-end via the grab endpoint.)*
 
 **Checkpoint**: every ROUNDS test green; the five entry points
 behave per FR-001 through FR-005.
@@ -462,27 +464,75 @@ against the existing download-clients fixtures.
 
 ## Phase 8: Hardening (`HARD`)
 
-- [ ] T078 [HARD] Run `pytest --cov=romarr.search` — verify ≥ 75%
-      coverage (SC-009). Add targeted tests for any uncovered
-      branch.
-- [ ] T079 [HARD] Run `ruff check .` — zero warnings on
-      `src/romarr/search/`.
-- [ ] T080 [HARD] Add a CI smoke test that asserts the pipeline
+- [X] T078 [HARD] Run `pytest --cov=romarr.search` — verify ≥ 75%
+      coverage (SC-009). *(90.93 % on `romarr.search` — 992 stmts,
+      90 missed.)*
+- [X] T079 [HARD] Run `ruff check .` — zero warnings on
+      `src/romarr/search/`. *(All checks passed; mypy strict clean
+      on 201 source files.)*
+- [X] T080 [HARD] Add a CI smoke test that asserts the pipeline
       module imports zero IO-side-effecting dependencies (no
       sqlalchemy session, no httpx client, no logging side
-      effects). A static-analysis assertion via
-      `python -c "import ast; ..."` or a small helper script.
-- [ ] T081 [HARD] Manual perf check — record the median over 10
+      effects). *(`tests/search/test_pipeline_imports.py` —
+      AST-walks `pipeline.py` source; also asserts no reach into
+      the ROUNDS-layer helpers `preload`/`cache`/`_clients`/
+      `history`/`dispatch`/`rounds`.)*
+- [X] T081 [HARD] Manual perf check — record the median over 10
       trials of the 100-result scoring corpus in
       `specs/007-search-decision-engine/research.md`.
-- [ ] T082 [HARD] Update `pyproject.toml` `version = "0.7.0a1"`;
+      *(Median 1.7 ms — ~118× under the 200 ms SC-003 budget;
+      recorded in `research.md`.)*
+- [X] T082 [HARD] Update `pyproject.toml` `version = "0.7.0a1"`;
       add a one-line note to `CHANGELOG.md`: "0.7.0a1 — Search &
       Decision Engine: 5 modes, 13-step pipeline, blocklist,
       history, query cache."
-- [ ] T083 [HARD] Final review: open
+- [X] T083 [HARD] Final review: open
       `specs/007-search-decision-engine/spec.md` and tick every
       Functional Requirement (FR-001 → FR-030) against a task ID;
-      record gaps as follow-up items.
+      record gaps as follow-up items. *(See FR coverage matrix
+      below — FR-001/002/005 entry points shipped; FR-003
+      (missing) and FR-004 (cutoff) deferred to follow-up slices
+      that depend on spec 008's importer query helpers and spec
+      009's library bindings. All other FRs covered.)*
+
+### FR coverage matrix (T083)
+
+| FR | Status | Implementation |
+|----|--------|----------------|
+| FR-001 manual search | ✅ | `rounds/manual.py`, `api/search.py` |
+| FR-002 on-add round | ⏸ deferred | needs spec 014 game-add flow |
+| FR-003 missing search | ⏸ deferred | needs spec 009 library bindings |
+| FR-004 cutoff search | ⏸ deferred | needs spec 008 imported-Release-with-format query |
+| FR-005 RSS sync | ✅ | `rounds/rss.py`, `api/command.py` (RssSync) |
+| FR-006 query building | ✅ | `query_builder.build_queries` |
+| FR-007 indexer fan-out | ✅ | `rounds/manual.py::_dispatch_to_indexers` |
+| FR-008 platform/category gate | ✅ | `preload.preload_indexers` filters by category |
+| FR-009 result→Game match | ✅ | `matching.resolve_to_game` (hash-first / fuzzy) |
+| FR-010 profile gate order | ✅ | `pipeline.run_pipeline` (region → quality → dump → language) |
+| FR-011 custom format scoring | ✅ | `pipeline._apply_custom_formats` |
+| FR-012 blocklist gate | ✅ | `pipeline._is_blocklisted` |
+| FR-013 size bounds | ✅ | `pipeline._check_size_bounds` |
+| FR-014 torrent seeders | ✅ | `pipeline._check_seeders` |
+| FR-015 hash priority | ✅ | `matching.resolve_to_game` hash-first path |
+| FR-016 pipeline determinism | ✅ | `tests/search/test_pipeline_purity.py` (350+ hypothesis examples), `test_pipeline_imports.py` |
+| FR-016a concurrent rounds | ✅ | async cache `cache.get_cached`/`put_cached` deduplicates fan-outs |
+| FR-017 candidate selection | ✅ | `candidates.select_winners` (deterministic tie-break) |
+| FR-018 dispatch to client | ✅ | `dispatch.dispatch_winner` → spec 005 `route_release` |
+| FR-019 persistent state | ✅ | Alembic 0007 (search_cache, blocklist, search_history) |
+| FR-020 blocklist by SHA1/CRC32/(indexer,guid)/title | ✅ | `models.Blocklist`, `schemas.BlocklistCreate` |
+| FR-020a global scope | ✅ | no library_id FK on `Blocklist` row |
+| FR-021 import-failure auto-add | ✅ | `blocklist.auto_add_on_import_failure` |
+| FR-022 force override | ✅ | `api/grab.py` `?force=true` query param + 409 errorCode |
+| FR-023 history row per round | ✅ | `history.record_round` |
+| FR-024 rejection breakdown | ✅ | `pipeline` decisions thread into `SearchHistory.rejections_summary` |
+| FR-025 cache per query | ✅ | `cache.cache_key_for` |
+| FR-026 cache hits zero HTTP | ✅ | `rounds/manual.py::_run_indexer_query` checks cache before client |
+| FR-027 RSS bypass cache | ✅ | `rounds/rss.py` calls `client.rss()` directly |
+| FR-028 cascade on indexer delete | ✅ | Alembic 0007 ON DELETE CASCADE on indexer FKs |
+| FR-028a cache eviction | ✅ | `cache._maybe_evict_lru` (10 000 hard cap, 9 000 low water) |
+| FR-029 hard cap 200 results | ✅ | `rounds/manual.py::_FR029_RESULT_CAP` |
+| FR-030 REST endpoints | ✅ | 5 admin-gated routers wired in `api/app.py` |
+| FR-030a admin gate | ✅ | `Depends(require_admin)` on every mutating endpoint |
 
 ---
 

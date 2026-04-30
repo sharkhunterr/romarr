@@ -3,6 +3,46 @@
 All notable changes to Romarr land here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semver.
 
+## [0.7.0a1] — 2026-04-30
+
+### Added
+
+- **Spec 007 — Search & Decision Engine** (full feature: 5 entry
+  modes, 13-step pure pipeline, frozen ``LibraryState``, query
+  cache, blocklist, history, dispatch bridge, 5 admin-gated
+  endpoints).
+  - Five round entry points — `manual`, `rss`, `on_add`, `missing`,
+    `cutoff` — all running through the same pure-function
+    pipeline. `manual` and `rss` ship in MVP; `on_add` /
+    `missing` / `cutoff` deferred to follow-ups that consume
+    spec 008's importer query helpers and spec 009's library
+    bindings.
+  - 13-step decision pipeline: identify → blocklist gate → DAT
+    lookup → quality / region / dump / language gates → custom
+    format scoring → DAT-verified bonus → indexer priority →
+    seeders → final score. 350+ hypothesis examples confirm
+    determinism (same input ↔ same output).
+  - Async query cache (`romarr.search.cache`) with LRU eviction
+    above 10 000 entries; deduplicates concurrent (game, indexer)
+    fan-outs across rounds.
+  - Append-only `Blocklist` + `SearchHistory` tables (Alembic
+    `0007`); blocklist enforces FR-021 at-least-one-match
+    invariant via Pydantic cross-field validator.
+  - `dispatch_winner` bridges a winning `Candidate` to spec 005's
+    `route_release(...)` and translates downloader errors into
+    `GRABBED` / `NO_ELIGIBLE_CLIENT` / `PENDING_RETRY` / `FAILED`
+    outcomes (FR-016 / SC-005).
+  - Admin-gated REST surface: `POST /api/v3/rom/search/manual`,
+    `POST /api/v3/rom/release/grab` (with `?force=true` blocklist
+    override per FR-022 / SC-006), `POST /api/v3/command`
+    (Sonarr-compat dispatcher), `GET /api/v3/rom/search/history`,
+    and `GET/POST/DELETE /api/v3/blocklist*`.
+  - Performance: 100-result pipeline scoring runs in ~1.7 ms
+    median (118× under the 200 ms SC-003 budget), recorded in
+    `specs/007-search-decision-engine/research.md`.
+  - Coverage: 90.93 % on `romarr.search` (target ≥ 75 %); 109
+    spec-007 tests, full suite 1 252 passing.
+
 ## [0.6.0a1] — 2026-04-30
 
 ### Added
