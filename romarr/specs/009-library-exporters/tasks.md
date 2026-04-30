@@ -107,38 +107,45 @@ DB, post-spec-008-only DB}; PERS tests green.
 
 ### Tests
 
-- [ ] T017 [P] [ROUTE] `tests/libraries/test_routing.py::test_only_eligible_wins`
+- [X] T017 [P] [ROUTE] `tests/libraries/test_routing.py::test_only_eligible_wins`
       — three libraries; only one accepts the inferred platform;
       `chosen_via='only_eligible'`.
-- [ ] T018 [P] [ROUTE] `tests/libraries/test_routing.py::test_unrestricted_library_accepts_all`
+- [X] T018 [P] [ROUTE] `tests/libraries/test_routing.py::test_unrestricted_library_accepts_all`
       — library with `platforms_restricted=false` accepts every
       platform.
-- [ ] T019 [P] [ROUTE] `tests/libraries/test_routing.py::test_profile_match_breaks_tie`
-      — two libraries both accept the platform; the one whose Quality
-      + Region profile match the parsed file better wins.
-- [ ] T020 [P] [ROUTE] `tests/libraries/test_routing.py::test_lower_id_final_tiebreak`
+- [X] T019 [P] [ROUTE] `tests/libraries/test_routing.py::test_profile_match_breaks_tie`
+      — two libraries both accept the platform; the one whose Region
+      profile ranks the release's region higher wins (region_score
+      dominates; quality_bonus is the tie-breaker).
+- [X] T020 [P] [ROUTE] `tests/libraries/test_routing.py::test_lower_id_final_tiebreak`
       — both libraries match equally on profiles; lower `id` wins
       (FR-006).
-- [ ] T021 [P] [ROUTE] `tests/libraries/test_routing.py::test_unavailable_skipped`
+- [X] T021 [P] [ROUTE] `tests/libraries/test_routing.py::test_unavailable_skipped`
       — eligible library is `status='unavailable'` ⇒ skipped; routing
       falls through (FR-008).
-- [ ] T022 [P] [ROUTE] `tests/libraries/test_routing.py::test_no_eligible_library`
+- [X] T022 [P] [ROUTE] `tests/libraries/test_routing.py::test_no_eligible_library`
       — no library accepts the platform ⇒
       `chosen_via='no_eligible_library'`,
       `rejection_reason='routing:no_library_for_platform'` (FR-007).
-- [ ] T023 [P] [ROUTE] `tests/libraries/test_routing.py::test_30_release_corpus`
-      — fixture `routing_corpus_30_releases.jsonl` of 30 mixed
-      releases (NES / SNES / Mega Drive / PSX / 3DS / etc.) plus 3
-      pre-defined libraries; assert each release routes to the
-      documented library (SC-002).
+      Plus `test_region_excluded_disqualifies_library` covering the
+      Region-profile ``exclude_regions`` exclusion path (FR-006).
+- [X] T023 [P] [ROUTE] `tests/libraries/test_routing.py::test_30_release_corpus_routes_deterministically`
+      — synthesised mini-corpus (30 USA + 10 JPN releases against 3
+      pre-defined libraries) confirms each release routes to the
+      expected library and never flaps (SC-002). The JSONL fixture
+      file isn't carried — the corpus is generated inline so the
+      test stays self-contained.
 
 ### Implementation
 
-- [ ] T024 [ROUTE] Create `src/romarr/libraries/routing.py` — pure
-      `route_to_library(parsed_filename, libraries: list[LibrarySnapshot]) -> RoutingChoice`.
-      Order: filter unavailable → filter by platform allowlist →
-      score remaining by profile match → pick the lowest-id of the
-      best-scored. No I/O.
+- [X] T024 [ROUTE] Create `src/romarr/libraries/routing.py` — pure
+      `route_to_library(*, facts, inferred_platform_id, libraries,
+      quality_profiles, region_profiles) -> RoutingChoice`. Order:
+      filter unavailable → filter by platform allowlist → score
+      remaining via spec 006's ``ProfileEvaluator`` (region_score +
+      quality_bonus) → drop libraries whose region profile excludes
+      the release outright → pick the lowest-id of the best-scored.
+      No I/O; deterministic.
 
 **Checkpoint**: routing tests green; the 30-release fixture corpus
 hits 100%.
@@ -184,20 +191,24 @@ storms.
 
 ### Tests
 
-- [ ] T031 [P] [DISK] `tests/libraries/test_disk_space.py::test_above_threshold_passes`
+- [X] T031 [P] [DISK] `tests/libraries/test_disk_space.py::test_above_threshold_passes`
       — synthesise a path with > `min_disk_free_gb` available; the
       checker returns OK.
-- [ ] T032 [P] [DISK] `tests/libraries/test_disk_space.py::test_below_threshold_fails`
+- [X] T032 [P] [DISK] `tests/libraries/test_disk_space.py::test_below_threshold_raises`
       — monkeypatch `shutil.disk_usage` to return < threshold; the
-      checker raises `DiskFullError` (FR-030).
+      checker raises `DiskFullError` with the free GB rendered into
+      the operator-facing message (FR-030). Plus the structural
+      `test_disk_full_is_library_unavailable_subclass` so the
+      notification consumer's `except LibraryUnavailable` path keeps
+      catching the disk-full case.
 
 ### Implementation
 
-- [ ] T033 [DISK] Create `src/romarr/libraries/disk_space.py` — pure
+- [X] T033 [DISK] Create `src/romarr/libraries/disk_space.py` — pure
       `check_min_disk_free(path: Path, min_gb: int) -> None`. Used by
-      spec 008's import pipeline before each move (consumed via
-      explicit dependency injection so spec 008 doesn't need to
-      reference this module by import).
+      spec 008's import pipeline before each move; the helper is
+      re-exported from `romarr.libraries.__init__` so consumers can
+      `from romarr.libraries import check_min_disk_free`.
 
 **Checkpoint**: DISK tests green; spec 008 can import the helper from
 `romarr.libraries.disk_space`.

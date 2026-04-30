@@ -19,6 +19,7 @@ exporters, manual-import flow, and admin API land in subsequent
 slices.
 """
 
+from romarr.libraries.disk_space import check_min_disk_free
 from romarr.libraries.errors import (
     DiskFullError,
     ExporterError,
@@ -27,6 +28,7 @@ from romarr.libraries.errors import (
     NoEligibleLibrary,
     PathUnwritable,
 )
+from romarr.libraries.routing import route_to_library
 from romarr.libraries.types import (
     ExporterOutcome,
     LibrarySnapshot,
@@ -49,4 +51,6 @@ __all__ = [
     "PathUnwritable",
     "RoutingChoice",
     "ScanProgress",
+    "check_min_disk_free",
+    "route_to_library",
 ]
