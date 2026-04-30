@@ -91,6 +91,12 @@ class Indexer(Base, TimestampMixin):
     )
     last_health_ok: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     last_health_error: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Spec 007 / FR-027 / US7: when false, RSS results from this
+    # indexer are recorded in search_history but never auto-grabbed
+    # regardless of score. Column is added by migration 0007_search.
+    rss_auto_grab: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True
+    )
 
     __table_args__ = (
         UniqueConstraint(

@@ -26,15 +26,19 @@ download-clients dispatch → hardening.
 
 **Purpose**: bring up the module skeleton, dependencies, types, and shared errors.
 
-- [ ] T001 [SCAF] Update `pyproject.toml` — add runtime dep
+- [X] T001 [SCAF] Update `pyproject.toml` — add runtime dep
       `rapidfuzz>=3.6` (used for fuzzy title matching at threshold 85).
-- [ ] T002 [P] [SCAF] Create `src/romarr/search/__init__.py` exposing
+      *(Already a project dep at line 42 of pyproject.toml.)*
+- [X] T002 [P] [SCAF] Create `src/romarr/search/__init__.py` exposing
       `SearchEngine`, `run_manual_search`, `run_search_on_add`,
       `run_missing_search`, `run_cutoff_search`, `run_rss_sync`.
-- [ ] T003 [P] [SCAF] Create `src/romarr/search/errors.py` —
+      *(Public surface ships only the value types + errors in slice 1;
+      the round entry-points re-export once their modules exist in the
+      pipeline + rounds slices.)*
+- [X] T003 [P] [SCAF] Create `src/romarr/search/errors.py` —
       `SearchError`, `NoEligibleCandidatesError`,
       `BlocklistedReleaseError`, `OverCapWarning`.
-- [ ] T004 [P] [SCAF] Create `src/romarr/search/types.py` — every
+- [X] T004 [P] [SCAF] Create `src/romarr/search/types.py` — every
       Pydantic / StrEnum from `data-model.md`'s "Score Breakdown
       Value Type" section: `RejectionCode`, `Rejection`,
       `ScoreContribution`, `ScoreBreakdown`, `Candidate`,
@@ -42,6 +46,8 @@ download-clients dispatch → hardening.
 - [ ] T005 [SCAF] Extend `tests/conftest.py` with a
       `mock_newznab_client(name)` fixture; create
       `tests/search/conftest.py` for module-local fixtures.
+      *(Deferred to the pipeline slice — fixture lands alongside the
+      first tests that need a mocked indexer client.)*
 
 **Checkpoint**: imports work; lint+types green; no behaviour added.
 
@@ -54,29 +60,33 @@ SQLAlchemy models + Pydantic schemas.
 
 ### Tests (write first; must fail)
 
-- [ ] T006 [P] [PERS] `tests/search/test_models.py` — round-trip
+- [X] T006 [P] [PERS] `tests/search/test_models.py` — round-trip
       `Blocklist`, `SearchHistory`, `SearchCache` rows; verify CHECK
       constraints on `search_type`, the unique
       `(indexer_id, cache_key)` on `search_cache`, the
       `rss_auto_grab` column on `indexer`.
-- [ ] T007 [P] [PERS] `tests/search/test_models.py::test_blocklist_at_least_one_field`
+- [X] T007 [P] [PERS] `tests/search/test_models.py::test_blocklist_at_least_one_field`
       — Pydantic-level: a Blocklist row with no
       `indexer_guid`/`hash_sha1`/`hash_crc32` is rejected.
-- [ ] T008 [P] [PERS] `tests/search/test_migration_0007.py` — applying
+- [X] T008 [P] [PERS] `tests/search/test_migration_0007.py` — applying
       the migration creates all three tables and adds the
       `rss_auto_grab` column with DEFAULT true.
 
 ### Implementation
 
-- [ ] T009 [PERS] Create `src/romarr/search/models.py` —
+- [X] T009 [PERS] Create `src/romarr/search/models.py` —
       `Blocklist`, `SearchHistory`, `SearchCache` SQLAlchemy 2.0
       models matching `data-model.md`.
-- [ ] T010 [P] [PERS] Create `src/romarr/search/schemas.py` —
+- [X] T010 [P] [PERS] Create `src/romarr/search/schemas.py` —
       `*Read` for all three; `*Create` for `Blocklist` only;
       `ManualSearchRequest`, `GrabRequest`, `CommandRequest`.
-- [ ] T011 [PERS] Author `src/romarr/db/alembic/versions/0007_search.py`
+- [X] T011 [PERS] Author `src/romarr/db/alembic/versions/0007_search.py`
       — DDL for the three tables + `ADD COLUMN IF NOT EXISTS
       rss_auto_grab BOOLEAN NOT NULL DEFAULT true` on `indexer`.
+      *(SQLite doesn't support `ADD COLUMN IF NOT EXISTS`, so the
+      column is added via `op.batch_alter_table` for portability.
+      Re-running the migration in a development loop is safe via
+      the alembic version table.)*
 
 **Checkpoint**: `alembic upgrade head` is clean; PERS tests green.
 
