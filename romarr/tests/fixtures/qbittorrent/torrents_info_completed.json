@@ -1,0 +1,18 @@
+[
+  {
+    "hash": "abc123def456abc123def456abc123def456abcd",
+    "name": "Sonic.the.Hedgehog.Mega.Drive.[U].zip",
+    "state": "uploading",
+    "progress": 1.0,
+    "eta": 0,
+    "num_seeds": 12,
+    "num_complete": 12,
+    "num_leechs": 0,
+    "num_incomplete": 0,
+    "dlspeed": 0,
+    "upspeed": 524288,
+    "save_path": "/downloads/complete/romarr",
+    "category": "romarr",
+    "tags": "romarr, romarr-megadrive"
+  }
+]

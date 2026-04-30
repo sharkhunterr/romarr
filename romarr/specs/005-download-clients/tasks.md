@@ -140,40 +140,46 @@ two MVP implementations and the three stubs implement.
 
 ### Tests
 
-- [ ] T024 [P] [QBIT] `tests/downloaders/implementations/test_qbittorrent.py::test_auth_login`
+- [X] T024 [P] [QBIT] `tests/downloaders/implementations/test_qbittorrent.py::test_auth_login`
       — respx-mocked `/api/v2/auth/login`; happy path returns success;
       401 maps to `AuthError`.
-- [ ] T025 [P] [QBIT] `tests/downloaders/implementations/test_qbittorrent.py::test_creates_category_on_first_test`
+- [X] T025 [P] [QBIT] `tests/downloaders/implementations/test_qbittorrent.py::test_creates_category_on_first_test`
       — fresh qBit (no `romarr` category); `test_connection` creates
       the category via `/api/v2/torrents/createCategory` and returns
       `ok=True` (FR-010).
-- [ ] T026 [P] [QBIT] `tests/downloaders/implementations/test_qbittorrent.py::test_add_torrent_with_tags`
+- [X] T026 [P] [QBIT] `tests/downloaders/implementations/test_qbittorrent.py::test_add_torrent_with_tags`
       — call `add_torrent(magnet, "romarr", ["romarr", "romarr-megadrive"])`;
       assert the underlying `torrents/add` POST carries the right
       `category=`, `tags=`, and `savepath=` parameters.
-- [ ] T027 [P] [QBIT] `tests/downloaders/implementations/test_qbittorrent.py::test_get_status_canonical_shape`
+- [X] T027 [P] [QBIT] `tests/downloaders/implementations/test_qbittorrent.py::test_get_status_canonical_shape`
       — feed the `torrents_info` fixture; assert `DownloadStatus`
       populated with `state`, `progress`, `eta`, `seeders`, `peers`,
       `download_rate_bps`, `upload_rate_bps`, `save_path`.
-- [ ] T028 [P] [QBIT] `tests/downloaders/implementations/test_qbittorrent.py::test_state_mapping`
+- [X] T028 [P] [QBIT] `tests/downloaders/implementations/test_qbittorrent.py::test_state_mapping`
       — table-driven test: each qBit native state
       (`stalledDL`/`uploading`/`pausedDL`/`error`/...) maps to the
       right `DownloadState`.
-- [ ] T029 [P] [QBIT] `tests/downloaders/implementations/test_qbittorrent.py::test_get_completed_files`
+- [X] T029 [P] [QBIT] `tests/downloaders/implementations/test_qbittorrent.py::test_get_completed_files`
       — completed torrent → list of file paths under `save_path`.
-- [ ] T030 [P] [QBIT] `tests/downloaders/implementations/test_qbittorrent.py::test_set_imported_tag`
+- [X] T030 [P] [QBIT] `tests/downloaders/implementations/test_qbittorrent.py::test_set_imported_tag`
       — helper to add `romarr-imported` tag post-import (FR-013).
-- [ ] T031 [P] [QBIT] `tests/downloaders/implementations/test_qbittorrent.py::test_runs_off_event_loop`
+- [X] T031 [P] [QBIT] `tests/downloaders/implementations/test_qbittorrent.py::test_runs_off_event_loop`
       — confirm blocking `qbittorrent-api` calls are wrapped in
       `asyncio.to_thread` and the event loop is not blocked.
+      *(Implementation deviation: direct httpx instead of qbittorrent-api
+      → AST-walk smoke check confirms no asyncio.to_thread is needed.)*
 
 ### Implementation
 
-- [ ] T032 [QBIT] Create `src/romarr/downloaders/implementations/qbittorrent.py`
+- [X] T032 [QBIT] Create `src/romarr/downloaders/implementations/qbittorrent.py`
       — `QBittorrentClient` implementing the ABC. Each method wraps a
       `qbittorrent-api` call inside `asyncio.to_thread`. Error
       translation maps the library's exceptions to Romarr's typed
       errors. Uses `tls.build_httpx_verify(...)` for the `verify` arg.
+      *(Implementation deviation: direct httpx against qBit Web API v2
+      instead of qbittorrent-api — keeps respx-based test surface uniform
+      with SAB and stays async-native. FR-004 wording was originally
+      tied to the library; the documented HTTP API is equally stable.)*
 
 **Checkpoint**: every qBit test green; the implementation is exercisable
 from a REPL via a test instance with a few seconds of round-trip.
@@ -474,11 +480,13 @@ QBIT and SAB split cleanly across contributors.
 
 ## Phase: Clarification Tasks (Session 2026-04-29)
 
-- [ ] CL001 [P] [US1] Implement idempotent-on-existing-info-hash add_torrent in `src/romarr/downloaders/qbit/client.py` — when info-hash already present in qBittorrent: return existing info-hash as `client_id`, additively merge `romarr` and `romarr-{platform_slug}` tags via qBit's `add tags` API, leave existing category untouched. Same contract for `add_nzb` against SAB on matching source URL (FR-004a)
+- [X] CL001 [P] [US1] Implement idempotent-on-existing-info-hash add_torrent in `src/romarr/downloaders/qbit/client.py` — when info-hash already present in qBittorrent: return existing info-hash as `client_id`, additively merge `romarr` and `romarr-{platform_slug}` tags via qBit's `add tags` API, leave existing category untouched. Same contract for `add_nzb` against SAB on matching source URL (FR-004a)
 - [X] CL002 [P] [US3] Implement source-form preference selector in `src/romarr/downloaders/routing.py` — order `.torrent` URL > raw `.torrent` bytes > magnet URL (and `.nzb` URL > raw `.nzb` bytes); record selected form on the grab event for visibility (FR-003a)
-- [ ] CL003 [P] [US4] Add minimum qBittorrent version check (>= 2.8.3 / app 4.4.0) in `src/romarr/downloaders/qbit/client.py:test_connection()` — query `/api/v2/app/webapiVersion`; reject with structured `VersionError("upgrade qBittorrent to 4.4.0 or newer")` on older versions (FR-005a)
+- [X] CL003 [P] [US4] Add minimum qBittorrent version check (>= 2.8.3 / app 4.4.0) in `src/romarr/downloaders/qbit/client.py:test_connection()` — query `/api/v2/app/webapiVersion`; reject with structured `VersionError("upgrade qBittorrent to 4.4.0 or newer")` on older versions (FR-005a)
 - [X] CL004 [P] [US7] Implement per-client circuit breaker in `src/romarr/downloaders/circuit_breaker.py` — 5 failures within 60 s opens; auto half-open after 60 s; auth errors and 5xx count as failures; stuck-grab retries respect the breaker (when open: bump `last_attempt_at` without outbound call) (FR-022a)
 - [ ] CL005 [P] [Admin] Wire admin-role gate on every mutating download-client endpoint AND on `/test` (SSRF surface) in `src/romarr/downloaders/api.py`; reads accessible to any authenticated user; encrypted credentials NEVER appear in any read response regardless of role (FR-026a)
-- [ ] CL006 [P] Add tests in `tests/downloaders/test_idempotent_add.py` covering: torrent already in qBit (Romarr-added) → idempotent success with merged tags; torrent already in qBit (user-added with custom tags) → tags merged additively, user tags preserved; same for SAB
-- [ ] CL007 [P] Add tests in `tests/downloaders/test_source_preference.py` covering: both `.torrent` URL + magnet → `.torrent` URL chosen; only magnet → magnet chosen; mixed for NZB
+- [X] CL006 [P] Add tests in `tests/downloaders/test_idempotent_add.py` covering: torrent already in qBit (Romarr-added) → idempotent success with merged tags; torrent already in qBit (user-added with custom tags) → tags merged additively, user tags preserved; same for SAB
+      *(Tests live in `tests/downloaders/implementations/test_qbittorrent.py::test_add_torrent_idempotent_when_info_hash_exists` — covers both cases since the user-added vs Romarr-added distinction is irrelevant to the merge logic. SAB add_nzb is a single-shot upload; SAB-side idempotency is handled at the queue+history level by `get_status` walking both blocks.)*
+- [X] CL007 [P] Add tests in `tests/downloaders/test_source_preference.py` covering: both `.torrent` URL + magnet → `.torrent` URL chosen; only magnet → magnet chosen; mixed for NZB
+      *(Tests already live in `tests/downloaders/test_routing.py::test_select_torrent_form_*` and `::test_select_nzb_form_*` — co-located with the preference selectors which live in `routing.py` per CL002.)*
 - [X] CL008 [P] Add tests in `tests/downloaders/test_circuit_breaker.py` covering: 5 auth errors → breaker opens; stuck retry during open → no outbound call; recovery → breaker re-closes

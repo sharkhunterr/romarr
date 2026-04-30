@@ -8,7 +8,14 @@ SABnzbd land in slice 2.
 
 from romarr.downloaders.implementations.deluge import DelugeClient
 from romarr.downloaders.implementations.nzbget import NzbgetClient
+from romarr.downloaders.implementations.qbittorrent import QBittorrentClient
 from romarr.downloaders.implementations.sabnzbd import SabnzbdClient
 from romarr.downloaders.implementations.transmission import TransmissionClient
 
-__all__ = ["DelugeClient", "NzbgetClient", "SabnzbdClient", "TransmissionClient"]
+__all__ = [
+    "DelugeClient",
+    "NzbgetClient",
+    "QBittorrentClient",
+    "SabnzbdClient",
+    "TransmissionClient",
+]

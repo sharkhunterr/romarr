@@ -32,6 +32,7 @@ from romarr.downloaders.errors import (
 from romarr.downloaders.implementations import (
     DelugeClient,
     NzbgetClient,
+    QBittorrentClient,
     SabnzbdClient,
     TransmissionClient,
 )
@@ -107,6 +108,7 @@ __all__ = [
     "NzbSource",
     "NzbUrl",
     "NzbgetClient",
+    "QBittorrentClient",
     "QueueEntry",
     "QueueEntryState",
     "QueueEntryUpdate",
