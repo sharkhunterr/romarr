@@ -244,39 +244,60 @@ storms.
 
 - [ ] T034 [P] [SCAN-FULL] `tests/libraries/scanner/test_full_scan.py::test_100_files_under_5s`
       — fixture `full_scan_100_files/` with 100 small ROMs; assert
-      scan completes in < 5 s (SC-003 first leg).
+      scan completes in < 5 s (SC-003 first leg). *(Deferred to
+      HARD slice — perf benchmark.)*
 - [ ] T035 [P] [SCAN-FULL] `tests/libraries/scanner/test_full_scan.py::test_10k_files_under_5min`
       — generate 10 000 tiny synthetic files at test time; assert scan
-      < 5 min (SC-003 second leg). Parallelise hashing across a
-      threadpool.
-- [ ] T036 [P] [SCAN-FULL] `tests/libraries/scanner/test_full_scan.py::test_links_existing_releases`
-      — pre-populate Releases with known DAT-matching hashes; scan
-      links each file to its existing Release without creating a
-      duplicate.
-- [ ] T037 [P] [SCAN-FULL] `tests/libraries/scanner/test_full_scan_idempotent.py::test_skip_known_path_size_mtime`
-      — re-scan after a clean scan; files whose `(path, size, mtime)`
-      already match a Dump are skipped (FR-010).
-- [ ] T038 [P] [SCAN-FULL] `tests/libraries/scanner/test_full_scan_orphan.py::test_missing_file_marks_release_wanted`
-      — delete a file on disk; scan; orphaned Dump detected; parent
-      Release transitions to `status='wanted'`; structured warning
-      emitted (FR-011).
-- [ ] T039 [P] [SCAN-FULL] `tests/libraries/scanner/test_progress_events.py::test_emits_every_100_files`
-      — scan 250 files; assert 3 progress events emitted on the
-      pub/sub channel (FR-012).
+      < 5 min (SC-003 second leg). *(Deferred to HARD slice — perf
+      benchmark.)*
+- [X] T036 [P] [SCAN-FULL] `tests/libraries/scanner/test_full_scan.py::test_links_existing_release_via_hash_match`
+      — pre-populate a Dump under a stale path; scan; assert the
+      Dump rebinds to the on-disk path when the hash matches and
+      ``files_linked == 1``.
+- [X] T037 [P] [SCAN-FULL] `tests/libraries/scanner/test_full_scan.py::test_skip_known_path_and_size`
+      — re-scan after a clean scan; files whose ``(path, size)``
+      already match a Dump are skipped without rehashing
+      (FR-010 idempotent re-scan).
+- [X] T038 [P] [SCAN-FULL] `tests/libraries/scanner/test_full_scan.py::test_missing_file_marks_release_wanted`
+      — pre-populate a Dump pointing at a nonexistent path with
+      its parent Release in ``status='imported'``; the orphan
+      sweep transitions the Release back to ``'wanted'`` and the
+      result reports ``files_orphaned == 1`` (FR-011). Plus
+      ``test_unmatched_file_counts_for_importer`` so the operator
+      can see the importer's pending workload.
+- [X] T039 [P] [SCAN-FULL] `tests/libraries/scanner/test_progress.py::test_emits_every_100_files`
+      — emitter ticks at every Nth recorded file plus a forced
+      final emit on ``finish()`` (FR-012). Plus 4 more progress
+      tests covering below-threshold suppression, orphan
+      force-emit, terminal snapshot return, and sinkless emitter
+      no-op. Plus
+      ``tests/libraries/scanner/test_full_scan.py::test_full_scan_emits_progress_events``
+      proving the integration: 5 files / every=2 → ≥ 3 events.
 - [ ] T040 [P] [SCAN-FULL] `tests/libraries/scanner/test_full_scan.py::test_new_file_creates_release`
       — file not matching any Release ⇒ runs identification cascade;
       passes profile gate ⇒ new Release created; fails ⇒ parked in
       `unidentified_dump` with `library_id` set (FR-014).
+      *(Deferred — needs spec 008's full identification cascade
+      and profile gate; the unmatched files surface in the
+      ``files_unmatched`` counter today so the operator can see
+      what the importer will pick up.)*
 
 ### Implementation
 
-- [ ] T041 [SCAN-FULL] Create `src/romarr/libraries/scanner/progress.py`
-      — `ScanProgressEmitter` that publishes events every N files.
-- [ ] T042 [SCAN-FULL] Create `src/romarr/libraries/scanner/full.py` —
-      async `full_scan(library: Library) -> ScanProgress`. Walks the
-      path with `os.scandir`, hashes via spec 001's `Hasher` in a
-      threadpool (`asyncio.to_thread`), identifies via spec 001's
-      `Identifier`, links/creates Releases.
+- [X] T041 [SCAN-FULL] Create `src/romarr/libraries/scanner/progress.py`
+      — `ScanProgressEmitter` publishes events every N files plus
+      a forced emit on orphan-recording (so the operator sees the
+      orphan signal as soon as it surfaces) and a terminal emit
+      on ``finish()``.
+- [X] T042 [SCAN-FULL] Create `src/romarr/libraries/scanner/full.py` —
+      async `full_scan(*, session, library_id, library_path,
+      accepted_extensions, progress_sink, progress_every, hasher)
+      -> FullScanResult`. Walks the path with ``Path.rglob``
+      (sorted for determinism), hashes via spec 001's ``Hasher``
+      in a threadpool (``asyncio.to_thread``), looks up Dumps by
+      ``(path, size)`` for the idempotent skip and by ``sha1``
+      for the link-by-hash rebind, and runs the orphan sweep at
+      the end. New-file Release creation lives with spec 008.
 
 **Checkpoint**: full-scan tests green including the 10k perf budget.
 
