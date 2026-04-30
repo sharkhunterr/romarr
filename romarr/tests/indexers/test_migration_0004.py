@@ -22,7 +22,10 @@ def _alembic_config(db_url: str) -> Config:
 def test_migration_creates_indexer_and_application(tmp_path: Path) -> None:
     db = tmp_path / "test.db"
     cfg = _alembic_config(f"sqlite+aiosqlite:///{db}")
-    command.upgrade(cfg, "head")
+    # Pin to 0004 because spec 005's migration is the one that finally
+    # installs the indexer.download_client_id FK; this test asserts the
+    # *deferred* state right after 0004 ran.
+    command.upgrade(cfg, "0004_indexers")
 
     conn = sqlite3.connect(db)
     try:
@@ -65,6 +68,6 @@ def test_migration_creates_indexer_and_application(tmp_path: Path) -> None:
 def test_migration_idempotent(tmp_path: Path) -> None:
     db = tmp_path / "test.db"
     cfg = _alembic_config(f"sqlite+aiosqlite:///{db}")
-    command.upgrade(cfg, "head")
+    command.upgrade(cfg, "0004_indexers")
     command.downgrade(cfg, "0003_platform_packs")
-    command.upgrade(cfg, "head")
+    command.upgrade(cfg, "0004_indexers")

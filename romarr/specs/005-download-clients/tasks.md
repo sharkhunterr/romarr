@@ -26,17 +26,17 @@ SABnzbd → stubs → routing → retry → API → hardening.
 
 - [ ] T001 [SCAF] Update `pyproject.toml` — add runtime dep
       `qbittorrent-api>=2024.1`. SAB uses the existing httpx; no new dep.
-- [ ] T002 [P] [SCAF] Create `src/romarr/downloaders/__init__.py` exposing
+- [X] T002 [P] [SCAF] Create `src/romarr/downloaders/__init__.py` exposing
       `DownloadClientRegistry`, `route_release`, `test_connectivity`,
       `add_release`, `RoutingDecision`.
-- [ ] T003 [P] [SCAF] Create `src/romarr/downloaders/errors.py` —
+- [X] T003 [P] [SCAF] Create `src/romarr/downloaders/errors.py` —
       `DownloaderError` (base), `ConnectionError`, `AuthError`,
       `CategoryWarning` (non-blocking), `VersionError`, `TLSError`,
       `NoEligibleClientError`.
-- [ ] T004 [P] [SCAF] Create `src/romarr/downloaders/types.py` — every
+- [X] T004 [P] [SCAF] Create `src/romarr/downloaders/types.py` — every
       Pydantic + StrEnum from `data-model.md`'s "Routing Value Types"
       section.
-- [ ] T005 [P] [SCAF] Create `src/romarr/downloaders/tags.py` — constants
+- [X] T005 [P] [SCAF] Create `src/romarr/downloaders/tags.py` — constants
       `TAG_ROMARR = "romarr"`, helpers
       `tag_for_platform(platform_slug) -> str`,
       `TAG_IMPORTED = "romarr-imported"`.
@@ -55,36 +55,36 @@ SABnzbd → stubs → routing → retry → API → hardening.
 
 ### Tests (write first; must fail)
 
-- [ ] T007 [P] [PERS] `tests/downloaders/test_models.py` — round-trip a
+- [X] T007 [P] [PERS] `tests/downloaders/test_models.py` — round-trip a
       `DownloadClient` through the async session; verify CHECK constraints
       on `type`, `port`, `ssl_cert_validation`.
-- [ ] T008 [P] [PERS] `tests/downloaders/test_models.py::test_unique_type_host_port`
+- [X] T008 [P] [PERS] `tests/downloaders/test_models.py::test_unique_type_host_port`
       — second insertion of the same `(type, host, port)` raises an
       `IntegrityError`.
-- [ ] T009 [P] [PERS] `tests/downloaders/test_models.py::test_qbit_requires_password`
+- [X] T009 [P] [PERS] `tests/downloaders/test_models.py::test_qbit_requires_password`
       — Pydantic-level validator rejects a qBit row with no password.
-- [ ] T010 [P] [PERS] `tests/downloaders/test_models.py::test_sab_rejects_password`
+- [X] T010 [P] [PERS] `tests/downloaders/test_models.py::test_sab_rejects_password`
       — Pydantic-level validator rejects a SAB row that carries username
       or password.
-- [ ] T011 [P] [PERS] `tests/downloaders/test_models.py::test_at_least_one_source_type_enabled`
+- [X] T011 [P] [PERS] `tests/downloaders/test_models.py::test_at_least_one_source_type_enabled`
       — Pydantic-level validator rejects `enable_for_torrents=False AND
       enable_for_usenet=False` (FR-023).
-- [ ] T012 [P] [PERS] `tests/downloaders/test_migration_0005.py::test_creates_table_and_fk`
+- [X] T012 [P] [PERS] `tests/downloaders/test_migration_0005.py::test_creates_table_and_fk`
       — applying the migration creates the table AND adds the FK from
       `indexer.download_client_id → download_client.id`. Foundation
       model fixture is used to insert a baseline indexer.
-- [ ] T013 [P] [PERS] `tests/downloaders/test_migration_0005.py::test_indexer_set_null_on_delete`
+- [X] T013 [P] [PERS] `tests/downloaders/test_migration_0005.py::test_indexer_set_null_on_delete`
       — populate an indexer's `download_client_id`; delete the client;
       assert the indexer's column is now NULL (not the row deleted).
 
 ### Implementation
 
-- [ ] T014 [PERS] Create `src/romarr/downloaders/models.py` —
+- [X] T014 [PERS] Create `src/romarr/downloaders/models.py` —
       `DownloadClient` SQLAlchemy 2.0 model matching `data-model.md`.
-- [ ] T015 [P] [PERS] Create `src/romarr/downloaders/schemas.py` —
+- [X] T015 [P] [PERS] Create `src/romarr/downloaders/schemas.py` —
       `DownloadClientRead/Create/Update`, `DownloadClientSchema`. Read
       schema MUST omit ciphertext blobs and expose `is_configured: bool`.
-- [ ] T016 [PERS] Author `src/romarr/db/alembic/versions/0005_download_clients.py`
+- [X] T016 [PERS] Author `src/romarr/db/alembic/versions/0005_download_clients.py`
       — DDL for the table + the deferred FK on `indexer.download_client_id`
       via `op.batch_alter_table` for SQLite parity with PostgreSQL.
 
@@ -111,17 +111,17 @@ two MVP implementations and the three stubs implement.
 - [ ] T019 [P] [ABC] `tests/downloaders/test_connectivity.py::test_warnings_non_blocking`
       — SAB without `romarr` category emits a `CategoryWarning` AND
       `ok = True` (FR-011).
-- [ ] T020 [P] [ABC] `tests/downloaders/test_tls.py::test_local_host_detection`
+- [X] T020 [P] [ABC] `tests/downloaders/test_tls.py::test_local_host_detection`
       — IPs in 127.0.0.0/8, 10.x, 192.168.x, 172.16-31.x, ::1, fe80::,
       and `localhost` all detected as local; public IPs are not.
 
 ### Implementation
 
-- [ ] T021 [ABC] Create `src/romarr/downloaders/base.py` — abstract
+- [X] T021 [ABC] Create `src/romarr/downloaders/base.py` — abstract
       `DownloadClient` class with the documented async method set, plus
       class-level metadata `name`, `type`, `supports_torrents`,
       `supports_usenet`.
-- [ ] T022 [ABC] Create `src/romarr/downloaders/tls.py` —
+- [X] T022 [ABC] Create `src/romarr/downloaders/tls.py` —
       `is_local_host(host) -> bool`, `build_httpx_verify(setting, host)`
       that returns the right value for httpx's `verify=` kwarg
       (True / False / a verifier that conditionally skips local hosts).
@@ -229,12 +229,12 @@ documented error paths with typed errors.
 
 ### Tests
 
-- [ ] T040 [P] [STUBS] `tests/downloaders/implementations/test_transmission_stub.py`
+- [X] T040 [P] [STUBS] `tests/downloaders/implementations/test_transmission_stub.py`
       — instantiating `TransmissionClient` and calling any method
       raises `NotImplementedError` with the documented message.
-- [ ] T041 [P] [STUBS] `tests/downloaders/implementations/test_deluge_stub.py`
+- [X] T041 [P] [STUBS] `tests/downloaders/implementations/test_deluge_stub.py`
       — same shape.
-- [ ] T042 [P] [STUBS] `tests/downloaders/implementations/test_nzbget_stub.py`
+- [X] T042 [P] [STUBS] `tests/downloaders/implementations/test_nzbget_stub.py`
       — same shape.
 - [ ] T043 [P] [STUBS] `tests/downloaders/implementations/test_stubs_in_schema.py`
       — `GET /api/v3/downloadclient/schema` (Phase 9) lists the three
@@ -242,7 +242,7 @@ documented error paths with typed errors.
 
 ### Implementation
 
-- [ ] T044 [STUBS] Create
+- [X] T044 [STUBS] Create
       `src/romarr/downloaders/implementations/transmission.py`,
       `deluge.py`, and `nzbget.py` — each defines a class implementing
       the ABC, with metadata set, every method raising
