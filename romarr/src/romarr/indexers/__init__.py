@@ -16,6 +16,7 @@ connectivity tester, Prowlarr surface, and CRUD endpoints land in
 follow-up slices.
 """
 
+from romarr.indexers.client import NewznabClient
 from romarr.indexers.errors import (
     IndexerAuthError,
     IndexerError,
@@ -30,6 +31,7 @@ from romarr.indexers.parser.extended_attrs import (
     normalize_region,
 )
 from romarr.indexers.parser.search import parse_search
+from romarr.indexers.rate_limiter import RateLimiter
 from romarr.indexers.tokens import (
     generate_token,
     hash_token,
@@ -53,8 +55,10 @@ __all__ = [
     "IndexerError",
     "IndexerHealthIssue",
     "IndexerProtocolError",
+    "NewznabClient",
     "ParsedTorznabAttr",
     "RateLimitDelayed",
+    "RateLimiter",
     "RssResult",
     "SearchResult",
     "dedup_by_guid",

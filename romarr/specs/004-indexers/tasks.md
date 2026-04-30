@@ -155,37 +155,42 @@ crossover; the parser is importable and exercisable from a REPL.
 
 ### Tests
 
-- [ ] T028 [P] [CLIENT] `tests/indexers/test_client_caps.py::test_caps_happy_path`
-      — respx-mocked `t=caps` returns `valid_full.xml`; assert the client
-      returns the parsed capabilities.
-- [ ] T029 [P] [CLIENT] `tests/indexers/test_client_search.py::test_search_with_extended`
-      — respx-mocked `t=search&q=...&cat=1000`; assert results are parsed and
-      extended attrs respected.
-- [ ] T030 [P] [CLIENT] `tests/indexers/test_client_search.py::test_filename_fallback`
-      — respx-mocked search returning vanilla XML; assert
-      `SearchResult.region`/`languages`/`revision` populated from foundation's
-      filename parser dispatcher with `*_provenance = FILENAME` (FR-004).
-- [ ] T031 [P] [CLIENT] `tests/indexers/test_client_failure_modes.py::test_malformed_xml`
-      — respx-mocked malformed XML response; assert no exception escapes the
-      client; an `IndexerHealthIssue(category='parser')` is emitted; the
-      result list is empty.
-- [ ] T032 [P] [CLIENT] `tests/indexers/test_client_failure_modes.py::test_5xx`
-      — respx-mocked 503; assert `IndexerProtocolError` raised, recorded in
-      the breaker.
-- [ ] T033 [P] [CLIENT] `tests/indexers/test_client_failure_modes.py::test_auth_error`
-      — respx-mocked 401; assert `IndexerAuthError` raised distinctly from
-      `IndexerProtocolError`.
+- [X] T028 [P] [CLIENT] `tests/indexers/test_client_caps.py::test_caps_happy_path`
+      + companion ``test_caps_includes_apikey_in_query`` and
+      ``test_caps_omits_apikey_when_none``.
+- [X] T029 [P] [CLIENT] `tests/indexers/test_client_search.py::test_search_with_extended_attrs`
+      — extended attrs respected; companion ``test_search_carries_query_and_categories``
+      asserts the outbound URL params (``t=search&q=...&cat=...&limit=100``).
+- [X] T030 [P] [CLIENT] `tests/indexers/test_client_search.py::test_filename_fallback_fills_missing_provenance`
+      — vanilla RSS → the dispatcher fills region / convention with
+      ``*_provenance = FILENAME`` (FR-004).
+- [X] T031 [P] [CLIENT] `tests/indexers/test_client_failure_modes.py::test_malformed_xml_in_search_returns_empty_with_health_issue`
+      — malformed XML returns ``[]`` instead of escalating; lxml's
+      ``recover=True`` is forgiving so the parser-error path is also
+      exercised by truncated input under the property-based test.
+- [X] T032 [P] [CLIENT] `tests/indexers/test_client_failure_modes.py::test_5xx_raises_protocol_error`
+      — 503 → ``IndexerProtocolError`` after retries; a
+      ``protocol``-category health issue is recorded.
+- [X] T033 [P] [CLIENT] `tests/indexers/test_client_failure_modes.py::test_401_raises_auth_error_distinctly`
+      + ``test_403_also_raises_auth_error`` — auth errors map to
+      ``IndexerAuthError`` and are recorded with category=``auth``,
+      distinct from protocol failures.
 
 ### Implementation
 
-- [ ] T034 [CLIENT] Create `src/romarr/indexers/client.py` — `NewznabClient`
-      class with `caps()`, `search(q, categories)`, `rss(categories)`. Uses
-      httpx async, decorated by tenacity (3 attempts, exponential backoff) and
-      wrapped by the foundation circuit breaker. The search method post-
-      processes results with foundation filename parsing for any field
-      missing from extended attrs.
-- [ ] T035 [CLIENT] Wire `IndexerHealthIssue` emission into the client's
-      exception paths via `health.py` (Phase 9 stub for now; producer here).
+- [X] T034 [CLIENT] Created `src/romarr/indexers/client.py` —
+      ``NewznabClient`` with ``caps()`` / ``search()`` / ``rss()``. Uses
+      httpx async; tenacity 3-attempt retry with exponential-jitter
+      backoff for ``IndexerProtocolError``; wrapped by the foundation
+      ``CircuitBreaker``. The search method post-processes parsed
+      results with the default filename-parser dispatcher for any
+      field whose ``*_provenance is None`` (FR-004).
+- [X] T035 [CLIENT] Wired ``IndexerHealthIssue`` emission into every
+      exception path via ``_record_issue``. Each issue is also logged
+      via structlog-style ``extra`` so even tests without direct
+      access to ``health_issues`` see the structured record. The
+      ``message`` LogRecord-reserved key is renamed to ``detail`` to
+      avoid Python's logging-framework collision.
 
 **Checkpoint**: client tests green; client gracefully handles every documented
 failure mode without crashing.
@@ -199,31 +204,35 @@ foundation circuit breaker.
 
 ### Tests
 
-- [ ] T036 [P] [RATE] `tests/indexers/test_rate_limiter.py::test_minimum_gap_enforced`
-      — configure 5 s; record outbound timestamps for 2 sequential calls;
-      assert the gap is ≥ 5 s (SC-005).
-- [ ] T037 [P] [RATE] `tests/indexers/test_rate_limiter.py::test_no_delay_when_zero`
-      — `rate_limit_seconds = 0`; back-to-back calls dispatch immediately.
-- [ ] T038 [P] [RATE] `tests/indexers/test_rate_limiter.py::test_monotonic_clock_used`
-      — patch `time.time()` to jump backward; the limiter still enforces the
-      gap (FR-009).
-- [ ] T039 [P] [RATE] `tests/indexers/test_rate_limiter.py::test_per_indexer_isolation`
-      — two indexers, each with a 5 s rate limit; calls to indexer A do not
-      affect indexer B's gap.
-- [ ] T040 [P] [RATE] `tests/indexers/test_circuit_breaker_reuse.py` — assert
-      that `from romarr.identification.hashmatch.circuit_breaker import CircuitBreaker`
-      is the ONLY breaker import in the indexers module; no second
-      implementation exists (Constitution Article III).
-- [ ] T041 [P] [RATE] `tests/indexers/test_circuit_breaker_reuse.py::test_isolation_between_indexers`
-      — open the breaker for indexer A; confirm calls to indexer B are
-      unaffected (SC-004).
+- [X] T036 [P] [RATE] `tests/indexers/test_rate_limiter.py::test_minimum_gap_enforced`
+      — second acquire is delayed roughly the gap (SC-005). The test
+      uses 0.05 s instead of 5 s for speed; the invariant is the same.
+- [X] T037 [P] [RATE] `tests/indexers/test_rate_limiter.py::test_no_delay_when_zero`
+      — ``seconds=0`` makes ``acquire`` a true no-op.
+- [X] T038 [P] [RATE] `tests/indexers/test_rate_limiter.py::test_monotonic_clock_used`
+      — injecting a clock that jumps backward still enforces the gap
+      (FR-009).
+- [X] T039 [P] [RATE] `tests/indexers/test_rate_limiter.py::test_per_indexer_isolation`
+      — two ``RateLimiter`` instances don't share state; companion
+      ``test_concurrent_acquires_serialized`` covers the same-limiter
+      multi-acquire path.
+- [X] T040 [P] [RATE] `tests/indexers/test_circuit_breaker_reuse.py::test_breaker_class_is_the_foundation_one`
+      — every module under ``romarr.indexers`` that imports
+      ``CircuitBreaker`` references the foundation's class object, NOT
+      a re-defined one (Constitution Article III). Companion
+      ``test_circuit_open_error_re_exported`` confirms the same for
+      the exception type.
+- [X] T041 [P] [RATE] `tests/indexers/test_circuit_breaker_reuse.py::test_breaker_isolation_between_indexers`
+      — opening one breaker leaves the other untouched (SC-004).
 
 ### Implementation
 
-- [ ] T042 [RATE] Create `src/romarr/indexers/rate_limiter.py` — async
-      `RateLimiter(seconds)` with `await acquire()` that enforces the
-      monotonic-clock gap; one instance per indexer id, cached in the
-      `IndexerRegistry`.
+- [X] T042 [RATE] Created `src/romarr/indexers/rate_limiter.py` — async
+      ``RateLimiter(seconds, clock=time.monotonic)`` with
+      ``await acquire()`` returning the actual delay (used by tests +
+      structured logging). The internal lock serializes concurrent
+      acquirers so the gap calculation stays consistent. The registry
+      will cache one instance per indexer id (Phase 6).
 
 **Checkpoint**: rate limiter tests green; isolation guarantees verified
 across indexers and across rate-limit + breaker.
