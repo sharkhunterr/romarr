@@ -55,5 +55,8 @@ class _StubClient(DownloadClient):
     async def set_imported_tag(self, client_native_id: str) -> None:
         raise NotImplementedError(_DEFERRED_MSG)
 
+    async def ensure_category(self) -> None:
+        raise NotImplementedError(_DEFERRED_MSG)
+
 
 __all__ = ["_StubClient"]

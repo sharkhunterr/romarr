@@ -125,5 +125,20 @@ class DownloadClient(ABC):
         lifecycle policy can act.
         """
 
+    @abstractmethod
+    async def ensure_category(self) -> None:
+        """Ensure the operator-configured category exists on the client.
+
+        qBittorrent auto-creates the category (free API). SAB cannot —
+        the operator MUST manually create the category in SAB's UI, so
+        SAB raises :class:`CategoryWarning` when the category is missing.
+        The connectivity orchestrator catches that warning and surfaces
+        a non-blocking :class:`ConnectivityWarning` (FR-011).
+
+        Raises:
+            CategoryWarning: when the category is missing and cannot be
+                created automatically.
+        """
+
 
 __all__ = ["DownloadClient"]

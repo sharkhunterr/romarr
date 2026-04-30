@@ -1,0 +1,21 @@
+{
+  "queue": {
+    "status": "Downloading",
+    "speed": "5.2 M",
+    "kbpersec": "5300",
+    "mb": "1200",
+    "mbleft": "300",
+    "slots": [
+      {
+        "nzo_id": "SABnzbd_nzo_abc123",
+        "filename": "Sonic.the.Hedgehog.Mega.Drive.[U].zip",
+        "status": "Downloading",
+        "percentage": "75",
+        "mb": "1200",
+        "mbleft": "300",
+        "timeleft": "0:01:30",
+        "cat": "romarr"
+      }
+    ]
+  }
+}

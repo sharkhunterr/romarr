@@ -100,15 +100,15 @@ two MVP implementations and the three stubs implement.
 
 ### Tests
 
-- [ ] T017 [P] [ABC] `tests/downloaders/test_connectivity.py::test_returns_structured_result`
+- [X] T017 [P] [ABC] `tests/downloaders/test_connectivity.py::test_returns_structured_result`
       — call `test_connectivity(client_impl)` against a respx-mocked
       happy path; assert `ConnectivityTestResult.ok = True` with a
       version string.
-- [ ] T018 [P] [ABC] `tests/downloaders/test_connectivity.py::test_typed_errors`
+- [X] T018 [P] [ABC] `tests/downloaders/test_connectivity.py::test_typed_errors`
       — parameterised over `ConnectionError`, `AuthError`, `TLSError`,
       `VersionError`; assert each translates to the matching
       `error_code` in the result (FR-008, SC-006).
-- [ ] T019 [P] [ABC] `tests/downloaders/test_connectivity.py::test_warnings_non_blocking`
+- [X] T019 [P] [ABC] `tests/downloaders/test_connectivity.py::test_warnings_non_blocking`
       — SAB without `romarr` category emits a `CategoryWarning` AND
       `ok = True` (FR-011).
 - [X] T020 [P] [ABC] `tests/downloaders/test_tls.py::test_local_host_detection`
@@ -125,7 +125,7 @@ two MVP implementations and the three stubs implement.
       `is_local_host(host) -> bool`, `build_httpx_verify(setting, host)`
       that returns the right value for httpx's `verify=` kwarg
       (True / False / a verifier that conditionally skips local hosts).
-- [ ] T023 [ABC] Create `src/romarr/downloaders/connectivity.py` —
+- [X] T023 [ABC] Create `src/romarr/downloaders/connectivity.py` —
       `test_connectivity(impl) -> ConnectivityTestResult` orchestrator
       that wraps each implementation's `test_connection` + ensures the
       `romarr` category exists / warns.
@@ -186,30 +186,30 @@ from a REPL via a test instance with a few seconds of round-trip.
 
 ### Tests
 
-- [ ] T033 [P] [SAB] `tests/downloaders/implementations/test_sabnzbd.py::test_addurl`
+- [X] T033 [P] [SAB] `tests/downloaders/implementations/test_sabnzbd.py::test_addurl`
       — respx-mocked `mode=addurl`; assert the API key, name (NZB URL),
       and category go on the query string; response gives
       `nzo_ids: [...]`.
-- [ ] T034 [P] [SAB] `tests/downloaders/implementations/test_sabnzbd.py::test_addfile_multipart`
+- [X] T034 [P] [SAB] `tests/downloaders/implementations/test_sabnzbd.py::test_addfile_multipart`
       — respx-mocked `mode=addfile`; raw `.nzb` bytes uploaded as
       multipart; same return shape.
-- [ ] T035 [P] [SAB] `tests/downloaders/implementations/test_sabnzbd.py::test_queue_status`
+- [X] T035 [P] [SAB] `tests/downloaders/implementations/test_sabnzbd.py::test_queue_status`
       — `mode=queue` JSON fixture; `get_status(client_id)` returns
       `DownloadStatus` with `state`, `progress`, `eta`,
       `download_rate_bps`. `seeders`/`peers` MUST be NULL (Usenet
       has no peers).
-- [ ] T036 [P] [SAB] `tests/downloaders/implementations/test_sabnzbd.py::test_history_completed_paths`
+- [X] T036 [P] [SAB] `tests/downloaders/implementations/test_sabnzbd.py::test_history_completed_paths`
       — `mode=history` JSON fixture for a completed item;
       `get_completed_files` returns the documented paths.
-- [ ] T037 [P] [SAB] `tests/downloaders/implementations/test_sabnzbd.py::test_invalid_apikey`
+- [X] T037 [P] [SAB] `tests/downloaders/implementations/test_sabnzbd.py::test_invalid_apikey`
       — fixture `invalid_apikey.json`; method raises `AuthError`.
-- [ ] T038 [P] [SAB] `tests/downloaders/implementations/test_sabnzbd.py::test_missing_category_warning`
+- [X] T038 [P] [SAB] `tests/downloaders/implementations/test_sabnzbd.py::test_missing_category_warning`
       — `mode=get_cats` fixture without `romarr`; `test_connection`
       returns `ok=True` with a `CategoryWarning` (FR-011).
 
 ### Implementation
 
-- [ ] T039 [SAB] Create `src/romarr/downloaders/implementations/sabnzbd.py`
+- [X] T039 [SAB] Create `src/romarr/downloaders/implementations/sabnzbd.py`
       — `SabnzbdClient` implementing the ABC; uses an internal
       `httpx.AsyncClient` configured by `tls.build_httpx_verify(...)`.
       All API calls go through a single private `_call(mode, **params)`

@@ -1,0 +1,20 @@
+{
+  "history": {
+    "slots": [
+      {
+        "nzo_id": "SABnzbd_nzo_abc123",
+        "name": "Sonic.the.Hedgehog.Mega.Drive.[U].zip",
+        "status": "Completed",
+        "category": "romarr",
+        "storage": "/downloads/complete/romarr/Sonic.the.Hedgehog.Mega.Drive.[U]",
+        "path": "/downloads/complete/romarr/Sonic.the.Hedgehog.Mega.Drive.[U]",
+        "completed": 1714478400,
+        "size": "1.2 GB",
+        "bytes": 1288490188,
+        "stage_log": [
+          {"name": "Download", "actions": ["Downloaded successfully"]}
+        ]
+      }
+    ]
+  }
+}

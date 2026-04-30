@@ -19,6 +19,7 @@ from romarr.downloaders.circuit_breaker import (
     CircuitState,
     DownloaderCircuitRegistry,
 )
+from romarr.downloaders.connectivity import test_connectivity
 from romarr.downloaders.errors import (
     AuthError,
     CategoryWarning,
@@ -31,6 +32,7 @@ from romarr.downloaders.errors import (
 from romarr.downloaders.implementations import (
     DelugeClient,
     NzbgetClient,
+    SabnzbdClient,
     TransmissionClient,
 )
 from romarr.downloaders.retry import (
@@ -110,6 +112,7 @@ __all__ = [
     "QueueEntryUpdate",
     "RoutingCandidate",
     "RoutingDecision",
+    "SabnzbdClient",
     "SourceKind",
     "SslCertValidation",
     "TLSError",
@@ -133,4 +136,5 @@ __all__ = [
     "select_torrent_form",
     "standard_tag_set",
     "tag_for_platform",
+    "test_connectivity",
 ]
