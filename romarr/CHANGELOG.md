@@ -3,6 +3,51 @@
 All notable changes to Romarr land here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semver.
 
+## [0.5.0a1] — 2026-04-30
+
+### Added
+
+- **Spec 005 — Download Clients** (full feature: qBittorrent + SABnzbd
+  MVP + three v1-deferred stubs + connectivity orchestrator + routing +
+  retry state machine + per-client circuit breaker + admin API)
+  - ``DownloadClient`` ABC with ``test_connection``, ``add_torrent`` /
+    ``add_nzb``, ``get_status``, ``remove``, ``set_imported_tag``,
+    ``ensure_category``. Five concrete impls: ``QBittorrentClient`` +
+    ``SabnzbdClient`` (configurable, available=true) and the
+    ``Transmission`` / ``Deluge`` / ``NZBGet`` stubs that raise
+    ``NotImplementedError("deferred to v1")`` from every method
+    (available=false; greyed out by the schema endpoint).
+  - SABnzbd via direct httpx against the documented query-string API
+    (``/api?mode=...``); auth flavour: ``{"status": false, "error":
+    "API Key Incorrect"}`` translates to :class:`AuthError`. SAB
+    cannot create categories — ``ensure_category`` raises
+    :class:`CategoryWarning` when ``romarr`` is missing (FR-011).
+  - qBittorrent via direct httpx against Web API v2 (deviation from
+    FR-004's qbittorrent-api mandate — see module docstring for
+    rationale). Idempotent on existing magnet info-hash: returns
+    existing hash + additively merges tags via ``/torrents/addTags``,
+    leaves the existing category alone (FR-004a / CL001).
+    Min-version gate: rejects qBit < 4.4.0 (webapi < 2.8.3) with
+    :class:`VersionError` (FR-005a / CL003).
+  - Pure-function ``route_release`` — indexer override > priority,
+    ties broken by id; ``select_torrent_form`` / ``select_nzb_form``
+    pick the highest-preference variant (.torrent URL > bytes >
+    magnet; .nzb URL > bytes) per FR-003a / CL002. 30-row JSONL
+    corpus parametrises the routing test.
+  - Pure-function retry state machine: 5-min retry cadence,
+    1-hour failure ceiling (FR-022 / SC-007). Auth + Version errors
+    skip the retry rotation entirely (non-transient).
+  - Per-client circuit breaker registry on top of the foundation
+    breaker (Article III) — 5 failures within 60s opens, 60s
+    cooldown to half-open (FR-022a / CL004).
+  - One new table (``download_client``) via Alembic ``0005`` which
+    also installs the deferred FK on ``indexer.download_client_id``
+    (ON DELETE SET NULL) that was created columnless in spec 004.
+    Credentials Fernet-encrypted via the metadata encryption helper.
+  - Admin API at ``/api/v3/downloadclient/*`` (CRUD + ``?test=true``
+    + ``/test`` + ``/schema``); CL005 admin gate via spec 010's
+    ``require_admin``. Encrypted blobs NEVER appear in any response.
+
 ## [0.4.0a1] — 2026-04-30
 
 ### Added

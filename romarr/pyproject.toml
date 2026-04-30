@@ -1,6 +1,6 @@
 [project]
 name = "romarr"
-version = "0.4.0a1"
+version = "0.5.0a1"
 description = "Self-hosted ROM acquisition manager for the *arr ecosystem"
 license = { text = "GPL-3.0-or-later" }
 authors = [{ name = "Jérémie Dathée" }]
@@ -112,6 +112,7 @@ ignore = [
 "src/romarr/metadata/api/**" = ["TC001", "TC002", "TC003"]
 "src/romarr/platform_packs/api/**" = ["TC001", "TC002", "TC003"]
 "src/romarr/indexers/api/**" = ["TC001", "TC002", "TC003"]
+"src/romarr/downloaders/api/**" = ["TC001", "TC002", "TC003"]
 
 [tool.ruff.format]
 quote-style = "double"
