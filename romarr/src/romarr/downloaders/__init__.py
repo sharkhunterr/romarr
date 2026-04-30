@@ -14,6 +14,11 @@ routing, retry, and the admin API land in subsequent slices.
 """
 
 from romarr.downloaders.base import DownloadClient
+from romarr.downloaders.circuit_breaker import (
+    CircuitOpenError,
+    CircuitState,
+    DownloaderCircuitRegistry,
+)
 from romarr.downloaders.errors import (
     AuthError,
     CategoryWarning,
@@ -27,6 +32,19 @@ from romarr.downloaders.implementations import (
     DelugeClient,
     NzbgetClient,
     TransmissionClient,
+)
+from romarr.downloaders.retry import (
+    FAILURE_CEILING,
+    RETRY_INTERVAL,
+    QueueEntry,
+    QueueEntryState,
+    QueueEntryUpdate,
+    is_due_for_retry,
+    is_over_ceiling,
+    record_attempt_failure,
+    record_attempt_success,
+    record_initial_failure,
+    record_initial_success,
 )
 from romarr.downloaders.routing import (
     RoutingCandidate,
@@ -64,10 +82,14 @@ from romarr.downloaders.types import (
 )
 
 __all__ = [
+    "FAILURE_CEILING",
+    "RETRY_INTERVAL",
     "TAG_IMPORTED",
     "TAG_ROMARR",
     "AuthError",
     "CategoryWarning",
+    "CircuitOpenError",
+    "CircuitState",
     "ClientType",
     "ConnectionError",
     "ConnectivityTestResult",
@@ -76,12 +98,16 @@ __all__ = [
     "DownloadClient",
     "DownloadState",
     "DownloadStatus",
+    "DownloaderCircuitRegistry",
     "DownloaderError",
     "NoEligibleClientError",
     "NzbBytes",
     "NzbSource",
     "NzbUrl",
     "NzbgetClient",
+    "QueueEntry",
+    "QueueEntryState",
+    "QueueEntryUpdate",
     "RoutingCandidate",
     "RoutingDecision",
     "SourceKind",
@@ -95,7 +121,13 @@ __all__ = [
     "VersionError",
     "build_httpx_verify",
     "consume_decision",
+    "is_due_for_retry",
     "is_local_host",
+    "is_over_ceiling",
+    "record_attempt_failure",
+    "record_attempt_success",
+    "record_initial_failure",
+    "record_initial_success",
     "route_release",
     "select_nzb_form",
     "select_torrent_form",

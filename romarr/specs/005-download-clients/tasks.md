@@ -305,24 +305,24 @@ feature ships the pure state machine plus the integration helper.
 
 ### Tests
 
-- [ ] T052 [P] [RETRY] `tests/downloaders/test_retry.py::test_stuck_on_connection_error`
+- [X] T052 [P] [RETRY] `tests/downloaders/test_retry.py::test_stuck_on_connection_error`
       — `add_release` returns a `ConnectionError`; the queue entry
       transitions to `state = 'stuck'` with `last_attempt_at` set.
-- [ ] T053 [P] [RETRY] `tests/downloaders/test_retry.py::test_retry_after_5_minutes`
+- [X] T053 [P] [RETRY] `tests/downloaders/test_retry.py::test_retry_after_5_minutes`
       — freezegun-advance time 5 minutes; the retry tick re-attempts
       the grab. Successful retry transitions to `'downloading'`.
-- [ ] T054 [P] [RETRY] `tests/downloaders/test_retry.py::test_failure_after_one_hour`
+- [X] T054 [P] [RETRY] `tests/downloaders/test_retry.py::test_failure_after_one_hour`
       — repeat the failure for 13 retries (5-minute cadence × 13 ≥
       65 minutes); on the first retry past 60 minutes the state
       transitions to `failed` and a notification event is emitted
       (FR-022, SC-007).
-- [ ] T055 [P] [RETRY] `tests/downloaders/test_retry.py::test_recovery_resets_attempts`
+- [X] T055 [P] [RETRY] `tests/downloaders/test_retry.py::test_recovery_resets_attempts`
       — after a successful retry, `attempt_count` resets to 0 (so a
       later failure starts a fresh window).
 
 ### Implementation
 
-- [ ] T056 [RETRY] Create `src/romarr/downloaders/retry.py` —
+- [X] T056 [RETRY] Create `src/romarr/downloaders/retry.py` —
       pure `tick(queue_entries, now) -> list[QueueEntryUpdate]`
       consumed by the future scheduler's 5-minute job; one
       `add_release(...)` orchestration helper that records the initial
@@ -477,8 +477,8 @@ QBIT and SAB split cleanly across contributors.
 - [ ] CL001 [P] [US1] Implement idempotent-on-existing-info-hash add_torrent in `src/romarr/downloaders/qbit/client.py` — when info-hash already present in qBittorrent: return existing info-hash as `client_id`, additively merge `romarr` and `romarr-{platform_slug}` tags via qBit's `add tags` API, leave existing category untouched. Same contract for `add_nzb` against SAB on matching source URL (FR-004a)
 - [X] CL002 [P] [US3] Implement source-form preference selector in `src/romarr/downloaders/routing.py` — order `.torrent` URL > raw `.torrent` bytes > magnet URL (and `.nzb` URL > raw `.nzb` bytes); record selected form on the grab event for visibility (FR-003a)
 - [ ] CL003 [P] [US4] Add minimum qBittorrent version check (>= 2.8.3 / app 4.4.0) in `src/romarr/downloaders/qbit/client.py:test_connection()` — query `/api/v2/app/webapiVersion`; reject with structured `VersionError("upgrade qBittorrent to 4.4.0 or newer")` on older versions (FR-005a)
-- [ ] CL004 [P] [US7] Implement per-client circuit breaker in `src/romarr/downloaders/circuit_breaker.py` — 5 failures within 60 s opens; auto half-open after 60 s; auth errors and 5xx count as failures; stuck-grab retries respect the breaker (when open: bump `last_attempt_at` without outbound call) (FR-022a)
+- [X] CL004 [P] [US7] Implement per-client circuit breaker in `src/romarr/downloaders/circuit_breaker.py` — 5 failures within 60 s opens; auto half-open after 60 s; auth errors and 5xx count as failures; stuck-grab retries respect the breaker (when open: bump `last_attempt_at` without outbound call) (FR-022a)
 - [ ] CL005 [P] [Admin] Wire admin-role gate on every mutating download-client endpoint AND on `/test` (SSRF surface) in `src/romarr/downloaders/api.py`; reads accessible to any authenticated user; encrypted credentials NEVER appear in any read response regardless of role (FR-026a)
 - [ ] CL006 [P] Add tests in `tests/downloaders/test_idempotent_add.py` covering: torrent already in qBit (Romarr-added) → idempotent success with merged tags; torrent already in qBit (user-added with custom tags) → tags merged additively, user tags preserved; same for SAB
 - [ ] CL007 [P] Add tests in `tests/downloaders/test_source_preference.py` covering: both `.torrent` URL + magnet → `.torrent` URL chosen; only magnet → magnet chosen; mixed for NZB
-- [ ] CL008 [P] Add tests in `tests/downloaders/test_circuit_breaker.py` covering: 5 auth errors → breaker opens; stuck retry during open → no outbound call; recovery → breaker re-closes
+- [X] CL008 [P] Add tests in `tests/downloaders/test_circuit_breaker.py` covering: 5 auth errors → breaker opens; stuck retry during open → no outbound call; recovery → breaker re-closes
