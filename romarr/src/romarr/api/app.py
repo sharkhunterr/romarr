@@ -40,6 +40,14 @@ from romarr.platform_packs.api import (
 from romarr.platform_packs.api import (
     platforms_router as platform_pack_platforms_router,
 )
+from romarr.profiles.api import (
+    custom_format_router,
+    dump_profile_router,
+    language_profile_router,
+    naming_profile_router,
+    quality_profile_router,
+    region_profile_router,
+)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -104,4 +112,10 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     # doesn't get pattern-matched as an integer id.
     app.include_router(download_clients_schema_router)
     app.include_router(download_clients_router)
+    app.include_router(quality_profile_router)
+    app.include_router(region_profile_router)
+    app.include_router(dump_profile_router)
+    app.include_router(language_profile_router)
+    app.include_router(naming_profile_router)
+    app.include_router(custom_format_router)
     return app

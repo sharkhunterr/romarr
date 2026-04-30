@@ -324,56 +324,72 @@ the naming-template preview endpoint.
 
 ### Tests
 
-- [ ] T056 [P] [API] `tests/profiles/api/test_quality_endpoints.py`
+- [X] T056 [P] [API] `tests/profiles/api/test_quality_endpoints.py`
       — full CRUD round-trip; POST then GET then PUT then DELETE.
-- [ ] T057 [P] [API] `tests/profiles/api/test_region_endpoints.py`
-      — same shape.
-- [ ] T058 [P] [API] `tests/profiles/api/test_dump_endpoints.py`
+      *(Plus FR-032a auth gating: 401 unauthenticated, 200 reads for
+      any authenticated user, 403 mutations for non-admin, 200 mutations
+      for admin. Plus FR-003a verification: PUT flips
+      is_user_modified=true.)*
+- [X] T057 [P] [API] `tests/profiles/api/test_region_endpoints.py`
+      — same shape. *(Folded into `test_other_endpoints.py`'s
+      parametrised round-trip — same coverage, less duplication
+      since the CRUD pattern is shared via `make_crud_router`.)*
+- [X] T058 [P] [API] `tests/profiles/api/test_dump_endpoints.py`
       — same.
-- [ ] T059 [P] [API] `tests/profiles/api/test_language_endpoints.py`
+- [X] T059 [P] [API] `tests/profiles/api/test_language_endpoints.py`
       — same.
-- [ ] T060 [P] [API] `tests/profiles/api/test_naming_endpoints.py`
+- [X] T060 [P] [API] `tests/profiles/api/test_naming_endpoints.py`
       — same; PUT with a bad template returns HTTP 400 with the
       structured error (FR-028).
-- [ ] T061 [P] [API] `tests/profiles/api/test_custom_format_endpoints.py`
+- [X] T061 [P] [API] `tests/profiles/api/test_custom_format_endpoints.py`
       — same; POST with an invalid regex returns HTTP 400.
-- [ ] T062 [P] [API] `tests/profiles/api/test_schema_endpoints.py`
+- [X] T062 [P] [API] `tests/profiles/api/test_schema_endpoints.py`
       — `GET /api/v3/qualityprofile/schema` (and the five other
       `/schema` endpoints) returns a valid JSON Schema document
       describing every documented field (FR-030).
-- [ ] T063 [P] [API] `tests/profiles/api/test_naming_preview.py`
+- [X] T063 [P] [API] `tests/profiles/api/test_naming_preview.py`
       — `POST /api/v3/rom/namingprofile/preview` with a candidate
       profile + an existing release id; assert the response body's
       `rendered` matches an offline render of the same template
       against the same release (FR-031). DB unchanged after.
+      *(Sample release is synthetic until spec 001's release-fetch
+      helper is wired through search-engine; the endpoint accepts
+      sample_release_id on the surface so the hand-off is a
+      no-API-break refactor.)*
 
 ### Implementation
 
-- [ ] T064 [API] Create `src/romarr/profiles/api/shared.py` —
+- [X] T064 [API] Create `src/romarr/profiles/api/shared.py` —
       `_make_crud_router(model_cls, schema_read, schema_create,
       schema_update, base_path)` factory plus the force-delete
       helper used by Phase 7.
-- [ ] T065 [P] [API] Create `src/romarr/profiles/api/quality.py` —
+      *(Filename normalised to `_shared.py` to match the existing
+      `_stub.py` private-module convention.)*
+- [X] T065 [P] [API] Create `src/romarr/profiles/api/quality.py` —
       uses the factory to expose `/api/v3/qualityprofile*` and
       `/schema`.
-- [ ] T066 [P] [API] Create `src/romarr/profiles/api/region.py` —
+- [X] T066 [P] [API] Create `src/romarr/profiles/api/region.py` —
       `/api/v3/rom/regionprofile*` + `/schema`.
-- [ ] T067 [P] [API] Create `src/romarr/profiles/api/dump.py` —
+- [X] T067 [P] [API] Create `src/romarr/profiles/api/dump.py` —
       `/api/v3/rom/dumpprofile*` + `/schema`.
-- [ ] T068 [P] [API] Create `src/romarr/profiles/api/language.py`
+- [X] T068 [P] [API] Create `src/romarr/profiles/api/language.py`
       — `/api/v3/rom/languageprofile*` + `/schema`.
-- [ ] T069 [P] [API] Create `src/romarr/profiles/api/naming.py` —
+- [X] T069 [P] [API] Create `src/romarr/profiles/api/naming.py` —
       `/api/v3/rom/namingprofile*` + `/schema` + `/preview`.
-- [ ] T070 [P] [API] Create `src/romarr/profiles/api/custom_format.py`
+- [X] T070 [P] [API] Create `src/romarr/profiles/api/custom_format.py`
       — `/api/v3/customformat*` + `/schema`.
-- [ ] T071 [API] Create `src/romarr/profiles/json_schema.py` — auto-export
+- [X] T071 [API] Create `src/romarr/profiles/json_schema.py` — auto-export
       a JSON Schema for each Pydantic `*Read` model via
       `pydantic.TypeAdapter(...).json_schema()`. The CRUD factory
       consumes this for the `/schema` route.
-- [ ] T072 [API] Wire all six routers into the application factory
+      *(Folded into the CRUD factory directly via
+      `TypeAdapter(schema_read).json_schema()` in the `/schema` handler
+      — no separate module needed; saves a layer of indirection.)*
+- [X] T072 [API] Wire all six routers into the application factory
       under their documented paths. Authentication continues to use
       the development-only no-op admin dependency until the Auth spec
-      lands.
+      lands. *(Auth spec landed in 010 — the routers now use the real
+      `require_admin` / `require_readonly` guards.)*
 
 **Checkpoint**: every endpoint exercised; the JSON Schema endpoints
 return documents that validate every existing default-seeded row.
@@ -392,16 +408,26 @@ before the delete.
       — bind a Quality profile to a synthetic library row; DELETE
       returns HTTP 409 with the affected library names listed in
       the response body (SC-006).
+      *(Deferred to spec 009 alongside the Library FK columns —
+      without the `library` table there's nothing to bind to. The
+      `?force=true` query parameter is already accepted on the
+      endpoint surface so spec 009 lights it up without an API
+      break.)*
 - [ ] T074 [P] [CASCADE] `tests/profiles/api/test_force_delete.py::test_force_unbinds_and_deletes`
       — same setup; DELETE with `?force=true` returns HTTP 204; the
       library's FK column is now NULL; the profile row is gone
-      (SC-006).
-- [ ] T075 [P] [CASCADE] `tests/profiles/api/test_force_delete.py::test_unbound_delete_works`
+      (SC-006). *(Deferred to spec 009.)*
+- [X] T075 [P] [CASCADE] `tests/profiles/api/test_force_delete.py::test_unbound_delete_works`
       — profile not bound; DELETE returns HTTP 204 directly.
+      *(Covered by `test_full_crud_round_trip` and
+      `test_each_router_full_round_trip` — every CRUD round-trip
+      ends with a DELETE on an unbound profile.)*
 - [ ] T076 [P] [CASCADE] `tests/profiles/api/test_force_delete.py::test_custom_format_m2m_cascade`
       — delete a Custom Format associated with a library; the m2m
       row disappears via `ON DELETE CASCADE`; library is otherwise
-      untouched.
+      untouched. *(Deferred to spec 009 — the m2m's `library_id`
+      column exists but has no FK constraint until spec 009 lands;
+      ON DELETE CASCADE works on `custom_format_id` already.)*
 
 ### Implementation
 
@@ -412,6 +438,10 @@ before the delete.
          columns and the m2m for Custom Formats);
       2. when `force = false` and there is at least one binding,
          return HTTP 409 with the list of blocking library names;
+      *(Deferred to spec 009 — the DELETE handler accepts
+      `?force=true` already and is documented as a no-op until the
+      `library` table lands. Spec 009's migration adds the FKs and
+      this handler grows the cascade query in the same slice.)*
       3. when `force = true`, set the FK columns to NULL inside the
          same transaction, then delete the profile.
 
