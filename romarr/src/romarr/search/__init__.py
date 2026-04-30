@@ -33,6 +33,11 @@ from romarr.search.cache import (
     invalidate as invalidate_cached,
 )
 from romarr.search.candidates import select_winners
+from romarr.search.dispatch import (
+    DispatchOutcome,
+    DispatchStatus,
+    dispatch_winner,
+)
 from romarr.search.errors import (
     BlocklistedReleaseError,
     NoEligibleCandidatesError,
@@ -71,6 +76,8 @@ __all__ = [
     "BlocklistedReleaseError",
     "Candidate",
     "DatLookup",
+    "DispatchOutcome",
+    "DispatchStatus",
     "IndexerMeta",
     "LibraryState",
     "MonitoredGame",
@@ -91,6 +98,7 @@ __all__ = [
     "blocklist_delete_entry",
     "build_queries",
     "cache_key_for",
+    "dispatch_winner",
     "fuzzy_match_query",
     "get_cached",
     "invalidate_cached",

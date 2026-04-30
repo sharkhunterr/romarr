@@ -48,6 +48,21 @@ from romarr.profiles.api import (
     quality_profile_router,
     region_profile_router,
 )
+from romarr.search.api import (
+    blocklist_router as search_blocklist_router,
+)
+from romarr.search.api import (
+    command_router as search_command_router,
+)
+from romarr.search.api import (
+    grab_router as search_grab_router,
+)
+from romarr.search.api import (
+    history_router as search_history_router,
+)
+from romarr.search.api import (
+    search_router,
+)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -118,4 +133,10 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     app.include_router(language_profile_router)
     app.include_router(naming_profile_router)
     app.include_router(custom_format_router)
+    # Search subsystem (spec 007)
+    app.include_router(search_router)
+    app.include_router(search_grab_router)
+    app.include_router(search_history_router)
+    app.include_router(search_command_router)
+    app.include_router(search_blocklist_router)
     return app
