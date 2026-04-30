@@ -159,28 +159,51 @@ on recovery, debounce events.
 
 ### Tests
 
-- [ ] T025 [P] [HEART] `tests/libraries/test_heartbeat.py::test_unavailable_emits_event`
-      — remove the library path; one heartbeat cycle; assert
-      `status='unavailable'` and one `OnHealthIssue` event.
-- [ ] T026 [P] [HEART] `tests/libraries/test_heartbeat.py::test_recovery_emits_event`
-      — restore the path; next heartbeat; status returns to `'ok'` and
-      one recovery event emitted.
-- [ ] T027 [P] [HEART] `tests/libraries/test_heartbeat.py::test_debounce_5min_window`
-      — flap (down → up → down → up) within 5 minutes; only the first
-      down + first recovery emit; no event storm (FR-029).
-- [ ] T028 [P] [HEART] `tests/libraries/test_heartbeat.py::test_per_library_cadence`
-      — two libraries with different `heartbeat_seconds`; freezegun
-      asserts each fires at its own cadence.
+- [X] T025 [P] [HEART] `tests/libraries/test_heartbeat.py::test_unavailable_emits_event_on_first_transition`
+      — first observation against a missing path: probe fires with
+      `status='unavailable'`, populated `error` string. Plus
+      `test_no_event_when_initial_status_already_unavailable`
+      covering the case where the library row already records
+      ``unavailable`` (no re-emit needed).
+- [X] T026 [P] [HEART] `tests/libraries/test_heartbeat.py::test_recovery_emits_event`
+      — path goes from missing to present; the next probe emits a
+      `is_recovery=True` event with `status='ok'`.
+- [X] T027 [P] [HEART] `tests/libraries/test_heartbeat.py::test_debounce_suppresses_flapping_events`
+      — flap (down → up → down → up) within the 5-min window; only
+      the first down and the first recovery emit. Exactly at +301s
+      the next down emits again (FR-029). Plus the dedicated
+      ``tests/libraries/test_debounce.py`` (5 tests) covering the
+      ``WindowedDebouncer`` primitive in isolation — the same
+      primitive consumed by spec 011's notification consumer for
+      the RomM exporter sustained-failure debounce.
+- [X] T028 [P] [HEART] `tests/libraries/test_heartbeat.py::test_per_library_cadence`
+      — two libraries with cadence 30s + 60s; pure
+      ``run_heartbeat_pass`` driver only fires probes whose
+      ``last_run + cadence <= now`` (no freezegun needed since
+      ``now`` is injected). Plus
+      ``test_run_heartbeat_pass_emits_events_on_transition``,
+      ``test_run_heartbeat_pass_inherits_initial_status_from_snapshot``,
+      and ``test_permission_error_on_stat_treated_as_unavailable``.
 
 ### Implementation
 
-- [ ] T029 [HEART] Create `src/romarr/libraries/heartbeat.py` — async
-      `HeartbeatLoop` that iterates configured libraries, calls
-      `os.stat(library.path)`, transitions status, emits debounced
-      events on the in-process pub/sub channel.
+- [X] T029 [HEART] Create `src/romarr/libraries/heartbeat.py` —
+      ``HeartbeatProbe`` is a pure single-library state machine
+      (transitions emit events surviving the 5-min debounce);
+      ``run_heartbeat_pass(*, snapshots, probes, last_run, cadence,
+      now, debouncer)`` is the pure loop driver consuming preloaded
+      snapshots. The shared ``WindowedDebouncer`` lives in
+      ``_debounce.py`` so the same primitive backs FR-029 and spec
+      011's RomM-failure debounce. The lifespan-integrated async
+      loop that persists ``library.status`` and forwards events on
+      the notification bus lands once spec 011 provides the bus.
 - [ ] T030 [HEART] Wire `HeartbeatLoop.start()` into the application
       lifespan startup so the loop runs as a background task; cancel
       on shutdown.
+      *(Deferred to spec 011 — needs the notification bus to
+      forward events. The pure primitives shipped here are
+      consumable by the lifespan task today — only the wiring
+      waits.)*
 
 **Checkpoint**: heartbeat tests green; debouncing prevents event
 storms.
