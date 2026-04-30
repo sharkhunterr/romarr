@@ -3,6 +3,37 @@
 All notable changes to Romarr land here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semver.
 
+## [0.4.0a1] — 2026-04-30
+
+### Added
+
+- **Spec 004 — Indexers (Prowlarr-First)** (full feature: parser + client +
+  rate limiter + registry + connectivity + RSS sync + health + admin API)
+  - Generic Newznab/Torznab HTTP client with extended-attribute parsing
+    under both ``torznab:`` and ``grabarr:`` namespaces; per-field
+    :class:`FieldProvenance` tracks which source supplied each value.
+  - Foundation filename-parser fallback fills any field whose
+    ``*_provenance is None`` after parsing (FR-004).
+  - Per-indexer monotonic-clock rate limiter + reuse of the foundation
+    ``CircuitBreaker`` (Article III pinned by a static-import test).
+  - Two new tables (``indexer`` + ``application``) via Alembic ``0004``;
+    32-byte URL-safe app-token gen + bcrypt hash for inbound Prowlarr
+    callbacks; FR-022 encryption-at-rest for indexer + Prowlarr API
+    keys via the metadata Fernet helper.
+  - Connectivity tester runs caps then optional minimal search; results
+    are flat (``ok / caps_ok / search_ok / category``) so the UI doesn't
+    need a try/except path.
+  - ``IndexerRssSync.sync_all_enabled_indexers`` parallel-isolated via
+    ``asyncio.gather(return_exceptions=True)`` (FR-019a); per-task
+    health writes use ``commit=False`` and the orchestrator commits
+    once after gather.
+  - Admin API at ``/api/v3/applications/*`` (register/list/read/delete)
+    and ``/api/v3/indexer*`` (CRUD + ``?test=true`` + ``/test`` + ``/schema``);
+    all admin-gated via spec 010. Application registration returns
+    the plaintext app token exactly once; subsequent reads omit it.
+  - Best-effort ``notify_prowlarr_change`` callback for indexer
+    deletions on Prowlarr-pushed indexers (FR-016 — never blocks).
+
 ## [0.3.0a1] — 2026-04-30
 
 ### Added

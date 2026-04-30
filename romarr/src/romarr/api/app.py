@@ -22,6 +22,7 @@ from romarr.api.error_handlers import register_error_handlers
 from romarr.api.routers.auth import router as auth_router
 from romarr.api.routers.users import router as users_router
 from romarr.db.session import create_engine, create_sessionmaker
+from romarr.indexers.api import applications_router, indexers_router
 from romarr.metadata.api import (
     field_priority_router,
     providers_router,
@@ -91,4 +92,6 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     app.include_router(refresh_router)
     app.include_router(packs_router)
     app.include_router(platform_pack_platforms_router)
+    app.include_router(applications_router)
+    app.include_router(indexers_router)
     return app
