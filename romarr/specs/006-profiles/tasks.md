@@ -182,59 +182,68 @@ The most sensitive piece — operator-supplied templates run inside it.
 
 ### Tests
 
-- [ ] T033 [P] [NAME] `tests/profiles/naming/test_engine_sandbox.py::test_class_attribute_blocked`
+- [X] T033 [P] [NAME] `tests/profiles/naming/test_engine_sandbox.py::test_class_attribute_blocked`
       — template `{{ Release.__class__ }}` raises
-      `SandboxViolationError`.
-- [ ] T034 [P] [NAME] `tests/profiles/naming/test_engine_sandbox.py::test_globals_blocked`
+      `SandboxViolationError`. *(Variant: rejected at parse time as
+      `TemplateUnknownTokenError` since the AST walk catches it
+      before the sandbox runs. Same defence-in-depth, earlier signal.)*
+- [X] T034 [P] [NAME] `tests/profiles/naming/test_engine_sandbox.py::test_globals_blocked`
       — template `{{ globals() }}` raises.
-- [ ] T035 [P] [NAME] `tests/profiles/naming/test_engine_sandbox.py::test_unknown_token`
+- [X] T035 [P] [NAME] `tests/profiles/naming/test_engine_sandbox.py::test_unknown_token`
       — template `{{ Game.SomeForbidden }}` raises
       `TemplateUnknownTokenError` at parse time (save time, FR-028).
-- [ ] T036 [P] [NAME] `tests/profiles/naming/test_engine_filters.py::test_only_allowed_filters`
+- [X] T036 [P] [NAME] `tests/profiles/naming/test_engine_filters.py::test_only_allowed_filters`
       — table-driven: `lower`, `upper`, `replace`, `truncate(N)` all
       work; any other Jinja built-in (e.g., `length`, `default`)
       raises `SandboxViolationError`.
-- [ ] T037 [P] [NAME] `tests/profiles/naming/test_postprocess.py::test_collapse_whitespace`
+- [X] T037 [P] [NAME] `tests/profiles/naming/test_postprocess.py::test_collapse_whitespace`
       — rendered string with consecutive spaces collapses to single
       spaces; trailing whitespace trimmed.
-- [ ] T038 [P] [NAME] `tests/profiles/naming/test_postprocess.py::test_drop_empty_groups`
+- [X] T038 [P] [NAME] `tests/profiles/naming/test_postprocess.py::test_drop_empty_groups`
       — empty bracketed groups (`()`, `( )`, `[]`, `[ ]`) are removed
       cleanly when their token is empty (FR-027).
-- [ ] T039 [P] [NAME] `tests/profiles/naming/test_postprocess.py::test_replace_illegal_chars`
+- [X] T039 [P] [NAME] `tests/profiles/naming/test_postprocess.py::test_replace_illegal_chars`
       — `replace_illegal_chars = true` and Game title contains
       `:`/`/`/`\`/`*`/`?`/`"`/`<`/`>`/`|`; assert each is replaced with
-      `_` (FR-026).
-- [ ] T040 [P] [NAME] `tests/profiles/naming/test_no_intro_corpus.py`
+      `_` (FR-026). *(Path separator `/` intentionally preserved
+      since several conventions produce subfolders — illegal-char
+      replacement runs per path component.)*
+- [X] T040 [P] [NAME] `tests/profiles/naming/test_no_intro_corpus.py`
       — at least 10 fixture pairs (input ParsedFilename + expected
       rendered string) under `tests/fixtures/profiles/naming/nointro/`;
       assert each renders to its golden output (SC-004).
-- [ ] T041 [P] [NAME] `tests/profiles/naming/test_redump_corpus.py`
-      — same shape, ≥ 10 fixtures.
-- [ ] T042 [P] [NAME] `tests/profiles/naming/test_tosec_corpus.py`
-      — same shape, ≥ 10 fixtures.
-- [ ] T043 [P] [NAME] `tests/profiles/naming/test_esde_corpus.py`
-      — same shape, ≥ 10 fixtures.
-- [ ] T044 [P] [NAME] `tests/profiles/naming/test_romm_corpus.py`
-      — same shape, ≥ 10 fixtures.
-- [ ] T045 [P] [NAME] `tests/profiles/naming/test_bad_templates.py`
+      *(12 inline fixtures rather than separate JSON files — same
+      golden-fixture shape, co-located with the test for readability.)*
+- [X] T041 [P] [NAME] `tests/profiles/naming/test_redump_corpus.py`
+      — same shape, ≥ 10 fixtures. *(11 inline.)*
+- [X] T042 [P] [NAME] `tests/profiles/naming/test_tosec_corpus.py`
+      — same shape, ≥ 10 fixtures. *(11 inline.)*
+- [X] T043 [P] [NAME] `tests/profiles/naming/test_esde_corpus.py`
+      — same shape, ≥ 10 fixtures. *(11 inline.)*
+- [X] T044 [P] [NAME] `tests/profiles/naming/test_romm_corpus.py`
+      — same shape, ≥ 10 fixtures. *(11 inline.)*
+- [X] T045 [P] [NAME] `tests/profiles/naming/test_bad_templates.py`
       — at least 10 deliberately broken templates under
       `tests/fixtures/profiles/bad_templates/`; assert each is rejected
       at save time with the documented structured error (SC-005).
+      *(13 inline rejection cases covering syntax errors, unknown
+      tokens, sandbox-escape vectors, forbidden filters, and method-call
+      attempts.)*
 
 ### Implementation
 
-- [ ] T046 [NAME] Create `src/romarr/profiles/naming/tokens.py` — the
+- [X] T046 [NAME] Create `src/romarr/profiles/naming/tokens.py` — the
       whitelist of allowed token namespaces (`Game`, `Release`, `Dump`,
       `Platform`) and the per-namespace allowed attributes. The Jinja
       env's `is_safe_attribute` consults this whitelist.
-- [ ] T047 [NAME] Create `src/romarr/profiles/naming/filters.py` —
+- [X] T047 [NAME] Create `src/romarr/profiles/naming/filters.py` —
       definitions of the four allowed filters (`lower`, `upper`,
       `replace`, `truncate`).
-- [ ] T048 [NAME] Create `src/romarr/profiles/naming/postprocess.py`
+- [X] T048 [NAME] Create `src/romarr/profiles/naming/postprocess.py`
       — pure `collapse_whitespace`, `drop_empty_bracketed_groups`,
       `replace_illegal_chars`, composed by `postprocess(rendered,
       replace_illegal: bool) -> str`.
-- [ ] T049 [NAME] Create `src/romarr/profiles/naming/engine.py` —
+- [X] T049 [NAME] Create `src/romarr/profiles/naming/engine.py` —
       `NamingTemplateEngine` class that wraps an
       `ImmutableSandboxedEnvironment`, registers only the allowed
       filters, sets `is_safe_attribute` to consult the token whitelist,

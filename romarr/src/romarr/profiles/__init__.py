@@ -24,6 +24,13 @@ from romarr.profiles.errors import (
     TemplateUnknownTokenError,
 )
 from romarr.profiles.evaluator import ProfileEvaluator, evaluate_all
+from romarr.profiles.naming import (
+    DumpTokens,
+    GameTokens,
+    NamingTemplateEngine,
+    PlatformTokens,
+    ReleaseTokens,
+)
 from romarr.profiles.scoring import compute_custom_format_score
 from romarr.profiles.types import (
     Decision,
@@ -36,15 +43,20 @@ from romarr.profiles.types import (
 
 __all__ = [
     "Decision",
+    "DumpTokens",
     "EvaluationReason",
     "EvaluationResult",
     "ForceDeleteResult",
+    "GameTokens",
     "NamingPreviewResponse",
+    "NamingTemplateEngine",
+    "PlatformTokens",
     "ProfileError",
     "ProfileEvaluator",
     "ProfileInUseError",
     "RegexCompileError",
     "ReleaseFacts",
+    "ReleaseTokens",
     "SandboxViolationError",
     "TemplateSyntaxError",
     "TemplateUnknownTokenError",
