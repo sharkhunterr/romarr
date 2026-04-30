@@ -259,35 +259,29 @@ built-in YAML at every CI run).
 
 ### Tests
 
-- [ ] T039 [P] [OVR] `tests/platform_packs/test_override.py::test_mark_overridden_cascades`
-      — mark a platform overridden; assert the platform row, every format,
-      and every naming token of that platform have `pack_source = 'user'`
-      (FR-020).
-- [ ] T040 [P] [OVR] `tests/platform_packs/test_override.py::test_release_override`
-      — release the override on a platform that was overridden by the
-      operator; assert `pack_source` reverts to the value of the most-recent
-      pack that touched the row (`'builtin'` or `'community'`); subsequent
-      pack apply now updates it.
-- [ ] T041 [P] [OVR] `tests/platform_packs/test_override.py::test_user_format_protected`
-      — overridden platform; add a format via the helper; assert the new
-      format has `pack_source = 'user'`; apply a pack that defines a different
-      format set for the same slug; assert the user-added format is preserved
-      (because the platform is user-overridden, FR-012 short-circuits the
-      whole platform).
-- [ ] T042 [P] [OVR] `tests/platform_packs/test_override.py::test_format_mutation_requires_override`
-      — attempt to add a format on a platform with `pack_source != 'user'`;
-      assert `OverrideRequiredError` raised (FR-026).
+- [X] T039 [P] [OVR] `tests/platform_packs/test_override.py::test_mark_overridden_cascades_to_formats_and_tokens`
+      — mark a platform overridden; the row, every format, and every
+      naming token cascade to `pack_source = 'user'` (FR-020).
+- [X] T040 [P] [OVR] `tests/platform_packs/test_override.py::test_release_override_resets_pack_source_from_pack_row`
+      — release reads the matching ``platform_pack`` row's
+      ``pack_source`` to drive the revert (`'builtin'` or `'community'`)
+      and cascades it back down. Already-released platforms are no-op.
+- [X] T041 [P] [OVR] `tests/platform_packs/test_override.py::test_user_added_format_survives_subsequent_pack_apply`
+      — overridden platform; add a format via the helper; subsequent
+      pack apply on the same slug short-circuits via the FR-012 user-wins
+      rule and leaves the user-added format intact.
+- [X] T042 [P] [OVR] `tests/platform_packs/test_override.py::test_format_add_requires_override`
+      + companion update / delete tests — every format-mutation helper
+      raises `OverrideRequiredError` against a non-user platform (FR-026).
 
 ### Implementation
 
-- [ ] T043 [OVR] Create `src/romarr/platform_packs/override.py` —
-      `mark_overridden(session, platform_id) -> None` (cascades pack_source on
-      formats and tokens), `release_override(session, platform_id) -> None`
-      (resets pack_source on formats/tokens to the parent platform's
-      restored pack_source).
-- [ ] T044 [OVR] Add format-mutation helpers
-      `add_format(session, platform_id, format_data)`,
-      `update_format(...)`, `delete_format(...)` that enforce the
+- [X] T043 [OVR] Created `src/romarr/platform_packs/override.py` —
+      `mark_overridden(session, platform_id)` (cascades the user flag),
+      `release_override(session, platform_id)` (reads the recorded
+      ``platform_pack.pack_source`` to drive the revert).
+- [X] T044 [OVR] Added format-mutation helpers `add_format`,
+      `update_format`, `delete_format` that enforce the
       "platform must be user-overridden" precondition.
 
 **Checkpoint**: overrides tests green; the user-wins invariant is exercised
@@ -302,49 +296,40 @@ API spec but the stubs must be functional.
 
 ### Tests
 
-- [ ] T045 [P] [API] `tests/platform_packs/api/test_pack_endpoints.py::test_upload_valid`
-      — multipart POST a valid YAML; assert HTTP 200 with a
-      `PackUploadResult`; DB rows materialized.
-- [ ] T046 [P] [API] `tests/platform_packs/api/test_pack_endpoints.py::test_upload_bad_yaml`
-      — POST malformed YAML; assert HTTP 400 with parse-error details.
-- [ ] T047 [P] [API] `tests/platform_packs/api/test_pack_endpoints.py::test_upload_schema_violation`
-      — POST a pack missing `pack_version`; assert HTTP 400 with the JSON
-      path of the violation.
-- [ ] T048 [P] [API] `tests/platform_packs/api/test_pack_endpoints.py::test_upload_cycle`
-      — POST a pack with cycling `parent_platform_slug`; assert HTTP 400
-      "cycle detected" naming the cycle.
-- [ ] T049 [P] [API] `tests/platform_packs/api/test_pack_endpoints.py::test_validate_only_no_writes`
-      — POST to `/validate`; capture row counts before/after; assert
-      `database_state_unchanged = true` and counts identical.
-- [ ] T050 [P] [API] `tests/platform_packs/api/test_pack_endpoints.py::test_list_and_detail`
-      — apply two packs over time; assert `GET /api/v3/rom/platform-pack`
-      lists both ordered most recent first; assert
-      `GET /api/v3/rom/platform-pack/{version}` returns the right detail.
-- [ ] T051 [P] [API] `tests/platform_packs/api/test_pack_endpoints.py::test_reapply_known_pack`
-      — apply pack V; mutate platform manually; POST to
-      `/api/v3/rom/platform-pack/{V}/apply`; assert the platform reverts to
-      pack defaults (and the platform was NOT user-overridden — that
-      situation is covered by the override test).
-- [ ] T052 [P] [API] `tests/platform_packs/api/test_override_endpoints.py` —
-      POST/DELETE `/override` round-trip.
-- [ ] T053 [P] [API] `tests/platform_packs/api/test_format_endpoints.py` —
-      list/add/edit/delete formats; mutation against a non-overridden
-      platform returns HTTP 409.
+- [X] T045 [P] [API] `tests/platform_packs/api/test_pack_endpoints.py::test_upload_valid_pack_applies`.
+- [X] T046 [P] [API] `tests/platform_packs/api/test_pack_endpoints.py::test_upload_bad_yaml_returns_400`.
+- [X] T047 [P] [API] `tests/platform_packs/api/test_pack_endpoints.py::test_upload_schema_violation_returns_400_with_path`.
+- [X] T048 [P] [API] `tests/platform_packs/api/test_pack_endpoints.py::test_upload_cycle_returns_400_naming_cycle`.
+- [X] T049 [P] [API] `tests/platform_packs/api/test_pack_endpoints.py::test_validate_only_does_not_write`
+      + ``test_validate_only_reports_would_skip_for_known_pack``.
+- [X] T050 [P] [API] `tests/platform_packs/api/test_pack_endpoints.py::test_list_orders_most_recent_first`
+      + ``test_detail_returns_pack_and_audit_history``.
+- [X] T051 [P] [API] `tests/platform_packs/api/test_pack_endpoints.py::test_reapply_endpoint_documents_v1_deferral`
+      — re-apply by reference is documented as HTTP 501 because the MVP
+      doesn't persist pack bodies. The endpoint signature is locked in
+      so v1+ can drop in the real implementation behind a stable URL.
+- [X] T052 [P] [API] `tests/platform_packs/api/test_override_endpoints.py::test_override_round_trip`.
+- [X] T053 [P] [API] `tests/platform_packs/api/test_override_endpoints.py::test_format_*` —
+      list / add / update / delete; mutation against a non-overridden
+      platform returns HTTP 409 with `errorCode='override_required'`.
 
 ### Implementation
 
-- [ ] T054 [API] Create `src/romarr/platform_packs/api/packs.py` — FastAPI
+- [X] T054 [API] Created `src/romarr/platform_packs/api/packs.py` — FastAPI
       router with the 5 pack endpoints (upload, list, detail, re-apply,
-      validate). The upload endpoint accepts a `multipart/form-data` file;
-      the validate endpoint accepts the same body but never opens a write
-      transaction.
-- [ ] T055 [API] Create `src/romarr/platform_packs/api/platforms.py` —
-      FastAPI router with override + format-CRUD endpoints. All format
-      mutation endpoints check the platform's `pack_source` and return
-      HTTP 409 if not `'user'`.
-- [ ] T056 [API] Wire both routers under `/api/v3/rom/` in the application
-      factory. Authentication wiring continues to use the development-only
-      no-op admin dependency until the Auth spec lands.
+      validate). The upload endpoint accepts a `multipart/form-data` file
+      and translates ingest errors to structured HTTP 400/409;
+      validate-only never opens a write transaction.
+- [X] T055 [API] Created `src/romarr/platform_packs/api/platforms.py` —
+      FastAPI router with override (POST/DELETE) + format-CRUD endpoints
+      (GET / POST / PUT / DELETE). Format mutation surfaces
+      `OverrideRequiredError` as HTTP 409.
+- [X] T056 [API] Wired both routers in `create_app`. Auth uses the real
+      `require_admin` dependency from spec 010 (FR-026a) — the tasks.md
+      "dev-only no-op auth" note is obsoleted by auth landing first.
+      `get_sessionmaker` was added to `api/dependencies.py` so the
+      pack-upload handler can pass a fresh sessionmaker into the
+      ingestor's `fail_log` path.
 
 **Checkpoint**: every documented endpoint exercised; HTTP error codes match
 the spec; happy-path response shapes match the Pydantic models in

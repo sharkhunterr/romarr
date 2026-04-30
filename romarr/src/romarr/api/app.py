@@ -27,6 +27,12 @@ from romarr.metadata.api import (
     providers_router,
     refresh_router,
 )
+from romarr.platform_packs.api import (
+    packs_router,
+)
+from romarr.platform_packs.api import (
+    platforms_router as platform_pack_platforms_router,
+)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -83,4 +89,6 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     app.include_router(providers_router)
     app.include_router(field_priority_router)
     app.include_router(refresh_router)
+    app.include_router(packs_router)
+    app.include_router(platform_pack_platforms_router)
     return app

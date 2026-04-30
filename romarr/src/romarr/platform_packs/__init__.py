@@ -33,6 +33,13 @@ from romarr.platform_packs.errors import (
     Violation,
 )
 from romarr.platform_packs.ingestor import IngestSource, ingest_pack
+from romarr.platform_packs.override import (
+    add_format,
+    delete_format,
+    mark_overridden,
+    release_override,
+    update_format,
+)
 from romarr.platform_packs.types import (
     PackPlatformDiff,
     PackUploadResult,
@@ -61,12 +68,17 @@ __all__ = [
     "SchemaVersionTooHighError",
     "ValidateResult",
     "Violation",
+    "add_format",
     "apply_builtin_pack",
     "canonicalize",
     "compute_contents_hash",
+    "delete_format",
     "ingest_pack",
     "load_pack",
+    "mark_overridden",
+    "release_override",
     "resolve_builtin_pack_path",
+    "update_format",
     "validate_cross_refs",
     "validate_pack",
     "validate_pack_structure",

@@ -27,7 +27,7 @@ from fastapi import Depends, HTTPException, Request, status
 # ``Annotated[AsyncSession, Depends(...)]`` to build the OpenAPI
 # schema, so the symbol must be live (TYPE_CHECKING-only imports
 # break ``/api/v3/openapi.json`` generation).
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from romarr.auth import (
     ROLE_ADMIN,
@@ -52,6 +52,16 @@ async def get_db(request: Request) -> AsyncIterator[AsyncSession]:
     sessionmaker = request.app.state.db_sessionmaker
     async with sessionmaker() as session:
         yield session
+
+
+def get_sessionmaker(request: Request) -> async_sessionmaker[AsyncSession]:
+    """Return the app-wide sessionmaker for callers that need a fresh
+    session OUTSIDE the per-request transaction (e.g. spec 003's
+    ``fail_log`` audit-row writer that runs after the ingest rollback)."""
+    sessionmaker: async_sessionmaker[AsyncSession] = (
+        request.app.state.db_sessionmaker
+    )
+    return sessionmaker
 
 
 # ---------------------------------------------------------------------------

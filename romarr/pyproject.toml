@@ -46,6 +46,7 @@ dependencies = [
     # Platform Packs (spec 003)
     "PyYAML>=6.0",
     "jsonschema>=4.21",
+    "python-multipart>=0.0.27",
 ]
 
 [project.optional-dependencies]
@@ -109,6 +110,7 @@ ignore = [
 # (AsyncSession, response models, etc.) MUST be live imports.
 "src/romarr/api/**" = ["TC001", "TC002", "TC003"]
 "src/romarr/metadata/api/**" = ["TC001", "TC002", "TC003"]
+"src/romarr/platform_packs/api/**" = ["TC001", "TC002", "TC003"]
 
 [tool.ruff.format]
 quote-style = "double"
