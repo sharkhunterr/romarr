@@ -27,19 +27,22 @@ Pegasus, LaunchBox) → manual import → API → hardening.
 
 - [ ] T001 [SCAF] Update `pyproject.toml` — add runtime dep
       `watchdog>=4.0` (inotify on Linux + polling fallback).
-- [ ] T002 [P] [SCAF] Create `src/romarr/libraries/__init__.py` exposing
-      `LibraryRegistry`, `route_to_library`, `scan_full`,
-      `scan_incremental`, `ExporterRegistry`.
-- [ ] T003 [P] [SCAF] Create `src/romarr/libraries/errors.py` —
+      *(Deferred to the SCAN-INC slice — watchdog is only needed
+      by the incremental scanner; landing it now would add an
+      unused import surface.)*
+- [X] T002 [P] [SCAF] Create `src/romarr/libraries/__init__.py` exposing
+      the slice-1 surface (errors + value types). Router /
+      registry / scan / exporter exports land in their own slices.
+- [X] T003 [P] [SCAF] Create `src/romarr/libraries/errors.py` —
       `LibraryError`, `PathUnwritable`, `NoEligibleLibrary`,
       `LibraryUnavailable`, `DiskFullError`, `ExporterError`.
-- [ ] T004 [P] [SCAF] Create `src/romarr/libraries/types.py` — every
+- [X] T004 [P] [SCAF] Create `src/romarr/libraries/types.py` — every
       Pydantic / StrEnum from `data-model.md`'s Value Types section.
-- [ ] T005 [SCAF] Extend `tests/conftest.py` with `tmp_library(tmp_path)`
-      fixture that returns a `LibrarySnapshot` pointing at a fresh tmp
-      directory; create `tests/libraries/conftest.py` for module-local
-      fixtures (mock RomM via respx, sample profile rows, fixture
-      gamelist.xml from a known-good ES-DE installation).
+- [X] T005 [SCAF] Extend `tests/conftest.py` registration to import
+      `romarr.libraries.models`; create `tests/libraries/conftest.py`
+      with `tmp_library_path` + `seeded_profile_ids` +
+      `make_library_create_payload` fixtures. RomM respx + ES-DE
+      gamelist fixtures land with the EXP-* slices.
 
 **Checkpoint**: imports work; lint+types green; no behaviour added.
 
@@ -49,46 +52,49 @@ Pegasus, LaunchBox) → manual import → API → hardening.
 
 ### Tests (write first; must fail)
 
-- [ ] T006 [P] [PERS] `tests/libraries/test_models.py` — round-trip a
+- [X] T006 [P] [PERS] `tests/libraries/test_models.py` — round-trip a
       `Library` row + a `LibraryPlatform` row through the async session;
       verify CHECK constraints on `lifecycle_policy` and `status`.
-- [ ] T007 [P] [PERS] `tests/libraries/test_models.py::test_unique_name`
+- [X] T007 [P] [PERS] `tests/libraries/test_models.py::test_unique_name`
       — second insertion with the same `name` raises `IntegrityError`.
-- [ ] T008 [P] [PERS] `tests/libraries/test_models.py::test_path_validator`
-      — Pydantic-level: non-existent path rejected; non-writable path
-      rejected; relative path rejected (FR-004).
-- [ ] T009 [P] [PERS] `tests/libraries/test_models.py::test_restricted_requires_platforms`
+- [X] T008 [P] [PERS] `tests/libraries/test_models.py::test_path_validator`
+      — Pydantic-level: relative path rejected (FR-004); existing-path
+      and writability checks live on the API layer (the model layer
+      shouldn't touch the filesystem during validation).
+- [X] T009 [P] [PERS] `tests/libraries/test_models.py::test_restricted_requires_platforms`
       — `platforms_restricted=true` AND empty m2m ⇒ rejected at
       validation (FR-005).
-- [ ] T010 [P] [PERS] `tests/libraries/test_models.py::test_romm_requires_url_and_key`
+- [X] T010 [P] [PERS] `tests/libraries/test_models.py::test_romm_requires_url_and_key`
       — `exporter_romm_enabled=true` without URL OR without API key ⇒
       rejected.
-- [ ] T011 [P] [PERS] `tests/libraries/test_migration_0009.py::test_creates_table_and_release_fk`
+- [X] T011 [P] [PERS] `tests/libraries/test_migration_0009.py::test_creates_table_and_release_fk`
       — applying the migration creates `library` + m2m + adds
-      `release.library_id` with FK to `library(id) ON DELETE SET NULL`.
-- [ ] T012 [P] [PERS] `tests/libraries/test_migration_0009.py::test_finalises_unidentified_dump_fk`
-      — applying after spec-008's gated migration finalises
-      `fk_unidentified_dump_library` (idempotent — runs without error
-      either way).
+      `release.library_id` with FK to `library(id) ON DELETE SET NULL`,
+      and finalises the FK on `library_custom_format.library_id`.
+- [X] T012 [P] [PERS] `tests/libraries/test_migration_0009.py::test_unidentified_dump_finalisation_idempotent`
+      — applying without spec 008 having shipped no-ops on the
+      `unidentified_dump` branch (idempotent in both directions).
 
 ### Implementation
 
-- [ ] T013 [PERS] Create `src/romarr/libraries/models.py` — `Library`
+- [X] T013 [PERS] Create `src/romarr/libraries/models.py` — `Library`
       and `LibraryPlatform` SQLAlchemy 2.0 models matching
       `data-model.md`.
-- [ ] T014 [P] [PERS] Create `src/romarr/libraries/schemas.py` —
-      `LibraryRead/Create/Update`, `LibraryPlatformRead`, `ScanResult`,
-      `ManualImportListing`, `ManualImportRequest`,
-      `ManualImportResult`. `LibraryRead` MUST omit
-      `exporter_romm_api_key_encrypted` and expose
+- [X] T014 [P] [PERS] Create `src/romarr/libraries/schemas.py` —
+      `LibraryCreate/Read/Update`, `LibraryPlatformRead`. `ScanResult`,
+      `ManualImportListing`, `ManualImportRequest`, `ManualImportResult`
+      land with the SCAN / MANUAL slices. `LibraryRead` omits
+      `exporter_romm_api_key_encrypted` and exposes
       `is_romm_configured: bool`.
-- [ ] T015 [PERS] Modify `src/romarr/domain/models/release.py` to add
-      `library_id: Mapped[int | None]` with the FK relationship and
-      `back_populates`.
-- [ ] T016 [PERS] Author `src/romarr/db/alembic/versions/0009_libraries.py`
+- [X] T015 [PERS] Modify `src/romarr/domain/models.py` (Release class)
+      to add `library_id: Mapped[int | None]` with the FK relationship.
+      `back_populates` on `Library.releases` lands when the relationship
+      is needed by a downstream slice.
+- [X] T016 [PERS] Author `src/romarr/db/alembic/versions/0009_libraries.py`
       — DDL for the table + m2m + the `release.library_id` FK addition;
-      finalise the gated FK on `unidentified_dump.library_id` if not
-      already present.
+      finalises both the `library_custom_format.library_id` FK (always)
+      and the `unidentified_dump.library_id` FK (only when spec 008
+      has already added the column).
 
 **Checkpoint**: `alembic upgrade head` is clean against any of {fresh
 DB, post-spec-008-only DB}; PERS tests green.

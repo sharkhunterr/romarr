@@ -299,6 +299,17 @@ class Release(Base, TimestampMixin):
     monitored: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     cutoff_met: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
+    # Library binding (spec 009): nullable so a Release can survive a
+    # library force-delete (FR-026 — set NULL, do not cascade). The
+    # FK target is added by Alembic ``0009_libraries`` so this column
+    # is harmless on any DB whose head is < 0009.
+    library_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("library.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     # Relationships
     game: Mapped[Game] = relationship(back_populates="releases")
     parent_release: Mapped[Release | None] = relationship(

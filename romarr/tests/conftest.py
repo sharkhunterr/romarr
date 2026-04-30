@@ -27,6 +27,7 @@ from romarr.domain import (
 )
 from romarr.downloaders import models as _downloader_models  # noqa: F401
 from romarr.indexers import models as _indexer_models  # noqa: F401
+from romarr.libraries import models as _library_models  # noqa: F401
 from romarr.metadata import models as _metadata_models  # noqa: F401
 from romarr.platform_packs import models as _platform_pack_models  # noqa: F401
 from romarr.profiles import models as _profile_models  # noqa: F401
