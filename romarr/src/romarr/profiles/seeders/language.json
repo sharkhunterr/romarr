@@ -1,0 +1,23 @@
+[
+  {
+    "seed_key": "fr-or-en",
+    "name": "FR or EN",
+    "required_languages": ["fr", "en"],
+    "preferred_languages": ["fr", "en"],
+    "exclude_japanese_only": true
+  },
+  {
+    "seed_key": "en-only",
+    "name": "EN Only",
+    "required_languages": ["en"],
+    "preferred_languages": ["en", "multi"],
+    "exclude_japanese_only": true
+  },
+  {
+    "seed_key": "any-language",
+    "name": "Any Language",
+    "required_languages": [],
+    "preferred_languages": ["en", "fr"],
+    "exclude_japanese_only": false
+  }
+]

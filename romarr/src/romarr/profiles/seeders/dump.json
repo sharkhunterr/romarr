@@ -1,0 +1,32 @@
+[
+  {
+    "seed_key": "preservation-strict",
+    "name": "Preservation Strict",
+    "allowed_dump_status": ["verified"],
+    "allow_proto_beta": false,
+    "allow_hacks": false,
+    "allow_trainers": false,
+    "allow_translations": false,
+    "prefer_revision": "latest"
+  },
+  {
+    "seed_key": "permissive",
+    "name": "Permissive",
+    "allowed_dump_status": ["verified", "good"],
+    "allow_proto_beta": false,
+    "allow_hacks": false,
+    "allow_trainers": false,
+    "allow_translations": true,
+    "prefer_revision": "latest"
+  },
+  {
+    "seed_key": "romhacks-welcome",
+    "name": "Romhacks Welcome",
+    "allowed_dump_status": ["verified", "good", "hack"],
+    "allow_proto_beta": true,
+    "allow_hacks": true,
+    "allow_trainers": true,
+    "allow_translations": true,
+    "prefer_revision": "any"
+  }
+]

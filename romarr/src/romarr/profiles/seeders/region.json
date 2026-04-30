@@ -1,0 +1,23 @@
+[
+  {
+    "seed_key": "usa-first",
+    "name": "USA First",
+    "priorities": ["USA", "EUR", "World", "JPN"],
+    "allow_fallback_outside_priorities": true,
+    "exclude_regions": []
+  },
+  {
+    "seed_key": "eur-first-fr",
+    "name": "EUR First (FR)",
+    "priorities": ["EUR", "World", "USA", "JPN"],
+    "allow_fallback_outside_priorities": true,
+    "exclude_regions": ["KOR", "CHN"]
+  },
+  {
+    "seed_key": "jpn-only",
+    "name": "JPN Only",
+    "priorities": ["JPN"],
+    "allow_fallback_outside_priorities": false,
+    "exclude_regions": ["KOR", "CHN"]
+  }
+]

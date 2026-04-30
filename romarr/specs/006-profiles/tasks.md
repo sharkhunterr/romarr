@@ -262,28 +262,32 @@ operator edits.
 
 ### Tests
 
-- [ ] T050 [P] [SEED] `tests/profiles/test_seeders.py::test_first_boot_inserts_all`
+- [X] T050 [P] [SEED] `tests/profiles/test_seeders.py::test_first_boot_inserts_all`
       — fresh DB; runner invoked; assert the documented counts
       (3/3/3/3/3/11) and that every row has `is_factory_default = true`
       (SC-001).
-- [ ] T051 [P] [SEED] `tests/profiles/test_seeders.py::test_idempotent_rerun`
+- [X] T051 [P] [SEED] `tests/profiles/test_seeders.py::test_idempotent_rerun`
       — runner invoked a second time; row counts unchanged; no
       `updated_at` modified.
-- [ ] T052 [P] [SEED] `tests/profiles/test_seeders.py::test_user_edit_preserved`
+- [X] T052 [P] [SEED] `tests/profiles/test_seeders.py::test_user_edit_preserved`
       — operator updates a default profile (e.g. renames "Preservation"
       → "Archive"); runner invoked again; the renamed row is left
       untouched and `is_factory_default` is now considered "owned by
       the operator" (the seeder uses `created_at != updated_at` as the
       sentinel).
+      *(Sentinel updated to FR-003a's `is_user_modified` flag rather
+      than the timestamp diff — same guarantee, plus the `seed_key`
+      upsert path so default-catalogue drift cleanly refreshes
+      non-edited rows.)*
 
 ### Implementation
 
-- [ ] T053 [SEED] Author the JSON seed files under
+- [X] T053 [SEED] Author the JSON seed files under
       `src/romarr/profiles/seeders/`:
       `quality.json`, `region.json`, `dump.json`, `language.json`,
       `naming.json`, `custom_formats.json`, `scene_groups.json`. Each
       file mirrors the catalogue tables in `data-model.md`.
-- [ ] T054 [SEED] Create `src/romarr/profiles/seeders/runner.py` —
+- [X] T054 [SEED] Create `src/romarr/profiles/seeders/runner.py` —
       `seed_defaults(session)` async helper that:
       1. iterates every JSON file;
       2. for each row, checks whether `(name, type)` already exists;
@@ -294,10 +298,19 @@ operator edits.
          is true);
       5. when present and `created_at != updated_at`, the operator has
          edited it — leave alone unconditionally.
+      *(Implementation rewrite per FR-003a: lookup is by `seed_key`
+      not `name`, the sentinel is `is_user_modified` not the timestamp
+      diff, and non-edited rows whose values drift from the JSON are
+      refreshed in place rather than left alone — closes the
+      "release evolves the default" gap.)*
 - [ ] T055 [SEED] Wire `seed_defaults(session)` into the application
       bootstrap so first-boot is automatic. The wiring lives in
       `src/romarr/app/lifespan.py` (a placeholder for now; the API spec
       formalises it).
+      *(Lifespan wiring deferred — the API factory landing in slice 5
+      is the right place to attach the seeder. Tests call
+      `seed_defaults(session)` directly today, and the runner is
+      idempotent so manual invocation is safe in any environment.)*
 
 **Checkpoint**: seeders tests green; an empty database has the catalog
 ready after a single startup; restarting touches nothing.

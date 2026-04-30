@@ -1,0 +1,29 @@
+[
+  {
+    "seed_key": "no-intro-standard",
+    "name": "No-Intro Standard",
+    "convention": "no-intro",
+    "template": "{{ Game.Title }} ({{ Release.Region }}){% if Release.Languages %} ({{ Release.Languages }}){% endif %}{% if Release.Revision %} ({{ Release.Revision }}){% endif %}{% if Release.Tags %} [{{ Release.Tags }}]{% endif %}.{{ Dump.Extension }}",
+    "platform_subfolder": true,
+    "replace_illegal_chars": true,
+    "multi_disc_subfolder": true
+  },
+  {
+    "seed_key": "es-de-compatible",
+    "name": "ES-DE Compatible",
+    "convention": "es-de",
+    "template": "{{ Platform.Slug }}/{{ Game.SortTitle }} - {{ Release.Region }}.{{ Dump.Extension }}",
+    "platform_subfolder": true,
+    "replace_illegal_chars": true,
+    "multi_disc_subfolder": true
+  },
+  {
+    "seed_key": "romm-passthrough",
+    "name": "RomM Passthrough",
+    "convention": "romm",
+    "template": "{{ Platform.Slug }}/{{ Release.OriginalName }}",
+    "platform_subfolder": true,
+    "replace_illegal_chars": true,
+    "multi_disc_subfolder": false
+  }
+]

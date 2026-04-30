@@ -1,0 +1,118 @@
+[
+  {
+    "seed_key": "verified-dump",
+    "name": "Verified Dump",
+    "score": 100,
+    "conditions": [
+      {"field": "tags", "operator": "matches_regex", "values": "\\[!\\]"}
+    ]
+  },
+  {
+    "seed_key": "hack",
+    "name": "Hack",
+    "score": -10000,
+    "conditions": [
+      {
+        "field": "tags",
+        "operator": "matches_regex",
+        "values": "\\[h\\d?\\]",
+        "or": [
+          {"field": "dump_status", "operator": "equals", "values": "hack"}
+        ]
+      }
+    ]
+  },
+  {
+    "seed_key": "trainer",
+    "name": "Trainer",
+    "score": -10000,
+    "conditions": [
+      {
+        "field": "tags",
+        "operator": "matches_regex",
+        "values": "\\[t\\d?\\]",
+        "or": [
+          {"field": "dump_status", "operator": "equals", "values": "trainer"}
+        ]
+      }
+    ]
+  },
+  {
+    "seed_key": "bad-dump",
+    "name": "Bad Dump",
+    "score": -10000,
+    "conditions": [
+      {
+        "field": "tags",
+        "operator": "matches_regex",
+        "values": "\\[b\\]",
+        "or": [
+          {"field": "dump_status", "operator": "equals", "values": "baddump"}
+        ]
+      }
+    ]
+  },
+  {
+    "seed_key": "overdump",
+    "name": "Overdump",
+    "score": -10000,
+    "conditions": [
+      {
+        "field": "tags",
+        "operator": "matches_regex",
+        "values": "\\[o\\]",
+        "or": [
+          {"field": "dump_status", "operator": "equals", "values": "overdump"}
+        ]
+      }
+    ]
+  },
+  {
+    "seed_key": "fr-translation",
+    "name": "FR Translation",
+    "score": 50,
+    "conditions": [
+      {"field": "tags", "operator": "matches_regex", "values": "\\[T\\+Fr\\]"}
+    ]
+  },
+  {
+    "seed_key": "en-translation",
+    "name": "EN Translation",
+    "score": 30,
+    "conditions": [
+      {"field": "tags", "operator": "matches_regex", "values": "\\[T\\+En\\]"}
+    ]
+  },
+  {
+    "seed_key": "original-release-rev0",
+    "name": "Original Release (Rev 0)",
+    "score": 20,
+    "conditions": [
+      {"field": "revision", "operator": "in", "values": ["", "Rev 0", "Rev 00"]}
+    ]
+  },
+  {
+    "seed_key": "latest-revision",
+    "name": "Latest Revision",
+    "score": 30,
+    "conditions": [
+      {"field": "revision", "operator": "matches_regex", "values": "Rev [B-Z]"}
+    ]
+  },
+  {
+    "seed_key": "multi-region",
+    "name": "Multi-Region",
+    "score": 15,
+    "conditions": [
+      {"field": "region", "operator": "in", "values": ["World", "World+EUR"]}
+    ]
+  },
+  {
+    "seed_key": "no-intro-convention",
+    "name": "No-Intro Convention",
+    "score": 10,
+    "conditions": [
+      {"field": "naming_convention", "operator": "equals", "values": "no-intro"}
+    ]
+  }
+]

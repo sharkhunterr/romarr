@@ -32,6 +32,7 @@ from romarr.profiles.naming import (
     ReleaseTokens,
 )
 from romarr.profiles.scoring import compute_custom_format_score
+from romarr.profiles.seeders import SCENE_GROUPS, seed_defaults
 from romarr.profiles.types import (
     Decision,
     EvaluationReason,
@@ -42,6 +43,7 @@ from romarr.profiles.types import (
 )
 
 __all__ = [
+    "SCENE_GROUPS",
     "Decision",
     "DumpTokens",
     "EvaluationReason",
@@ -62,4 +64,5 @@ __all__ = [
     "TemplateUnknownTokenError",
     "compute_custom_format_score",
     "evaluate_all",
+    "seed_defaults",
 ]
