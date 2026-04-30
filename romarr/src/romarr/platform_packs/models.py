@@ -17,7 +17,6 @@ from sqlalchemy import (
     JSON,
     CheckConstraint,
     DateTime,
-    ForeignKey,
     Index,
     Integer,
     String,
@@ -67,11 +66,12 @@ class PlatformPackApplicationLog(Base):
     __tablename__ = "platform_pack_application_log"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    pack_version: Mapped[str] = mapped_column(
-        String(16),
-        ForeignKey("platform_pack.pack_version", ondelete="CASCADE"),
-        nullable=False,
-    )
+    # Intentionally NOT a FK to ``platform_pack.pack_version``: failed
+    # runs MUST persist their audit row even though the data-side
+    # transaction (which would have inserted the matching pack row)
+    # rolled back (FR-024). The pack_version is a logical pointer for
+    # human auditors, not a referential-integrity constraint.
+    pack_version: Mapped[str] = mapped_column(String(16), nullable=False)
     action: Mapped[str] = mapped_column(String(16), nullable=False)
     platforms_affected: Mapped[list[str]] = mapped_column(
         JSON, nullable=False, default=list

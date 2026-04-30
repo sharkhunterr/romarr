@@ -1,0 +1,463 @@
+pack_version: "2026.04.001"
+schema_version: 1
+description: "Romarr built-in platform pack — 20 MVP consoles + handhelds covering the Romarr launch catalog."
+author: "Romarr"
+source_url: "https://romarr.example/packs/builtin"
+
+parsing_strategies:
+  - id: ines-header
+    description: "iNES (.nes) header sniff"
+    regex: "^NES\\x1A"
+    apply_to_platforms: ["nes"]
+  - id: snes-header
+    description: "Super Nintendo (.smc/.sfc) header"
+    regex: "^.{0,512}SUPER\\s*NES"
+    apply_to_platforms: ["snes"]
+  - id: megadrive-header
+    description: "Mega Drive ROM header"
+    regex: "^.{0,256}SEGA"
+    apply_to_platforms: ["megadrive"]
+  - id: gameboy-header
+    description: "Game Boy / GBC ROM header sniff"
+    regex: "^.{0,335}NINTENDO"
+    apply_to_platforms: ["gameboy", "gbc"]
+  - id: iso9660
+    description: "Generic ISO9660 disc filesystem"
+    regex: "^.{0,33000}CD001"
+    apply_to_platforms: ["psx", "saturn", "dreamcast", "gamecube", "wii", "ps2"]
+
+platforms:
+  # ---- Nintendo cartridge consoles ----
+  - slug: nes
+    name: "Nintendo Entertainment System"
+    short_name: "NES"
+    manufacturer: Nintendo
+    generation: 3
+    release_year: 1983
+    is_handheld: false
+    is_disc_based: false
+    metadata_ids:
+      igdb_id: 18
+      screenscraper_id: 3
+      mobygames_id: 22
+      retroachievements_id: 7
+    formats:
+      - extension: ".nes"
+        format_type: cartridge
+        is_primary: true
+        parser_strategy: ines-header
+      - extension: ".unif"
+        format_type: cartridge
+      - extension: ".fds"
+        format_type: cartridge
+
+  - slug: snes
+    name: "Super Nintendo Entertainment System"
+    short_name: "SNES"
+    manufacturer: Nintendo
+    generation: 4
+    release_year: 1990
+    is_handheld: false
+    is_disc_based: false
+    metadata_ids:
+      igdb_id: 19
+      screenscraper_id: 4
+      mobygames_id: 15
+      retroachievements_id: 3
+    formats:
+      - extension: ".sfc"
+        format_type: cartridge
+        is_primary: true
+      - extension: ".smc"
+        format_type: cartridge
+        parser_strategy: snes-header
+
+  - slug: gameboy
+    name: "Nintendo Game Boy"
+    short_name: "Game Boy"
+    manufacturer: Nintendo
+    generation: 4
+    release_year: 1989
+    is_handheld: true
+    is_disc_based: false
+    metadata_ids:
+      igdb_id: 33
+      screenscraper_id: 9
+      mobygames_id: 10
+      retroachievements_id: 4
+    formats:
+      - extension: ".gb"
+        format_type: cartridge
+        is_primary: true
+        parser_strategy: gameboy-header
+
+  - slug: gbc
+    name: "Nintendo Game Boy Color"
+    short_name: "GBC"
+    manufacturer: Nintendo
+    generation: 5
+    release_year: 1998
+    is_handheld: true
+    is_disc_based: false
+    parent_platform_slug: gameboy
+    metadata_ids:
+      igdb_id: 22
+      screenscraper_id: 10
+      mobygames_id: 11
+      retroachievements_id: 6
+    formats:
+      - extension: ".gbc"
+        format_type: cartridge
+        is_primary: true
+        parser_strategy: gameboy-header
+      - extension: ".gb"
+        format_type: cartridge
+
+  - slug: gba
+    name: "Nintendo Game Boy Advance"
+    short_name: "GBA"
+    manufacturer: Nintendo
+    generation: 6
+    release_year: 2001
+    is_handheld: true
+    is_disc_based: false
+    metadata_ids:
+      igdb_id: 24
+      screenscraper_id: 12
+      mobygames_id: 12
+      retroachievements_id: 5
+    formats:
+      - extension: ".gba"
+        format_type: cartridge
+        is_primary: true
+
+  - slug: n64
+    name: "Nintendo 64"
+    short_name: "N64"
+    manufacturer: Nintendo
+    generation: 5
+    release_year: 1996
+    is_handheld: false
+    is_disc_based: false
+    metadata_ids:
+      igdb_id: 4
+      screenscraper_id: 14
+      mobygames_id: 9
+      retroachievements_id: 2
+    formats:
+      - extension: ".n64"
+        format_type: cartridge
+        is_primary: true
+      - extension: ".v64"
+        format_type: cartridge
+      - extension: ".z64"
+        format_type: cartridge
+
+  - slug: gamecube
+    name: "Nintendo GameCube"
+    short_name: "GameCube"
+    manufacturer: Nintendo
+    generation: 6
+    release_year: 2001
+    is_handheld: false
+    is_disc_based: true
+    metadata_ids:
+      igdb_id: 21
+      screenscraper_id: 13
+      mobygames_id: 14
+      retroachievements_id: 16
+    formats:
+      - extension: ".gcm"
+        format_type: disc
+      - extension: ".iso"
+        format_type: disc
+        is_primary: true
+        parser_strategy: iso9660
+      - extension: ".rvz"
+        format_type: compressed
+        is_compressed: true
+
+  - slug: wii
+    name: "Nintendo Wii"
+    short_name: "Wii"
+    manufacturer: Nintendo
+    generation: 7
+    release_year: 2006
+    is_handheld: false
+    is_disc_based: true
+    metadata_ids:
+      igdb_id: 5
+      screenscraper_id: 16
+      mobygames_id: 82
+      retroachievements_id: 19
+    formats:
+      - extension: ".iso"
+        format_type: disc
+        is_primary: true
+        parser_strategy: iso9660
+      - extension: ".wbfs"
+        format_type: disc
+      - extension: ".rvz"
+        format_type: compressed
+        is_compressed: true
+
+  - slug: nds
+    name: "Nintendo DS"
+    short_name: "DS"
+    manufacturer: Nintendo
+    generation: 7
+    release_year: 2004
+    is_handheld: true
+    is_disc_based: false
+    metadata_ids:
+      igdb_id: 20
+      screenscraper_id: 15
+      mobygames_id: 44
+      retroachievements_id: 18
+    formats:
+      - extension: ".nds"
+        format_type: cartridge
+        is_primary: true
+
+  - slug: 3ds
+    name: "Nintendo 3DS"
+    short_name: "3DS"
+    manufacturer: Nintendo
+    generation: 8
+    release_year: 2011
+    is_handheld: true
+    is_disc_based: false
+    parent_platform_slug: nds
+    metadata_ids:
+      igdb_id: 37
+      screenscraper_id: 17
+      mobygames_id: 101
+      retroachievements_id: 62
+    formats:
+      - extension: ".3ds"
+        format_type: cartridge
+        is_primary: true
+      - extension: ".cci"
+        format_type: cartridge
+
+  # ---- Sega ----
+  - slug: master-system
+    name: "Sega Master System"
+    short_name: "SMS"
+    manufacturer: Sega
+    generation: 3
+    release_year: 1985
+    is_handheld: false
+    is_disc_based: false
+    metadata_ids:
+      igdb_id: 64
+      screenscraper_id: 2
+      mobygames_id: 26
+      retroachievements_id: 11
+    formats:
+      - extension: ".sms"
+        format_type: cartridge
+        is_primary: true
+
+  - slug: megadrive
+    name: "Sega Mega Drive"
+    short_name: "Mega Drive"
+    manufacturer: Sega
+    generation: 4
+    release_year: 1988
+    is_handheld: false
+    is_disc_based: false
+    metadata_ids:
+      igdb_id: 29
+      screenscraper_id: 1
+      mobygames_id: 16
+      retroachievements_id: 1
+    formats:
+      - extension: ".md"
+        format_type: cartridge
+        is_primary: true
+        parser_strategy: megadrive-header
+      - extension: ".gen"
+        format_type: cartridge
+      - extension: ".bin"
+        format_type: cartridge
+
+  - slug: saturn
+    name: "Sega Saturn"
+    short_name: "Saturn"
+    manufacturer: Sega
+    generation: 5
+    release_year: 1994
+    is_handheld: false
+    is_disc_based: true
+    metadata_ids:
+      igdb_id: 32
+      screenscraper_id: 22
+      mobygames_id: 23
+      retroachievements_id: 39
+    formats:
+      - extension: ".cue"
+        format_type: disc
+        is_primary: true
+        requires_companion: true
+        companion_extensions: [".bin", ".iso"]
+      - extension: ".chd"
+        format_type: compressed
+        is_compressed: true
+      - extension: ".iso"
+        format_type: disc
+        parser_strategy: iso9660
+
+  - slug: dreamcast
+    name: "Sega Dreamcast"
+    short_name: "Dreamcast"
+    manufacturer: Sega
+    generation: 6
+    release_year: 1998
+    is_handheld: false
+    is_disc_based: true
+    metadata_ids:
+      igdb_id: 23
+      screenscraper_id: 23
+      mobygames_id: 8
+      retroachievements_id: 40
+    formats:
+      - extension: ".gdi"
+        format_type: disc
+        is_primary: true
+        requires_companion: true
+        companion_extensions: [".bin"]
+      - extension: ".chd"
+        format_type: compressed
+        is_compressed: true
+
+  # ---- Sony disc consoles ----
+  - slug: psx
+    name: "Sony PlayStation"
+    short_name: "PSX"
+    manufacturer: Sony
+    generation: 5
+    release_year: 1994
+    is_handheld: false
+    is_disc_based: true
+    metadata_ids:
+      igdb_id: 7
+      screenscraper_id: 57
+      mobygames_id: 6
+      retroachievements_id: 12
+    formats:
+      - extension: ".cue"
+        format_type: disc
+        is_primary: true
+        requires_companion: true
+        companion_extensions: [".bin"]
+      - extension: ".chd"
+        format_type: compressed
+        is_compressed: true
+      - extension: ".pbp"
+        format_type: package
+
+  - slug: ps2
+    name: "Sony PlayStation 2"
+    short_name: "PS2"
+    manufacturer: Sony
+    generation: 6
+    release_year: 2000
+    is_handheld: false
+    is_disc_based: true
+    metadata_ids:
+      igdb_id: 8
+      screenscraper_id: 58
+      mobygames_id: 7
+      retroachievements_id: 21
+    formats:
+      - extension: ".iso"
+        format_type: disc
+        is_primary: true
+        parser_strategy: iso9660
+      - extension: ".chd"
+        format_type: compressed
+        is_compressed: true
+
+  - slug: psp
+    name: "Sony PlayStation Portable"
+    short_name: "PSP"
+    manufacturer: Sony
+    generation: 7
+    release_year: 2004
+    is_handheld: true
+    is_disc_based: true
+    metadata_ids:
+      igdb_id: 38
+      screenscraper_id: 61
+      mobygames_id: 46
+      retroachievements_id: 41
+    formats:
+      - extension: ".iso"
+        format_type: disc
+        is_primary: true
+      - extension: ".cso"
+        format_type: compressed
+        is_compressed: true
+
+  # ---- Atari ----
+  - slug: atari-2600
+    name: "Atari 2600"
+    short_name: "2600"
+    manufacturer: Atari
+    generation: 2
+    release_year: 1977
+    is_handheld: false
+    is_disc_based: false
+    metadata_ids:
+      igdb_id: 59
+      screenscraper_id: 26
+      mobygames_id: 28
+      retroachievements_id: 25
+    formats:
+      - extension: ".a26"
+        format_type: cartridge
+        is_primary: true
+
+  - slug: atari-7800
+    name: "Atari 7800"
+    short_name: "7800"
+    manufacturer: Atari
+    generation: 3
+    release_year: 1986
+    is_handheld: false
+    is_disc_based: false
+    parent_platform_slug: atari-2600
+    metadata_ids:
+      igdb_id: 60
+      screenscraper_id: 27
+      mobygames_id: 34
+      retroachievements_id: 51
+    formats:
+      - extension: ".a78"
+        format_type: cartridge
+        is_primary: true
+
+  # ---- NEC ----
+  - slug: pce-cd
+    name: "PC Engine CD-ROM²"
+    short_name: "PCE-CD"
+    manufacturer: NEC
+    generation: 4
+    release_year: 1988
+    is_handheld: false
+    is_disc_based: true
+    metadata_ids:
+      igdb_id: 86
+      screenscraper_id: 31
+      mobygames_id: 45
+      retroachievements_id: 76
+    formats:
+      - extension: ".cue"
+        format_type: disc
+        is_primary: true
+        requires_companion: true
+        companion_extensions: [".bin"]
+      - extension: ".chd"
+        format_type: compressed
+        is_compressed: true

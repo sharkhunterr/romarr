@@ -60,12 +60,10 @@ def upgrade() -> None:
     op.create_table(
         "platform_pack_application_log",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column(
-            "pack_version",
-            sa.String(16),
-            sa.ForeignKey("platform_pack.pack_version", ondelete="CASCADE"),
-            nullable=False,
-        ),
+        # NOT a FK — failed runs persist their audit row after the
+        # data-side transaction (which would have inserted the matching
+        # pack row) rolls back (FR-024).
+        sa.Column("pack_version", sa.String(16), nullable=False),
         sa.Column("action", sa.String(16), nullable=False),
         sa.Column(
             "platforms_affected",

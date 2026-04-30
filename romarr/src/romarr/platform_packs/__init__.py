@@ -21,6 +21,10 @@ The transactional ingestor + built-in pack + API stubs land in
 follow-up slices.
 """
 
+from romarr.platform_packs.builtin import (
+    apply_builtin_pack,
+    resolve_builtin_pack_path,
+)
 from romarr.platform_packs.errors import (
     OverrideRequiredError,
     PackValidationError,
@@ -28,6 +32,7 @@ from romarr.platform_packs.errors import (
     SchemaVersionTooHighError,
     Violation,
 )
+from romarr.platform_packs.ingestor import IngestSource, ingest_pack
 from romarr.platform_packs.types import (
     PackPlatformDiff,
     PackUploadResult,
@@ -46,6 +51,7 @@ from romarr.platform_packs.yaml_loader import (
 )
 
 __all__ = [
+    "IngestSource",
     "OverrideRequiredError",
     "PackPlatformDiff",
     "PackUploadResult",
@@ -55,9 +61,12 @@ __all__ = [
     "SchemaVersionTooHighError",
     "ValidateResult",
     "Violation",
+    "apply_builtin_pack",
     "canonicalize",
     "compute_contents_hash",
+    "ingest_pack",
     "load_pack",
+    "resolve_builtin_pack_path",
     "validate_cross_refs",
     "validate_pack",
     "validate_pack_structure",
