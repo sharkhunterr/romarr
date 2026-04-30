@@ -25,15 +25,17 @@ protection → hardening.
 
 **Purpose**: bring up the module skeleton, dependencies, types, and shared errors.
 
-- [ ] T001 [SCAF] Update `pyproject.toml` — add runtime dep
+- [X] T001 [SCAF] Update `pyproject.toml` — add runtime dep
       `Jinja2>=3.1` (used in sandboxed mode only).
-- [ ] T002 [P] [SCAF] Create `src/romarr/profiles/__init__.py` exposing
+      *(Already a project dep — line 40 of pyproject.toml. Sandbox
+      configuration lands with the naming engine slice.)*
+- [X] T002 [P] [SCAF] Create `src/romarr/profiles/__init__.py` exposing
       `ProfileEvaluator`, `NamingTemplateEngine`, `seed_defaults`.
-- [ ] T003 [P] [SCAF] Create `src/romarr/profiles/errors.py` —
+- [X] T003 [P] [SCAF] Create `src/romarr/profiles/errors.py` —
       `ProfileError` (base), `TemplateSyntaxError`,
       `TemplateUnknownTokenError`, `SandboxViolationError`,
       `RegexCompileError`, `ProfileInUseError`.
-- [ ] T004 [P] [SCAF] Create `src/romarr/profiles/types.py` —
+- [X] T004 [P] [SCAF] Create `src/romarr/profiles/types.py` —
       `Decision` enum, `EvaluationReason`, `EvaluationResult`,
       `NamingPreviewRequest/Response`, `ForceDeleteResult` Pydantic
       models from `data-model.md`.
@@ -52,44 +54,49 @@ schemas + idempotent library-FK addition.
 
 ### Tests (write first; must fail)
 
-- [ ] T006 [P] [PERS] `tests/profiles/test_models.py` — round-trip one row
+- [X] T006 [P] [PERS] `tests/profiles/test_models.py` — round-trip one row
       per profile type through the async session; verify CHECK constraints
       on `dump_profile.prefer_revision`, `naming_profile.convention`,
       `custom_format.score` range.
-- [ ] T007 [P] [PERS] `tests/profiles/test_models.py::test_unique_name_per_type`
+- [X] T007 [P] [PERS] `tests/profiles/test_models.py::test_unique_name_per_type`
       — second insertion of the same `name` in any profile table raises
       `IntegrityError`.
-- [ ] T008 [P] [PERS] `tests/profiles/test_models.py::test_m2m_unique`
+- [X] T008 [P] [PERS] `tests/profiles/test_models.py::test_m2m_unique`
       — `(library_id, custom_format_id)` is a composite PK; duplicate insert
       raises (edge case in spec).
-- [ ] T009 [P] [PERS] `tests/profiles/test_models.py::test_quality_validators`
+- [X] T009 [P] [PERS] `tests/profiles/test_models.py::test_quality_validators`
       — Pydantic-level: `len(allowed_formats) >= 1`,
       `preferred_format ∈ allowed_formats`,
       `upgrade_until_format ∈ allowed_formats`.
-- [ ] T010 [P] [PERS] `tests/profiles/test_models.py::test_region_invariants`
+- [X] T010 [P] [PERS] `tests/profiles/test_models.py::test_region_invariants`
       — empty priorities + fallback=false rejected;
       same-region in priorities AND exclude rejected.
-- [ ] T011 [P] [PERS] `tests/profiles/test_models.py::test_custom_format_regex_compile`
+- [X] T011 [P] [PERS] `tests/profiles/test_models.py::test_custom_format_regex_compile`
       — invalid regex in `matches_regex` rejected at save time
       with `RegexCompileError`.
-- [ ] T012 [P] [PERS] `tests/profiles/test_migration_0006.py::test_creates_six_tables_and_m2m`
+- [X] T012 [P] [PERS] `tests/profiles/test_migration_0006.py::test_creates_six_tables_and_m2m`
       — applying the migration creates all six tables + m2m with the
       documented constraints.
-- [ ] T013 [P] [PERS] `tests/profiles/test_migration_0006.py::test_library_fk_idempotent`
+- [X] T013 [P] [PERS] `tests/profiles/test_migration_0006.py::test_library_fk_idempotent`
       — apply the migration twice (with a fake `library` table present);
       the FK columns are added once and the second run is a no-op.
+      *(FR-004 was rewritten by the clarifications — Library FK columns are now owned by spec 009. This slice ships the seed_key partial-unique-index test in `test_seed_key_partial_unique_index` instead, which is the FR-003a sentinel guarantee. Idempotency proved by `test_migration_idempotent`.)*
 
 ### Implementation
 
-- [ ] T014 [PERS] Create `src/romarr/profiles/models.py` — six SQLAlchemy
+- [X] T014 [PERS] Create `src/romarr/profiles/models.py` — six SQLAlchemy
       2.0 models matching `data-model.md`, including the
       `library_custom_format` association.
-- [ ] T015 [P] [PERS] Create `src/romarr/profiles/schemas.py` — `*Read /
+- [X] T015 [P] [PERS] Create `src/romarr/profiles/schemas.py` — `*Read /
       *Create / *Update` for each profile type.
-- [ ] T016 [PERS] Author `src/romarr/db/alembic/versions/0006_profiles.py`
+- [X] T016 [PERS] Author `src/romarr/db/alembic/versions/0006_profiles.py`
       — DDL for the six tables, the m2m, and the conditional `ADD COLUMN
       IF NOT EXISTS` for the five library FKs (gated by an existence check
       on the `library` table).
+      *(Clarification rewrite: this migration creates the six tables + m2m
+      with the FR-003a `seed_key` + `is_user_modified` columns. The five
+      Library FK columns and the m2m's `library_id` FK are deferred to
+      spec 009 per the data-model clarification chain.)*
 
 **Checkpoint**: `alembic upgrade head` is clean; PERS tests green.
 
