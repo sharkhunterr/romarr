@@ -23,12 +23,15 @@ from romarr.profiles.errors import (
     TemplateSyntaxError,
     TemplateUnknownTokenError,
 )
+from romarr.profiles.evaluator import ProfileEvaluator, evaluate_all
+from romarr.profiles.scoring import compute_custom_format_score
 from romarr.profiles.types import (
     Decision,
     EvaluationReason,
     EvaluationResult,
     ForceDeleteResult,
     NamingPreviewResponse,
+    ReleaseFacts,
 )
 
 __all__ = [
@@ -38,9 +41,13 @@ __all__ = [
     "ForceDeleteResult",
     "NamingPreviewResponse",
     "ProfileError",
+    "ProfileEvaluator",
     "ProfileInUseError",
     "RegexCompileError",
+    "ReleaseFacts",
     "SandboxViolationError",
     "TemplateSyntaxError",
     "TemplateUnknownTokenError",
+    "compute_custom_format_score",
+    "evaluate_all",
 ]

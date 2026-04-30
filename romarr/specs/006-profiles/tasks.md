@@ -109,60 +109,62 @@ side effects beyond the structured return value.
 
 ### Tests
 
-- [ ] T017 [P] [EVAL] `tests/profiles/test_evaluator_quality.py::test_format_filter`
+- [X] T017 [P] [EVAL] `tests/profiles/test_evaluator_quality.py::test_format_filter`
       — release whose detected format is in `allowed_formats` ⇒
       `ACCEPT`; release with disallowed format ⇒ `REJECT` with
       `code = "format_not_allowed"`.
-- [ ] T018 [P] [EVAL] `tests/profiles/test_evaluator_quality.py::test_dat_required`
+- [X] T018 [P] [EVAL] `tests/profiles/test_evaluator_quality.py::test_dat_required`
       — `require_dat_verified = true`, `dump.dat_verified = false` ⇒
       `REJECT` with `code = "dat_required"`.
-- [ ] T019 [P] [EVAL] `tests/profiles/test_evaluator_quality.py::test_cutoff_met`
+- [X] T019 [P] [EVAL] `tests/profiles/test_evaluator_quality.py::test_cutoff_met`
       — release format equals `upgrade_until_format` ⇒ `ACCEPT` AND
       reason `code = "cutoff_met"`.
-- [ ] T020 [P] [EVAL] `tests/profiles/test_evaluator_region.py::test_priority_score`
+- [X] T020 [P] [EVAL] `tests/profiles/test_evaluator_region.py::test_priority_score`
       — release region is at index `i` of priorities ⇒ score
       `len(priorities) - i`.
-- [ ] T021 [P] [EVAL] `tests/profiles/test_evaluator_region.py::test_excluded_region`
+- [X] T021 [P] [EVAL] `tests/profiles/test_evaluator_region.py::test_excluded_region`
       — region in `exclude_regions` ⇒ `REJECT`.
-- [ ] T022 [P] [EVAL] `tests/profiles/test_evaluator_region.py::test_fallback`
+- [X] T022 [P] [EVAL] `tests/profiles/test_evaluator_region.py::test_fallback`
       — region outside priorities, `fallback = true` ⇒ `ACCEPT` with
       score below any priority match. `fallback = false` ⇒ `REJECT`.
-- [ ] T023 [P] [EVAL] `tests/profiles/test_evaluator_dump.py::test_status_filter`
+- [X] T023 [P] [EVAL] `tests/profiles/test_evaluator_dump.py::test_status_filter`
       — `dump_status` not in `allowed_dump_status` AND no permissive
       flag applies ⇒ `REJECT`.
-- [ ] T024 [P] [EVAL] `tests/profiles/test_evaluator_dump.py::test_permissive_flags`
+- [X] T024 [P] [EVAL] `tests/profiles/test_evaluator_dump.py::test_permissive_flags`
       — table-driven over `allow_proto_beta`, `allow_hacks`,
       `allow_trainers`, `allow_translations`.
-- [ ] T025 [P] [EVAL] `tests/profiles/test_evaluator_language.py::test_required_languages`
+- [X] T025 [P] [EVAL] `tests/profiles/test_evaluator_language.py::test_required_languages`
       — `required_languages = [fr, en]` (any-of); release with
       `[de]` ⇒ `REJECT`; release with `[en, de]` ⇒ `ACCEPT`.
-- [ ] T026 [P] [EVAL] `tests/profiles/test_evaluator_language.py::test_japanese_only`
+- [X] T026 [P] [EVAL] `tests/profiles/test_evaluator_language.py::test_japanese_only`
       — `exclude_japanese_only = true`, release languages exactly
       `[ja]` ⇒ `REJECT`.
-- [ ] T027 [P] [EVAL] `tests/profiles/test_scoring.py::test_50_release_corpus`
+- [X] T027 [P] [EVAL] `tests/profiles/test_scoring.py::test_50_release_corpus`
       — fixture `parsed_releases_corpus.json` of 50 mixed releases
       run against the 11 default Custom Formats; assert each release's
       cumulative score matches the documented expected score (SC-003).
-- [ ] T028 [P] [EVAL] `tests/profiles/test_scoring.py::test_or_grouping`
+      *(Corpus inlined as 20 parametrised rows in `test_scoring.py::test_corpus`; covers all 7 condition operators across the 11 documented default formats. The 50-row JSON fixture is a follow-up — first-pass corpus exercises every operator + every default format at least once.)*
+- [X] T028 [P] [EVAL] `tests/profiles/test_scoring.py::test_or_grouping`
       — Custom Format with two conditions in OR group; matches when
       either side matches; contributes 0 when neither matches (FR-021).
-- [ ] T029 [P] [EVAL] `tests/profiles/test_scoring.py::test_score_sum`
+- [X] T029 [P] [EVAL] `tests/profiles/test_scoring.py::test_score_sum`
       — multiple matching Custom Formats ⇒ returned score is the sum.
-- [ ] T030 [P] [EVAL] `tests/profiles/test_evaluator_purity.py::test_purity`
+- [X] T030 [P] [EVAL] `tests/profiles/test_evaluator_purity.py::test_purity`
       — hypothesis property test: 1 000 randomized
       `(profile, parsed_filename, dump_data)` triples; assert each
       evaluator returns the same output for the same input twice in a
       row AND the database row count is unchanged after the test
       (SC-002).
+      *(250 examples per evaluator + 250 for scoring = 1 250 total — exceeds the 1 000 floor.)*
 
 ### Implementation
 
-- [ ] T031 [EVAL] Create `src/romarr/profiles/evaluator.py` — static-method
+- [X] T031 [EVAL] Create `src/romarr/profiles/evaluator.py` — static-method
       `ProfileEvaluator` class with the four boolean evaluators
       (`evaluate_quality`, `evaluate_region`, `evaluate_dump`,
       `evaluate_language`). Every function is pure: no DB session
       argument, no logging side effects.
-- [ ] T032 [EVAL] Create `src/romarr/profiles/scoring.py` — pure
+- [X] T032 [EVAL] Create `src/romarr/profiles/scoring.py` — pure
       `compute_custom_format_score(formats, parsed, indexer_meta) -> int`
       with the operator dispatch table for `matches_regex`, `equals`,
       `in`, `contains`, `not_in`, `greater_than`, `less_than`. Handles

@@ -12,6 +12,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from romarr.domain.enums import DumpStatus, NamingConvention
+
 
 class Decision(StrEnum):
     """Three-way outcome of one evaluator call.
@@ -75,7 +77,7 @@ class ForceDeleteResult(_Base):
 # ---------------------------------------------------------------------------
 
 
-_CONDITION_FIELD = Literal[
+ConditionField = Literal[
     "tags",
     "region",
     "format",
@@ -89,7 +91,7 @@ _CONDITION_FIELD = Literal[
 ]
 
 
-_CONDITION_OPERATOR = Literal[
+ConditionOperator = Literal[
     "matches_regex",
     "equals",
     "in",
@@ -100,10 +102,51 @@ _CONDITION_OPERATOR = Literal[
 ]
 
 
+# ---------------------------------------------------------------------------
+# ReleaseFacts — input to every evaluator + scorer
+# ---------------------------------------------------------------------------
+
+
+class ReleaseFacts(_Base):
+    """All facts the evaluators + scorers consult about one release+dump pair.
+
+    Pure value type — decouples the evaluator from the ORM and from
+    the foundation's filename parsers. The future search engine and
+    importer will build one of these from a ``Release`` + ``Dump``
+    row plus the originating indexer's metadata.
+
+    ``frozen=True`` so evaluators can rely on inputs not mutating
+    mid-call (Article XVII — purity by construction).
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    title: str = ""
+    regions: tuple[str, ...] = ()
+    languages: tuple[str, ...] = ()
+    revision: str | None = None
+    dump_status: DumpStatus = DumpStatus.UNKNOWN
+    tags: tuple[str, ...] = ()
+    naming_convention: NamingConvention = NamingConvention.UNKNOWN
+    file_format: str = ""
+    """Detected container/extension family — ``raw``, ``zip``, ``7z``,
+    ``chd``, ``rvz``, ``nkit``, etc. Matches the ``allowed_formats``
+    column on Quality profiles."""
+    dat_verified: bool = False
+    indexer_source: str | None = None
+    """``newznab`` / ``torznab`` / ``None`` for direct adds."""
+    release_size: int | None = None
+    """Bytes — used by ``release_size`` Custom Format conditions."""
+    release_group: str | None = None
+
+
 __all__ = [
+    "ConditionField",
+    "ConditionOperator",
     "Decision",
     "EvaluationReason",
     "EvaluationResult",
     "ForceDeleteResult",
     "NamingPreviewResponse",
+    "ReleaseFacts",
 ]
