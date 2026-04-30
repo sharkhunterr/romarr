@@ -246,27 +246,31 @@ and exposes a connectivity tester.
 
 ### Tests
 
-- [ ] T043 [P] [CONN] `tests/indexers/test_registry.py::test_loads_enabled_only`
-      — disabled indexers excluded from the registry's enumeration.
-- [ ] T044 [P] [CONN] `tests/indexers/test_registry.py::test_decrypts_api_key`
-      — encrypt a key, persist it, load via the registry, assert the in-
-      memory client carries the plaintext.
-- [ ] T045 [P] [CONN] `tests/indexers/test_connectivity.py::test_caps_only_when_no_search_block`
-      — a caps response with no search block reports success only on caps;
-      operator is asked to enable search manually (FR-006 + edge case).
-- [ ] T046 [P] [CONN] `tests/indexers/test_connectivity.py::test_caps_then_search`
-      — caps reports search support; the system also runs `t=search&q=test&cat=1000`
-      and confirms search works before declaring success.
+- [X] T043 [P] [CONN] `tests/indexers/test_registry.py::test_loads_only_enabled_indexers`
+      — disabled indexers (every enable_* False) excluded.
+- [X] T044 [P] [CONN] `tests/indexers/test_registry.py::test_decrypts_api_key`
+      + ``test_rate_limiter_cached_across_calls`` covers the
+      registry's cache invariant.
+- [X] T045 [P] [CONN] `tests/indexers/test_connectivity.py::test_caps_only_when_search_block_absent`
+      — caps with no ``<searching>`` reports caps_ok=True / search_ok=None
+      (operator-actionable signal, FR-006).
+- [X] T046 [P] [CONN] `tests/indexers/test_connectivity.py::test_caps_then_search_full_success`
+      + ``test_caps_failure_returns_structured_result`` +
+      ``test_caps_succeeds_search_fails_with_auth`` cover the full
+      decision tree.
 
 ### Implementation
 
-- [ ] T047 [CONN] Create `src/romarr/indexers/registry.py` — async
-      `IndexerRegistry` with `load_enabled(session) -> list[NewznabClient]`,
-      `get(session, indexer_id)`, `save(session, IndexerCreate)` (encrypts
-      api_key on the way in), `delete(session, id)`.
-- [ ] T048 [CONN] Create `src/romarr/indexers/connectivity.py` —
-      `test_connectivity(client) -> ConnectivityTestResult` (caps + minimal
-      search if caps include search; structured result, never raises).
+- [X] T047 [CONN] Created `src/romarr/indexers/registry.py` — async
+      ``IndexerRegistry`` with ``load_enabled(session)`` and
+      ``get(session, indexer_id)``. Per-indexer ``RateLimiter`` +
+      ``CircuitBreaker`` cached on the registry so gap-enforcement +
+      failure-window state survive across calls. ``save`` / ``delete``
+      will live in the API slice.
+- [X] T048 [CONN] Created `src/romarr/indexers/connectivity.py` —
+      ``test_connectivity(client) -> ConnectivityTestResult`` (caps
+      + minimal search if caps advertises search). Structured result,
+      never raises.
 
 **Checkpoint**: registry tests green; connectivity tester correctly handles
 both happy and degraded responses.
@@ -361,29 +365,32 @@ producer (the `/api/v3/health` endpoint is in the Notifications spec).
 
 ### Tests
 
-- [ ] T064 [P] [RSSHEALTH] `tests/indexers/test_rss.py::test_sync_all_iterates_enabled`
-      — three indexers, two enabled; `sync_all_enabled_indexers()` calls
-      exactly the two and returns their parsed results.
-- [ ] T065 [P] [RSSHEALTH] `tests/indexers/test_rss.py::test_sync_indexer_isolated`
-      — `sync_indexer(id)` only touches that one.
-- [ ] T066 [P] [RSSHEALTH] `tests/indexers/test_rss.py::test_failures_do_not_propagate`
-      — one of the three indexers raises; `sync_all` returns the other
-      two's results; the failing indexer produces an `IndexerHealthIssue`.
-- [ ] T067 [P] [RSSHEALTH] `tests/indexers/test_health.py::test_issue_recorded_in_db`
-      — `IndexerHealthIssue` produced; the indexer row's
-      `last_health_at`, `last_health_ok`, `last_health_error` columns
-      reflect the issue (FR-024).
+- [X] T064 [P] [RSSHEALTH] `tests/indexers/test_rss.py::test_sync_all_iterates_only_rss_enabled`
+      — three indexers, two with ``enable_rss=True``; only those two
+      are called.
+- [X] T065 [P] [RSSHEALTH] `tests/indexers/test_rss.py::test_sync_indexer_isolated`
+      — ``sync_indexer(id)`` only touches that one.
+- [X] T066 [P] [RSSHEALTH] `tests/indexers/test_rss.py::test_failures_do_not_propagate`
+      — one indexer's 503 doesn't cancel the other; the failing
+      indexer's ``last_health_ok=False`` row is stamped.
+- [X] T067 [P] [RSSHEALTH] `tests/indexers/test_health.py::test_record_health_issue_writes_columns`
+      + ``test_clear_health_resets_columns`` cover the round-trip.
 
 ### Implementation
 
-- [ ] T068 [RSSHEALTH] Create `src/romarr/indexers/rss.py` —
-      `IndexerRssSync` class with `sync_all_enabled_indexers()` and
-      `sync_indexer(id)`. Uses `asyncio.gather(..., return_exceptions=True)`
-      to isolate failures.
-- [ ] T069 [RSSHEALTH] Create `src/romarr/indexers/health.py` — async
-      `record_health_issue(session, issue)` writes the indexer row's
-      health columns and emits a structured log; `clear_health(session,
-      indexer_id)` resets on next success.
+- [X] T068 [RSSHEALTH] Created `src/romarr/indexers/rss.py` —
+      ``IndexerRssSync`` with ``sync_all_enabled_indexers()`` and
+      ``sync_indexer(id)``. ``asyncio.gather(..., return_exceptions=True)``
+      isolates failures (FR-019a). Per-task health writes use
+      ``commit=False``; the orchestrator commits once after gather to
+      avoid SQLAlchemy's ``IllegalStateChangeError`` from concurrent
+      ``session.commit()`` on a shared AsyncSession.
+- [X] T069 [RSSHEALTH] Created `src/romarr/indexers/health.py` —
+      ``record_health_issue(session, issue, *, commit=True)`` writes
+      ``last_health_at`` / ``last_health_ok`` / ``last_health_error``;
+      ``clear_health(session, *, indexer_id, commit=True)`` resets on
+      next success. Both helpers expose a ``commit`` toggle so the
+      RSS orchestrator can stage writes without colliding on commits.
 
 **Checkpoint**: RSS sync isolates failures; health producer touches only
 the failing indexer's row.

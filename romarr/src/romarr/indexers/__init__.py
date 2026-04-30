@@ -17,12 +17,17 @@ follow-up slices.
 """
 
 from romarr.indexers.client import NewznabClient
+from romarr.indexers.connectivity import (
+    ConnectivityTestResult,
+    test_connectivity,
+)
 from romarr.indexers.errors import (
     IndexerAuthError,
     IndexerError,
     IndexerProtocolError,
     RateLimitDelayed,
 )
+from romarr.indexers.health import clear_health, record_health_issue
 from romarr.indexers.parser.caps import parse_caps
 from romarr.indexers.parser.dedup import dedup_by_guid
 from romarr.indexers.parser.extended_attrs import (
@@ -32,6 +37,8 @@ from romarr.indexers.parser.extended_attrs import (
 )
 from romarr.indexers.parser.search import parse_search
 from romarr.indexers.rate_limiter import RateLimiter
+from romarr.indexers.registry import IndexerRegistry
+from romarr.indexers.rss import IndexerRssSync
 from romarr.indexers.tokens import (
     generate_token,
     hash_token,
@@ -48,6 +55,7 @@ from romarr.indexers.types import (
 )
 
 __all__ = [
+    "ConnectivityTestResult",
     "DatSource",
     "FieldProvenance",
     "IndexerAuthError",
@@ -55,12 +63,15 @@ __all__ = [
     "IndexerError",
     "IndexerHealthIssue",
     "IndexerProtocolError",
+    "IndexerRegistry",
+    "IndexerRssSync",
     "NewznabClient",
     "ParsedTorznabAttr",
     "RateLimitDelayed",
     "RateLimiter",
     "RssResult",
     "SearchResult",
+    "clear_health",
     "dedup_by_guid",
     "extract_extended_attrs",
     "generate_token",
@@ -69,5 +80,7 @@ __all__ = [
     "normalize_region",
     "parse_caps",
     "parse_search",
+    "record_health_issue",
+    "test_connectivity",
     "verify_token",
 ]
