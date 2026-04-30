@@ -13,9 +13,15 @@ narrow — one async ``run`` per (library, platform_slug) pair —
 because every concrete exporter handles its own atomicity, locking,
 retry, and idempotence.
 
-Slice 4 ships the ES-DE exporter (XML render + atomic write +
-advisory lock + media mirror). RomM / Pegasus / LaunchBox land in
-their own slices.
+Slices 4-6 ship the four exporter primitives:
+  * ES-DE renderer + atomic writer + media mirror (slice 4)
+  * Pegasus + LaunchBox renderers reusing the shared atomic writer (slice 5)
+  * RomM remote push with tenacity retry + Fernet decryption (slice 6)
+
+The full per-import dispatch (which exporters fire, in what order,
+on which (library, platform_slug) pair) lives in spec 008's
+importer + spec 011's notification consumer for the post-failure
+debounce.
 """
 
 from __future__ import annotations
@@ -39,6 +45,7 @@ from romarr.libraries.exporters.pegasus import (
     render_metadata_txt,
     write_metadata_atomic,
 )
+from romarr.libraries.exporters.romm import RommPushOutcome, push_to_romm
 
 
 class ExporterBase(ABC):
@@ -64,7 +71,9 @@ __all__ = [
     "LaunchBoxGame",
     "PegasusCollection",
     "PegasusGame",
+    "RommPushOutcome",
     "materialise_cover",
+    "push_to_romm",
     "render_gamelist_xml",
     "render_launchbox_xml",
     "render_metadata_txt",

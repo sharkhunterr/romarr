@@ -295,25 +295,45 @@ polling paths.
 
 ### Tests
 
-- [ ] T048 [P] [EXP-ROMM] `tests/libraries/exporters/test_romm.py::test_happy_path`
-      — respx-mocked RomM; import succeeds; the exporter POSTs to
-      `<romm_url>/api/platforms/<id>/scan` with the `Authorization:
-      Bearer <key>` header.
-- [ ] T049 [P] [EXP-ROMM] `tests/libraries/exporters/test_romm.py::test_503_does_not_block_import`
-      — RomM returns 503; import is recorded as `success=true` with
-      `warning='romm_export_failed'` (FR-015, US9).
-- [ ] T050 [P] [EXP-ROMM] `tests/libraries/exporters/test_romm.py::test_three_failures_emit_health_event`
-      — 3 sustained failures; one `OnHealthIssue` event emitted (no
-      duplicate within 5-min debounce).
+- [X] T048 [P] [EXP-ROMM] `tests/libraries/exporters/test_romm.py::test_happy_path_posts_with_bearer_header`
+      — respx-mocked RomM; the exporter POSTs to
+      `<romm_url>/api/platforms/<id>/scan` with the
+      `Authorization: Bearer <key>` header carrying the Fernet-
+      decrypted plaintext. Plus
+      `test_url_with_trailing_slash_normalised`.
+- [X] T049 [P] [EXP-ROMM] `tests/libraries/exporters/test_romm.py::test_503_returns_failure_outcome_without_raising`
+      — RomM returns 503; the exporter retries thrice and surfaces
+      `RommPushOutcome(success=False)` so the importer records the
+      import as success with a warning (FR-015, US9). Plus
+      `test_4xx_returns_failure_without_retry`,
+      `test_connect_error_returns_failure_outcome`, and
+      `test_recovers_after_one_503` covering the transient-recovery
+      path.
+- [X] T050 [P] [EXP-ROMM] `tests/libraries/exporters/test_romm.py::test_three_sustained_failures_return_distinct_outcomes`
+      — three sustained failures each return a distinct
+      `RommPushOutcome(success=False)` the notification consumer
+      can debounce. The 5-min debounce + `OnHealthIssue` emission
+      itself lives in spec 011's notification consumer (which
+      consumes the same debounce primitive used by the heartbeat
+      loop in the HEART slice).
 
 ### Implementation
 
-- [ ] T051 [EXP-ROMM] Create `src/romarr/libraries/exporters/__init__.py`
-      with the `ExporterBase` ABC and `ExporterRegistry`.
-- [ ] T052 [EXP-ROMM] Create `src/romarr/libraries/exporters/romm.py`
-      — `RommExporter` implementing the ABC. Uses httpx async with
-      tenacity (3 attempts, exponential backoff) and decrypts the API
-      key on each call via spec 002's helper.
+- [X] T051 [EXP-ROMM] `src/romarr/libraries/exporters/__init__.py`
+      — `ExporterBase` ABC + the slice-4-6 primitive re-exports.
+      An `ExporterRegistry` enumerating per-name implementations
+      lands with the per-import dispatch in spec 008's importer.
+- [X] T052 [EXP-ROMM] Create `src/romarr/libraries/exporters/romm.py`
+      — async `push_to_romm(*, romm_url, encrypted_api_key,
+      platform_id, timeout_s, client) -> RommPushOutcome`. Uses
+      httpx async with tenacity (3 attempts, exponential-jitter
+      backoff) for transient errors (connect / timeout / 5xx) and
+      decrypts the Fernet-wrapped API key per call via
+      `romarr.metadata.encryption.decrypt`. Best-effort: never
+      raises, returns a structured `RommPushOutcome` for every
+      path (success, retried-then-failed, 4xx, connect error,
+      unexpected). The full `RommExporter` ABC implementation
+      lands with the per-import dispatch.
 
 **Checkpoint**: RomM exporter tests green; failure paths surface
 warnings without blocking imports.
