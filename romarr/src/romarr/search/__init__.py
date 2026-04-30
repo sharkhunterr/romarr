@@ -43,6 +43,7 @@ from romarr.search.history import record_round as record_history_round
 from romarr.search.matching import FUZZY_THRESHOLD, fuzzy_match_query, resolve_to_game
 from romarr.search.pipeline import DAT_VERIFIED_BONUS, run_pipeline
 from romarr.search.query_builder import build_queries
+from romarr.search.rounds import run_manual_search, run_rss_sync
 from romarr.search.state import (
     BlocklistEntry,
     DatLookup,
@@ -97,6 +98,8 @@ __all__ = [
     "put_cached",
     "record_history_round",
     "resolve_to_game",
+    "run_manual_search",
     "run_pipeline",
+    "run_rss_sync",
     "select_winners",
 ]

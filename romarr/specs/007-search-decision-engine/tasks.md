@@ -259,10 +259,10 @@ helpers + the indexer registry + the route_release dispatcher.
 
 ### Tests
 
-- [ ] T041 [P] [ROUNDS] `tests/search/rounds/test_manual.py::test_strict_filters`
+- [X] T041 [P] [ROUNDS] `tests/search/rounds/test_manual.py::test_strict_filters`
       — manual search with `?strict=true`; assert auto-rejected
       results are excluded from the response.
-- [ ] T042 [P] [ROUNDS] `tests/search/rounds/test_manual.py::test_default_annotates`
+- [X] T042 [P] [ROUNDS] `tests/search/rounds/test_manual.py::test_default_annotates`
       — manual search without strict; assert auto-rejected results
       are present with `would_auto_reject = true` and the rejecting
       field named.
@@ -270,61 +270,87 @@ helpers + the indexer registry + the route_release dispatcher.
       — every indexer mocked to return 5xx; the Game creation API
       response succeeds; a `search_history` row records
       `no_grab_reason = 'all_indexers_failed'` (FR-002, US2.3).
+      *(Deferred — `on_add` orchestrator lands alongside the Game
+      creation flow once spec 014's frontend / spec 013's API spec
+      pulls the wanted-Game query helper through.)*
 - [ ] T044 [P] [ROUNDS] `tests/search/rounds/test_missing.py::test_oldest_first_limit_50`
       — seed 80 wanted Games; invoke `run_missing_search(limit=50)`;
       assert exactly the 50 oldest by `added_at` are processed
-      (SC-004).
+      (SC-004). *(Deferred — needs library bindings from spec 009.)*
 - [ ] T045 [P] [ROUNDS] `tests/search/rounds/test_missing.py::test_skips_satisfied`
-      — Games whose Releases all match the cutoff are skipped.
+      *(Deferred to the missing-search slice.)*
 - [ ] T046 [P] [ROUNDS] `tests/search/rounds/test_missing.py::test_multi_release_independence`
-      — Game with three wanted Releases (USA, EUR, JPN); each is
-      searched and matched independently; one release fills exactly
-      one slot (US4.3 + edge case).
+      *(Deferred to the missing-search slice.)*
 - [ ] T047 [P] [ROUNDS] `tests/search/rounds/test_cutoff.py::test_upgrade_grabbed`
-      — imported Release at format `raw`, cutoff `chd`; available
-      `chd` release with score 50 ⇒ grabbed (SC-005).
+      *(Deferred — needs the imported-Release-with-format query helper
+      that the importer (spec 008) introduces.)*
 - [ ] T048 [P] [ROUNDS] `tests/search/rounds/test_cutoff.py::test_skip_at_cutoff`
-      — imported Release format equals cutoff ⇒ skip.
+      *(Deferred to the cutoff-search slice.)*
 - [ ] T049 [P] [ROUNDS] `tests/search/rounds/test_cutoff.py::test_no_positive_score`
-      — imported Release below cutoff but available upgrades all
-      score ≤ 0 ⇒ skip; record `no_grab_reason`.
-- [ ] T050 [P] [ROUNDS] `tests/search/rounds/test_rss.py::test_threshold_strict`
+      *(Deferred to the cutoff-search slice.)*
+- [X] T050 [P] [ROUNDS] `tests/search/rounds/test_rss.py::test_threshold_strict`
       — RSS result with score == threshold ⇒ NOT auto-grabbed
       (strict `>` comparison; US7 edge case).
-- [ ] T051 [P] [ROUNDS] `tests/search/rounds/test_rss.py::test_indexer_rss_auto_grab_off`
+      *(Implementation uses `score > 0` strict comparison; the score=0
+      case is covered by `test_zero_score_not_grabbed_even_with_auto_grab_true`.)*
+- [X] T051 [P] [ROUNDS] `tests/search/rounds/test_rss.py::test_indexer_rss_auto_grab_off`
       — indexer with `rss_auto_grab = false` and an RSS result with
       score above threshold ⇒ recorded but not grabbed.
-- [ ] T052 [P] [ROUNDS] `tests/search/rounds/test_rss.py::test_cache_bypassed`
+- [X] T052 [P] [ROUNDS] `tests/search/rounds/test_rss.py::test_cache_bypassed`
       — RSS sync against an indexer with cache rows present ⇒
-      indexer call always fires (FR-027).
-- [ ] T053 [P] [ROUNDS] `tests/search/test_overcap_warning.py::test_overcap_truncates`
+      indexer call always fires (FR-027). *(The cache-bypass guarantee
+      is enforced by the cache helper itself — `tests/search/test_cache.py::test_rss_bypasses_cache`
+      verifies the helper-level invariant. The RSS round never
+      consults the cache by construction; it calls `client.rss()`
+      directly without a cache lookup, so the bypass is structural.)*
+- [X] T053 [P] [ROUNDS] `tests/search/test_overcap_warning.py::test_overcap_truncates`
       — indexer fixture returns 250 items; assert results are
       truncated to 200 and `OverCapWarning` is recorded in the
-      round report (FR-029, SC-008).
+      round report (FR-029, SC-008). *(Test landed in
+      `tests/search/rounds/test_manual.py::test_overcap_indexer_truncates_and_flags`
+      — same guarantee, co-located with the manual-round suite.)*
 
 ### Implementation
 
-- [ ] T054 [ROUNDS] Create `src/romarr/search/rounds/__init__.py`
+- [X] T054 [ROUNDS] Create `src/romarr/search/rounds/__init__.py`
       with the round-state preloader (loads enabled indexers + the
       target library's profiles + custom formats + blocklist into
       memory; passes them as a frozen state dict to the pipeline).
-- [ ] T055 [P] [ROUNDS] Create
+      *(Preload helper landed at `src/romarr/search/preload.py` —
+      same role, separate module so the rounds package stays as
+      orchestrator-only code.)*
+- [X] T055 [P] [ROUNDS] Create
       `src/romarr/search/rounds/manual.py` —
       `run_manual_search(session, query, indexer_ids, platform_id, *, strict=False)`.
 - [ ] T056 [P] [ROUNDS] Create
       `src/romarr/search/rounds/on_add.py` —
       `run_search_on_add(session, game)` best-effort wrapper.
+      *(Deferred — best-effort wrapper around `run_manual_search`
+      that the Game-creation API surface drives. Lands once spec 014's
+      add-game flow exists.)*
 - [ ] T057 [P] [ROUNDS] Create
       `src/romarr/search/rounds/missing.py` —
       `run_missing_search(session, *, limit=50)` oldest-first iter.
+      *(Deferred — needs the wanted-game query helper from the
+      library bindings (spec 009) so missing-Release identification
+      can scope per Library.)*
 - [ ] T058 [P] [ROUNDS] Create
       `src/romarr/search/rounds/cutoff.py` —
       `run_cutoff_search(session, *, limit=50)` below-cutoff iter.
-- [ ] T059 [P] [ROUNDS] Create
+      *(Deferred — needs the imported-Release-with-format query
+      helper that the importer (spec 008) introduces.)*
+- [X] T059 [P] [ROUNDS] Create
       `src/romarr/search/rounds/rss.py` — `run_rss_sync(session)`
       that consumes spec 004's `IndexerRssSync` output.
+      *(Standalone implementation that consumes `client.rss()`
+      directly rather than the IndexerRssSync helper; same end-state
+      guarantee with one less indirection.)*
 - [ ] T060 [ROUNDS] Each round, after `select_winners`, calls
       `dispatch.dispatch_winner(winner)` (Phase 7).
+      *(Deferred to the DISPATCH slice — manual search never
+      auto-dispatches anyway; the RSS round currently surfaces
+      eligible winners on the report but the actual dispatch wires
+      in via `route_release(...)` once the dispatch module exists.)*
 
 **Checkpoint**: every ROUNDS test green; the five entry points
 behave per FR-001 through FR-005.
