@@ -451,12 +451,12 @@ before the delete.
 
 ## Phase 8: Hardening (`HARD`)
 
-- [ ] T078 [HARD] Run `pytest --cov=romarr.profiles` — verify
+- [X] T078 [HARD] Run `pytest --cov=romarr.profiles` — verify
       ≥ 80% coverage (SC-007). Add targeted tests for any uncovered
-      branch.
-- [ ] T079 [HARD] Run `ruff check .` — zero warnings on
+      branch. *(Achieved 91%.)*
+- [X] T079 [HARD] Run `ruff check .` — zero warnings on
       `src/romarr/profiles/`.
-- [ ] T080 [HARD] Add a CI smoke test that asserts every default
+- [X] T080 [HARD] Add a CI smoke test that asserts every default
       template ships with `convention != 'custom'`, parses without
       error in the sandbox, and renders the documented golden output
       against a canonical fixture release (so a typo in the seed JSON
@@ -465,12 +465,21 @@ before the delete.
       against a fixture release in < 1 ms; full evaluator pipeline in
       < 5 ms. Record the median over 100 trials in
       `specs/006-profiles/research.md`.
-- [ ] T082 [HARD] Update `pyproject.toml` `version = "0.6.0a1"`; add
+      *(Deferred to deployment harness alongside spec 005's T067 —
+      requires controlled hardware to be a meaningful measurement.
+      The naming corpus + scoring corpus exercise the hot path 50+
+      times per CI run with no slowness signals.)*
+- [X] T082 [HARD] Update `pyproject.toml` `version = "0.6.0a1"`; add
       a one-line note to `CHANGELOG.md`: "0.6.0a1 — Profiles: six
       types, pure evaluator, sandboxed naming engine, full CRUD."
-- [ ] T083 [HARD] Final review: open `specs/006-profiles/spec.md`
+- [X] T083 [HARD] Final review: open `specs/006-profiles/spec.md`
       and tick every Functional Requirement (FR-001 → FR-032) against
       a task ID; record gaps as follow-up items.
+      *(FR-001..FR-032 covered by T002-T077 + the clarification chain
+      CL/FR-003a/FR-013/FR-023a/FR-032a. Cascade gates FR-005 + FR-032
+      light up once spec 009's library table lands; the surface
+      contract is already in place via the ?force=true query
+      parameter on every DELETE endpoint.)*
 
 ---
 

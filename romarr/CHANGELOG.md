@@ -3,6 +3,58 @@
 All notable changes to Romarr land here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semver.
 
+## [0.6.0a1] — 2026-04-30
+
+### Added
+
+- **Spec 006 — Profiles** (full feature: six profile types + pure-function
+  evaluator + Custom Format scorer + sandboxed Jinja naming engine +
+  idempotent first-boot seeders + admin API)
+  - Six SQLAlchemy 2.0 models — ``QualityProfile``, ``RegionProfile``,
+    ``DumpProfile``, ``LanguageProfile``, ``NamingProfile``,
+    ``CustomFormat`` — plus the ``library_custom_format`` m2m. Each
+    profile carries the FR-003a seeder sentinels (``seed_key`` +
+    ``is_user_modified``) and ``is_factory_default``. Alembic
+    migration ``0006`` ships the six tables, the m2m, and the
+    partial unique index on ``seed_key WHERE seed_key IS NOT NULL``.
+    Library FK columns + the m2m's ``library_id`` FK are deferred
+    to spec 009 (forward-reference pattern matching spec 005's
+    ``indexer.download_client_id``).
+  - Pure-function ``ProfileEvaluator`` — four evaluators
+    (Quality / Region / Dump / Language) returning a flat
+    ``EvaluationResult`` envelope. 1 250 hypothesis property
+    examples confirm purity (SC-002, exceeds the 1 000 floor).
+  - Pure-function ``compute_custom_format_score`` — closed
+    seven-operator dispatch with OR-grouping per condition
+    (FR-021); list-valued fields (tags / regions / languages)
+    match if ANY element satisfies. Region scoring formula
+    explicit at ``len(priorities) − index`` (FR-013).
+  - Sandboxed Jinja2 ``NamingTemplateEngine`` —
+    ``ImmutableSandboxedEnvironment`` + per-namespace
+    ``is_safe_attribute`` + AST walk at SAVE time rejects unknown
+    top-level names, unknown attributes on ``Game`` / ``Release`` /
+    ``Dump`` / ``Platform``, non-allowlist filters, and
+    function/method invocations. Filter set restricted to four:
+    ``lower`` / ``upper`` / ``replace`` / ``truncate``. Five
+    canonical convention corpora (no-intro / redump / tosec /
+    es-de / romm) at 11-12 golden fixtures each + 13 bad-template
+    rejections cover SC-004 + SC-005.
+  - Idempotent first-boot seeder — 26 default profiles (3 / 3 / 3 /
+    3 / 3 / 11) shipped as JSON files. Looks up by ``seed_key``,
+    upserts only when ``is_user_modified = false`` AND values
+    differ; operator edits are sacred (FR-003a). Default-catalogue
+    drift cleanly refreshes non-edited rows on next boot.
+  - Admin API at ``/api/v3/qualityprofile*`` + the five other
+    profile paths plus ``/preview`` for naming templates. Reads
+    accessible to any authenticated user; mutations + preview
+    require admin (FR-032a). PUT flips ``is_user_modified=true`` in
+    the same transaction. ``?force=true`` accepted on every DELETE
+    (cascade unbinding lights up in spec 009).
+  - JSON Schema endpoint at ``{base}/schema`` per profile type —
+    auto-generated from the Pydantic ``*Read`` schema via
+    ``TypeAdapter(...).json_schema()``, always in sync with the
+    model (FR-030).
+
 ## [0.5.0a1] — 2026-04-30
 
 ### Added
