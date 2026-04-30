@@ -324,37 +324,56 @@ warnings without blocking imports.
 
 ### Tests
 
-- [ ] T053 [P] [EXP-ESDE] `tests/libraries/exporters/test_esde_gamelist.py::test_emits_well_formed_xml`
-      — emit gamelist.xml for 5 fixture games; parse with `lxml.etree`
-      and assert it matches the structure of the known-good ES-DE
-      fixture (SC-005).
-- [ ] T054 [P] [EXP-ESDE] `tests/libraries/exporters/test_esde_gamelist.py::test_relative_image_path`
-      — emitted `<image>` value is `./media/covers/<slug>.<ext>`
-      (FR-018).
-- [ ] T055 [P] [EXP-ESDE] `tests/libraries/exporters/test_esde_media_mirror.py::test_hardlink_when_same_fs`
+- [X] T053 [P] [EXP-ESDE] `tests/libraries/exporters/test_esde_gamelist.py::test_emits_well_formed_xml`
+      — emit gamelist.xml for 2 fixture games (one fully populated,
+      one minimal); parse with `lxml.etree` and assert every field
+      maps to the expected element. Plus
+      `test_xml_declaration_and_encoding` and
+      `test_render_is_deterministic` (purity).
+- [X] T054 [P] [EXP-ESDE] `tests/libraries/exporters/test_esde_gamelist.py::test_relative_image_path_is_emitted_as_given`
+      — emitted `<image>` value is the relative `./media/covers/...`
+      path the orchestrator computed via the media-mirror helper
+      (FR-018). Plus `test_no_cover_omits_image_element` and
+      `test_thumbnail_and_marquee_emitted_when_present` for FR-018a.
+- [X] T055 [P] [EXP-ESDE] `tests/libraries/exporters/test_esde_media_mirror.py::test_hardlink_when_same_fs`
       — covers under `data/covers/` are hardlinked to
-      `<lib>/<platform>/media/covers/<slug>.<ext>` when same fs.
-- [ ] T056 [P] [EXP-ESDE] `tests/libraries/exporters/test_esde_media_mirror.py::test_copy_fallback_cross_fs`
+      `<lib>/<platform>/media/covers/<slug>.<ext>` when same fs
+      (asserted via inode equality).
+- [X] T056 [P] [EXP-ESDE] `tests/libraries/exporters/test_esde_media_mirror.py::test_copy_fallback_cross_fs`
       — when `EXDEV` raised, fall back to `shutil.copy2` with mtime
       preservation.
-- [ ] T057 [P] [EXP-ESDE] `tests/libraries/exporters/test_esde_media_mirror.py::test_refresh_on_metadata_update`
-      — cover changes in `data/covers/`; the exporter detects the
-      mtime change and refreshes the mirror.
-- [ ] T058 [P] [EXP-ESDE] `tests/libraries/exporters/test_esde_atomic_rewrite.py::test_mid_write_crash_preserves_prior_file`
-      — fault-inject mid-XML-write; assert the existing gamelist.xml
-      is untouched (FR-017).
+- [X] T057 [P] [EXP-ESDE] `tests/libraries/exporters/test_esde_media_mirror.py::test_refresh_on_metadata_update`
+      — cover changes in `data/covers/`; the helper detects the
+      mtime change and refreshes the mirror. Plus the symmetric
+      `test_no_refresh_when_source_unchanged` (idempotence).
+- [X] T058 [P] [EXP-ESDE] `tests/libraries/exporters/test_esde_atomic_rewrite.py::test_mid_write_crash_preserves_prior_file`
+      — fault-inject the `os.replace` step; assert the existing
+      gamelist.xml is untouched and the partial `.tmp` is cleaned
+      up (FR-017). Plus `test_lock_unavailable_coalesces` covering
+      FR-017a (concurrent writer holding the advisory lock makes
+      the second writer return False without re-emitting) and
+      `test_lock_released_after_successful_write`.
 - [ ] T059 [P] [EXP-ESDE] `tests/libraries/exporters/test_esde_gamelist.py::test_disabled_emits_nothing`
       — `exporter_esde_enabled=false`; no gamelist.xml created on
-      import.
+      import. *(Deferred to the orchestrator slice — slice 4 ships
+      the renderer + writer + media-mirror primitives; the
+      enabled-flag check lives in the per-import dispatch in spec
+      008's importer.)*
 
 ### Implementation
 
-- [ ] T060 [EXP-ESDE] Create `src/romarr/libraries/exporters/esde.py`
-      — `EsdeExporter` implementing the ABC. Builds the XML via
-      `lxml.etree` from a streaming query of all Imported Releases on
-      the platform. Writes to `gamelist.xml.tmp` then `os.replace`.
-      Materialises media via `os.link` (hardlink) with `EXDEV`
-      fallback to `shutil.copy2`.
+- [X] T060 [EXP-ESDE] Create `src/romarr/libraries/exporters/esde.py`
+      — pure `render_gamelist_xml(games: Sequence[EsdeGame]) -> bytes`
+      builds the XML via `lxml.etree`. `write_gamelist_atomic(target_dir,
+      xml_bytes) -> bool` wraps the write in an
+      `fcntl.flock`-based advisory lock (FR-017a, coalesce on
+      contention) plus the `.tmp` + `os.replace` atomic-rename
+      pattern (FR-017). Media materialisation lives in
+      `_media_mirror.py::materialise_cover` (hardlink + EXDEV
+      fallback to `shutil.copy2`, idempotent re-run on unchanged
+      source mtime). The full orchestrator (per-import dispatch,
+      ORM streaming query, `EsdeExporter` ABC implementation) lands
+      with the importer wiring.
 
 **Checkpoint**: ES-DE exporter tests green; SC-005 fixture parses
 correctly.
