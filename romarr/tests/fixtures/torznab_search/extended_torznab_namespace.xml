@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:torznab="http://torznab.com/schemas/2015/feed">
+  <channel>
+    <title>Test Search</title>
+    <item>
+      <title>Sonic 3 (USA).md</title>
+      <guid isPermaLink="false">guid-torznab-1</guid>
+      <link>https://example.test/download?id=10</link>
+      <pubDate>Sun, 01 Jun 2025 12:00:00 +0000</pubDate>
+      <category>1060</category>
+      <enclosure url="https://example.test/download?id=10" length="2097152" type="application/x-bittorrent"/>
+      <torznab:attr name="region" value="USA"/>
+      <torznab:attr name="languages" value="en,fr"/>
+      <torznab:attr name="seeders" value="42"/>
+      <torznab:attr name="hash_sha1" value="ABCDEF1234567890abcdef1234567890abcdef12"/>
+    </item>
+  </channel>
+</rss>

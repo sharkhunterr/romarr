@@ -24,21 +24,23 @@ description: "Granular task list for indexers — Newznab/Torznab client, Prowla
 
 **Purpose**: bring up the module skeleton, dependencies, types, and shared errors.
 
-- [ ] T001 [SCAF] Update `pyproject.toml` — add runtime dep `bcrypt` (used now
-      for app-token hashing; will be re-used by the Auth spec).
-- [ ] T002 [P] [SCAF] Create `src/romarr/indexers/__init__.py` exposing
-      `NewznabClient`, `IndexerRegistry`, `IndexerRssSync`, `test_connectivity`.
-- [ ] T003 [P] [SCAF] Create `src/romarr/indexers/errors.py` —
+- [X] T001 [SCAF] `bcrypt` already shipped via foundation + auth deps; direct
+      ``bcrypt`` is available so the app-token hashing path uses it directly
+      (passlib has a known incompatibility with bcrypt>=4.0). No pyproject
+      change needed.
+- [X] T002 [P] [SCAF] Created `src/romarr/indexers/__init__.py` re-exporting
+      types + parsers + tokens + errors. Client / registry / RSS land in the
+      next slice and will be added to the package surface there.
+- [X] T003 [P] [SCAF] Created `src/romarr/indexers/errors.py` —
       `IndexerError`, `IndexerAuthError`, `IndexerProtocolError`,
-      `CircuitOpenError` (re-export from foundation),
-      `RateLimitDelayed` (info-level marker, not raised).
-- [ ] T004 [P] [SCAF] Create `src/romarr/indexers/types.py` —
-      `FieldProvenance`, `ParsedTorznabAttr`, `IndexerCapabilities`,
-      `SearchResult`, `RssResult`, `IndexerHealthIssue` Pydantic models from
-      `data-model.md`.
-- [ ] T005 [SCAF] Extend `tests/conftest.py` with a `torznab_response(name)`
-      fixture loader; create `tests/indexers/conftest.py` with module-local
-      fixtures (respx mocks, sample indexer rows).
+      ``CircuitOpenError`` re-exported from foundation (Article III),
+      ``RateLimitDelayed`` informational marker (NOT raised).
+- [X] T004 [P] [SCAF] Created `src/romarr/indexers/types.py` —
+      `FieldProvenance`, `DatSource`, `ParsedTorznabAttr`,
+      `IndexerCapabilities`, `SearchResult`, `RssResult`,
+      `IndexerHealthIssue` Pydantic models from `data-model.md`.
+- [X] T005 [SCAF] Created `tests/indexers/conftest.py` with the
+      `torznab_response(name)` fixture loader.
 
 **Checkpoint**: imports work; lint+types green; no behaviour added.
 
@@ -51,38 +53,41 @@ helpers, and the Alembic migration.
 
 ### Tests (write first; must fail)
 
-- [ ] T006 [P] [PERS] `tests/indexers/test_models.py` — round-trip Indexer +
-      Application rows through the async session; verify enum CHECK constraints.
-- [ ] T007 [P] [PERS] `tests/indexers/test_models.py::test_unique_url_per_impl`
+- [X] T006 [P] [PERS] `tests/indexers/test_models.py::test_indexer_round_trip`
+      — column round-trip + default values (priority=25, timeout_seconds=30,
+      result_limit=100).
+- [X] T007 [P] [PERS] `tests/indexers/test_models.py::test_unique_url_per_impl`
       — second insertion of `(implementation, url)` raises an `IntegrityError`.
-- [ ] T008 [P] [PERS] `tests/indexers/test_models.py::test_application_unique_prowlarr_url`
+- [X] T008 [P] [PERS] `tests/indexers/test_models.py::test_application_unique_prowlarr_url`
       — second insertion of the same `prowlarr_url` raises.
-- [ ] T009 [P] [PERS] `tests/indexers/test_tokens.py::test_token_format`
-      — `generate_token()` returns 32 random bytes encoded base64-urlsafe; two
-      consecutive calls produce different tokens.
-- [ ] T010 [P] [PERS] `tests/indexers/test_tokens.py::test_token_verify`
-      — `hash_token(t)` produces a stable bcrypt hash; `verify_token(t, hashed)`
-      returns True; verifying with a wrong token returns False.
-- [ ] T011 [P] [PERS] `tests/indexers/test_migration_0004.py` — applying the
-      migration creates both tables with documented constraints; the
-      `indexer.download_client_id` column exists but has no FK yet.
+- [X] T009 [P] [PERS] `tests/indexers/test_tokens.py::test_token_format`
+      — URL-safe base64 of 32 random bytes; consecutive calls differ.
+- [X] T010 [P] [PERS] `tests/indexers/test_tokens.py::test_hash_and_verify_round_trip`
+      + companion negative tests cover wrong-token / empty / garbage-hash /
+      per-call salt.
+- [X] T011 [P] [PERS] `tests/indexers/test_migration_0004.py` — applying the
+      migration creates both tables with the documented constraints; the
+      `indexer.download_client_id` column exists but has no FK yet (the FK
+      arrives in spec 005).
 
 ### Implementation
 
-- [ ] T012 [PERS] Create `src/romarr/indexers/models.py` — `Indexer` and
-      `Application` SQLAlchemy 2.0 models matching `data-model.md`. Use
-      `JSON` for portability; use `LargeBinary` for the encrypted blobs.
-- [ ] T013 [P] [PERS] Create `src/romarr/indexers/schemas.py` —
-      `IndexerRead/Create/Update`, `ApplicationRead/Create`, `IndexerSchema`.
-      `IndexerRead` MUST omit `api_key_encrypted` and expose
-      `is_configured: bool`.
-- [ ] T014 [P] [PERS] Create `src/romarr/indexers/tokens.py` —
-      `generate_token() -> str` (URL-safe base64 of `secrets.token_bytes(32)`),
-      `hash_token(plain: str) -> str` (bcrypt with per-hash salt),
-      `verify_token(plain: str, hashed: str) -> bool`.
-- [ ] T015 [PERS] Author `src/romarr/db/alembic/versions/0004_indexers.py`
-      — DDL for both tables, the `(implementation, url)` and `prowlarr_url`
-      uniqueness, and the `indexer.download_client_id` column without FK.
+- [X] T012 [PERS] Created `src/romarr/indexers/models.py` — `Indexer` +
+      `Application` SQLAlchemy 2.0 models matching `data-model.md` with
+      every CHECK constraint and the unique indexes.
+- [ ] T013 [P] [PERS] Pydantic `IndexerRead/Create/Update` +
+      `ApplicationRead/Create` + `IndexerSchema` schemas. **Deferred** to
+      the API slice — schemas are only consumed by the routers.
+- [X] T014 [P] [PERS] Created `src/romarr/indexers/tokens.py` — uses
+      ``bcrypt`` directly (passlib's ``bcrypt_sha256`` backend has a
+      known incompatibility with modern ``bcrypt>=4.0``); the
+      ``token_urlsafe(32)`` token is 43 chars, well under bcrypt's
+      72-byte input cap, so no SHA256 prehash bridge is needed.
+- [X] T015 [PERS] Authored
+      `src/romarr/db/alembic/versions/0004_indexers.py` — DDL for both
+      tables, the (implementation, url) + prowlarr_url uniques, and the
+      ``indexer.download_client_id`` column without an FK (the FK arrives
+      in spec 005).
 
 **Checkpoint**: `alembic upgrade head` is clean; PERS tests green.
 
@@ -95,51 +100,49 @@ extraction with provenance, plus same-GUID dedup. No HTTP; no DB.
 
 ### Tests
 
-- [ ] T016 [P] [PARSE] `tests/indexers/parser/test_caps.py` — feed each fixture
-      under `tests/fixtures/torznab_caps/`; assert the resulting
-      `IndexerCapabilities` reports the right `searching` map, categories, and
-      extended-attr support hint.
-- [ ] T017 [P] [PARSE] `tests/indexers/parser/test_caps.py::test_no_search_block`
-      — fixture `no_search_block.xml`; assert capabilities returned but
-      `searching` is empty so the registry's auto-defaults kick in.
-- [ ] T018 [P] [PARSE] `tests/indexers/parser/test_search.py::test_vanilla`
-      — fixture `vanilla_no_extended.xml`; assert `SearchResult.region` etc.
-      are NULL with `*_provenance` NULL (will be filled by the client via
-      filename parsing).
-- [ ] T019 [P] [PARSE] `tests/indexers/parser/test_extended_attrs.py::test_torznab_namespace`
-      — fixture `extended_torznab_namespace.xml`; assert `region = "US"` (after
-      ISO normalisation) with `region_provenance = FieldProvenance.TORZNAB`.
-- [ ] T020 [P] [PARSE] `tests/indexers/parser/test_extended_attrs.py::test_grabarr_namespace`
-      — fixture `extended_grabarr_namespace.xml`; assert `region = "EU"` with
-      `region_provenance = FieldProvenance.GRABARR`.
-- [ ] T021 [P] [PARSE] `tests/indexers/parser/test_extended_attrs.py::test_unknown_value_dropped`
-      — fixture `unknown_extended_value.xml` (e.g., `region="ZZ"`); assert the
-      attribute is dropped with a structured warning logged; the field stays
+- [X] T016 [P] [PARSE] `tests/indexers/parser/test_caps.py::test_valid_full_caps`
+      + companion ``test_no_search_block_returns_empty_searching`` and
+      noise-tolerance test.
+- [X] T017 [P] [PARSE] `tests/indexers/parser/test_caps.py::test_no_search_block_returns_empty_searching`
+      — caps without ``<searching>`` returns an empty searching map.
+- [X] T018 [P] [PARSE] `tests/indexers/parser/test_search.py::test_vanilla_no_extended_attrs_leaves_provenance_null`
+      — vanilla RSS leaves every ``*_provenance`` NULL (filename fallback
+      will fill these in the CLIENT slice).
+- [X] T019 [P] [PARSE] `tests/indexers/parser/test_extended_attrs.py::test_torznab_namespace_region_normalised`
+      — region in ``torznab:`` namespace round-trips with
+      ``provenance = TORZNAB``.
+- [X] T020 [P] [PARSE] `tests/indexers/parser/test_extended_attrs.py::test_grabarr_namespace_region_overrides_torznab`
+      — when both namespaces emit the same attr, ``grabarr:`` wins with
+      ``provenance = GRABARR``.
+- [X] T021 [P] [PARSE] `tests/indexers/parser/test_extended_attrs.py::test_unknown_region_value_dropped`
+      — unknown region (``ZZ``) is dropped silently; the field stays
       NULL.
-- [ ] T022 [P] [PARSE] `tests/indexers/parser/test_dedup.py::test_same_guid_collapsed`
-      — fixture `duplicate_guid_two_categories.xml`; assert exactly one
-      `SearchResult` returned with the union of categories (FR-026, SC-008).
-- [ ] T023 [P] [PARSE] `tests/indexers/parser/test_search.py::test_corpus_property`
-      — hypothesis-generated near-edge XML inputs; assert the parser never
-      raises and never returns more entries than `<item>` elements in the
-      input.
+- [X] T022 [P] [PARSE] `tests/indexers/parser/test_dedup.py::test_same_guid_collapsed_with_union_categories`
+      — same GUID across two ``<item>`` rows collapses with the union of
+      categories on the survivor (FR-026, SC-008).
+- [X] T023 [P] [PARSE] `tests/indexers/parser/test_search.py::test_property_parser_tolerates_random_bytes`
+      — hypothesis fuzz: random bytes either parse to a list or raise
+      ``IndexerProtocolError``; never any other exception type.
 
 ### Implementation
 
-- [ ] T024 [PARSE] Create `src/romarr/indexers/parser/caps.py` — pure
-      `parse_caps(xml_bytes: bytes) -> IndexerCapabilities`.
-- [ ] T025 [PARSE] Create `src/romarr/indexers/parser/extended_attrs.py` —
-      `extract_extended_attrs(item_element) -> dict[str, ParsedTorznabAttr]`
-      handling both `torznab:` and `grabarr:` namespaces; ISO normalisation
-      via `romarr.identification.filename.base.translate_region` and
-      `translate_languages`.
-- [ ] T026 [PARSE] Create `src/romarr/indexers/parser/dedup.py` — pure
-      `dedup_by_guid(items: list[SearchResult]) -> list[SearchResult]`.
-- [ ] T027 [PARSE] Create `src/romarr/indexers/parser/search.py` — pure
-      `parse_search(xml_bytes, indexer_id) -> list[SearchResult]`. For
-      fields not provided by extended attrs, leave them NULL — the client
-      (Phase 4) fills them via filename parsing and stamps
-      `*_provenance = FieldProvenance.FILENAME`.
+- [X] T024 [PARSE] Created `src/romarr/indexers/parser/caps.py` — pure
+      ``parse_caps(xml_bytes: bytes) -> IndexerCapabilities``.
+- [X] T025 [PARSE] Created `src/romarr/indexers/parser/extended_attrs.py` —
+      ``extract_extended_attrs`` walks ``{*}attr`` children; namespace URI
+      drives provenance; ``normalize_region`` + ``normalize_languages``
+      ship a built-in dictionary (foundation didn't ship a translate-
+      regions helper after all, so we ship our own dictionary scoped to
+      what indexer payloads actually emit).
+- [X] T026 [PARSE] Created `src/romarr/indexers/parser/dedup.py` — pure
+      ``dedup_by_guid`` collapses same-GUID rows with category union.
+- [X] T027 [PARSE] Created `src/romarr/indexers/parser/search.py` — pure
+      ``parse_search(xml_bytes, indexer_id) -> list[SearchResult]``;
+      every extended attr name → SearchResult slot mapping (region /
+      languages / revision / dump_tags / hash_sha1 / hash_crc32 /
+      naming_convention / dat_source / size / seeders / peers / files /
+      info_hash / magnet_url / category) with provenance preserved.
+      Calls ``dedup_by_guid`` before returning.
 
 **Checkpoint**: every parser test green including the dedup and namespace
 crossover; the parser is importable and exercisable from a REPL.

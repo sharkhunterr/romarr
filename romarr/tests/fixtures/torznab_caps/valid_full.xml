@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<caps>
+    <server version="1.5.0" title="Test Indexer"/>
+    <searching>
+        <search available="yes" supportedParams="q,cat,limit"/>
+        <tv-search available="no"/>
+        <movie-search available="no"/>
+    </searching>
+    <categories>
+        <category id="1000" name="Console">
+            <subcat id="1010" name="NDS"/>
+            <subcat id="1060" name="Other Console"/>
+            <subcat id="1080" name="3DS"/>
+        </category>
+        <category id="7000" name="Other">
+            <subcat id="7010" name="Misc"/>
+        </category>
+    </categories>
+</caps>

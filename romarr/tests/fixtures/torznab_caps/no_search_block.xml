@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<caps>
+    <server version="0.1" title="Caps-only Indexer"/>
+    <categories>
+        <category id="1000" name="Console"/>
+    </categories>
+</caps>

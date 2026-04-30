@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+     xmlns:torznab="http://torznab.com/schemas/2015/feed"
+     xmlns:grabarr="https://romarr.example/schemas/grabarr">
+  <channel>
+    <title>Test Search</title>
+    <item>
+      <title>Sonic 2 (Europe).md</title>
+      <guid isPermaLink="false">guid-grabarr-1</guid>
+      <link>https://example.test/download?id=20</link>
+      <pubDate>Sun, 01 Jun 2025 12:00:00 +0000</pubDate>
+      <category>1060</category>
+      <enclosure url="https://example.test/download?id=20" length="1048576" type="application/x-bittorrent"/>
+      <torznab:attr name="region" value="USA"/>
+      <grabarr:attr name="region" value="EUR"/>
+      <grabarr:attr name="dat_source" value="no-intro"/>
+      <grabarr:attr name="naming_convention" value="no-intro"/>
+      <grabarr:attr name="dump_tags" value="verified,trainer"/>
+    </item>
+  </channel>
+</rss>

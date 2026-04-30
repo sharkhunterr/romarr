@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:torznab="http://torznab.com/schemas/2015/feed">
+  <channel>
+    <title>Test Search</title>
+    <item>
+      <title>Mystery Title (Unknown Region).md</title>
+      <guid isPermaLink="false">guid-unknown-1</guid>
+      <link>https://example.test/download?id=99</link>
+      <pubDate>Sun, 01 Jun 2025 12:00:00 +0000</pubDate>
+      <category>1060</category>
+      <torznab:attr name="region" value="ZZ"/>
+    </item>
+  </channel>
+</rss>

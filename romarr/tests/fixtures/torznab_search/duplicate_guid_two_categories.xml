@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Test Search</title>
+    <item>
+      <title>Sonic the Hedgehog (USA).md</title>
+      <guid isPermaLink="false">guid-dup-1</guid>
+      <link>https://example.test/download?id=30</link>
+      <pubDate>Sun, 01 Jun 2025 12:00:00 +0000</pubDate>
+      <category>1060</category>
+    </item>
+    <item>
+      <title>Sonic the Hedgehog (USA).md</title>
+      <guid isPermaLink="false">guid-dup-1</guid>
+      <link>https://example.test/download?id=30</link>
+      <pubDate>Sun, 01 Jun 2025 12:00:00 +0000</pubDate>
+      <category>7010</category>
+    </item>
+  </channel>
+</rss>
