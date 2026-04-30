@@ -115,6 +115,7 @@ ignore = [
 "src/romarr/downloaders/api/**" = ["TC001", "TC002", "TC003"]
 "src/romarr/profiles/api/**" = ["TC001", "TC002", "TC003"]
 "src/romarr/search/api/**" = ["TC001", "TC002", "TC003"]
+"src/romarr/libraries/api/**" = ["TC001", "TC002", "TC003"]
 
 [tool.ruff.format]
 quote-style = "double"

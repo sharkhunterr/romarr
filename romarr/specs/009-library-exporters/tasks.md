@@ -435,37 +435,54 @@ correctly.
 
 ### Tests
 
-- [ ] T072 [P] [API] `tests/libraries/api/test_library_endpoints.py::test_full_crud`
-      — POST/GET/PUT/DELETE round-trip.
-- [ ] T073 [P] [API] `tests/libraries/api/test_library_endpoints.py::test_path_validation_400`
-      — POST with non-existent path ⇒ HTTP 400 (FR-004).
-- [ ] T074 [P] [API] `tests/libraries/api/test_library_endpoints.py::test_force_delete_blocks_when_history_present`
+- [X] T072 [P] [API] `tests/libraries/api/test_library_endpoints.py::test_full_crud_round_trip`
+      — POST/GET/PUT/DELETE round-trip; plus duplicate-name 409,
+      auth-gate (admin POST / readonly GET / 401 unauthenticated /
+      403 user-role POST), and `test_put_replaces_platform_ids` for
+      the m2m diff.
+- [X] T073 [P] [API] `tests/libraries/api/test_library_endpoints.py::test_post_with_nonexistent_path_returns_400`
+      and `test_post_with_relative_path_returns_422` — FR-004
+      filesystem check on the API layer + Pydantic absolute-path
+      check at the schema layer.
+- [X] T074 [P] [API] `tests/libraries/api/test_library_endpoints.py::test_force_delete_blocks_when_history_present`
       — `keep_dump_history=true` AND historical Dumps reference the
-      library ⇒ even `?force=true` returns HTTP 409 (FR-027, US6.3).
-- [ ] T075 [P] [API] `tests/libraries/api/test_library_endpoints.py::test_force_delete_succeeds_no_history`
-      — Releases attached but no historical Dumps ⇒ `?force=true`
-      removes the library row, sets Releases' `library_id` to NULL,
-      keeps files on disk (FR-026, SC-006).
+      library ⇒ even `?force=true` returns HTTP 409 with
+      `errorCode='historical_dumps_present'` (FR-027, US6.3).
+- [X] T075 [P] [API] `tests/libraries/api/test_library_endpoints.py::test_force_delete_unbinds_releases_when_no_history`
+      — Releases attached but no historical Dumps ⇒ no force →
+      409 (`library_in_use`); with `?force=true` → 204 + every
+      attached Release's `library_id` set to NULL, no files on
+      disk touched (FR-026, SC-006).
 - [ ] T076 [P] [API] `tests/libraries/api/test_scan_endpoints.py`
       — POST scan + scan/incremental return command IDs; full + incr
-      scans run.
+      scans run. *(Deferred to the SCAN slice — needs the scan
+      orchestrator that lands with SCAN-FULL / SCAN-INC.)*
 - [ ] T077 [P] [API] `tests/libraries/api/test_exporter_endpoints.py::test_list_returns_status`
-      — GET exporter status; per-exporter last-run + count.
+      — GET exporter status; per-exporter last-run + count. *(Deferred
+      to the first EXP-* slice — needs the exporter registry.)*
 - [ ] T078 [P] [API] `tests/libraries/api/test_exporter_endpoints.py::test_run_on_demand`
       — POST `/exporters/{name}/run`; the named exporter executes.
+      *(Deferred to the first EXP-* slice.)*
 - [ ] T079 [P] [API] `tests/libraries/api/test_manual_import_endpoints.py`
-      — GET listing + POST bulk happy paths.
+      — GET listing + POST bulk happy paths. *(Deferred to the
+      MANUAL slice — needs the candidate-listing helper that
+      depends on spec 008's importer.)*
 
 ### Implementation
 
-- [ ] T080 [API] Create `src/romarr/libraries/api/libraries.py` —
-      FastAPI router for `/api/v3/rom/library*` (CRUD).
+- [X] T080 [API] Create `src/romarr/libraries/api/libraries.py` —
+      FastAPI router for `/api/v3/rom/library*` (CRUD with the
+      m2m platform allowlist, optional ``?force=true`` cascade
+      gate, and Fernet encryption of the RomM API key on save).
+      Wired into the application factory in `api/app.py`.
 - [ ] T081 [P] [API] Create `src/romarr/libraries/api/scan.py` —
-      scan trigger endpoints.
+      scan trigger endpoints. *(Deferred — same dependency as T076.)*
 - [ ] T082 [P] [API] Create `src/romarr/libraries/api/exporters.py`
-      — exporter status + manual-run endpoints.
+      — exporter status + manual-run endpoints. *(Deferred — same
+      dependency as T077/T078.)*
 - [ ] T083 [P] [API] Create `src/romarr/libraries/api/manual_import.py`
-      — `/api/v3/rom/manual-import*` endpoints.
+      — `/api/v3/rom/manual-import*` endpoints. *(Deferred — same
+      dependency as T079.)*
 - [ ] T084 [API] Wire all four routers into the application factory.
 
 **Checkpoint**: every endpoint exercised; HTTP status codes match the
