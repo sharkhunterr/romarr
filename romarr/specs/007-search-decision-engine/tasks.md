@@ -196,41 +196,54 @@ because the heavy lifting is in the pure pipeline.
 
 ### Tests
 
-- [ ] T031 [P] [STATE] `tests/search/test_cache.py::test_cache_hit`
+- [X] T031 [P] [STATE] `tests/search/test_cache.py::test_cache_hit`
       — write a row, read with the same key inside TTL ⇒ hit; assert
-      zero outbound HTTP traffic via respx (SC-007).
-- [ ] T032 [P] [STATE] `tests/search/test_cache.py::test_cache_miss_after_ttl`
+      zero outbound HTTP traffic via respx (SC-007). *(Helper-level
+      hit test today; the round-orchestrator slice will add the
+      respx wrap that asserts zero outbound HTTP.)*
+- [X] T032 [P] [STATE] `tests/search/test_cache.py::test_cache_miss_after_ttl`
       — freezegun-advance time past TTL ⇒ miss; assert a single
-      outbound HTTP call.
-- [ ] T033 [P] [STATE] `tests/search/test_cache.py::test_rss_bypasses_cache`
+      outbound HTTP call. *(Time injection via the helper's `now=`
+      kwarg instead of freezegun — same effect, no global clock side
+      effect on parallel tests.)*
+- [X] T033 [P] [STATE] `tests/search/test_cache.py::test_rss_bypasses_cache`
       — invoke the cache helper with `bypass=True` (the RSS path);
       assert it always misses regardless of state (FR-027).
-- [ ] T034 [P] [STATE] `tests/search/test_cache.py::test_orphaned_indexer_treated_as_miss`
+- [X] T034 [P] [STATE] `tests/search/test_cache.py::test_orphaned_indexer_treated_as_miss`
       — write a cache row, delete the indexer; the next lookup
-      treats it as miss (FR-028).
-- [ ] T035 [P] [STATE] `tests/search/test_blocklist.py::test_auto_add_on_import_failure`
+      treats it as miss (FR-028). *(FK CASCADE wipes the row on
+      indexer delete — same end-state guarantee with one less DB
+      read on the hot path.)*
+- [X] T035 [P] [STATE] `tests/search/test_blocklist.py::test_auto_add_on_import_failure`
       — call the helper used by the future Importer spec to
       auto-add a release; assert a row appears with
       `added_by = 'system'` and the documented reason format
       (FR-021).
-- [ ] T036 [P] [STATE] `tests/search/test_blocklist.py::test_lookup_by_guid_or_hash`
+- [X] T036 [P] [STATE] `tests/search/test_blocklist.py::test_lookup_by_guid_or_hash`
       — table-driven: lookup by `(indexer_id, indexer_guid)`,
       by `hash_sha1`, by `hash_crc32`; each path returns the
       matching row.
-- [ ] T037 [P] [STATE] `tests/search/test_history.py::test_round_creates_one_row_per_indexer`
+- [X] T037 [P] [STATE] `tests/search/test_history.py::test_round_creates_one_row_per_indexer`
       — a manual search across 3 indexers produces 3
       search-history rows sharing one `correlation_id`.
 
 ### Implementation
 
-- [ ] T038 [STATE] Create `src/romarr/search/cache.py` — async
+- [X] T038 [STATE] Create `src/romarr/search/cache.py` — async
       `get_cached`, `put_cached`, `invalidate`, with cache-key
       derivation `sha256(query.lower().strip() + frozenset(category_ids))`.
-- [ ] T039 [P] [STATE] Create `src/romarr/search/blocklist.py` —
+      *(Plus FR-028a LRU eviction: `_maybe_evict_lru` drains the
+      table from CACHE_HARD_CAP=10 000 down to CACHE_LOW_WATER=9 000
+      by `last_read_at` ascending. Hysteresis prevents thrashing.)*
+- [X] T039 [P] [STATE] Create `src/romarr/search/blocklist.py` —
       async `is_blocklisted(release) -> Rejection | None`,
       `add_entry(...)`, `delete_entry(id)`,
       `auto_add_on_import_failure(release, reason)`.
-- [ ] T040 [P] [STATE] Create `src/romarr/search/history.py` —
+      *(Returns the matching :class:`Blocklist` row directly rather
+      than a `Rejection` envelope — the pipeline already constructs
+      the structured Rejection at the call site, so the helper stays
+      database-shape close to the wire.)*
+- [X] T040 [P] [STATE] Create `src/romarr/search/history.py` —
       async `record_round(correlation_id, search_type, ...)` that
       writes one row per (indexer, game) pair in the round.
 
