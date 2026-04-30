@@ -12,11 +12,24 @@ intentionally thin until those slices land — :func:`run_manual_search`
 et al. surface here once their modules exist.
 """
 
+from romarr.search.candidates import select_winners
 from romarr.search.errors import (
     BlocklistedReleaseError,
     NoEligibleCandidatesError,
     OverCapWarning,
     SearchError,
+)
+from romarr.search.matching import FUZZY_THRESHOLD, fuzzy_match_query, resolve_to_game
+from romarr.search.pipeline import DAT_VERIFIED_BONUS, run_pipeline
+from romarr.search.query_builder import build_queries
+from romarr.search.state import (
+    BlocklistEntry,
+    DatLookup,
+    IndexerMeta,
+    LibraryState,
+    MonitoredGame,
+    MonitoredRelease,
+    PlatformFormatBounds,
 )
 from romarr.search.types import (
     Candidate,
@@ -30,10 +43,19 @@ from romarr.search.types import (
 )
 
 __all__ = [
+    "DAT_VERIFIED_BONUS",
+    "FUZZY_THRESHOLD",
+    "BlocklistEntry",
     "BlocklistedReleaseError",
     "Candidate",
+    "DatLookup",
+    "IndexerMeta",
+    "LibraryState",
+    "MonitoredGame",
+    "MonitoredRelease",
     "NoEligibleCandidatesError",
     "OverCapWarning",
+    "PlatformFormatBounds",
     "Query",
     "Rejection",
     "RejectionCode",
@@ -42,4 +64,9 @@ __all__ = [
     "SearchError",
     "SearchRoundReport",
     "SearchType",
+    "build_queries",
+    "fuzzy_match_query",
+    "resolve_to_game",
+    "run_pipeline",
+    "select_winners",
 ]
