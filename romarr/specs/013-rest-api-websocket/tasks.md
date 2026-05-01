@@ -29,13 +29,21 @@ integration tests → command bus → Sonarr-shape probe → hardening.
       `openapi-spec-validator>=0.7`.
 - [ ] T002 [P] [SCAF] Create `src/romarr/api/__init__.py` exposing
       `create_app`.
-- [ ] T003 [P] [SCAF] Create `src/romarr/api/models.py` — `Tag`,
-      `QueueEntry`, `IdempotencyCache` SQLAlchemy 2.0 models matching
-      the inline data-model in `plan.md`.
+- [X] T003 [P] [SCAF] Create `src/romarr/api/models.py` — `Tag`,
+      `TagAssignment`, `QueueEntry`, `IdempotencyCache` SQLAlchemy
+      2.0 models matching the inline data-model in `plan.md`. Brand
+      default `tag.color = #9BBC0F` (spec 014). Round-trip tests
+      live in `tests/api/test_models.py` (Tag uniqueness,
+      TagAssignment CHECK + cascade, QueueEntry state CHECK +
+      native-id uniqueness, IdempotencyCache composite PK).
 - [X] T004 [P] [SCAF] Create `src/romarr/api/envelopes.py` —
       `PaginationEnvelope`, `ErrorEnvelope` Pydantic models.
-- [ ] T005 [SCAF] Author `src/romarr/db/alembic/versions/0013_rest_api.py`
-      — DDL for the three new tables.
+- [X] T005 [SCAF] Author `src/romarr/db/alembic/versions/0013_rest_api.py`
+      — DDL for the four new tables (`tag`, `tag_assignment`,
+      `queue_entry`, `idempotency_cache`). Reversible. Smoke-tested
+      via `tests/api/test_migration_0013.py` (table creation,
+      reversibility, documented columns, composite PK on
+      `idempotency_cache`, brand-default `tag.color`).
 - [ ] T006 [SCAF] Extend `tests/conftest.py` with `app_client`
       (TestClient) and `ws_client` (websockets test helper);
       create `tests/api/conftest.py` for module-local fixtures.

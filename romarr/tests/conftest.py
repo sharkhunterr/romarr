@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 # with the metadata before create_all runs. Each spec's models live
 # under their own package — listing them here keeps a single
 # Base.metadata that knows about every table the test suite needs.
+from romarr.api import models as _api_models  # noqa: F401
 from romarr.api.app import create_app
 from romarr.auth import models as _auth_models  # noqa: F401
 from romarr.db.session import create_engine, create_sessionmaker
