@@ -281,32 +281,43 @@ search engine's 85 (intentional asymmetry).
 
 ### Tests
 
-- [ ] T047 [P] [MULTIDISC] `tests/importer/steps/test_multi_disc.py::test_cue_bin_parent_child`
-      — `Final Fantasy IX (USA) (Disc 1).cue/.bin` +
-      `Final Fantasy IX (USA) (Disc 2).cue/.bin` ⇒ exactly 1 parent
-      Release with `disc_number=1, disc_total=2` and 1 child with
-      `parent_release_id = parent.id` (FR-017, FR-018, SC-004).
-- [ ] T048 [P] [MULTIDISC] `tests/importer/steps/test_multi_disc.py::test_filename_pattern_disc_n`
-      — `Game (Disc 2).bin` without `(Disc 1)` sibling ⇒ create child
-      Release with `parent_release_id` referring to the existing parent if
-      present, otherwise pseudo-parent created with disc_total inferred.
-- [ ] T049 [P] [MULTIDISC] `tests/importer/steps/test_multi_disc.py::test_side_a_b_floppy`
-      — `Title (Side A).adf / (Side B).adf` ⇒ multi-side handled like
-      multi-disc.
-- [ ] T050 [P] [MULTIDISC] `tests/importer/steps/test_multi_disc.py::test_hash_the_bin_not_cue`
-      — for cue/bin pairs, the DAT lookup uses the `.bin` hash (FR-019,
-      US3.3).
-- [ ] T051 [P] [MULTIDISC] `tests/importer/steps/test_multi_disc.py::test_property_random_disc_layouts`
-      — hypothesis property test: random combinations of cue/bin and
-      filename-pattern entries; the detector never produces an invalid
-      tree (no orphan child without a known parent slot).
+- [X] T047 [P] [MULTIDISC] `tests/importer/steps/test_multi_disc.py::test_cue_bin_parent_child`
+      — two cue/bin pairs ⇒ ``MultiDiscGroup(detection_signal='cue_bin')``
+      with 2 members; each member ships both files; ``primary_file``
+      is the ``.bin`` (FR-017, FR-018, FR-019). The
+      orchestrator-level transition to ``parent_release_id`` is the
+      DBUPDATE step's concern.
+- [X] T048 [P] [MULTIDISC] `tests/importer/steps/test_multi_disc.py::test_filename_pattern_disc_n`
+      — three ``Game (Disc N).iso`` files ⇒
+      ``detection_signal='filename_pattern'`` with 3 members. Plus
+      ``test_filename_pattern_single_disc_returns_none`` covering
+      the single ``(Disc 1)`` no-siblings case (returns None; the
+      orchestrator imports as a single-disc release).
+- [X] T049 [P] [MULTIDISC] `tests/importer/steps/test_multi_disc.py::test_side_a_b_floppy`
+      — ``(Side A)`` / ``(Side B)`` mapped to disc_number 1 / 2 with
+      ``detection_signal='side_a_b'``.
+- [X] T050 [P] [MULTIDISC] `tests/importer/steps/test_multi_disc.py::test_hash_the_bin_not_the_cue`
+      — every member's ``primary_file`` is the ``.bin`` (FR-019).
+      Plus 3 cue-parser tests: extracts referenced files, gracefully
+      handles missing files, parses multi-track cues.
+- [X] T051 [P] [MULTIDISC] `tests/importer/steps/test_multi_disc.py::test_property_random_disc_layouts_never_produce_invalid_trees`
+      — hypothesis: 200 random combinations of disc-style and
+      unrelated filenames; the detector never produces an invalid
+      tree (members sorted by disc_number, no duplicate disc
+      numbers, ≥ 2 members in any returned group). Plus
+      ``test_irrelevant_files_dont_trigger_detection`` covering
+      the no-disc-signal happy path.
 
 ### Implementation
 
-- [ ] T052 [MULTIDISC] Create `src/romarr/importer/steps/multi_disc.py`
-      — `detect_multi_disc(files: list[Path]) -> list[MultiDiscGroup]`
-      pure function consuming a list of paths, plus a small `.cue` parser
-      that extracts `FILE "<name>" BINARY` lines.
+- [X] T052 [MULTIDISC] Create `src/romarr/importer/steps/multi_disc.py`
+      — pure ``detect_multi_disc(files) -> MultiDiscGroup | None``
+      consuming a list of paths. Three detection signals (cue_bin
+      > filename_pattern > side_a_b) tried in priority order;
+      ``parse_cue_referenced_files(cue_path)`` exposed as a public
+      helper. ``DiscMember`` carries ``files`` (every file
+      constituting the member) and ``primary_file`` (the canonical
+      bytestream the orchestrator hashes).
 
 **Checkpoint**: MULTIDISC tests green; the property test runs 1000
 random layouts without producing invalid trees.
@@ -317,19 +328,30 @@ random layouts without producing invalid trees.
 
 ### Tests
 
-- [ ] T053 [P] [PROFILEGATE] `tests/importer/steps/test_profile_gate.py::test_uses_spec_006_evaluator`
-      — composes `ProfileEvaluator.evaluate_quality/region/dump/language`;
-      a rejecting profile parks the file in `unidentified_dump` with the
-      structured reason.
-- [ ] T054 [P] [PROFILEGATE] `tests/importer/steps/test_profile_gate.py::test_force_warning_only`
-      — `ImportContext.force = true` (manual flow) ⇒ rejection becomes a
-      `warning` field on `ImportOutcome`, not a halt (FR-021, US4.2).
+- [X] T053 [P] [PROFILEGATE] `tests/importer/steps/test_profile_gate.py`
+      — 6 tests cover the spec 006 ``evaluate_all`` composition: all
+      gates accept ⇒ passed; quality / region / dump / language each
+      reject with their structured ``RejectionReason``; multi-gate
+      rejection always surfaces the first failing gate in fixed
+      Q→R→D→L order (deterministic across reruns).
+- [X] T054 [P] [PROFILEGATE] `tests/importer/steps/test_profile_gate.py::test_force_overrides_rejection_into_warning`
+      — ``force=True`` flips a rejection into a passing result with
+      ``warning='force_overrode:<reason>'`` and the structured
+      ``rejection_reason`` populated for the audit trail (FR-021,
+      US4.2). Plus ``test_force_on_passing_gate_is_no_op`` so a
+      force-import that wouldn't have been rejected anyway produces
+      a clean pass without spurious warnings.
 
 ### Implementation
 
-- [ ] T055 [PROFILEGATE] Create
-      `src/romarr/importer/steps/profile_gate.py` — composes the four
-      evaluators and produces a `Decision` + structured rejection reason.
+- [X] T055 [PROFILEGATE] Create
+      `src/romarr/importer/steps/profile_gate.py` — pure
+      ``apply_profile_gate(*, quality, region, dump, language,
+      facts, force) -> ProfileGateResult`` composing spec 006's
+      ``evaluate_all``. ``ProfileGateResult`` carries ``passed``,
+      ``rejection_reason`` (always populated when a profile said
+      NO), ``warning`` (force-pass only), and ``failing_gate``
+      (deterministic via the fixed Q→R→D→L order).
 
 **Checkpoint**: PROFILEGATE tests green; spec 006's evaluator wired with
 no business-logic duplication.
@@ -340,21 +362,32 @@ no business-logic duplication.
 
 ### Tests
 
-- [ ] T056 [P] [RENDER] `tests/importer/steps/test_render.py::test_uses_spec_006_engine`
-      — composes `NamingTemplateEngine.render(profile, game, release,
-      dump)`.
-- [ ] T057 [P] [RENDER] `tests/importer/steps/test_render.py::test_platform_subfolder`
-      — rendered path begins with `<library_root>/<platform_slug>/...` when
-      the Naming profile has `platform_subfolder=true`.
-- [ ] T058 [P] [RENDER] `tests/importer/steps/test_render.py::test_multi_disc_subfolder`
-      — for multi-disc games with `multi_disc_subfolder=true`, both discs
-      land in `<library_root>/<platform_slug>/<game_subfolder>/`.
+- [X] T056 [P] [RENDER] `tests/importer/steps/test_render.py::test_uses_spec_006_engine`
+      — composes ``NamingTemplateEngine.render(profile, game,
+      release, dump, platform)``; the rendered basename + extension
+      surface on :class:`RenderedDestination` for the MOVE step.
+- [X] T057 [P] [RENDER] `tests/importer/steps/test_render.py::test_platform_subfolder_when_enabled`
+      — rendered path begins with
+      ``<library_root>/<platform_slug>/...`` when the Naming
+      profile's ``platform_subfolder=True``. Plus the symmetric
+      ``test_no_platform_subfolder_when_disabled``.
+- [X] T058 [P] [RENDER] `tests/importer/steps/test_render.py::test_multi_disc_subfolder_groups_discs`
+      — for multi-disc games with ``multi_disc_subfolder=True`` and
+      ``multi_disc_total > 1``, both discs land in
+      ``<library_root>/<platform_slug>/<game_subfolder>/``. Plus
+      ``test_no_multi_disc_subfolder_for_single_disc`` (no spurious
+      grouping when ``multi_disc_total == 1``) and
+      ``test_render_is_deterministic`` (purity).
 
 ### Implementation
 
-- [ ] T059 [RENDER] Create `src/romarr/importer/steps/render.py` —
-      composes the engine; resolves the full destination path including
-      `library.path`, `platform_subfolder`, `multi_disc_subfolder`.
+- [X] T059 [RENDER] Create `src/romarr/importer/steps/render.py` —
+      pure ``render_destination(*, engine, profile, library_root,
+      game, release, dump, platform, multi_disc_total)
+      -> RenderedDestination`` composing spec 006's engine. Path
+      composition: ``library_root [/ platform_slug [/ game_subfolder]]
+      / basename.ext``. ``_safe_dirname`` sanitises the multi-disc
+      subfolder name (built outside the engine).
 
 **Checkpoint**: RENDER tests green; rendered paths are deterministic
 across reruns.
