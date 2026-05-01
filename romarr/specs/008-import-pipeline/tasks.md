@@ -27,49 +27,75 @@ phases (`SCAF`, `HARD`).
 **Purpose**: bring up the module skeleton, dependencies, types, locks,
 errors, persistence, and orchestrator shell.
 
-- [ ] T001 [SCAF] Update `pyproject.toml` — add runtime deps `py7zr>=0.21`,
-      `rarfile>=4.2`, `aiofiles>=23`. Document the Docker image's `unrar`
-      apt-get dependency in plan.md.
-- [ ] T002 [P] [SCAF] Create `src/romarr/importer/__init__.py` exposing
-      `ImportEngine`, `run_import`, `start_watcher`, `stop_watcher`.
-- [ ] T003 [P] [SCAF] Create `src/romarr/importer/errors.py` —
+- [X] T001 [SCAF] Update `pyproject.toml` — add runtime dep
+      `aiofiles>=23` (`py7zr>=0.21` and `rarfile>=4.1` already
+      shipped with foundation). Docker `unrar` apt-get dependency
+      documented in plan.md.
+- [X] T002 [P] [SCAF] Create `src/romarr/importer/__init__.py`
+      exposing the slice-1 surface (errors + types + lock manager
+      + orchestrator stubs). The full ``ImportEngine`` symbol
+      lands with the WATCH slice once polling + webhook + lifecycle
+      compose into a single managed object.
+- [X] T003 [P] [SCAF] Create `src/romarr/importer/errors.py` —
       `ImporterError`, `ExtractError`, `MoveError`, `GameNotMatched`,
       `ProfileRejected`, `LockTimeout`, `WebhookAuthError`.
-- [ ] T004 [P] [SCAF] Create `src/romarr/importer/types.py` — every
-      Pydantic / StrEnum from `data-model.md`'s "Value Types" section:
-      `RejectionReason`, `ImportContext`, `MultiDiscGroup`,
-      `LifecycleAction`, `ImportOutcome`.
-- [ ] T005 [P] [SCAF] Create `src/romarr/importer/locks.py` — async
-      in-process advisory lock keyed by `(release_id, sha1)` with a 60-s
-      timeout (FR-033, FR-034).
-- [ ] T006 [P] [SCAF] Create `src/romarr/importer/models.py` —
-      `ImportHistory` SQLAlchemy 2.0 model + `UnidentifiedDump` extension
-      definitions (the model class lives in foundation; this file defines
-      additional columns via SQLAlchemy's `__table_args__` extension).
-- [ ] T007 [P] [SCAF] Create `src/romarr/importer/schemas.py` — Pydantic
-      `ImportHistoryRead`, `ManualImportRequest`, `ManualMatchRequest`,
-      `WebhookPayload` (discriminated union).
-- [ ] T008 [SCAF] Author `src/romarr/db/alembic/versions/0008_import_pipeline.py`
-      — DDL for `import_history` + `unidentified_dump` extensions with the
-      gated FK pattern documented in `data-model.md`.
-- [ ] T009 [SCAF] Create `src/romarr/importer/orchestrator.py` — the
-      13-step driver function `run_import(context: ImportContext) ->
-      ImportOutcome`. Initially each step raises `NotImplementedError`;
-      subsequent phases fill them in.
-- [ ] T010 [SCAF] Extend `tests/conftest.py` with `tmp_library(tmp_path)`
-      fixture; create `tests/importer/conftest.py` with module-local
-      fixtures (synthetic ROM bytes, fake DAT entries, mock download
-      client).
-- [ ] T011 [P] [SCAF] `tests/importer/test_models.py` — round-trip
-      `ImportHistory` rows; verify nullable FKs and the CHECK constraint on
-      `imported_via`.
-- [ ] T012 [P] [SCAF] `tests/importer/test_locks.py` — contention test:
-      two concurrent acquirers on same key serialise; the first holder
-      releases; the second acquires. 60-s timeout test via freezegun
-      raises `LockTimeout` (FR-034).
-- [ ] T013 [P] [SCAF] `tests/importer/test_migration_0008.py` — applying
-      the migration creates the table; the gated `library_id` FK is added
-      only when a `library` table is present.
+- [X] T004 [P] [SCAF] Create `src/romarr/importer/types.py` —
+      `RejectionReason` StrEnum + `ImportContext` /
+      `MultiDiscGroup` / `LifecycleAction` / `ImportOutcome`
+      frozen Pydantic models matching `data-model.md`.
+- [X] T005 [P] [SCAF] Create `src/romarr/importer/locks.py` — async
+      `ImportLockManager` with per-(release_id, sha1)
+      :class:`asyncio.Lock` registry, 60-s default timeout
+      (FR-033, FR-034). 4 tests cover distinct keys parallel,
+      same-key serialisation, timeout raises ``LockTimeout``,
+      lock released on exception.
+- [X] T006 [P] [SCAF] Create `src/romarr/importer/models.py` —
+      `ImportHistory` SQLAlchemy 2.0 model with the documented
+      indices (started_at, release_started, correlation,
+      native_id, success). The `UnidentifiedDump` extension
+      columns (`rejection_reason`, `library_id`,
+      `suggested_game_id`) live on the foundation ORM class so
+      every consumer sees the same schema; only the FK target on
+      `library_id` is gated by the migration.
+- [X] T007 [P] [SCAF] Create `src/romarr/importer/schemas.py` —
+      `ImportHistoryRead`, `ManualImportEntry` /
+      `ManualImportRequest`, `ManualMatchRequest`,
+      `RetryResponse`, `UnidentifiedDumpRead`. The
+      `WebhookPayload` discriminated union lands with the WATCH
+      slice once the per-client variants are needed.
+- [X] T008 [SCAF] Author `src/romarr/db/alembic/versions/0008_import_pipeline.py`
+      — DDL for `import_history` + `unidentified_dump`
+      extensions with the gated FK pattern. Since spec 009
+      (Library) shipped first, the ``library`` table exists when
+      0008 runs and the FK on
+      ``unidentified_dump.library_id`` is finalised here directly.
+      ``down_revision = '0009_libraries'``.
+- [X] T009 [SCAF] Create `src/romarr/importer/orchestrator.py` —
+      `run_import(context) -> ImportOutcome`, `start_watcher()`,
+      `stop_watcher()` stubs. Each raises `NotImplementedError`
+      with a message naming the slice that fills it in.
+- [X] T010 [SCAF] Extend `tests/conftest.py` to register
+      `romarr.importer.models`; create `tests/importer/conftest.py`
+      with `correlation_id`, `base_context`, `now` fixtures.
+      Synthetic-ROM / fake-DAT / mock-client fixtures land
+      with the slices that need them.
+- [X] T011 [P] [SCAF] `tests/importer/test_models.py` — 5 tests:
+      round-trip with all populated fields, CHECK constraint on
+      `imported_via`, nullable FKs accept NULL on a failure row,
+      coalesced marker round-trips, ``UnidentifiedDump`` extension
+      columns persist through the foundation ORM class.
+- [X] T012 [P] [SCAF] `tests/importer/test_locks.py` — 4 tests
+      (see T005). Timeout test uses real ``asyncio.wait_for`` with
+      a 100 ms timeout instead of freezegun — the lock manager
+      uses ``asyncio`` internals which freezegun doesn't reach.
+- [X] T013 [P] [SCAF] `tests/importer/test_migration_0008.py` —
+      3 tests: import_history table + every nullable FK created;
+      unidentified_dump extension columns + both FKs (game,
+      library) finalised at head; downgrade reverses cleanly.
+      Plus update to `test_migration_0009` so its
+      ``test_migration_unidentified_dump_finalisation_gate_no_ops_at_0009``
+      stops at 0009 (where the column doesn't exist) before
+      rolling forward to head (where 0008 adds the column + FK).
 
 **Checkpoint**: `alembic upgrade head` is clean; locks + models + types
 + scaffolding tests green; orchestrator imports cleanly.

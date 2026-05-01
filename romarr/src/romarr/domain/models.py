@@ -483,6 +483,19 @@ class UnidentifiedDump(Base, TimestampMixin):
         Integer, ForeignKey("platform.id", ondelete="SET NULL"), nullable=True
     )
 
+    # Spec 008 (Importer) extensions. The columns are added by Alembic
+    # ``0008_import_pipeline``; the FK on ``library_id`` is gated on
+    # whether the ``library`` table already exists (per data-model.md's
+    # Forward Dependency section). The ``suggested_game_id`` FK lands
+    # unconditionally — the ``game`` table ships in foundation.
+    rejection_reason: Mapped[str | None] = mapped_column(String, nullable=True)
+    library_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    suggested_game_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("game.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
     __table_args__ = (
         CheckConstraint("attempt_count >= 0", name="ck_unidentified_dump_attempts"),
     )

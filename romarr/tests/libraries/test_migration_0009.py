@@ -89,29 +89,41 @@ def test_migration_is_reversible(tmp_path: Path) -> None:
         conn.close()
 
 
-def test_migration_unidentified_dump_finalisation_idempotent(tmp_path: Path) -> None:
-    """If spec 008 has not yet shipped, ``unidentified_dump.library_id``
-    does not exist — the migration must skip the FK finalisation
-    branch silently rather than failing."""
-    db = tmp_path / "test_no_dump_column.db"
+def test_migration_unidentified_dump_finalisation_gate_no_ops_at_0009(
+    tmp_path: Path,
+) -> None:
+    """0009's ``unidentified_dump.library_id`` finalisation branch
+    must be a no-op when the column does not yet exist.
+
+    Spec 008 adds the column and ships AFTER spec 009 in the
+    project's migration chain (down_revision = 0009_libraries),
+    so when 0009 runs ``unidentified_dump.library_id`` doesn't
+    exist yet. Stopping the upgrade exactly at 0009 exercises the
+    gated branch.
+    """
+    db = tmp_path / "test_at_0009.db"
     cfg = _alembic_config(f"sqlite+aiosqlite:///{db}")
 
-    command.upgrade(cfg, "head")
+    # Stop the upgrade at 0009; do NOT roll forward into 0008.
+    command.upgrade(cfg, "0009_libraries")
 
     conn = sqlite3.connect(db)
     try:
-        # unidentified_dump exists (spec 001) but does NOT yet carry
-        # library_id (spec 008 hasn't shipped). Confirm the column is
-        # absent so the test premise holds, and confirm no FK referring
-        # to library was added (since there's no column to reference).
+        # 0009 ran but 0008 hasn't; the column doesn't exist yet
+        # and 0009's gated branch silently skipped the FK.
         columns = {
             row[1] for row in conn.execute("PRAGMA table_info(unidentified_dump)")
         }
         assert "library_id" not in columns
 
-        # And every existing unidentified_dump FK still points at its
-        # original target (no new library FK).
+        # Pulling forward to 0008 (head) materialises the column +
+        # FK via 0008's unconditional path.
+        command.upgrade(cfg, "head")
+        columns = {
+            row[1] for row in conn.execute("PRAGMA table_info(unidentified_dump)")
+        }
+        assert "library_id" in columns
         ud_fks = _foreign_keys(conn, "unidentified_dump")
-        assert ("library", "id") not in ud_fks
+        assert ("library", "id") in ud_fks
     finally:
         conn.close()
