@@ -19,8 +19,10 @@ from fastapi.responses import JSONResponse
 
 from romarr import __version__
 from romarr.api.error_handlers import register_error_handlers
+from romarr.api.middleware import register_cors, register_gzip
 from romarr.api.routers.auth import router as auth_router
 from romarr.api.routers.users import router as users_router
+from romarr.config import get_settings
 from romarr.db.session import create_engine, create_sessionmaker
 from romarr.downloaders.api import (
     clients_router as download_clients_router,
@@ -182,6 +184,14 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     @app.get("/", include_in_schema=False)
     async def _root() -> JSONResponse:
         return JSONResponse({"name": "romarr", "version": __version__})
+
+    # Spec 013 phase MW. Middleware order matters: Starlette runs the
+    # last-registered middleware first, so GZip lands on the outermost
+    # layer (it must see the final response bytes). CORS goes next,
+    # ahead of the routers.
+    settings = get_settings()
+    register_gzip(app, min_size_bytes=settings.gzip_min_size_bytes)
+    register_cors(app, allowed_origins=settings.cors_allowed_origins)
 
     register_error_handlers(app)
     app.include_router(auth_router)

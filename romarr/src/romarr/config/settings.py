@@ -84,6 +84,22 @@ class Settings(BaseSettings):
         description="Root data directory for covers, backups, and runtime files.",
     )
 
+    # API middleware (spec 013)
+    gzip_min_size_bytes: int = Field(
+        default=1024,
+        ge=0,
+        description="Spec 013 FR-029. Response bodies at or above this "
+        "byte threshold are gzip-compressed. Set to 0 to compress every "
+        "response.",
+    )
+    cors_allowed_origins: list[str] = Field(
+        default_factory=list,
+        description="Spec 013 FR-030. JSON-encoded list of allowed "
+        "Origin headers; empty = same-origin only. Reverse proxies "
+        "fronting Romarr should leave this empty and pass the original "
+        "Host through unchanged.",
+    )
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

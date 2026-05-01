@@ -151,14 +151,22 @@ shuts down cleanly.
 
 ### Tests
 
-- [ ] T018 [P] [MW] `tests/api/middleware/test_gzip.py::test_threshold_1kb`
-      — < 1 KB body: no gzip; > 1 KB: response carries
-      `Content-Encoding: gzip` (FR-029).
-- [ ] T019 [P] [MW] `tests/api/middleware/test_cors.py::test_default_same_origin`
+- [X] T018 [P] [MW] `tests/api/middleware/test_gzip.py` —
+      4 cases: < 1 KB body uncompressed; > 1 KB body
+      `Content-Encoding: gzip`; `Accept-Encoding: identity`
+      bypasses; `min_size_bytes=0` opts in to compress every
+      response (FR-029, operator-tunable).
+- [X] T019 [P] [MW] `tests/api/middleware/test_cors.py::test_default_same_origin_only`
       — empty `ROMARR_CORS_ALLOWED_ORIGINS`; cross-origin request
-      blocked (FR-030).
-- [ ] T020 [P] [MW] `tests/api/middleware/test_cors.py::test_configured_origins`
-      — env var set; matching origin allowed; non-matching blocked.
+      reaches the route but the
+      `Access-Control-Allow-Origin` header is omitted, so the
+      browser rejects the response (FR-030). Companion preflight
+      test pins HTTP 400 for OPTIONS from an unknown origin.
+- [X] T020 [P] [MW] `tests/api/middleware/test_cors.py::test_configured_origin_*`
+      — env var set; matching origin gets the CORS header
+      echoed back; non-matching origin gets the header omitted;
+      preflight succeeds with `Access-Control-Allow-Credentials`
+      for the matching origin.
 - [ ] T021 [P] [MW] `tests/api/middleware/test_csrf.py::test_cookie_post_blocked_without_token`
       — cookie-authenticated POST without `X-CSRF-Token` header
       returns HTTP 403 reason `csrf_token_missing` (US7, SC-007).
@@ -188,12 +196,18 @@ shuts down cleanly.
 
 ### Implementation
 
-- [ ] T031 [MW] Create `src/romarr/api/middleware/gzip.py` — wraps
+- [X] T031 [MW] Create `src/romarr/api/middleware/gzip.py` — wraps
       FastAPI's `GZipMiddleware` with the 1 KB threshold from
-      settings.
-- [ ] T032 [P] [MW] Create `src/romarr/api/middleware/cors.py` —
-      reads `ROMARR_CORS_ALLOWED_ORIGINS` JSON env; default empty
-      list (same-origin only).
+      `Settings.gzip_min_size_bytes` (operator-tunable via
+      `ROMARR_GZIP_MIN_SIZE_BYTES`). Wired into `create_app()`
+      ahead of CORS so it lands on the outermost layer.
+- [X] T032 [P] [MW] Create `src/romarr/api/middleware/cors.py` —
+      reads `ROMARR_CORS_ALLOWED_ORIGINS` JSON env via
+      `Settings.cors_allowed_origins` (`list[str]`, default empty
+      = same-origin only). `allow_credentials=True` for the
+      cookie-session SPA flow; methods/headers wildcarded so the
+      operator decides ORIGIN, the rest is pass-through. Wired
+      into `create_app()` after GZip.
 - [ ] T033 [P] [MW] Create `src/romarr/api/middleware/csrf.py` —
       `fastapi-csrf-protect` integration; bypass when the resolved
       `AuthMethod` from spec 010 is `API_KEY` / `JWT` / `PROXY`.
