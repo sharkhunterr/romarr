@@ -279,14 +279,24 @@ shuts down cleanly.
 - [ ] T049 [P] [ROUTERS] `tests/api/routers/test_calendar.py::test_empty_schema_valid`
       — GET `/api/v3/calendar?start=...&end=...` returns
       `[]` with a documented schema (MVP — data sources TBD).
-- [ ] T050 [P] [ROUTERS] `tests/api/routers/test_tag.py::test_full_crud`
-      — POST/GET/PUT/DELETE round-trip on `/api/v3/tag*`.
-- [ ] T051 [P] [ROUTERS] `tests/api/routers/test_tag.py::test_delete_in_use_409`
-      — tag in use by a Game; DELETE returns HTTP 409 unless
-      `?force=true`.
-- [ ] T052 [P] [ROUTERS] `tests/api/routers/test_tag.py::test_detail_lists_resources`
-      — GET `/api/v3/tag/detail/{id}` returns Games/Notifications/
-      Indexers using this tag.
+- [X] T050 [P] [ROUTERS] `tests/api/routers/test_tag.py::test_post_get_put_delete_round_trip`
+      — POST/GET (list + single)/PUT/DELETE round-trip on
+      `/api/v3/tag*`. Default colour matches the brand
+      `#9BBC0F`. Companion validation tests for the slug-pattern
+      `name`, hex-pattern `color`, and unique-name 409 with
+      `errorCode tag_name_conflict`.
+- [X] T051 [P] [ROUTERS] `tests/api/routers/test_tag.py::test_delete_in_use_*`
+      — tag in use by a Game-typed assignment; DELETE returns
+      HTTP 409 with `errorCode tag_in_use`. With `?force=true`,
+      cascades the assignment rows and returns HTTP 204 — pinned
+      by `test_delete_in_use_with_force_cascades`.
+- [X] T052 [P] [ROUTERS] `tests/api/routers/test_tag.py::test_detail_lists_resources_grouped_by_entity_type`
+      — GET `/api/v3/tag/detail/{id}` returns the documented
+      Sonarr-shape `{id, label, gameIds, indexerIds,
+      notificationIds, releaseIds}` envelope, with each list
+      sorted ascending. The `/detail/{id}` route is registered
+      before the `{tag_id}` catch-all in the router so FastAPI's
+      path matcher hits the literal first.
 
 ### Implementation
 
@@ -317,8 +327,17 @@ shuts down cleanly.
 - [ ] T059 [P] [ROUTERS] Create
       `src/romarr/api/routers/calendar.py` — MVP empty list with the
       documented schema.
-- [ ] T060 [P] [ROUTERS] Create `src/romarr/api/routers/tag.py` —
-      full CRUD + force-delete + detail.
+- [X] T060 [P] [ROUTERS] Create `src/romarr/api/routers/tag.py` —
+      full CRUD + force-delete + `/detail/{id}` polymorphic
+      lookup. Read endpoints gated by `require_readonly`; write
+      endpoints gated by `require_admin`. Slug-pattern + hex
+      colour validation at the Pydantic schema layer; unique-name
+      conflict surfaces as HTTP 409 with errorCode
+      `tag_name_conflict`. The 409 + cascade flow on DELETE
+      (FR-013) checks for any existing `TagAssignment` row before
+      removal; `?force=true` cascades the assignments via a
+      single `DELETE FROM tag_assignment` statement. Wired into
+      `create_app()` after the system status router.
 
 **Checkpoint**: ROUTERS tests green.
 

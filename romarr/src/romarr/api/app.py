@@ -23,6 +23,7 @@ from romarr.api.error_handlers import register_error_handlers
 from romarr.api.middleware import register_cors, register_gzip
 from romarr.api.routers.auth import router as auth_router
 from romarr.api.routers.status import router as system_status_router
+from romarr.api.routers.tag import router as tag_router
 from romarr.api.routers.users import router as users_router
 from romarr.config import get_settings
 from romarr.db.session import create_engine, create_sessionmaker
@@ -205,6 +206,10 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     app.include_router(users_router)
     # Spec 013 — Sonarr-compat /api/v3/system/status (FR-031, US1).
     app.include_router(system_status_router)
+    # Spec 013 — Tag CRUD (T060). The /detail/{id} sub-route is
+    # registered before the {tag_id} catch-all in the router so
+    # FastAPI's path matcher hits the literal first.
+    app.include_router(tag_router)
     app.include_router(providers_router)
     app.include_router(field_priority_router)
     app.include_router(refresh_router)
