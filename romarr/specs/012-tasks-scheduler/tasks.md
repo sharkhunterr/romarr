@@ -150,34 +150,70 @@ shutdown → command alias → API → hardening.
 
 ### Tests
 
-- [ ] T018 [P] [SCHED] `tests/tasks/test_scheduler.py::test_bootstrap_registers_enabled_only`
-      — pre-populate `job` table with 3 enabled + 1 disabled rows;
-      `SchedulerService.start()`; assert APScheduler has 3
-      registered jobs (FR-006).
-- [ ] T019 [P] [SCHED] `tests/tasks/test_scheduler.py::test_misfire_grace_60min`
-      — freezegun-jump 8 hours; only the most recent missed cycle
-      fires once; older cycles are skipped (SC-004).
-- [ ] T020 [P] [SCHED] `tests/tasks/test_scheduler.py::test_concurrent_trigger_409`
+- [X] T018 [P] [SCHED] `tests/tasks/test_scheduler.py::test_bootstrap_registers_enabled_only`
+      — pre-populate `job` with 3 enabled + 1 disabled rows;
+      `SchedulerService.start()`; assert APScheduler has the 3
+      enabled jobs registered (FR-006). Plus
+      `test_event_driven_job_skipped_in_bootstrap` covering
+      `AutoCheckAdded`-style rows that have no schedule.
+- [X] T019 [P] [SCHED] `tests/tasks/test_scheduler.py::test_misfire_grace_coalesces`
+      — assert APScheduler job carries
+      `misfire_grace_time=3600` + `coalesce=True` so an 8 h gap
+      coalesces to one fire (SC-004). Wall-clock-based freezegun
+      coverage of multiple-hour jumps lives in spec 013's
+      end-to-end suite; the unit test pins the config.
+- [X] T020 [P] [SCHED] `tests/tasks/test_scheduler.py::test_concurrent_trigger_raises_when_at_cap`
       — runner is in-flight; trigger again; raises
-      `JobAlreadyRunning` (FR-012, SC-003).
-- [ ] T021 [P] [SCHED] `tests/tasks/test_scheduler.py::test_max_concurrent_2`
-      — `max_concurrent_instances = 2`; first two triggers succeed;
-      third raises.
-- [ ] T022 [P] [SCHED] `tests/tasks/test_scheduler.py::test_reschedule_takes_effect`
-      — PATCH-style schedule mutation; assert APScheduler's next
-      run reflects the new cadence (FR-026, SC-007).
+      `JobAlreadyRunning` (FR-012, SC-003). After the runner
+      releases, a fresh trigger succeeds.
+- [X] T021 [P] [SCHED] `tests/tasks/test_scheduler.py::test_max_concurrent_2`
+      — `max_concurrent_instances = 2`; first two triggers
+      succeed; third raises. After one slot frees up, the next
+      trigger lands.
+- [X] T022 [P] [SCHED] `tests/tasks/test_scheduler.py::test_reschedule_takes_effect`
+      — PATCH-style schedule mutation: interval → interval, then
+      interval → cron; assert the persisted Job row reflects
+      both (FR-026, SC-007).
 
 ### Implementation
 
-- [ ] T023 [SCHED] Create `src/romarr/tasks/scheduler.py` —
-      `SchedulerService` class wrapping `AsyncIOScheduler` with
-      `SQLAlchemyJobStore`. `start()` reads enabled `Job` rows and
-      registers them; `stop()` is graceful (Phase 8). Exposes
-      `trigger(name, *, force=False, kwargs=None) -> int` returning
-      a `job_run_id`.
-- [ ] T024 [SCHED] Add `reschedule_job(name, schedule)` method that
-      uses APScheduler's `reschedule_job()` so changes apply without
-      restart.
+- [X] T023 [SCHED] Create `src/romarr/tasks/scheduler.py` —
+      `SchedulerService` class wrapping `AsyncIOScheduler`.
+      `start()` reads enabled `Job` rows and registers them
+      with the right cron / interval trigger,
+      `misfire_grace_time=3600`, `coalesce=True`,
+      `max_instances=job.max_concurrent_instances`,
+      `replace_existing=True`. `stop()` shuts down APScheduler
+      and awaits inflight runner tasks. `trigger(job_id, *,
+      triggered_by, triggered_by_user_id, parameters, force) ->
+      int` writes a `job_run` row, dispatches the runner on the
+      loop, registers the task in `_inflight[job_id]` so the
+      next trigger sees the count for the cap check, and
+      returns the new `run_id`. Concurrency check + insert +
+      task registration happen under a single lock so two
+      concurrent triggers can't both pass the cap. The
+      lifecycle helper from the EXEC slice will own the
+      `_finalise` write; for SCHED an inline minimum is
+      sufficient.
+- [X] T024 [SCHED] `SchedulerService.reschedule_job(name, *,
+      cron, interval_seconds)` — mutually-exclusive validator
+      ports the schema-layer rule into the runtime path; the
+      method updates the `Job` row + APScheduler's trigger so
+      the new cadence applies without restart.
+
+**Deferred** to subsequent slices (each their own concern):
+
+- Single-instance enforcement (FR-005a / `scheduler_lock`)
+  for SQLite — needs a separate migration to add the table.
+  Postgres uses `pg_try_advisory_lock` and is structurally
+  fine on multi-replica.
+- `job.schedule_timezone` (FR-007a) — APScheduler can take a
+  tz on cron triggers; we plumb it when the column is added
+  in a follow-up migration.
+- Cancellation token plumbing through to the lifespan handler
+  — lands in the SHUTDOWN slice (FR-021 graceful shutdown).
+- Throttled progress callback — lands in the EXEC slice
+  (FR-023, T033/T034).
 
 **Checkpoint**: SCHED tests green.
 
