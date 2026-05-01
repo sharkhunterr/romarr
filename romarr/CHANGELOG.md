@@ -3,6 +3,85 @@
 All notable changes to Romarr land here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semver.
 
+## [0.8.0a1] — 2026-05-01
+
+### Added
+
+- **Spec 009 — Library Management & Exporters** (partial: model +
+  routing + 4 exporter primitives + heartbeat + full scan + library
+  CRUD API. Incremental scan + manual import + scan/exporter API
+  endpoints land in follow-up slices that depend on spec 008's
+  importer and the watchdog package.)
+  - One new table (``library``), one m2m
+    (``library_platform``), one column addition
+    (``release.library_id``), and the integrating Alembic
+    migration ``0009`` that finalises the forward-reference FKs
+    deferred by spec 006 (``library_custom_format.library_id``)
+    and spec 008 (``unidentified_dump.library_id``, gated on
+    spec 008 having shipped its column).
+  - Pure-function multi-library router
+    (``romarr.libraries.routing``) implementing FR-006:
+    ``routing_score = region_score + quality_bonus`` via spec
+    006's ``ProfileEvaluator``; tie-break on lower
+    ``library.id``. Custom Format scores deliberately excluded —
+    those belong to the search engine, not the importer. AST
+    smoke test asserts the router source imports nothing from
+    sqlalchemy / httpx / aiohttp / requests / redis / logging.
+  - Pre-import disk-space gate
+    (``romarr.libraries.disk_space.check_min_disk_free``)
+    raising ``DiskFullError`` (subclass of ``LibraryUnavailable``)
+    with operator-facing free-GB message (FR-030).
+  - Library CRUD endpoints under ``/api/v3/rom/library*`` —
+    POST/GET/PUT/DELETE with the m2m platform allowlist, Fernet
+    encryption of the RomM API key on save, and the
+    FR-025/026/027 force-delete cascade gate (409
+    ``library_in_use`` without force; 409
+    ``historical_dumps_present`` even with force when
+    ``keep_dump_history=true`` and historical Dumps exist; 204 +
+    ``library_id=NULL`` on attached Releases when force succeeds
+    with no history).
+  - Four exporter primitives sharing one atomic+lock writer:
+      * ES-DE / Batocera / Recalbox ``gamelist.xml`` via
+        ``lxml.etree`` (FR-016, FR-017, FR-017a, FR-018, FR-018a).
+        Cover materialisation hardlinks from
+        ``data/covers/`` with EXDEV fallback to ``shutil.copy2``,
+        idempotent on unchanged source mtime.
+      * Pegasus ``metadata.txt`` colon-separated key/value
+        document.
+      * LaunchBox per-platform-or-global ``launchbox-export.xml``;
+        rating maps from Romarr's 0..1 to LaunchBox's 0..5
+        ``<CommunityStarRating>``.
+      * RomM remote-push ``push_to_romm`` — best-effort POST to
+        ``/api/platforms/<id>/scan`` with tenacity 3-attempt
+        exponential-jitter retry on connect / timeout / 5xx.
+        Fernet-decrypts the API key per call so plaintext never
+        lives in memory between requests. Never raises (FR-015 /
+        US9: a RomM hiccup must not block an otherwise-successful
+        import).
+  - Per-library heartbeat with 5-min debounce
+    (``romarr.libraries.heartbeat`` + ``_debounce.WindowedDebouncer``)
+    implementing FR-028 / FR-029. ``HeartbeatProbe`` is a
+    single-library state machine; ``run_heartbeat_pass`` is a
+    pure loop driver with per-library cadence. The shared
+    ``WindowedDebouncer[K]`` (PEP 695 syntax) is reusable by spec
+    011's notification consumer.
+  - Async full filesystem scanner
+    (``romarr.libraries.scanner.full_scan``) implementing FR-009
+    + FR-010 + FR-011 + FR-012: walks ``library.path`` with
+    ``Path.rglob`` (sorted for determinism), hashes off the
+    event loop via ``asyncio.to_thread``, applies the
+    idempotent skip on ``(path, size)`` match, link-by-``sha1``
+    rebind for renamed/relocated files, and the orphan sweep
+    that transitions Releases back to ``'wanted'``.
+    ``ScanProgressEmitter`` ticks every 100 files seen with a
+    forced emit on orphans and a terminal emit on ``finish()``.
+  - Performance: 100-file full scan runs in ~0.12 s; projected
+    10 000-file scan in ~12 s, well under the 5-min SC-003
+    second-leg budget. Recorded in
+    ``specs/009-library-exporters/research.md``.
+  - Coverage: 92.24 % on ``romarr.libraries`` (target ≥ 75 %);
+    full library suite 96 passing.
+
 ## [0.7.0a1] — 2026-04-30
 
 ### Added
