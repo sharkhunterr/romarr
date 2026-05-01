@@ -3,6 +3,51 @@
 All notable changes to Romarr land here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semver.
 
+## [0.12.0a1] — 2026-05-01
+
+### Added
+
+- **Spec 012 — Tasks & Scheduler**: APScheduler bootstrap +
+  `SchedulerService` orchestrating nine factory-default jobs
+  (`RssSync`, `CutoffSearch`, `MissingSearch`,
+  `RefreshGameMetadata`, `DatUpdate`, `Backup`, `HealthCheck`,
+  `LibraryScan`, `AutoCheckAdded`). Per-job runner adapters via a
+  structurally-typed `JobRunner` Protocol; cooperative
+  cancellation registry with FR-021 force-terminate after the
+  configured grace window; auto-pause of scheduled cycles when
+  the spec 011 `HealthEngine` reports `error` (US5.2/US5.3
+  manual-trigger override + in-flight runs continue);
+  graceful four-phase shutdown handler (no-new-ticks → grace-
+  await → cooperative cancel → force-terminate). Per-runId
+  WebSocket-progress throttle (≤ 10 events/sec; 100 ms quiet
+  window; final `taskFinished` bypasses).
+- New tables `job` (operator-configurable schedule + audit
+  columns + `is_factory_default` sentinel) and `job_run`
+  (append-only history with `triggered_by`, `cancellation_forced`
+  audit columns) plus an explicit declaration of APScheduler's
+  own `apscheduler_jobs` table for migration reproducibility.
+  Alembic `0012` chains after `0011_notifications`. SEED runs
+  on first boot to populate the catalogue idempotently —
+  operator edits survive subsequent boots.
+- REST API at `/api/v3/system/tasks*` covering list / detail
+  read / PATCH (admin) / trigger (admin) plus paginated run
+  history with status / triggered_by filters and admin-only
+  cancel. Sonarr-compat `POST /api/v3/command` (admin) +
+  `GET /api/v3/command/{id}` (readonly) with the documented
+  10-name alias map (FR-016 + extras: HealthCheck,
+  RefreshGameMetadata) so Notifiarr / Homepage / Tautulli
+  drive Romarr without a translation layer. The legacy
+  `/api/v3/command` router from spec 007's search slice was
+  removed in this release — spec 012 is the canonical owner
+  per FR-016.
+- Lifespan integration that wires the scheduler +
+  cancellation registry onto `app.state` when
+  `app.state._enable_scheduler = True`, and runs the graceful
+  shutdown handler on teardown so audit rows write with the
+  engine still alive. Default is OFF for tests; production
+  sets the flag.
+- 87.7% test coverage on `src/romarr/tasks/` (SC-010 floor: 75%).
+
 ## [0.11.0a1] — 2026-05-01
 
 ### Added
