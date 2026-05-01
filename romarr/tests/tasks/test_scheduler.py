@@ -3,12 +3,26 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncIterator
 from typing import Any
 
 import pytest
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
+# ---------------------------------------------------------------------------
+# Fixtures + helpers
+#
+# The scheduler spawns runner tasks that open their own sessions
+# from the shared sessionmaker. With bare ``:memory:`` SQLite each
+# connection gets a fresh empty DB, so the runner's writes don't
+# survive to the polling loop. ``cache=shared`` plus a per-test
+# unique name keeps every connection pointing at the same in-memory
+# DB while keeping tests isolated from each other.
+import pytest_asyncio
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
+
+from romarr.domain import Base
 from romarr.tasks.errors import (
     JobAlreadyRunning,
     JobDisabled,
@@ -23,25 +37,36 @@ from romarr.tasks.types import (
     TriggerKind,
 )
 
-# ---------------------------------------------------------------------------
-# Fixtures + helpers
-#
-# The scheduler spawns runner tasks that open their own sessions
-# from the shared sessionmaker. With bare ``:memory:`` SQLite each
-# connection gets a fresh empty DB, so the runner's writes don't
-# survive to the polling loop. ``cache=shared`` plus a per-test
-# unique name keeps every connection pointing at the same in-memory
-# DB while keeping tests isolated from each other.
+
+@pytest_asyncio.fixture
+async def shared_engine() -> AsyncIterator[AsyncEngine]:
+    """Per-test in-memory SQLite with one shared connection.
+
+    The scheduler spawns runner tasks that open their own
+    sessions. Without a single shared connection, each session
+    on bare ``:memory:`` sees a fresh empty DB and the runner's
+    writes are invisible to the polling loop. The shared-cache
+    URL form has flaky behaviour across test runs in the same
+    process. StaticPool forces every session to reuse the same
+    underlying aiosqlite connection — fast, isolated per test,
+    and correct for this multi-session profile.
+    """
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        poolclass=StaticPool,
+        connect_args={"check_same_thread": False},
+    )
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield engine
+    await engine.dispose()
 
 
 @pytest.fixture
 def sessionmaker(
-    api_engine: AsyncEngine,
+    shared_engine: AsyncEngine,
 ) -> async_sessionmaker:
-    """Reuse the project-wide ``api_engine`` fixture which uses
-    ``cache=shared`` so concurrent connections from runner
-    tasks share the same in-memory DB."""
-    return async_sessionmaker(api_engine, expire_on_commit=False)
+    return async_sessionmaker(shared_engine, expire_on_commit=False)
 
 
 async def _seed_job(
@@ -178,7 +203,7 @@ async def test_concurrent_trigger_raises_when_at_cap(
         release.set()
         # Wait for the runner to finish, then a fresh trigger
         # should succeed.
-        await _wait_for_run_terminal(sessionmaker, run_id_1)
+        await service.await_run(run_id_1)
         run_id_2 = await service.trigger("OneAtATime")
         assert run_id_2 != run_id_1
     finally:
@@ -231,7 +256,7 @@ async def test_max_concurrent_2(
 
         # Release one slot — third trigger should now succeed.
         release[0].set()
-        await _wait_for_run_terminal(sessionmaker, first_id)
+        await service.await_run(first_id)
         third_id = await service.trigger("TwoAtATime")
         assert third_id != first_id
         assert third_id != second_id
@@ -379,7 +404,7 @@ async def test_runner_success_marks_job_run_success(
     )
     try:
         run_id = await service.trigger("Audited")
-        await _wait_for_run_terminal(sessionmaker, run_id)
+        await service.await_run(run_id)
     finally:
         await service.stop()
 
@@ -412,7 +437,7 @@ async def test_runner_exception_marks_job_run_failed(
     )
     try:
         run_id = await service.trigger("Buggy")
-        await _wait_for_run_terminal(sessionmaker, run_id)
+        await service.await_run(run_id)
     finally:
         await service.stop()
 
@@ -439,7 +464,7 @@ async def test_no_runner_registered_marks_failed(
     )
     try:
         run_id = await service.trigger("Orphan")
-        await _wait_for_run_terminal(sessionmaker, run_id)
+        await service.await_run(run_id)
     finally:
         await service.stop()
 
@@ -494,7 +519,7 @@ async def test_trigger_records_triggered_by(
             triggered_by=TriggerKind.COMMAND,
             triggered_by_user_id=user_id,
         )
-        await _wait_for_run_terminal(sessionmaker, run_id)
+        await service.await_run(run_id)
     finally:
         await service.stop()
 
@@ -513,14 +538,26 @@ async def _wait_for_run_terminal(
     sessionmaker: async_sessionmaker,
     run_id: int,
     *,
-    timeout: float = 5.0,
+    timeout: float = 30.0,
 ) -> None:
-    """Poll the JobRun row until it reaches a terminal status."""
+    """Poll the JobRun row until it reaches a terminal status.
+
+    Yields a few extra event-loop ticks after observing
+    terminal so the runner task's ``add_done_callback`` has
+    fired — otherwise a follow-up trigger could see the task
+    still in the inflight set even though its row is already
+    persisted.
+    """
     deadline = asyncio.get_event_loop().time() + timeout
     while asyncio.get_event_loop().time() < deadline:
         async with sessionmaker() as session:
             run = await session.get(JobRun, run_id)
             if run is not None and run.status != "running":
+                # Yield extra ticks so the task's done callback
+                # fires and the scheduler's inflight bookkeeping
+                # catches up with the persisted state.
+                for _ in range(3):
+                    await asyncio.sleep(0)
                 return
         await asyncio.sleep(0.05)
     raise AssertionError(

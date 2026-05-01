@@ -223,33 +223,51 @@ shutdown → command alias → API → hardening.
 
 ### Tests
 
-- [ ] T025 [P] [RUNNER] `tests/tasks/test_runner_protocol.py::test_protocol_compliance`
-      — parametrised over each adapter; assert each is a
-      structural-typed `JobRunner` (`run` accepts `JobContext`,
-      returns awaitable `JobResult`).
-- [ ] T026 [P] [RUNNER] `tests/tasks/test_runner_protocol.py::test_adapters_pass_kwargs_through`
-      — `RefreshGame` command with `kwargs = {"gameId": 42}`
-      flows into the underlying spec function as `game_id=42`.
+- [X] T025 [P] [RUNNER] `tests/tasks/test_runner_protocol.py::test_adapter_satisfies_runner_protocol`
+      — parametrised over each of the 9 adapters; asserts each
+      is a structurally-typed :class:`JobRunner` (has an
+      async `run(context: JobContext) -> JobResult`). Plus
+      `test_adapter_carries_job_id_matching_class` confirming
+      the adapter's `job_id` matches the SEED catalogue entry
+      it represents.
+- [X] T026 [P] [RUNNER] `tests/tasks/test_runner_protocol.py::test_refresh_game_metadata_kwargs_flow_through`
+      + `test_library_scan_kwargs_select_target_library` —
+      operator-supplied `JobContext.parameters` flows into the
+      adapter's result summary so the audit captures the
+      scope (single-game vs all-games, per-library vs all
+      libraries).
 - [ ] T027 [P] [RUNNER] `tests/tasks/test_runner_protocol.py::test_progress_callback_throttled`
-      — runner calls `progress_callback` 100 times in 100 ms;
-      assert at most 10 events emitted on the WS channel
-      (FR-023).
+      — *deferred to EXEC slice* — the throttling logic is
+      a separate concern from runner dispatch; the EXEC layer
+      wraps the `progress_callback` before handing it to the
+      runner.
 
 ### Implementation
 
-- [ ] T028 [RUNNER] Create `src/romarr/tasks/runner_protocol.py` —
-      `JobRunner` Protocol + `RUNNER_REGISTRY` dict mapping job
-      names to runner instances.
-- [ ] T029 [RUNNER] Create `src/romarr/tasks/runners/adapters.py` —
-      one adapter class per documented job, each wrapping the
-      already-shipped function (e.g.,
-      `RssSyncAdapter` wraps spec 004's `IndexerRssSync.sync_all_enabled_indexers()`,
-      `MissingSearchAdapter` wraps spec 007's `run_missing_search()`,
-      `HealthCheckAdapter` wraps spec 011's `HealthEngine.refresh()`,
-      `LibraryScanAdapter` wraps spec 009's `scan_full()` and
-      `scan_incremental()` per the schedule type).
-- [ ] T030 [RUNNER] Wire the registry into `SchedulerService` so
-      `trigger(name)` looks up the runner without conditional code.
+- [X] T028 [RUNNER] Create `src/romarr/tasks/runner_protocol.py`
+      — `@runtime_checkable JobRunner` Protocol +
+      `build_default_registry()` builder that assembles the
+      production registry from the per-job adapters.
+- [X] T029 [RUNNER] Create `src/romarr/tasks/runners/adapters.py`
+      — one adapter per documented default. `HealthCheckAdapter`
+      wraps spec 011's `HealthEngine.refresh()`. The other
+      eight adapters (RssSync, CutoffSearch, MissingSearch,
+      RefreshGameMetadata, DatUpdate, Backup, LibraryScan,
+      AutoCheckAdded) are structured stubs that record their
+      parameters in `JobResult.summary` and return SUCCESS
+      until cross-spec wiring lands. Every adapter shares an
+      `_AdapterBase` class that catches inner-`_run`
+      exceptions and surfaces them as `JobResult(FAILED, ...)`
+      so the scheduler never sees a raised exception from the
+      adapter contract.
+- [X] T030 [RUNNER] Wire the registry into `SchedulerService`
+      via constructor injection — the scheduler accepts both
+      adapter-object runners (`runner.run(ctx)`) and plain
+      async-callable runners (`runner(ctx)`); the SCHED tests
+      pass closures, the production lifespan wires the
+      registry from `build_default_registry()`. The
+      cross-cutting `await_run(job_run_id)` helper lets tests
+      block until a specific run completes without polling.
 
 **Checkpoint**: RUNNER tests green; every job has a registered
 runner.

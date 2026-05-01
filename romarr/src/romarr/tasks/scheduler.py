@@ -60,13 +60,11 @@ from romarr.tasks.errors import (
 from romarr.tasks.models import Job, JobRun
 from romarr.tasks.types import (
     JobContext,
-    JobResult,
     JobStatus,
     TriggerKind,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
 
     from sqlalchemy.ext.asyncio import async_sessionmaker
     from sqlalchemy.ext.asyncio.session import AsyncSession
@@ -78,11 +76,13 @@ _logger = logging.getLogger(__name__)
 # Public type aliases
 
 
-type JobRunner = Callable[[JobContext], Awaitable[JobResult]]
-"""Structural-typed runner protocol. The dispatcher calls
-``runner(context)`` and awaits the result. The full
-:class:`Protocol` definition with attribute requirements lives
-in the RUNNER slice; for SCHED a callable is sufficient."""
+if TYPE_CHECKING:
+    from romarr.tasks.runner_protocol import JobRunner as _JobRunner
+
+type JobRunner = "_JobRunner"
+"""Structural-typed runner protocol — see
+:mod:`romarr.tasks.runner_protocol`. The dispatcher calls
+``runner.run(context)`` and awaits the result."""
 
 
 type JobRegistry = dict[str, JobRunner]
@@ -159,24 +159,50 @@ class SchedulerService:
         self._started = True
 
     async def stop(self) -> None:
-        """Shut down APScheduler. Inflight tasks are awaited up
-        to the configured graceful timeout; the SHUTDOWN slice
-        adds force-terminate after 5 s (FR-021)."""
-        if not self._started:
-            return
-        self._scheduler.shutdown(wait=False)
-        # Await inflight tasks so the test event loop sees them
-        # finish cleanly rather than leaving orphan futures.
+        """Shut down APScheduler (when started) and await inflight
+        runner tasks so the event loop sees them finish cleanly.
+        The SHUTDOWN slice adds the 5 s force-terminate (FR-021).
+
+        We always wait for inflight tasks regardless of
+        ``_started`` because :meth:`trigger` can spawn runner
+        tasks without the APScheduler bootstrap path being
+        taken (manual triggers / tests)."""
+        if self._started:
+            self._scheduler.shutdown(wait=False)
+            self._started = False
         async with self._inflight_lock:
             tasks = [
                 task for tasks in self._inflight.values() for task in tasks
             ]
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
-        self._started = False
 
     # ------------------------------------------------------------------
     # Trigger
+
+    async def await_run(self, job_run_id: int, *, timeout: float = 30.0) -> None:
+        """Block until the runner task for ``job_run_id`` has
+        completed. Useful from tests / the test endpoint when
+        the caller wants to know the runner is done before
+        returning a response.
+
+        Production callers (the API trigger endpoint) call
+        :meth:`trigger` and return immediately — they don't
+        want to hold the request open for a long-running
+        runner."""
+        deadline = asyncio.get_event_loop().time() + timeout
+        while asyncio.get_event_loop().time() < deadline:
+            async with self._inflight_lock:
+                inflight = [
+                    task
+                    for tasks in self._inflight.values()
+                    for task in tasks
+                    if not task.done()
+                    and getattr(task, "_romarr_run_id", None) == job_run_id
+                ]
+            if not inflight:
+                return
+            await asyncio.gather(*inflight, return_exceptions=True)
 
     async def trigger(
         self,
@@ -244,6 +270,9 @@ class SchedulerService:
                 ),
                 name=f"job-runner-{job_id}-{run_id}",
             )
+            # Stamp the task with the run_id so ``await_run`` can
+            # find it when the caller wants to block until done.
+            task._romarr_run_id = run_id  # type: ignore[attr-defined]
             self._inflight[job_id].add(task)
 
             def _done(
@@ -336,8 +365,16 @@ class SchedulerService:
             parameters=dict(parameters),
         )
 
+        # Accept both adapter-object runners (`runner.run(ctx)`)
+        # and plain async-callable runners (`runner(ctx)`) — the
+        # SCHED tests pass closures, the production registry
+        # passes adapter instances.
+        if hasattr(runner, "run"):
+            runner_callable: Any = runner.run
+        else:
+            runner_callable = runner
         try:
-            result = await runner(context)
+            result = await runner_callable(context)
         except asyncio.CancelledError:
             await self._finalise(
                 job_run_id=job_run_id,
