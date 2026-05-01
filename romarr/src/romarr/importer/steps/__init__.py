@@ -41,6 +41,12 @@ from romarr.importer.steps.multi_disc import (
     detect_multi_disc,
     parse_cue_referenced_files,
 )
+from romarr.importer.steps.notify import (
+    ImporterEventBus,
+    OnImportEvent,
+    OnUpgradeEvent,
+    emit_import_events,
+)
 from romarr.importer.steps.profile_gate import (
     ProfileGateResult,
     apply_profile_gate,
@@ -57,13 +63,17 @@ __all__ = [
     "FormatRule",
     "GameCandidate",
     "GameMatchResult",
+    "ImporterEventBus",
     "MoveResult",
     "MultiDiscGroup",
+    "OnImportEvent",
+    "OnUpgradeEvent",
     "ProfileGateResult",
     "RenderedDestination",
     "apply_lifecycle",
     "apply_profile_gate",
     "detect_multi_disc",
+    "emit_import_events",
     "extract",
     "hash_candidates",
     "identify_file",

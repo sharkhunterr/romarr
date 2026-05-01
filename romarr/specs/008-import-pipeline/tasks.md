@@ -660,20 +660,34 @@ ways.
 
 ### Tests
 
-- [ ] T078 [P] [NOTIFY] `tests/importer/steps/test_notify.py::test_on_import_emitted`
-      — successful import emits an `OnImport` event on the in-process
-      pub/sub channel (FR-031).
-- [ ] T079 [P] [NOTIFY] `tests/importer/steps/test_notify.py::test_on_upgrade_emitted`
-      — import that replaces an existing Dump emits `OnUpgrade` IN
-      ADDITION to `OnImport` (FR-032).
+- [X] T078 [P] [NOTIFY] `tests/importer/steps/test_notify.py::test_on_import_emitted_on_success`
+      — successful import emits an ``OnImport`` event on the
+      in-process pub/sub channel (FR-031). Plus
+      ``test_on_import_carries_coalesced_and_warning`` proving
+      the payload threads coalesced + warning fields so the
+      consumer can render "5 callers, 1 imported, 4 coalesced"-
+      style notifications.
+- [X] T079 [P] [NOTIFY] `tests/importer/steps/test_notify.py::test_on_upgrade_emitted_in_addition_to_on_import`
+      — import with ``upgraded_from_dump_id`` set emits BOTH
+      ``OnImport`` and ``OnUpgrade`` (FR-032). Plus
+      ``test_on_upgrade_not_emitted_when_no_prior_dump`` so
+      first-time imports stay quiet on the upgrade channel.
 
 ### Implementation
 
-- [ ] T080 [NOTIFY] Create `src/romarr/importer/steps/notify.py` —
-      `emit(event_name, payload)` writing onto the in-process channel
-      that the future Notifications spec consumes. Library exporters
-      (RomM push, gamelist.xml) are stubbed at this point — the channel
-      delivers the event; the consumer wiring lands in Library spec.
+- [X] T080 [NOTIFY] Create `src/romarr/importer/steps/notify.py` —
+      ``ImporterEventBus`` (in-process pub/sub) +
+      ``OnImportEvent`` / ``OnUpgradeEvent`` frozen value types +
+      async ``emit_import_events(*, bus, correlation_id,
+      library_id, game_id, release_id, dump_id, dump_path,
+      imported_via, coalesced, warning, upgraded_from_dump_id)``.
+      The bus dispatches sequentially and propagates subscriber
+      failures (no swallowing — silent failures hide real
+      notification bugs). Plus 3 mechanic tests covering multiple
+      subscribers, no-subscribers no-op, and subscriber-failure
+      propagation. Spec 011's notification subsystem will
+      register the actual Apprise / WebSocket / library-exporter
+      consumers on top of this primitive.
 
 **Checkpoint**: NOTIFY tests green; the channel emits both event types
 when applicable.
