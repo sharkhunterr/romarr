@@ -12,6 +12,7 @@ app per test with overridden settings / dependencies.
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
@@ -21,6 +22,7 @@ from romarr import __version__
 from romarr.api.error_handlers import register_error_handlers
 from romarr.api.middleware import register_cors, register_gzip
 from romarr.api.routers.auth import router as auth_router
+from romarr.api.routers.status import router as system_status_router
 from romarr.api.routers.users import router as users_router
 from romarr.config import get_settings
 from romarr.db.session import create_engine, create_sessionmaker
@@ -181,6 +183,11 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
         # cached default. Test code uses ``with create_app(database_url=…)``.
         app.state._test_database_url = database_url
 
+    # Spec 013 — Sonarr-shape /api/v3/system/status reports startTime
+    # as the moment the app was built. create_app() runs once per
+    # process, so this is functionally the process boot time.
+    app.state._start_time = datetime.now(UTC)
+
     @app.get("/", include_in_schema=False)
     async def _root() -> JSONResponse:
         return JSONResponse({"name": "romarr", "version": __version__})
@@ -196,6 +203,8 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     register_error_handlers(app)
     app.include_router(auth_router)
     app.include_router(users_router)
+    # Spec 013 — Sonarr-compat /api/v3/system/status (FR-031, US1).
+    app.include_router(system_status_router)
     app.include_router(providers_router)
     app.include_router(field_priority_router)
     app.include_router(refresh_router)

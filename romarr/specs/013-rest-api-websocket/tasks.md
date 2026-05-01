@@ -229,12 +229,19 @@ shuts down cleanly.
 
 ### Tests (one suite per router)
 
-- [ ] T036 [P] [ROUTERS] `tests/api/routers/test_status.py::test_sonarr_shape`
-      — `GET /api/v3/system/status`; assert response carries
-      version / instanceName / urlBase / osName / runtimeVersion /
-      appData / startTime / isProduction (FR-031, SC-001).
-- [ ] T037 [P] [ROUTERS] `tests/api/routers/test_status.py::test_unauthenticated_ok`
-      — no auth; HTTP 200 (public per FR-004).
+- [X] T036 [P] [ROUTERS] `tests/api/routers/test_status.py::test_status_authenticated_returns_full_sonarr_shape`
+      — `GET /api/v3/system/status` with a session cookie returns
+      the v3 baseline (version / instanceName / urlBase / osName /
+      runtimeVersion / appData / startTime / isProduction) plus
+      the v4 additions (databaseType / databaseVersion /
+      migrationVersion / runtimeName) per the spec 013
+      clarification — emit the UNION (FR-031, SC-001).
+- [X] T037 [P] [ROUTERS] `tests/api/routers/test_status.py::test_status_unauthenticated_returns_minimal_shape`
+      — no auth; HTTP 200 returning `{version, isProduction}`
+      only. Companion `test_status_public_tier_does_not_leak_topology`
+      pins that no v3/v4 field beyond those two leaks to
+      unauthenticated scanners (FR-004 + auth-tiered
+      clarification).
 - [ ] T038 [P] [ROUTERS] `tests/api/routers/test_log.py::test_paginated_log_entries`
       — GET `/api/v3/system/log?page=1&pageSize=10`; canonical
       envelope.
@@ -283,8 +290,15 @@ shuts down cleanly.
 
 ### Implementation
 
-- [ ] T053 [ROUTERS] Create
-      `src/romarr/api/routers/status.py` — Sonarr-shape JSON.
+- [X] T053 [ROUTERS] Create
+      `src/romarr/api/routers/status.py` — Sonarr-shape JSON
+      mounted under `/api/v3/system/status`. Tiered by auth via
+      `get_current_principal`: public callers get
+      `{version, isProduction}`; authenticated callers (any role)
+      get the v3+v4 union. `app.state._start_time` is stamped
+      during `create_app()` so the `startTime` field reflects the
+      process boot moment. `databaseType` derived from the
+      configured `database_url` (sqLite / postgreSQL).
 - [ ] T054 [P] [ROUTERS] Create `src/romarr/api/routers/log.py` —
       paginated log reader + file listing + download.
 - [ ] T055 [P] [ROUTERS] Create
