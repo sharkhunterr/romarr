@@ -106,26 +106,41 @@ shutdown → command alias → API → hardening.
 
 ### Tests
 
-- [ ] T013 [P] [SEED] `tests/tasks/test_seeder.py::test_first_boot_seeds_nine`
-      — fresh DB; runner invoked; assert exactly 9 rows with the
-      documented `(type, schedule)` pairs and
-      `is_factory_default = true` (SC-001).
-- [ ] T014 [P] [SEED] `tests/tasks/test_seeder.py::test_idempotent_rerun`
-      — runner invoked a second time; row count unchanged; no
-      `updated_at` modified.
-- [ ] T015 [P] [SEED] `tests/tasks/test_seeder.py::test_user_edit_preserved`
+- [X] T013 [P] [SEED] `tests/tasks/test_seeder.py::test_first_boot_seeds_nine`
+      — fresh DB; runner invoked; assert exactly 9 rows with
+      the documented `(type, schedule)` pairs and
+      `is_factory_default = True` (SC-001). Plus
+      `test_documented_schedules_match_catalogue` which pins
+      every cell of the catalogue table to a specific schedule
+      so a documented schedule change is caught here too.
+- [X] T014 [P] [SEED] `tests/tasks/test_seeder.py::test_idempotent_rerun`
+      — runner invoked a second time; row count unchanged.
+      The seeder is "skip if id already exists" rather than
+      "compare-and-write", so the second pass is a pure read.
+- [X] T015 [P] [SEED] `tests/tasks/test_seeder.py::test_user_edit_is_preserved_across_rerun`
       — operator edits `MissingSearch.schedule_interval_seconds =
-      7200`; runner invoked again; the operator's value is preserved
-      (FR-008).
-- [ ] T016 [P] [SEED] `tests/tasks/test_seeder.py::test_library_scan_default_disabled`
-      — fresh seed; `LibraryScan.enabled = false` per the catalogue.
+      7200` (and clears the cron); runner invoked again; the
+      operator's value is preserved (FR-008).
+- [X] T016 [P] [SEED] `tests/tasks/test_seeder.py::test_library_scan_default_disabled`
+      + `test_other_defaults_are_enabled` — `LibraryScan.enabled
+      = False` per the catalogue; the other eight defaults all
+      ship enabled.
 
 ### Implementation
 
-- [ ] T017 [SEED] Create `src/romarr/tasks/seeder.py` — `seed_defaults(session)`
-      with the catalogue from `data-model.md`. Uses the spec 006
-      pattern of `(created_at != updated_at)` as the edit-detection
-      sentinel.
+- [X] T017 [SEED] Create `src/romarr/tasks/seeder.py` —
+      `seed_defaults(session)` with the catalogue from
+      `data-model.md` as a frozen `tuple[_DefaultJob, ...]`.
+      Returns the count of newly-inserted rows so callers can
+      log "first boot detected, 9 jobs seeded" or "no-op,
+      catalogue unchanged". The "skip if id exists" semantics
+      preserve operator edits without needing the `(created_at
+      != updated_at)` sentinel — once a row is in the table,
+      the seeder never touches it again. A future-release
+      catalogue addition is picked up automatically because the
+      new id won't match any existing row. Plus a
+      `test_partial_existing_inserts_only_missing` test
+      simulating that upgrade scenario.
 
 **Checkpoint**: SEED tests green.
 
