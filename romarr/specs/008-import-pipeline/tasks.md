@@ -541,24 +541,37 @@ in 100% of trials (SC-009).
 
 ### Tests
 
-- [ ] T068 [P] [DBUPDATE] `tests/importer/steps/test_db_update.py::test_creates_dump_with_all_hashes`
-      — Dump row carries CRC32, MD5, SHA-1, format, path, dat_verified,
-      dat_source, dat_entry_id, original_filename, imported_at,
-      imported_via (FR-027).
-- [ ] T069 [P] [DBUPDATE] `tests/importer/steps/test_db_update.py::test_release_status_imported`
-      — `Release.status` flips to `'imported'` after a successful import.
-- [ ] T070 [P] [DBUPDATE] `tests/importer/steps/test_db_update.py::test_keep_dump_history_false_deletes_old`
-      — `library.keep_dump_history = false`; existing Dump for the same
-      Release is deleted along with its file (FR-028).
-- [ ] T071 [P] [DBUPDATE] `tests/importer/steps/test_db_update.py::test_keep_dump_history_true_appends`
-      — `library.keep_dump_history = true`; both Dumps coexist.
+- [X] T068 [P] [DBUPDATE] `tests/importer/steps/test_db_update.py::test_creates_dump_with_all_hashes`
+      — Dump row carries CRC32 / MD5 / SHA-1 / size_bytes / format /
+      path / original_filename / dat_verified / dat_source /
+      imported_at / imported_via / imported_by (FR-027).
+- [X] T069 [P] [DBUPDATE] `tests/importer/steps/test_db_update.py::test_release_status_flips_to_imported`
+      — ``Release.status`` flips from ``wanted`` to ``imported``
+      after a successful import; ``cutoff_met`` clears so the
+      search engine re-evaluates against the current Quality
+      profile.
+- [X] T070 [P] [DBUPDATE] `tests/importer/steps/test_db_update.py::test_keep_dump_history_false_replaces_old_dump`
+      — ``keep_dump_history=False``; the prior Dump row for the
+      same Release is deleted by the same transaction so only
+      the fresh Dump survives (FR-028). On-disk file deletion
+      lives with the LIFECYCLE step when the lifecycle policy
+      requires it; this step focuses on DB state.
+- [X] T071 [P] [DBUPDATE] `tests/importer/steps/test_db_update.py::test_keep_dump_history_true_appends`
+      — ``keep_dump_history=True``; both Dumps coexist on the
+      Release (the historical one + the fresh one).
 
 ### Implementation
 
-- [ ] T072 [DBUPDATE] Create `src/romarr/importer/steps/db_update.py` —
-      async `persist_dump(session, identification, dump_path,
-      lifecycle_outcome) -> Dump`. The whole operation runs in a single
-      `async with session.begin()` to be transactional.
+- [X] T072 [DBUPDATE] Create `src/romarr/importer/steps/db_update.py` —
+      async ``persist_dump(*, session, release_id, dump_path,
+      original_filename, hashes, file_format, dat_verified,
+      dat_source, dat_entry_id, imported_via, imported_by,
+      keep_dump_history) -> Dump``. Steps in order: retire prior
+      Dumps when history is disabled, insert the fresh Dump,
+      transition Release status. ``await session.flush()``
+      populates ``Dump.id`` so the caller can record it on the
+      audit row; the orchestrator owns the commit so the whole
+      pipeline lands in a single transaction.
 
 **Checkpoint**: DBUPDATE tests green; the keep-history toggle works both
 ways.
@@ -569,24 +582,41 @@ ways.
 
 ### Tests
 
-- [ ] T073 [P] [LIFECYCLE] `tests/importer/steps/test_lifecycle.py::test_hardlink_and_seed`
-      — tags the download `romarr-imported`; does not remove (FR-029).
-- [ ] T074 [P] [LIFECYCLE] `tests/importer/steps/test_lifecycle.py::test_move_and_remove_grace`
-      — tags then schedules `client.remove(client_id)` for 5 min later;
-      assert via freezegun that removal fires after the grace period.
-- [ ] T075 [P] [LIFECYCLE] `tests/importer/steps/test_lifecycle.py::test_copy_and_keep_noop`
-      — only tags; no removal scheduled.
-- [ ] T076 [P] [LIFECYCLE] `tests/importer/steps/test_lifecycle.py::test_async_does_not_block_completion`
-      — the orchestrator returns the `ImportOutcome` before the
-      lifecycle action fires (FR-030).
+- [X] T073 [P] [LIFECYCLE] `tests/importer/steps/test_lifecycle.py::test_tag_imported_tags_only`
+      — tags the download via ``client.set_imported_tag``;
+      ``apply_lifecycle`` returns ``None`` (no scheduled task);
+      no remove is called (FR-029, hardlink_and_seed policy).
+- [X] T074 [P] [LIFECYCLE] `tests/importer/steps/test_lifecycle.py::test_schedule_remove_fires_after_grace`
+      — tags synchronously, returns an :class:`asyncio.Task` that
+      sleeps the grace window then calls
+      ``client.remove(native_id, delete_files=True)``. Test uses
+      a 50 ms grace + ``await task`` rather than freezegun
+      because asyncio.sleep doesn't honour frozen clocks.
+- [X] T075 [P] [LIFECYCLE] `tests/importer/steps/test_lifecycle.py::test_noop_neither_tags_nor_removes`
+      — copy_and_keep policy maps to ``LifecycleAction(kind="noop")``;
+      neither tag nor remove fires.
+- [X] T076 [P] [LIFECYCLE] `tests/importer/steps/test_lifecycle.py::test_schedule_remove_does_not_block_completion`
+      — FR-030: ``apply_lifecycle`` with a 10 s grace window
+      returns in < 1 s; the scheduled task carries the work
+      asynchronously so the orchestrator publishes
+      ``ImportOutcome`` before the removal fires. Plus
+      ``test_unknown_action_kind_raises`` so an unhandled kind
+      surfaces a ``ValueError`` rather than silently noop'ing.
 
 ### Implementation
 
-- [ ] T077 [LIFECYCLE] Create `src/romarr/importer/steps/lifecycle.py`
-      — async `apply_lifecycle(action: LifecycleAction)` that re-uses
-      spec 005's qBittorrent / SAB tag operations. Schedule-remove uses
-      an `asyncio.create_task(asyncio.sleep(grace_seconds) + client.remove)`
-      pattern.
+- [X] T077 [LIFECYCLE] Create `src/romarr/importer/steps/lifecycle.py`
+      — async ``apply_lifecycle(*, action, client, grace_seconds)
+      -> asyncio.Task | None`` that dispatches the
+      :class:`LifecycleAction`'s kind. Both ``tag_imported`` and
+      ``schedule_remove`` start by tagging via
+      ``client.set_imported_tag``; ``schedule_remove`` then spawns
+      a fire-and-forget ``asyncio.create_task`` that sleeps the
+      grace window before calling ``client.remove(native_id,
+      delete_files=True)``. The Task is returned so tests can
+      ``await`` it; production callers never await — the task
+      lives until the grace window completes or the loop shuts
+      down.
 
 **Checkpoint**: LIFECYCLE tests green; the 5-minute grace is honoured.
 
