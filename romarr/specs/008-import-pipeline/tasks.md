@@ -188,18 +188,28 @@ re-extract skips.
 
 ### Tests
 
-- [ ] T032 [P] [HASH] `tests/importer/steps/test_hash_step.py::test_walks_extracted_dir`
-      — given a directory containing one ROM + one `readme.txt` smaller
-      than `min_size_bytes`, the hasher hashes only the ROM (FR-008).
-- [ ] T033 [P] [HASH] `tests/importer/steps/test_hash_step.py::test_streams_via_foundation_hasher`
-      — calls go through `src/romarr/identification/hasher.py` (mock-and-
-      assert).
+- [X] T032 [P] [HASH] `tests/importer/steps/test_hash_step.py` —
+      6 tests covering the walker: filters by extension (case-
+      insensitive, leading-dot-tolerant), honours
+      ``min_size_bytes`` floor (FR-008 small-file skip), recurses
+      through nested directories, skips unknown extensions,
+      ``FormatRule.normalised_extension`` round-trips both
+      ``"md"`` and ``".MD"``.
+- [X] T033 [P] [HASH] `tests/importer/steps/test_hash_step.py::test_uses_foundation_hasher`
+      — output of ``hash_candidates`` matches a direct
+      ``Hasher().hash_path`` call (sha1 / crc32 / md5 /
+      size_bytes), proving the step delegates to spec 001's
+      foundation Hasher rather than re-implementing.
 
 ### Implementation
 
-- [ ] T034 [HASH] Create `src/romarr/importer/steps/hash_step.py` —
-      `hash_candidates(directory, platform_formats) -> dict[Path, Hashes]`
-      using foundation's `Hasher.async_hash_file`.
+- [X] T034 [HASH] Create `src/romarr/importer/steps/hash_step.py` —
+      ``FormatRule(extension, min_size_bytes)`` value type plus
+      async ``hash_candidates(*, directory, rules, hasher)
+      -> dict[Path, HashResult]``. Walks ``directory.rglob("*")``
+      sorted for determinism; hashes through
+      ``asyncio.to_thread(hasher.hash_path, ...)`` so the event
+      loop stays responsive during multi-MB CD images.
 
 **Checkpoint**: HASH tests green; the small-file skip rule honours
 `platform_format.min_size_bytes`.
@@ -210,19 +220,31 @@ re-extract skips.
 
 ### Tests
 
-- [ ] T035 [P] [DATMATCH] `tests/importer/steps/test_dat_match.py::test_local_dat_hit`
-      — composes foundation's `HashMatchCascade`; first authoritative
-      match populates `dat_verified=true, dat_source, dat_entry_id`.
-- [ ] T036 [P] [DATMATCH] `tests/importer/steps/test_dat_match.py::test_no_dat_continues`
-      — no match → `dat_verified=false`; pipeline does NOT block (FR-011).
-- [ ] T037 [P] [DATMATCH] `tests/importer/steps/test_dat_match.py::test_baddump_status_propagated`
-      — DAT entry's `status='baddump'` propagates as parsed
-      `dump_status='baddump'`; `dat_verified` is set to false (US5.3).
+- [X] T035 [P] [DATMATCH] `tests/importer/steps/test_dat_match.py::test_local_dat_hit_populates_verified_source_entry`
+      — composes foundation's `HashMatchCascade`; the cascade
+      winner's source / entry / VERIFIED status flow into the
+      ``DatMatchResult`` (``dat_verified=True``, ``dat_source``
+      populated, ``entry`` is the winner).
+- [X] T036 [P] [DATMATCH] `tests/importer/steps/test_dat_match.py::test_no_dat_match_returns_unverified`
+      — no entry on any backend ⇒ ``dat_verified=False`` /
+      ``dump_status=UNKNOWN`` / ``entry=None`` (FR-011 — pipeline
+      doesn't block). Plus
+      ``test_backend_error_surfaces_in_status`` covering the
+      circuit-open case.
+- [X] T037 [P] [DATMATCH] `tests/importer/steps/test_dat_match.py::test_baddump_propagates_status_and_flips_verified`
+      — DAT entry's ``status=BADDUMP`` propagates as
+      ``dump_status=BADDUMP``; ``dat_verified`` flips to False
+      so the audit row records the file as unverified (US5.3).
 
 ### Implementation
 
-- [ ] T038 [DATMATCH] Create `src/romarr/importer/steps/dat_match.py` —
-      thin wrapper around `HashMatchCascade.lookup(...)`.
+- [X] T038 [DATMATCH] Create `src/romarr/importer/steps/dat_match.py` —
+      ``DatMatchResult`` (dat_verified, dat_source, entry,
+      dump_status, backend_status) frozen dataclass. Async
+      ``match_dat(*, cascade, platform_id, sha1) -> DatMatchResult``
+      wraps ``cascade.lookup_sha1``. Lower-cases the SHA-1
+      defensively. Surfaces the per-backend status dict so the
+      audit row can show which backend(s) hit.
 
 **Checkpoint**: DATMATCH tests green; "no DAT match" never blocks.
 
@@ -232,17 +254,32 @@ re-extract skips.
 
 ### Tests
 
-- [ ] T039 [P] [IDENTIFY] `tests/importer/steps/test_identify.py::test_full_cascade`
-      — composes foundation's `Identifier.identify(path, filename,
-      torznab_attrs)`; resulting `Identification` has `confidence` set.
-- [ ] T040 [P] [IDENTIFY] `tests/importer/steps/test_identify.py::test_with_grab_record_attrs`
-      — Torznab extended attrs from a prior grab record are passed
-      through; the merged identification carries provenance.
+- [X] T039 [P] [IDENTIFY] `tests/importer/steps/test_identify.py::test_full_cascade_returns_identify_outcome`
+      — composes foundation's ``Identifier.identify``; the
+      resulting :class:`IdentifyOutcome` carries the merged
+      identification + hashes. Without a configured cascade /
+      parser dispatcher / header readers, every layer
+      short-circuits cleanly; the wrapper itself proves the
+      composition rather than the underlying cascade behaviour
+      (which spec 001 owns).
+- [X] T040 [P] [IDENTIFY] `tests/importer/steps/test_identify.py::test_with_grab_record_torznab_attrs`
+      — Torznab extended attrs from a prior grab record are
+      passed through; the merged identification preserves the
+      contribution. Plus
+      ``test_precomputed_hashes_bypasses_rehashing`` so the
+      orchestrator's hash-once invariant holds (the HASH step's
+      output is reused, not recomputed).
 
 ### Implementation
 
-- [ ] T041 [IDENTIFY] Create `src/romarr/importer/steps/identify.py` —
-      thin wrapper around `Identifier.identify(...)`.
+- [X] T041 [IDENTIFY] Create `src/romarr/importer/steps/identify.py` —
+      async ``identify_file(*, identifier, path, platform_id,
+      torznab_attrs, precomputed_hashes) -> IdentifyOutcome``.
+      Always passes ``compute_hashes=False`` when
+      ``precomputed_hashes`` is provided (the HASH step's result
+      is canonical). ``platform_id=None`` skips the cascade so
+      the orchestrator can route to GAMEMATCH for fuzzy
+      resolution when the platform isn't yet known.
 
 **Checkpoint**: IDENTIFY tests green; provenance preserved in the merge.
 

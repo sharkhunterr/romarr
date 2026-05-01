@@ -81,7 +81,11 @@ def render_destination(
     subfolder when ``profile.multi_disc_subfolder`` is true. Pass
     ``1`` for single-disc imports.
     """
-    template = profile.template
+    template = getattr(profile, "template", "")
+    if not isinstance(template, str) or not template:
+        raise ValueError(
+            "naming profile is missing a non-empty 'template' attribute"
+        )
     platform_subfolder = bool(getattr(profile, "platform_subfolder", True))
     multi_disc_subfolder = bool(
         getattr(profile, "multi_disc_subfolder", True)
