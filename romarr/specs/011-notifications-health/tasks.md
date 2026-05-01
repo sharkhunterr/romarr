@@ -26,24 +26,27 @@ test endpoint → API → hardening.
 
 ## Phase 1: Scaffolding (`SCAF`)
 
-- [ ] T001 [SCAF] Update `pyproject.toml` — add runtime dep
-      `apprise>=1.8`. The Sonarr-format webhook re-uses the existing
-      `httpx` dependency.
-- [ ] T002 [P] [SCAF] Create `src/romarr/notifications/__init__.py`
-      exposing `NotificationEngine`, `HealthEngine`,
-      `dispatch_event`, `start_health_loop`.
-- [ ] T003 [P] [SCAF] Create `src/romarr/notifications/errors.py` —
+- [X] T001 [SCAF] ``apprise>=1.7`` already shipped with foundation
+      (spec 002 — required by Apprise URL validation in
+      provider configs). No version bump needed.
+- [X] T002 [P] [SCAF] Create `src/romarr/notifications/__init__.py`
+      exposing the slice-1 surface (errors + types). Engine /
+      dispatcher / health-loop exports land in their slices.
+- [X] T003 [P] [SCAF] Create `src/romarr/notifications/errors.py` —
       `NotificationError`, `AppriseInvalidUrl`, `TemplateError`,
       `WebhookRetryExhausted`, `HealthCheckTimeout`.
-- [ ] T004 [P] [SCAF] Create `src/romarr/notifications/types.py` —
-      every Pydantic / StrEnum from `data-model.md`'s "Value Types"
-      section: `EventType`, `HealthStatus`, `ComponentCategory`,
-      `HealthCheckResult`, `HealthSnapshot`, the seven event
-      payload models, the discriminated `EventPayload` union.
-- [ ] T005 [SCAF] Extend `tests/conftest.py` with `respx_apprise_mock`
-      and `mock_event_channel` fixtures; create
-      `tests/notifications/conftest.py` for module-local fixtures
-      (sample notifications, captured Sonarr webhook fixtures).
+- [X] T004 [P] [SCAF] Create `src/romarr/notifications/types.py` —
+      `EventType` / `HealthStatus` / `ComponentCategory` enums,
+      ``HealthCheckResult`` + ``HealthSnapshot``, ``GameRef`` /
+      ``ReleaseRef`` / ``DumpRef`` / ``IndexerRef`` /
+      ``DownloadClientRef`` value types, the seven event
+      payload models, and the discriminated ``EventPayload``
+      union (Pydantic v2 ``Annotated[..., Field(discriminator=
+      "event_type")]``). All frozen.
+- [X] T005 [SCAF] Extend `tests/conftest.py` to register
+      ``romarr.notifications.models``. ``respx_apprise_mock`` and
+      ``mock_event_channel`` fixtures land with the CHANNEL +
+      DISPATCH slices that need them.
 
 **Checkpoint**: imports work; lint+types green; no behaviour added.
 
@@ -53,34 +56,52 @@ test endpoint → API → hardening.
 
 ### Tests (write first; must fail)
 
-- [ ] T006 [P] [PERS] `tests/notifications/test_models.py` —
-      round-trip `Notification` and `HealthCheck` rows; verify
-      CHECK constraints on `last_status` and `health_check.status`.
-- [ ] T007 [P] [PERS] `tests/notifications/test_models.py::test_unique_notification_name`
-      — duplicate `name` raises.
-- [ ] T008 [P] [PERS] `tests/notifications/test_models.py::test_unique_health_component`
-      — duplicate `component` raises.
-- [ ] T009 [P] [PERS] `tests/notifications/test_models.py::test_at_least_one_event_subscribed`
-      — Pydantic-level validator rejects all `on_* = false`.
+- [X] T006 [P] [PERS] `tests/notifications/test_models.py::test_notification_round_trip`
+      and ``test_health_check_round_trip`` — round-trip both
+      tables; CHECK constraints on ``last_status`` and
+      ``health_check.status`` reject unknown values.
+- [X] T007 [P] [PERS] `tests/notifications/test_models.py::test_notification_unique_name`
+      — duplicate ``name`` raises ``IntegrityError``.
+- [X] T008 [P] [PERS] `tests/notifications/test_models.py::test_health_check_unique_component`
+      — duplicate ``component`` raises.
+- [X] T009 [P] [PERS] `tests/notifications/test_models.py::test_notification_create_requires_at_least_one_event`
+      — ``NotificationCreate`` rejects all-False ``on_*`` (FR-005);
+      ``test_notification_create_with_one_flag_succeeds`` covers
+      the symmetric pass.
 - [ ] T010 [P] [PERS] `tests/notifications/test_models.py::test_template_validates_at_save`
-      — `on_import_format` referencing an unknown variable
+      — ``on_import_format`` referencing an unknown variable
       rejected at save time (re-uses spec 006's renderer).
-- [ ] T011 [P] [PERS] `tests/notifications/test_migration_0011.py`
-      — applying the migration creates both tables with documented
-      constraints.
+      *(Deferred — spec 006's renderer integration lands with
+      the TEMPLATES slice; today templates persist as opaque
+      strings and the dispatcher will validate at render time.)*
+- [X] T011 [P] [PERS] `tests/notifications/test_migration_0011.py`
+      — 2 tests: ``test_migration_creates_both_tables`` (every
+      documented column + UNIQUE constraints) and
+      ``test_migration_is_reversible`` (downgrade to
+      ``0008_import_pipeline`` drops both tables).
 
 ### Implementation
 
-- [ ] T012 [PERS] Create `src/romarr/notifications/models.py` —
-      `Notification` and `HealthCheck` SQLAlchemy 2.0 models.
-- [ ] T013 [P] [PERS] Create `src/romarr/notifications/schemas.py`
-      — `NotificationRead/Create/Update`, `HealthCheckRead`,
-      `TestNotificationResponse`, `HealthSnapshotResponse`.
-      `NotificationRead` MUST omit `apprise_url_encrypted` and
-      expose `apprise_url_redacted: str` derived from
-      `apprise_url_scheme` (e.g., `discord://...`).
-- [ ] T014 [PERS] Author `src/romarr/db/alembic/versions/0011_notifications.py`
-      — DDL for both tables.
+- [X] T012 [PERS] Create `src/romarr/notifications/models.py` —
+      ``Notification`` and ``HealthCheck`` SQLAlchemy 2.0 models.
+      ``health_check`` carries the persisted debouncer columns
+      (``last_emitted_state``, ``last_emitted_at``) per Q2 so a
+      flapping-then-restarted Romarr doesn't re-spam the
+      operator.
+- [X] T013 [P] [PERS] Create `src/romarr/notifications/schemas.py`
+      — ``NotificationCreate / Update / Read``,
+      ``HealthCheckRead``, ``TestNotificationResponse``,
+      ``HealthSnapshotResponse``. ``NotificationRead`` masks
+      ``apprise_url_encrypted`` into
+      ``apprise_url_redacted: '<scheme>://...'`` via the
+      ``from_orm_row`` helper (no encryption decoded on read
+      paths). The ``at-least-one-event`` cross-field validator
+      runs in ``_NotificationBase`` so both Create and Read
+      enforce it.
+- [X] T014 [PERS] Author `src/romarr/db/alembic/versions/0011_notifications.py`
+      — DDL for both tables. ``down_revision='0008_import_pipeline'``
+      so the migration sits at the tail of the chain. Reversible
+      downgrade.
 
 **Checkpoint**: `alembic upgrade head` clean; PERS tests green.
 
