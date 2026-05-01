@@ -350,4 +350,63 @@ def _notify_type_for_event(event: BaseModel) -> str:
     return "info"
 
 
-__all__ = ["DispatchOutcome", "dispatch_to_notification"]
+async def trigger_test(
+    notification: Notification,
+    *,
+    send_apprise: _AppriseSender = default_apprise_send,
+    send_webhook: _WebhookSender = default_send_webhook,
+) -> DispatchOutcome:
+    """Synthesize an :class:`OnImportPayload` with placeholder
+    fields and run it through :func:`dispatch_to_notification`.
+
+    The synthetic event uses fixed sentinel values so the
+    operator can recognise it ("Test Game", "Test Release") and
+    so the test endpoint produces a deterministic body. The
+    notification's filters (``enabled``, event-flag, tags) are
+    bypassed: the operator-pressed test button asserts "send
+    one regardless of subscription state" — that's the whole
+    point of the endpoint (FR-016).
+
+    Returns the same :class:`DispatchOutcome` shape as a real
+    event so the API can surface ``success`` and
+    ``error_message`` directly.
+    """
+    from romarr.notifications.types import (  # local to avoid cycle
+        DumpRef,
+        GameRef,
+        OnImportPayload,
+        ReleaseRef,
+    )
+
+    payload = OnImportPayload(
+        game=GameRef(
+            id=0,
+            title="Test Game",
+            platform_slug="test",
+            platform_name="Test Platform",
+            igdb_id=None,
+            tags=(),
+        ),
+        release=ReleaseRef(
+            id=0,
+            name="Test Release",
+            region="USA",
+            naming_convention="no-intro",
+        ),
+        dump=DumpRef(path="/test/path", dat_verified=True),
+    )
+
+    # Bypass the filter chain so a notification that hasn't
+    # subscribed to OnImport (or whose tags don't intersect)
+    # still receives the test message — the operator pressed
+    # "Test" and expects something to land.
+    delivered = await _send_and_record(
+        notification=notification,
+        event=payload,
+        send_apprise=send_apprise,
+        send_webhook=send_webhook,
+    )
+    return DispatchOutcome(delivered=delivered, skip_reason=None)
+
+
+__all__ = ["DispatchOutcome", "dispatch_to_notification", "trigger_test"]

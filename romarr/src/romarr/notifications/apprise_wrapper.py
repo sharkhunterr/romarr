@@ -99,4 +99,13 @@ async def send(
     )
 
 
-__all__ = ["AppriseSendResult", "send"]
+def validate_url(url: str) -> None:
+    """Public alias of :func:`_validate_url` for the API layer.
+
+    Raises :class:`AppriseInvalidUrl` if Apprise rejects the URL.
+    The Apprise object built during validation is discarded — the
+    API layer only needs the success/failure bit."""
+    _validate_url(url)
+
+
+__all__ = ["AppriseSendResult", "send", "validate_url"]

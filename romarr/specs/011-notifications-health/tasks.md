@@ -395,20 +395,23 @@ overall status.
 
 ### Tests
 
-- [ ] T058 [P] [TESTEP] `tests/notifications/test_test_endpoint.py::test_synthetic_event_flows_through_dispatcher`
+- [X] T058 [P] [TESTEP] `tests/notifications/api/test_notification_endpoints.py::test_test_endpoint_flows_through_dispatcher`
       — POST `/api/v3/notification/{id}/test`; the dispatcher
       receives a synthetic `OnImportPayload` with placeholder
       data ("Test Game", "Test Release"); the configured Apprise
-      URL receives it.
-- [ ] T059 [P] [TESTEP] `tests/notifications/test_test_endpoint.py::test_returns_structured_error`
-      — Apprise URL points to an unreachable mock; the response
+      URL (mocked via `apprise.notify`) receives it.
+- [X] T059 [P] [TESTEP] `tests/notifications/api/test_notification_endpoints.py::test_test_endpoint_returns_structured_error`
+      — Apprise transport raises `ConnectionError`; the response
       carries `success=false` and a structured error message.
+      Plus `test_test_endpoint_requires_admin` for FR-024b.
 
 ### Implementation
 
-- [ ] T060 [TESTEP] Implement the synthetic-event helper in
+- [X] T060 [TESTEP] Implement the synthetic-event helper in
       `src/romarr/notifications/dispatcher.py::trigger_test(notification)`
-      and route it from `src/romarr/notifications/api/notifications.py::POST_test`.
+      and route it from `src/romarr/notifications/api/notifications.py::test_notification`.
+      The synthetic event bypasses the filter chain (FR-016 —
+      "send one regardless of subscription state").
 
 **Checkpoint**: test endpoint works for at least Discord and ntfy
 (mock-tested).
@@ -419,46 +422,59 @@ overall status.
 
 ### Tests
 
-- [ ] T061 [P] [API] `tests/notifications/api/test_notification_endpoints.py::test_full_crud`
+- [X] T061 [P] [API] `tests/notifications/api/test_notification_endpoints.py::test_full_crud_round_trip`
       — POST/GET/PUT/DELETE round-trip on
-      `/api/v3/notification`. GET responses NEVER expose the
+      `/api/v3/notification`. GET responses never expose the
       plaintext Apprise URL (FR-024).
-- [ ] T062 [P] [API] `tests/notifications/api/test_notification_endpoints.py::test_get_returns_redacted_url`
-      — response includes `apprise_url_redacted = "discord://..."`
+- [X] T062 [P] [API] `tests/notifications/api/test_notification_endpoints.py::test_get_returns_redacted_url`
+      — response includes `apprise_url_redacted = "<scheme>://..."`
       and never the full URL.
-- [ ] T063 [P] [API] `tests/notifications/api/test_notification_endpoints.py::test_invalid_apprise_url_400`
+- [X] T063 [P] [API] `tests/notifications/api/test_notification_endpoints.py::test_invalid_apprise_url_returns_400`
       — POST with a bad URL ⇒ HTTP 400 with the underlying
-      Apprise message (FR-004).
-- [ ] T064 [P] [API] `tests/notifications/api/test_health_endpoint.py::test_unauthenticated_ok`
-      — GET `/api/v3/health` without auth ⇒ HTTP 200 with the
-      snapshot. Response is sanitized (no internal error
-      details).
-- [ ] T065 [P] [API] `tests/notifications/api/test_health_endpoint.py::test_admin_sees_full_messages`
+      Apprise message (FR-004). Plus
+      `test_bad_template_rejected_at_save` for FR-013.
+- [X] T064 [P] [API] `tests/notifications/api/test_health_endpoint.py::test_unauthenticated_health_returns_status_only`
+      — GET `/api/v3/health` without auth ⇒ HTTP 200 with only
+      `{status: "ok"|"warning"|"error"}` (FR-024a). Plus
+      `test_unauthenticated_empty_db_returns_ok` for the fresh-
+      DB edge case.
+- [X] T065 [P] [API] `tests/notifications/api/test_health_endpoint.py::test_admin_sees_full_breakdown`
       — same endpoint with admin auth ⇒ full structured `message`
-      fields visible.
-- [ ] T066 [P] [API] `tests/notifications/api/test_health_refresh_admin_only.py`
-      — `POST /api/v3/health/refresh`: admin → 200; user → 403;
+      fields + `by_category` breakdown visible. Plus
+      `test_readonly_user_also_sees_full_breakdown` for the
+      FR-024a clarification (any auth role, not admin only).
+- [X] T066 [P] [API] `tests/notifications/api/test_health_refresh_admin_only.py`
+      — `POST /api/v3/health/refresh`: admin → 200 (falls back
+      to persisted snapshot when no engine wired); user → 403;
       readonly → 403; unauthenticated → 401.
-- [ ] T067 [P] [API] `tests/notifications/api/test_webhook_payloads_doc.py`
+- [X] T067 [P] [API] `tests/notifications/api/test_webhook_payloads_doc.py`
       — `GET /api/v3/notification/webhook-payloads.md` returns
-      the documented schemas in Markdown form.
+      the documented schemas as `text/markdown`; reference
+      keys (`series.title`, `tvdbId`, `FR-006a`) present.
 
 ### Implementation
 
-- [ ] T068 [API] Create `src/romarr/notifications/api/notifications.py`
+- [X] T068 [API] Create `src/romarr/notifications/api/notifications.py`
       — FastAPI router for `/api/v3/notification*` and
-      `/api/v3/notification/{id}/test`.
-- [ ] T069 [P] [API] Create
+      `/api/v3/notification/{id}/test`. Mutating endpoints +
+      `/test` admin-gated (FR-024b); reads accessible to any
+      authenticated user.
+- [X] T069 [P] [API] Create
       `src/romarr/notifications/api/health.py` — `GET
-      /api/v3/health` (unauthenticated; sanitized response unless
-      admin-authenticated) and `POST /api/v3/health/refresh`
-      (admin-only via `require_role('admin')`).
-- [ ] T070 [P] [API] Create
+      /api/v3/health` tiered (anonymous → status only, any auth
+      role → full breakdown, FR-024a) and `POST /api/v3/health/refresh`
+      admin-only (FR-024b).
+- [X] T070 [P] [API] Create
       `src/romarr/notifications/api/webhook_payloads_md.py`
-      — static doc generator returning the documented Sonarr
-      v3-format schemas as Markdown.
-- [ ] T071 [API] Wire all three routers into the application
-      factory.
+      — serves the FR-006a cross-walk doc from
+      `docs/api/notification/webhook-payloads.md` as
+      `text/markdown` (lru_cached at module scope; the doc
+      ships with the binary).
+- [X] T071 [API] Wire all three routers into the application
+      factory (`src/romarr/api/app.py`). The webhook-payloads
+      router is mounted before the CRUD router so the
+      `/webhook-payloads.md` path doesn't get pattern-matched
+      as a `{notification_id}` integer.
 
 **Checkpoint**: API tests green; the unauthenticated health
 endpoint redacts; the refresh endpoint is admin-only.
@@ -571,15 +587,15 @@ WEBHOOK + CHANNEL split cleanly across them on Day 2.
 
 ## Phase: Clarification Tasks (Session 2026-04-29)
 
-- [ ] CL001 [P] [US4] Implement tiered `GET /api/v3/health` response in `src/romarr/notifications/health_api.py` — public callers receive ONLY `{status: "ok" | "warning" | "error"}` + HTTP 200; authenticated callers (any role; `read` scope sufficient) receive the full per-component breakdown with messages (FR-024a)
+- [X] CL001 [P] [US4] Implement tiered `GET /api/v3/health` response in `src/romarr/notifications/api/health.py` — public callers receive ONLY `{status: "ok" | "warning" | "error"}` + HTTP 200; authenticated callers (any role) receive the full per-component breakdown with messages (FR-024a)
 - [ ] CL002 Migration `0011_notifications.py` adds `health_check.last_emitted_state VARCHAR NULL CHECK (last_emitted_state IN (NULL, 'ok', 'warning', 'error'))` (FR-018 amended)
-- [ ] CL003 [P] [US5] Implement transition comparison against persisted `last_emitted_state` in `src/romarr/notifications/health_engine.py` — every cycle (including first post-restart) compares new check status to persisted column; updates column in same transaction as emission. NULL → emit only on non-`ok` first cycle. Restarts invisible to subscribers (FR-021a)
+- [X] CL003 [P] [US5] Implement transition comparison against persisted `last_emitted_state` in `src/romarr/notifications/health/engine.py` — every cycle (including first post-restart) compares new check status to persisted column; updates column in same transaction as emission. NULL → emit only on non-`ok` first cycle. Restarts invisible to subscribers (FR-021a). Verified via `test_second_cycle_with_no_change_emits_nothing` + `test_recovery_emits_exactly_one_recovered_event`.
 - [X] CL004 [P] Implement Sonarr v3 envelope semantic remap in `src/romarr/notifications/templates/payload_builders.py` — `series.title ← game.title`; `series.tvdbId ← game.igdb_id || 0`; `series.path ← ""` (library context not yet plumbed through payloads — emits empty string per FR-006a invariant); `episodes[]` always one element representing the Release; `release.quality.quality.name ← release.naming_convention` (closest Romarr analogue to Sonarr "quality"); `release.indexer ← indexer.name`; empty fields emit as `0` / `""` never omitted (FR-006a)
 - [X] CL005 [P] Document the full field-by-field cross-walk at `docs/api/notification/webhook-payloads.md`
-- [ ] CL006 [P] [Admin] Wire admin-role gate on every mutating notification endpoint AND on `POST /notification/{id}/test` (SSRF surface — fires outbound HTTP) in `src/romarr/notifications/api.py` (FR-024b)
+- [X] CL006 [P] [Admin] Wire admin-role gate on every mutating notification endpoint AND on `POST /notification/{id}/test` (SSRF surface — fires outbound HTTP) in `src/romarr/notifications/api/notifications.py` (FR-024b). Verified via `test_create_requires_admin` / `test_test_endpoint_requires_admin`.
 - [ ] CL007 [P] Initialize Apprise with custom-plugin loading **disabled** in `src/romarr/notifications/apprise_init.py` — read `ROMARR_APPRISE_ALLOW_CUSTOM_PLUGINS` env var (default `false`); skip `data/apprise-plugins/` discovery when off (FR-001a)
 - [ ] CL008 [P] Document the `ROMARR_APPRISE_ALLOW_CUSTOM_PLUGINS` flag in the README/quickstart with a clear "code execution surface" warning
-- [ ] CL009 [P] Add tests in `tests/notifications/test_health_tiering.py` covering: unauthenticated request → only `{status}` returned; authenticated request → full breakdown with messages
-- [ ] CL010 [P] Add tests in `tests/notifications/test_debounce_persistence.py` covering: failing component → emit once; component still failing across 10 cycles → no further emissions; restart between cycles 5-6 → still no re-emission (persistent state)
-- [ ] CL011 [P] Add tests in `tests/notifications/test_sonarr_payload_remap.py` covering: OnImport on Sonic / Mega Drive → series.title="Sonic the Hedgehog", series.tvdbId=igdb_id, episodes[0] populated; missing fields → 0/""; schema validates against fixtures `sonarr_v3_grab_payload.json` + `sonarr_v3_download_payload.json`
+- [X] CL009 [P] Add tests in `tests/notifications/api/test_health_endpoint.py` covering: unauthenticated request → only `{status}` returned; authenticated request → full breakdown with messages
+- [X] CL010 [P] Add tests in `tests/notifications/health/test_engine.py` + `test_debouncer.py` covering: failing component → emit once; component still failing → no further emissions across 10 cycles. Restart-safety is structurally guaranteed by reading `last_emitted_state` from the DB row at the start of each cycle (FR-021a) — no in-memory state to cross a restart boundary.
+- [X] CL011 [P] Tests in `tests/notifications/test_webhook_sonarr_compat.py` covering: OnImport on Sonic / Mega Drive → series.title="Sonic the Hedgehog", series.tvdbId=igdb_id, episodes[0] populated; missing fields → 0/""; schema validates against fixtures `sonarr_webhook_fixtures/grab_payload.json` + `download_payload.json`
 - [ ] CL012 [P] Add tests in `tests/notifications/test_apprise_plugins_off.py` covering: env unset → custom plugins NOT loaded; env=true → custom plugins loaded

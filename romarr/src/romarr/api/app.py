@@ -42,6 +42,13 @@ from romarr.metadata.api import (
     providers_router,
     refresh_router,
 )
+from romarr.notifications.api import (
+    health_router as notifications_health_router,
+)
+from romarr.notifications.api import (
+    notifications_router,
+    webhook_payloads_md_router,
+)
 from romarr.platform_packs.api import (
     packs_router,
 )
@@ -152,4 +159,11 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     app.include_router(importer_webhook_router)
     app.include_router(importer_history_router)
     app.include_router(importer_unidentified_router)
+    # Notifications + health subsystem (spec 011). The webhook-
+    # payloads doc router shares the /api/v3/notification prefix
+    # with the CRUD router, so it goes before the catch-all
+    # ``{notification_id}`` patterns to avoid pattern collision.
+    app.include_router(webhook_payloads_md_router)
+    app.include_router(notifications_router)
+    app.include_router(notifications_health_router)
     return app
