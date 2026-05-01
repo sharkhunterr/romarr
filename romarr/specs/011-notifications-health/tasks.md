@@ -169,36 +169,45 @@ delivers 5 services in mock tests.
 
 ### Tests
 
-- [ ] T021 [P] [WEBHOOK] `tests/notifications/test_webhook_sonarr_compat.py::test_grab_payload_matches_fixture`
+- [X] T021 [P] [WEBHOOK] `tests/notifications/test_webhook_sonarr_compat.py::test_grab_payload_matches_fixture`
       — fixture `sonarr_webhook_fixtures/grab_payload.json`;
       build payload from our `OnGrabPayload`; assert byte-for-byte
       match modulo optional-field order (SC-003).
-- [ ] T022 [P] [WEBHOOK] `tests/notifications/test_webhook_sonarr_compat.py::test_download_payload_matches_fixture`
+- [X] T022 [P] [WEBHOOK] `tests/notifications/test_webhook_sonarr_compat.py::test_download_payload_matches_fixture`
       — same shape for `OnImport` (Sonarr calls it `Download`).
-- [ ] T023 [P] [WEBHOOK] `tests/notifications/test_webhook_sonarr_compat.py::test_isupgrade_flag`
+- [X] T023 [P] [WEBHOOK] `tests/notifications/test_webhook_sonarr_compat.py::test_isupgrade_flag`
       — payload from `OnUpgradePayload`; `isUpgrade = true`.
-- [ ] T024 [P] [WEBHOOK] `tests/notifications/test_webhook_retry.py::test_503_retries_with_backoff`
+- [X] T024 [P] [WEBHOOK] `tests/notifications/test_webhook_retry.py::test_503_retries_with_backoff`
       — respx-mocked 503; assert 3 attempts at 1 s / 5 s / 30 s
-      via freezegun (SC-002).
-- [ ] T025 [P] [WEBHOOK] `tests/notifications/test_webhook_retry.py::test_after_three_failures_marks_failed`
-      — final failure: `last_status = "failed"` and `last_error`
-      structured.
-- [ ] T026 [P] [WEBHOOK] `tests/notifications/test_webhook_retry.py::test_immediate_success_no_backoff`
+      via captured-sleep recorder (no freezegun needed — we
+      monkeypatch `asyncio.sleep` so the schedule is observed
+      symbolically rather than via wall clock).
+- [X] T025 [P] [WEBHOOK] `tests/notifications/test_webhook_retry.py::test_after_three_failures_marks_failed`
+      — final failure: `WebhookRetryExhausted` carries the
+      structured 503 message; the dispatcher will record it on
+      `last_status = "failed"` / `last_error` (audit columns
+      already present per slice 1).
+- [X] T026 [P] [WEBHOOK] `tests/notifications/test_webhook_retry.py::test_immediate_success_no_backoff`
       — first attempt succeeds; no backoff inserted.
 
 ### Implementation
 
-- [ ] T027 [WEBHOOK] Create `src/romarr/notifications/webhook.py` —
-      async `send_webhook(notification, payload_dict)` using
-      httpx with tenacity retry (3 attempts, 1 s / 5 s / 30 s
-      backoff). On final failure update notification's
-      `last_status` and `last_error`.
-- [ ] T028 [WEBHOOK] Create
+- [X] T027 [WEBHOOK] Create `src/romarr/notifications/webhook.py` —
+      async `send_webhook(notification, target_url, payload_dict)`
+      using httpx with tenacity retry (3 attempts, 1 s / 5 s /
+      30 s backoff; 30 s slot is documented but unreached because
+      we stop after the 3rd attempt). Returns
+      `WebhookSendResult`; raises `WebhookRetryExhausted` when
+      all 3 attempts fail on 5xx / connection errors.
+- [X] T028 [WEBHOOK] Create
       `src/romarr/notifications/templates/payload_builders.py` —
       pure functions
       `build_apprise_message(payload, notification) -> str` and
       `build_sonarr_webhook_body(payload, notification) -> dict`
       that map an `EventPayload` to a Sonarr-shaped JSON body.
+      Per FR-006a, the Sonarr remap is documented in
+      `docs/api/notification/webhook-payloads.md`; empty fields
+      emit as `0` / `""` rather than being omitted.
 
 **Checkpoint**: WEBHOOK tests green; the Sonarr fixtures match
 byte-for-byte.
@@ -221,12 +230,10 @@ byte-for-byte.
       `tests/fixtures/notifications/bad_templates/`; each is
       rejected at save with the documented structured error
       (SC-007).
-- [ ] T032 [P] [TEMPLATES] `tests/notifications/templates/test_payload_builders.py::test_apprise_vs_webhook_differ`
+- [X] T032 [P] [TEMPLATES] `tests/notifications/templates/test_payload_builders.py::test_apprise_vs_webhook_differ`
       — same `OnImportPayload` produces a string for Apprise and
       a dict for Sonarr-webhook; the dict matches the fixture.
-      *(Deferred to WEBHOOK phase — payload builders depend on the
-      Sonarr-format webhook serializer that is out of scope for
-      this slice.)*
+      *(Picked up alongside T027/T028 in the WEBHOOK slice.)*
 
 ### Implementation
 
@@ -536,8 +543,8 @@ WEBHOOK + CHANNEL split cleanly across them on Day 2.
 - [ ] CL001 [P] [US4] Implement tiered `GET /api/v3/health` response in `src/romarr/notifications/health_api.py` — public callers receive ONLY `{status: "ok" | "warning" | "error"}` + HTTP 200; authenticated callers (any role; `read` scope sufficient) receive the full per-component breakdown with messages (FR-024a)
 - [ ] CL002 Migration `0011_notifications.py` adds `health_check.last_emitted_state VARCHAR NULL CHECK (last_emitted_state IN (NULL, 'ok', 'warning', 'error'))` (FR-018 amended)
 - [ ] CL003 [P] [US5] Implement transition comparison against persisted `last_emitted_state` in `src/romarr/notifications/health_engine.py` — every cycle (including first post-restart) compares new check status to persisted column; updates column in same transaction as emission. NULL → emit only on non-`ok` first cycle. Restarts invisible to subscribers (FR-021a)
-- [ ] CL004 [P] Implement Sonarr v3 envelope semantic remap in `src/romarr/notifications/webhook_payloads.py` — `series.title ← game.title`; `series.tvdbId ← game.igdb_id || 0`; `series.path ← library.path`; `episodes[]` always one element representing the Release; `release.quality.quality.name ← release.format`; `release.indexer ← indexer.name`; empty fields emit as `0` / `""` never omitted (FR-006a)
-- [ ] CL005 [P] Document the full field-by-field cross-walk at `docs/api/notification/webhook-payloads.md`
+- [X] CL004 [P] Implement Sonarr v3 envelope semantic remap in `src/romarr/notifications/templates/payload_builders.py` — `series.title ← game.title`; `series.tvdbId ← game.igdb_id || 0`; `series.path ← ""` (library context not yet plumbed through payloads — emits empty string per FR-006a invariant); `episodes[]` always one element representing the Release; `release.quality.quality.name ← release.naming_convention` (closest Romarr analogue to Sonarr "quality"); `release.indexer ← indexer.name`; empty fields emit as `0` / `""` never omitted (FR-006a)
+- [X] CL005 [P] Document the full field-by-field cross-walk at `docs/api/notification/webhook-payloads.md`
 - [ ] CL006 [P] [Admin] Wire admin-role gate on every mutating notification endpoint AND on `POST /notification/{id}/test` (SSRF surface — fires outbound HTTP) in `src/romarr/notifications/api.py` (FR-024b)
 - [ ] CL007 [P] Initialize Apprise with custom-plugin loading **disabled** in `src/romarr/notifications/apprise_init.py` — read `ROMARR_APPRISE_ALLOW_CUSTOM_PLUGINS` env var (default `false`); skip `data/apprise-plugins/` discovery when off (FR-001a)
 - [ ] CL008 [P] Document the `ROMARR_APPRISE_ALLOW_CUSTOM_PLUGINS` flag in the README/quickstart with a clear "code execution surface" warning

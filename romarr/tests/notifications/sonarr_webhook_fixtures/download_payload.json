@@ -1,0 +1,51 @@
+{
+  "eventType": "Download",
+  "instanceName": "Romarr",
+  "applicationUrl": "",
+  "series": {
+    "id": 1,
+    "title": "Sonic the Hedgehog",
+    "titleSlug": "megadrive",
+    "path": "",
+    "tvdbId": 42,
+    "tvMazeId": 0,
+    "imdbId": "",
+    "type": "standard",
+    "year": 0,
+    "tags": ["platformer"]
+  },
+  "episodes": [
+    {
+      "id": 10,
+      "episodeNumber": 10,
+      "seasonNumber": 0,
+      "title": "Sonic the Hedgehog (USA)",
+      "overview": "",
+      "airDate": "",
+      "airDateUtc": "",
+      "qualityVersion": 0
+    }
+  ],
+  "episodeFile": {
+    "relativePath": "/library/megadrive/Sonic.md",
+    "path": "/library/megadrive/Sonic.md",
+    "quality": {
+      "quality": {
+        "id": 0,
+        "name": "no-intro"
+      },
+      "revision": {
+        "version": 1,
+        "real": 0,
+        "isRepack": false
+      }
+    },
+    "size": 524288,
+    "sceneName": "",
+    "releaseGroup": ""
+  },
+  "isUpgrade": false,
+  "downloadClient": "",
+  "downloadClientType": "",
+  "downloadId": ""
+}
