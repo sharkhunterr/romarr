@@ -753,10 +753,18 @@ auto-blocklist, perf, coverage, ruff.
       original row is preserved.
 - [ ] T088 [P] [HARD] `tests/importer/api/test_manual_endpoints.py` —
       full CRUD-style round trip on the manual import endpoints.
-- [ ] T089 [P] [HARD] `tests/importer/api/test_history_endpoints.py` —
-      pagination + filter on `/api/v3/rom/import/history`.
-- [ ] T090 [P] [HARD] `tests/importer/api/test_unidentified_endpoints.py`
-      — list + match + delete.
+      *(Deferred — manual / retry / match endpoints depend on the
+      orchestrator end-to-end which lands in a follow-up HARD
+      slice.)*
+- [X] T089 [P] [HARD] `tests/importer/api/test_history_endpoint.py`
+      — 5 tests covering ``GET /api/v3/rom/import/history``:
+      paginated, filter by ``imported_via``, filter by
+      ``success``, 401 unauthenticated, 422 on invalid limit.
+- [X] T090 [P] [HARD] `tests/importer/api/test_unidentified_endpoints.py`
+      — 6 tests: list paginated, filter by library_id, DELETE
+      succeeds (DB row gone, file untouched per FR-038), DELETE
+      404 when missing, DELETE 403 for non-admin users, list
+      401 unauthenticated. POST match deferred with T088.
 - [ ] T091 [HARD] Run `pytest --cov=romarr.importer` — verify ≥ 75%
       coverage (SC-010). Add targeted tests for any uncovered branch.
 - [ ] T092 [HARD] Run `ruff check .` — zero warnings on
