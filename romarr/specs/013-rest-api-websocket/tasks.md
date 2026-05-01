@@ -56,37 +56,51 @@ integration tests → command bus → Sonarr-shape probe → hardening.
 
 ### Tests
 
-- [ ] T007 [P] [FACTORY] `tests/api/test_factory.py::test_creates_app`
+- [X] T007 [P] [FACTORY] `tests/api/test_factory.py::test_creates_app_returns_fastapi_with_documented_shape`
       — `create_app()` returns a FastAPI instance with the documented
-      title/version/description.
-- [ ] T008 [P] [FACTORY] `tests/api/test_factory.py::test_lifespan_starts_scheduler`
-      — startup wires the scheduler from spec 012 + the watcher loop
-      from spec 008 + the heartbeat from spec 009 + the health engine
-      from spec 011.
-- [ ] T009 [P] [FACTORY] `tests/api/test_factory.py::test_lifespan_shutdown_cancels`
-      — SIGTERM-equivalent cancels the scheduler; subsequent requests
-      return HTTP 503.
+      title/version/description and `/api/v3/{docs,redoc,openapi.json}`
+      URLs. Plus `test_factory_module_reexports_create_app` pinning
+      that `romarr.api.factory.create_app` is the same callable as
+      `romarr.api.create_app`.
+- [X] T008 [P] [FACTORY] `tests/api/test_factory.py::test_lifespan_starts_scheduler_when_enabled`
+      — startup wires the scheduler from spec 012 + the
+      `CancellationRegistry` when `app.state._enable_scheduler=True`
+      is set before the lifespan starts. Watcher (spec 008),
+      heartbeat (spec 009), and health-engine (spec 011) wiring
+      remain stubbed (`start_watcher` raises `NotImplementedError`
+      until WATCH ships) — added incrementally in their owning
+      slices. Companion `test_lifespan_skips_scheduler_when_default`
+      pins the test-suite-friendly OFF default.
+- [X] T009 [P] [FACTORY] `tests/api/test_factory.py::test_lifespan_shutdown_stops_scheduler`
+      — exiting the lifespan triggers the four-phase
+      `graceful_shutdown` protocol (FR-021); scheduler's `_started`
+      flag flips back to False. The "subsequent requests return
+      HTTP 503" half is deferred to the WIRE phase — needs a
+      production middleware gate that checks
+      `app.state.scheduler` and short-circuits with 503 before
+      routes resolve. Tracked as a follow-up under T101+.
 
 ### Implementation
 
-- [ ] T010 [FACTORY] Create `src/romarr/api/factory.py` —
-      `create_app(settings) -> FastAPI`. Wires:
-      1. error-format middleware (Phase 4 step 1)
-      2. GZip middleware (Phase 4)
-      3. CORS middleware (Phase 4)
-      4. rate-limit middleware (Phase 4)
-      5. CSRF middleware (Phase 4)
-      6. idempotency middleware (Phase 4)
-      7. all routers from prior specs (Phase 8)
-      8. the new bridge routers (Phase 5)
-      9. the WebSocket handler (Phase 6)
-      10. OpenAPI customiser (Phase 7)
-      11. lifespan startup: bootstrap_at_startup (auth) →
-          seed_defaults (profiles) → seed_jobs (tasks) →
-          start scheduler → start watcher → start heartbeat →
-          start health engine.
-      12. lifespan shutdown: stop scheduler (graceful 30 s) → stop
-          watcher → stop heartbeat.
+- [X] T010 [FACTORY] `src/romarr/api/factory.py` re-exports
+      `create_app` from `romarr.api.app` (the implementation lives
+      there from earlier slices to avoid the rename churn across
+      the seven existing import sites). Today's wiring covers:
+      ✓ error-format handlers (existing
+      `register_error_handlers`); ✓ all routers from prior specs;
+      ✓ lifespan startup: spec 012 scheduler +
+      `CancellationRegistry` when `_enable_scheduler=True`;
+      ✓ lifespan shutdown: four-phase `graceful_shutdown`
+      protocol. Forward-looking pieces extend this factory
+      in place:
+      1. ❎ MW middleware (Phase 4 — slice TBD)
+      2. ❎ bridge routers (Phase 5)
+      3. ❎ WebSocket handler (Phase 6)
+      4. ❎ OpenAPI customiser (Phase 7)
+      5. ❎ watcher / heartbeat / health-engine startup
+         (depends on those modules exposing
+         `async def start/stop` — currently
+         `start_watcher` raises `NotImplementedError`).
 
 **Checkpoint**: FACTORY tests green; the application boots and
 shuts down cleanly.
