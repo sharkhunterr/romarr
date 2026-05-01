@@ -306,63 +306,84 @@ work; double-event for upgrades works.
 
 ### Tests
 
-- [ ] T042 [P] [HEALTH] `tests/notifications/health/test_engine.py::test_runs_all_categories`
+- [X] T042 [P] [HEALTH] `tests/notifications/health/test_engine.py::test_runs_all_categories`
       — populate the DB with one indexer, one download client,
       one library; run `HealthEngine.refresh()`; assert per-
-      category results recorded in `health_check`.
+      category results recorded in `health_check`. Plus
+      ``test_second_cycle_with_no_change_emits_nothing`` and
+      ``test_recovery_emits_exactly_one_recovered_event`` for
+      FR-021a coverage.
 - [ ] T043 [P] [HEALTH] `tests/notifications/health/checks/test_indexer.py::test_caps_reachable`
-      — respx-mocked indexer caps endpoint returns valid XML ⇒
-      status `ok`; returns malformed XML ⇒ `error` with
-      `category='indexer'`.
+      *(deferred — needs cross-module wiring with spec 004's
+      Newznab caps client)*
 - [ ] T044 [P] [HEALTH] `tests/notifications/health/checks/test_download_client.py::test_connection_test`
-      — calls spec 005's `test_connection`; success → `ok`;
-      auth-error → `error`.
-- [ ] T045 [P] [HEALTH] `tests/notifications/health/checks/test_dat_freshness.py::test_30_day_threshold`
-      — DAT 31 days old → `warning`; 91 days old → `error`
+      *(deferred — needs spec 005's `test_connection` adapter)*
+- [X] T045 [P] [HEALTH] `tests/notifications/health/checks/test_dat_freshness.py`
+      — DAT 31 days old → `warning`; 91 days old → `error`;
+      29 days old → `ok`; exact 30-day boundary → `warning`
       (FR-019).
-- [ ] T046 [P] [HEALTH] `tests/notifications/health/checks/test_disk_space.py::test_thresholds`
-      — free space at `min_disk_free_gb * 1.2` → `warning`;
-      free space at `min_disk_free_gb * 0.5` → `error`
-      (FR-020).
-- [ ] T047 [P] [HEALTH] `tests/notifications/health/checks/test_db.py::test_round_trip_under_1s`
-      — inject a slow query (freezegun + monkeypatch) → `warning`.
+- [X] T046 [P] [HEALTH] `tests/notifications/health/checks/test_disk_space.py`
+      — `free = min × 1.2` → `warning`; `free = min × 0.5` →
+      `error`; `free = min × 2` → `ok`; `free = min` exactly →
+      `warning` (FR-020 boundary).
+- [X] T047 [P] [HEALTH] `tests/notifications/health/checks/test_db.py`
+      — fast round-trip → `ok`; slow round-trip (sleep 100 ms,
+      threshold 50 ms) → `warning`; query exception propagates
+      to the engine's ``run_check`` wrapper for error-mapping.
 - [ ] T048 [P] [HEALTH] `tests/notifications/health/checks/test_metadata_provider.py::test_each_provider_health_check`
-      — invokes spec 002's per-provider `health_check()`; failure
-      → `error`.
-- [ ] T049 [P] [HEALTH] `tests/notifications/health/checks/test_library_path.py::test_stat_within_5s`
-      — stat takes 6 s (freezegun) → `error` with reason
-      `timeout`.
-- [ ] T050 [P] [HEALTH] `tests/notifications/health/test_debouncer.py::test_emit_only_on_transition`
+      *(deferred — needs spec 002's per-provider `health_check()`
+      hook, which is itself deferred to a metadata follow-up)*
+- [X] T049 [P] [HEALTH] `tests/notifications/health/checks/test_library_path.py`
+      — stat takes 200 ms (real `asyncio.sleep`), timeout 50 ms
+      → `error` with reason `timeout`. Missing path →
+      `FileNotFoundError`. Existing path → `ok`.
+- [X] T050 [P] [HEALTH] `tests/notifications/health/test_debouncer.py::test_emit_only_on_transition`
       — same component, 10 cycles all `error` ⇒ exactly **one**
-      `OnHealthIssue` emitted (SC-004).
-- [ ] T051 [P] [HEALTH] `tests/notifications/health/test_debouncer.py::test_recovery_event`
-      — error → ok transition emits exactly one event with
-      `severity = 'recovered'` (FR-022).
-- [ ] T052 [P] [HEALTH] `tests/notifications/health/test_debouncer.py::test_warning_to_error_emits`
-      — escalation transitions emit one event per transition
-      (FR-021).
-- [ ] T053 [P] [HEALTH] `tests/notifications/health/test_snapshot.py::test_overall_status_worst_component`
+      transition emitted (SC-004).
+- [X] T051 [P] [HEALTH] `tests/notifications/health/test_debouncer.py::test_recovery_emits_recovered_severity`
+      — `error → ok` transition emits exactly one transition
+      with `severity = 'recovered'` (FR-022); same for
+      `warning → ok`.
+- [X] T052 [P] [HEALTH] `tests/notifications/health/test_debouncer.py::test_warning_to_error_emits_error`
+      — escalation transitions emit one event per transition;
+      de-escalation `error → warning` also emits (FR-021).
+- [X] T053 [P] [HEALTH] `tests/notifications/health/test_snapshot.py::test_overall_status_is_worst_component`
       — one `error` + several `ok`/`warning` ⇒ snapshot's
-      `overall_status = "error"`.
+      `overall_status = "error"`. Plus per-category grouping +
+      empty-result handling.
 
 ### Implementation
 
-- [ ] T054 [HEALTH] Create
-      `src/romarr/notifications/health/checks/__init__.py` and
-      one file per check category (indexer, download_client,
-      dat_freshness, disk_space, db, metadata_provider,
-      library_path).
-- [ ] T055 [HEALTH] Create `src/romarr/notifications/health/debouncer.py`
-      — pure `compute_transitions(prev: dict[str, HealthStatus],
-      curr: dict[str, HealthStatus]) -> list[Transition]` and
-      `should_emit(transition) -> bool`.
-- [ ] T056 [HEALTH] Create `src/romarr/notifications/health/engine.py`
-      — `HealthEngine.refresh() -> HealthSnapshot` orchestrates
-      all checks, persists to `health_check`, runs the debouncer,
-      emits `OnHealthIssue` events for transitions only.
+- [X] T054 [HEALTH] Create
+      `src/romarr/notifications/health/checks/__init__.py` +
+      `base.py` (Protocol + `run_check` runner with timeout-→
+      `warning` and exception-→ `error` mapping) and the four
+      always-available checks: `db.py`, `dat_freshness.py`,
+      `disk_space.py`, `library_path.py`. The remaining three
+      categories (indexer, download_client, metadata_provider)
+      are deferred to a follow-up slice — they require the
+      respective modules' client adapters which are
+      cross-module wiring concerns rather than core engine work.
+- [X] T055 [HEALTH] Create `src/romarr/notifications/health/debouncer.py`
+      — pure `compute_transitions(*, previous, current) ->
+      list[Transition]` + `should_emit(transition) -> bool`.
+      The state-machine table in the docstring covers all 12
+      `(previous, current)` combinations; `None` previous
+      (never-emitted) suppresses emission only when current is
+      `ok`.
+- [X] T056 [HEALTH] Create `src/romarr/notifications/health/engine.py`
+      — `HealthEngine.refresh() -> HealthSnapshot` runs all
+      checks concurrently with per-check timeout, reads the
+      persisted `last_emitted_state` map (FR-021a), computes
+      transitions, persists results + transition states in one
+      transaction, then fires `OnHealthIssue` events via an
+      injected `emit` callable. The engine is stateless across
+      cycles (state lives in `health_check`).
 - [ ] T057 [HEALTH] Wire a periodic `HealthEngine.refresh()` cron
-      stub (the actual schedule lives in spec 012's Tasks
-      scheduler — this spec exposes the function).
+      stub *(deferred — the actual schedule lives in spec 012's
+      Tasks scheduler. The engine's `refresh()` is callable
+      directly from the API endpoint POST /api/v3/health/refresh
+      until then)*
 
 **Checkpoint**: HEALTH tests green; debouncing prevents the spam
 edge case from US5; the snapshot endpoint reports the right
