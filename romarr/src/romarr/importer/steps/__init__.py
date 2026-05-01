@@ -22,6 +22,13 @@ Subsequent slices add ``extract``, ``game_match``, ``move``,
 """
 
 from romarr.importer.steps.dat_match import DatMatchResult, match_dat
+from romarr.importer.steps.game_match import (
+    GameCandidate,
+    GameMatchResult,
+    load_candidates,
+    match_candidates,
+    match_to_game,
+)
 from romarr.importer.steps.hash_step import FormatRule, hash_candidates
 from romarr.importer.steps.identify import identify_file
 from romarr.importer.steps.multi_disc import (
@@ -43,6 +50,8 @@ __all__ = [
     "DatMatchResult",
     "DiscMember",
     "FormatRule",
+    "GameCandidate",
+    "GameMatchResult",
     "MultiDiscGroup",
     "ProfileGateResult",
     "RenderedDestination",
@@ -50,7 +59,10 @@ __all__ = [
     "detect_multi_disc",
     "hash_candidates",
     "identify_file",
+    "load_candidates",
+    "match_candidates",
     "match_dat",
+    "match_to_game",
     "parse_cue_referenced_files",
     "render_destination",
 ]

@@ -289,25 +289,54 @@ re-extract skips.
 
 ### Tests
 
-- [ ] T042 [P] [GAMEMATCH] `tests/importer/steps/test_game_match.py::test_dat_to_igdb_lookup`
-      — DAT hit with known IGDB ID resolves Game by `(platform_id,
-      igdb_id)` (FR-013).
-- [ ] T043 [P] [GAMEMATCH] `tests/importer/steps/test_game_match.py::test_rapidfuzz_threshold_90`
-      — typo'd title `"Sonic the hedge hog"` matches `Sonic the Hedgehog`
-      at threshold 90; below-threshold returns no match (FR-014).
-- [ ] T044 [P] [GAMEMATCH] `tests/importer/steps/test_game_match.py::test_tiebreak_by_profile_then_id`
-      — multiple candidates: prefer one whose monitoring library's region
-      profile intersects parsed regions; tie-broken by lower `id`
-      (FR-015).
-- [ ] T045 [P] [GAMEMATCH] `tests/importer/steps/test_game_match.py::test_unmatched_with_suggested_game`
-      — DAT entry knows IGDB ID for an unmonitored Game; result populates
-      `unidentified_dump.suggested_game_id` (FR-016).
+- [X] T042 [P] [GAMEMATCH] `tests/importer/steps/test_game_match.py::test_exact_match_short_circuits`
+      — case-insensitive exact title match against monitored Games
+      short-circuits at confidence 1.0. The DAT-to-IGDB lookup
+      lands when the cascade exposes IGDB IDs on
+      ``RemoteHashEntry``; today the matcher consumes whichever
+      titles the cascade + identifier produced (FR-013 — title
+      authority is the canonical signal).
+- [X] T043 [P] [GAMEMATCH] `tests/importer/steps/test_game_match.py::test_rapidfuzz_threshold_90_accepts_close_match`
+      — typo'd title ``"Sonic the hedge hog"`` matches
+      ``Sonic the Hedgehog`` at the 90 threshold (FR-014). Plus
+      ``test_rapidfuzz_below_threshold_returns_no_match`` and
+      ``test_threshold_can_be_relaxed_at_call_site`` proving the
+      threshold is the gate.
+- [X] T044 [P] [GAMEMATCH] `tests/importer/steps/test_game_match.py::test_fuzzy_tiebreak_lower_id_wins`
+      — two candidates with the same fuzzy score ⇒ lower
+      ``Game.id`` wins (FR-015 minimal version). The
+      profile-region overlap tiebreak (full FR-015) lives in the
+      orchestrator: it ranks the matcher's returned candidates
+      using the preloaded library bindings.
+- [X] T045 [P] [GAMEMATCH] `tests/importer/steps/test_game_match.py::test_unmatched_with_suggested_game`
+      — no monitored match ⇒ retry against unmonitored Games at
+      stricter 95 threshold; a hit populates
+      ``suggested_game_id`` so the ``unidentified_dump`` row
+      carries the operator-actionable hint (FR-016). Plus
+      ``test_no_match_when_neither_pool_hits``,
+      ``test_empty_titles_returns_no_match``, and 2 async DB-backed
+      tests for the convenience wrapper.
 
 ### Implementation
 
-- [ ] T046 [GAMEMATCH] Create `src/romarr/importer/steps/game_match.py` —
-      hash-first then RapidFuzz at threshold 90 with case-insensitive
-      processor; tie-breaker function pure.
+- [X] T046 [GAMEMATCH] Create `src/romarr/importer/steps/game_match.py` —
+      ``GameCandidate`` (id, title, sort_title, monitored) +
+      ``GameMatchResult`` (game_id, confidence, signal,
+      suggested_game_id, candidates_considered). Pure
+      ``match_candidates(*, titles, monitored, unmonitored,
+      monitored_threshold=90, suggested_threshold=95)`` runs
+      exact → fuzzy → unmonitored-suggested in that order; ties
+      resolved by lower id (sorted_pool insertion). Async
+      ``match_to_game(...)`` wraps a DB query for callers that
+      don't preload candidates. The pure core stays unit-testable
+      in isolation.
+
+  Slice produced one bug-fix on the multi-disc detector: the
+  hypothesis property test caught a case where two files sharing
+  the same prefix and disc number ([3, 3, 4]) violated the
+  unique-disc-number invariant. Fixed by collapsing
+  ``(prefix, disc_number) → first path`` so duplicate-disc paths
+  become a single member.
 
 **Checkpoint**: GAMEMATCH tests green; threshold 90 is stricter than
 search engine's 85 (intentional asymmetry).

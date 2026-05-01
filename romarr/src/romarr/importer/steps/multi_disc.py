@@ -210,26 +210,30 @@ def _detect_cue_bin(paths: list[Path]) -> MultiDiscGroup | None:
 
 
 def _detect_filename_pattern(paths: list[Path]) -> MultiDiscGroup | None:
-    candidates: dict[str, list[tuple[int, Path]]] = {}
+    # Group by (prefix, disc_number) so two files sharing the same
+    # prefix AND disc number (e.g., a "(Disc 3).iso" and an
+    # accidentally-duplicated "(Disc 3).bin" outside the cue/bin
+    # path) collapse to a single member.
+    candidates: dict[str, dict[int, Path]] = {}
     for p in paths:
         n = _match_disc_number(p.stem)
         if n is None:
             continue
         prefix = _strip_disc_suffix(p.stem)
-        candidates.setdefault(prefix, []).append((n, p))
+        bucket = candidates.setdefault(prefix, {})
+        bucket.setdefault(n, p)
 
     # Take the largest grouping with ≥ 2 distinct disc numbers.
-    best: tuple[str, list[tuple[int, Path]]] | None = None
-    for prefix, items in candidates.items():
-        unique = {n for n, _ in items}
-        if len(unique) < 2:
+    best: tuple[str, dict[int, Path]] | None = None
+    for prefix, bucket in candidates.items():
+        if len(bucket) < 2:
             continue
-        if best is None or len(items) > len(best[1]):
-            best = (prefix, items)
+        if best is None or len(bucket) > len(best[1]):
+            best = (prefix, bucket)
     if best is None:
         return None
 
-    items = sorted(best[1], key=lambda pair: pair[0])
+    items = sorted(best[1].items())
     members = tuple(
         DiscMember(disc_number=n, files=(p,), primary_file=p) for n, p in items
     )
