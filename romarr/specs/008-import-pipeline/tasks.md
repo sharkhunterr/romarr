@@ -110,37 +110,63 @@ signals to the orchestrator.
 ### Tests
 
 - [ ] T014 [P] [WATCH] `tests/importer/steps/test_watch_polling.py::test_polls_every_30s`
-      — freezegun-advance time; assert one poll per configured client per
-      30 seconds (FR-001).
+      *(Deferred — DownloadClient ABC needs a
+      ``list_managed_downloads`` method that doesn't exist yet
+      on spec 005's surface. The polling watcher lands once
+      that method is added; for now the webhook covers the
+      operator's primary post-download-complete signal.)*
 - [ ] T015 [P] [WATCH] `tests/importer/steps/test_watch_polling.py::test_filters_by_tag`
-      — only downloads tagged `romarr` AND missing `romarr-imported` are
-      surfaced (FR-001).
+      *(Deferred with T014.)*
 - [ ] T016 [P] [WATCH] `tests/importer/steps/test_watch_polling.py::test_isolates_failing_client`
-      — one client raises ConnectionError; others still polled; failure
-      persisting > 10 minutes emits `OnHealthIssue` (FR-003).
-- [ ] T017 [P] [WATCH] `tests/importer/test_webhook.py::test_constant_time_token`
-      — bad token returns HTTP 401 with no log entry exposing the expected
-      token (FR-002, edge case).
-- [ ] T018 [P] [WATCH] `tests/importer/test_webhook.py::test_rate_limit`
-      — 11 requests in 60 seconds from one source IP ⇒ the 11th gets
-      HTTP 429.
-- [ ] T019 [P] [WATCH] `tests/importer/test_webhook.py::test_immediate_import`
-      — valid token; assert the import for the documented download_id
-      starts within 1 second (SC-008).
+      *(Deferred with T014.)*
+- [X] T017 [P] [WATCH] `tests/importer/test_webhook.py::test_invalid_token_returns_401`
+      — bad token returns HTTP 401 with structured
+      ``errorCode='invalid_token'``; the comparison runs in
+      constant time via :func:`secrets.compare_digest` so the
+      response time doesn't leak the expected value. Plus
+      ``test_missing_token_returns_401`` and
+      ``test_disabled_webhook_returns_401`` (no-token-configured
+      defensive case).
+- [X] T018 [P] [WATCH] `tests/importer/test_webhook.py::test_rate_limit_returns_429_after_burst`
+      — 10 valid requests in <60 s succeed; the 11th returns
+      HTTP 429 with ``errorCode='rate_limited'``. Sliding-window
+      counter per source IP via
+      :class:`SlidingWindowLimiter`, in-process (the threat
+      model is the operator's own qBit on their own network).
+- [X] T019 [P] [WATCH] `tests/importer/test_webhook.py::test_valid_token_returns_202_and_dispatches`
+      — happy path: 202 ACCEPTED with the request's
+      ``download_client_native_id`` echoed back; the configured
+      dispatcher fires asynchronously after the response
+      publishes (FR-002 / SC-008). Plus
+      ``test_no_dispatcher_configured_still_returns_202`` and
+      ``test_missing_native_id_returns_422``.
 
 ### Implementation
 
 - [ ] T020 [WATCH] Create `src/romarr/importer/steps/watch.py` — async
-      `WatcherLoop` that runs every 30 s, iterates configured clients, and
-      enqueues `(client_id, native_id)` candidates onto an internal
-      asyncio.Queue consumed by the orchestrator.
-- [ ] T021 [WATCH] Create `src/romarr/importer/webhook.py` — FastAPI
-      handler at `/api/v3/webhook/download-complete` performing
-      constant-time token comparison via `secrets.compare_digest` and
-      sliding-window 60-s rate limit per source IP.
-- [ ] T022 [WATCH] Wire `WatcherLoop.start()` into the application
-      lifespan startup (the lifespan helper from spec 006). The loop is
-      cancelable on shutdown.
+      ``WatcherLoop`` that runs every 30 s, iterates configured
+      clients, and enqueues ``(client_id, native_id)`` candidates
+      onto an internal ``asyncio.Queue`` consumed by the
+      orchestrator. *(Deferred with T014-T016 — needs
+      ``DownloadClient.list_managed_downloads``.)*
+- [X] T021 [WATCH] Create `src/romarr/importer/webhook.py` — FastAPI
+      handler at ``/api/v3/webhook/download-complete``.
+      Constant-time token comparison via
+      :func:`secrets.compare_digest`, sliding-window 60-s rate
+      limit (10 req/IP) via
+      :class:`romarr.importer._rate_limit.SlidingWindowLimiter`,
+      schema validation via :class:`WebhookPayload`. Returns
+      202 ACCEPTED immediately and dispatches the actual import
+      via a fire-and-forget ``asyncio.create_task`` (held in
+      ``_inflight`` so the loop doesn't garbage-collect it
+      mid-import). ``configure_dispatcher(callable | None)``
+      injects the dispatcher (tests pass a recorder; production
+      wires the orchestrator's ``run_import``).
+      Wired into the application factory in ``api/app.py``.
+      Settings: new ``importer_webhook_token`` field on
+      :class:`Settings` (empty = webhook closed).
+- [ ] T022 [WATCH] Wire ``WatcherLoop.start()`` into the application
+      lifespan startup. *(Deferred with T014-T016, T020.)*
 
 **Checkpoint**: WATCH tests green; the watcher loop runs as a background
 task and the webhook returns within the 1 s p95 budget.

@@ -28,6 +28,7 @@ from romarr.downloaders.api import (
 from romarr.downloaders.api import (
     schema_router as download_clients_schema_router,
 )
+from romarr.importer.webhook import router as importer_webhook_router
 from romarr.indexers.api import applications_router, indexers_router
 from romarr.libraries.api import libraries_router
 from romarr.metadata.api import (
@@ -141,4 +142,6 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     app.include_router(search_history_router)
     app.include_router(search_command_router)
     app.include_router(search_blocklist_router)
+    # Importer subsystem (spec 008) — webhook only for now.
+    app.include_router(importer_webhook_router)
     return app

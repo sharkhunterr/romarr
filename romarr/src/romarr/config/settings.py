@@ -68,6 +68,16 @@ class Settings(BaseSettings):
         "for credentials at rest. MUST be set in production.",
     )
 
+    # Importer webhook
+    importer_webhook_token: str = Field(
+        default="",
+        description="Bearer token expected on the "
+        "POST /api/v3/webhook/download-complete endpoint. Empty = the "
+        "webhook is closed (every call returns 401). Set per "
+        "download client in the operator's qBittorrent / SAB hook "
+        "configuration.",
+    )
+
     # Cover storage
     data_dir: str = Field(
         default="./data",
