@@ -49,12 +49,6 @@ from romarr.notifications.api import (
     notifications_router,
     webhook_payloads_md_router,
 )
-from romarr.tasks.api import (
-    runs_router as tasks_runs_router,
-)
-from romarr.tasks.api import (
-    tasks_router,
-)
 from romarr.platform_packs.api import (
     packs_router,
 )
@@ -84,6 +78,12 @@ from romarr.search.api import (
 from romarr.search.api import (
     search_router,
 )
+from romarr.tasks.api import (
+    runs_router as tasks_runs_router,
+)
+from romarr.tasks.api import (
+    tasks_router,
+)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -96,14 +96,63 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     Stored on ``app.state`` so the dependency layer can pull them out
     without going through global singletons (which break test
     parallelism).
+
+    Also wires the spec 012 Tasks subsystem onto ``app.state``:
+    a :class:`SchedulerService` with the production runner
+    registry plus a :class:`CancellationRegistry`. On shutdown
+    the graceful-shutdown protocol runs (FR-021, US6).
+    Tests that don't want a live scheduler (most of them) opt
+    out by setting ``app.state._skip_scheduler = True`` before
+    the lifespan starts.
     """
     database_url = getattr(app.state, "_test_database_url", None)
     engine = create_engine(database_url) if database_url else create_engine()
     app.state.db_engine = engine
     app.state.db_sessionmaker = create_sessionmaker(engine)
+
+    # Spec 012 — start the Tasks subsystem when explicitly
+    # enabled. Default OFF so the test suite (which builds
+    # the app many times per session) doesn't pay the
+    # SchedulerService bootstrap cost; production sets
+    # ``app.state._enable_scheduler = True`` (or the
+    # eventual ``ROMARR_SCHEDULER_ENABLED`` settings flag).
+    enable_scheduler = getattr(
+        app.state, "_enable_scheduler", False
+    )
+    scheduler = None
+    if enable_scheduler:
+        from romarr.tasks.execution.cancellation import CancellationRegistry
+        from romarr.tasks.runner_protocol import build_default_registry
+        from romarr.tasks.scheduler import SchedulerService
+
+        cancellation_registry = CancellationRegistry()
+        scheduler = SchedulerService(
+            session_factory=app.state.db_sessionmaker,
+            runners=build_default_registry(),
+            cancellation_registry=cancellation_registry,
+        )
+        try:
+            await scheduler.start()
+        except Exception:
+            # Failure to bootstrap (DB not seeded, etc.) shouldn't
+            # paralyse the API surface — endpoints surface 503 if
+            # the scheduler isn't on app.state.
+            scheduler = None
+        else:
+            app.state.scheduler = scheduler
+            app.state.cancellation_registry = cancellation_registry
+
     try:
         yield
     finally:
+        if scheduler is not None:
+            from romarr.tasks.shutdown import graceful_shutdown
+
+            cr = getattr(app.state, "cancellation_registry", None)
+            await graceful_shutdown(
+                scheduler=scheduler,
+                cancellation_registry=cr,
+            )
         await engine.dispose()
 
 

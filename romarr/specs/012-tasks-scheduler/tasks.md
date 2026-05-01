@@ -444,32 +444,57 @@ end-to-end.
 
 ### Tests
 
-- [ ] T053 [P] [SHUTDOWN] `tests/tasks/test_graceful_shutdown.py::test_finishes_within_30s`
-      — runner finishes in 5 s; SIGTERM-equivalent invoked; shutdown
-      completes; runner's row records natural status (US6.1).
-- [ ] T054 [P] [SHUTDOWN] `tests/tasks/test_graceful_shutdown.py::test_cancellation_after_30s`
-      — runner sleeps 60 s; shutdown invoked; after 30 s
-      `cancellation_event` set; runner observes and returns
-      `cancelled`; row records `error='shutdown'` (US6.2,
-      SC-006).
-- [ ] T055 [P] [SHUTDOWN] `tests/tasks/test_graceful_shutdown.py::test_force_terminate_after_5_more_seconds`
-      — runner ignores `cancellation_event`; after 5 additional s
-      the executor force-terminates; row records
-      `cancellation_forced = true`.
+- [X] T053 [P] [SHUTDOWN] `tests/tasks/test_graceful_shutdown.py::test_finishes_within_grace_period`
+      — runner finishes inside the grace window; ``status="success"``,
+      ``cancellation_forced=False`` (US6.1).
+- [X] T054 [P] [SHUTDOWN] `tests/tasks/test_graceful_shutdown.py::test_cancellation_after_grace`
+      — cooperative runner; grace window expires; cancellation
+      event signalled; runner returns ``CANCELLED``;
+      ``cancellation_forced=False`` (US6.2, SC-006).
+- [X] T055 [P] [SHUTDOWN] `tests/tasks/test_graceful_shutdown.py::test_force_terminate_when_runner_ignores_signal`
+      — runner ignores the event; force-cancel fires after the
+      configured force-terminate window; row records
+      ``cancellation_forced=True`` (FR-021). Plus
+      ``test_shutdown_with_no_inflight_runs`` (idle-scheduler
+      shutdown returns cleanly) and
+      ``test_shutdown_without_registry`` (works without a
+      cancellation registry — straight to force-terminate).
 
 ### Implementation
 
-- [ ] T056 [SHUTDOWN] Create `src/romarr/tasks/shutdown.py` —
-      SIGTERM handler that:
-      1. tells `SchedulerService` to stop accepting new triggers;
-      2. awaits in-flight runs with a 30-s deadline;
-      3. sets every remaining `cancellation_event`;
-      4. waits up to 5 more seconds;
-      5. force-terminates the asyncio tasks of any still-running
-         runners and writes their `JobRun` rows.
-- [ ] T057 [SHUTDOWN] Wire the SIGTERM handler into the FastAPI
-      lifespan shutdown handler so it runs before the application
-      tears down.
+- [X] T056 [SHUTDOWN] Create `src/romarr/tasks/shutdown.py` —
+      ``graceful_shutdown(scheduler, cancellation_registry=None,
+      grace_seconds=30, force_terminate_seconds=5)``. Four-phase
+      protocol:
+      1. ``scheduler._scheduler.shutdown(wait=False)`` — no
+         new APScheduler ticks; in-flight runs continue.
+      2. ``await`` inflight tasks with a ``grace_seconds``
+         timeout (most runners finish naturally in this window).
+      3. If a registry is wired and tasks remain,
+         ``cancellation_registry.cancel_all()`` signals every
+         remaining run's ``cancellation_event``.
+      4. Tasks that ignored the signal get a final
+         ``task.cancel()`` + ``await`` for
+         ``force_terminate_seconds``; the scheduler's
+         ``_run_and_finalise`` catches ``CancelledError`` and
+         records ``cancellation_forced=True``.
+      Total function — never raises; the lifespan can't safely
+      retry shutdown.
+- [X] T057 [SHUTDOWN] Wired into the FastAPI lifespan
+      (`src/romarr/api/app.py::_lifespan`):
+      - On startup (when ``app.state._enable_scheduler`` is
+        True), build a ``CancellationRegistry`` + a
+        ``SchedulerService`` with the production
+        ``build_default_registry()`` + ``await scheduler.start()``,
+        and stash both on ``app.state``.
+      - On teardown, run ``graceful_shutdown(...)`` before the
+        engine disposes so audit rows write with the engine
+        still alive.
+      Default is ``_enable_scheduler=False`` so the test suite
+      (which builds the app many times) doesn't pay the
+      bootstrap cost. Production sets the flag (or the
+      eventual ``ROMARR_SCHEDULER_ENABLED`` settings flag does
+      it).
 
 **Checkpoint**: SHUTDOWN tests green; SC-006 met.
 
