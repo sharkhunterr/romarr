@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING
 import apprise
 
 from romarr.metadata.encryption import decrypt
+from romarr.notifications.apprise_init import build_apprise_asset
 from romarr.notifications.errors import AppriseInvalidUrl
 
 if TYPE_CHECKING:
@@ -48,8 +49,13 @@ class AppriseSendResult:
 def _validate_url(url: str) -> apprise.Apprise:
     """Build an :class:`apprise.Apprise` object with ``url``
     attached. Raises :class:`AppriseInvalidUrl` when Apprise
-    rejects the URL (typo, unknown scheme, malformed token)."""
-    apobj = apprise.Apprise()
+    rejects the URL (typo, unknown scheme, malformed token).
+
+    The :class:`AppriseAsset` is built with the FR-001a-aware
+    plugin-path configuration so untrusted plugin directories
+    aren't consulted unless the operator explicitly enabled
+    them."""
+    apobj = apprise.Apprise(asset=build_apprise_asset())
     if not apobj.add(url):
         raise AppriseInvalidUrl(
             f"apprise rejected URL (scheme/format invalid): "

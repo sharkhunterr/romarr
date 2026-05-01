@@ -3,6 +3,50 @@
 All notable changes to Romarr land here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semver.
 
+## [0.11.0a1] — 2026-05-01
+
+### Added
+
+- **Spec 011 — Notifications & Health**: Apprise as the unified
+  outbound transport (FR-001, Article XIV) + Sonarr v3-format
+  webhooks for ecosystem tooling (Notifiarr, Homepage,
+  Tautulli) at `/api/v3/notification/webhook-payloads.md`. Seven
+  event types (`OnGrab`, `OnImport`, `OnUpgrade`, `OnFail`,
+  `OnHealthIssue`, `OnDatUpdate`, `OnGameAdded`) flow through a
+  per-notification fan-out channel with bounded buffers
+  (10k events, oldest dropped on overflow) and a sandboxed
+  Jinja2 renderer (immutable sandbox + `StrictUndefined` for
+  save-time validation per FR-013). Health-check engine with
+  four built-in checks (DB / DAT freshness / disk space /
+  library path) and a persisted-state debouncer (FR-021a — one
+  emit per state transition, restart-safe). Tiered
+  `GET /api/v3/health` endpoint (anonymous → status only;
+  authenticated → full breakdown per FR-024a). Apprise plugin
+  loading is OFF by default; opt in via
+  `ROMARR_APPRISE_ALLOW_CUSTOM_PLUGINS=true` (FR-001a). 90.2%
+  test coverage on the notifications module (SC-009 floor: 75%).
+- New tables `notification` (operator-configured Apprise URL +
+  per-event flags + tag filter + optional Jinja2 template
+  overrides; URL Fernet-encrypted at rest per FR-003) and
+  `health_check` (one row per component with persisted
+  `last_emitted_state` for restart-safe debouncing).
+  Alembic `0011` chains after `0008_import_pipeline`.
+- Article XIV gate test that statically scans
+  `src/romarr/notifications/` for forbidden per-service
+  transport imports (`discord-py`, `python-telegram-bot`,
+  `slack-sdk`, etc.).
+
+### Deferred
+
+- Cross-module health checks (indexer caps probe via spec 004's
+  client; download-client connection-test via spec 005's
+  adapter; per-provider metadata health via spec 002) — flagged
+  in tasks.md as T043 / T044 / T048; unblocked once each
+  dependency lands.
+- Periodic refresh wiring lives in spec 012's Tasks scheduler —
+  the engine's `refresh()` is callable via
+  `POST /api/v3/health/refresh` until then (T057).
+
 ## [0.9.0a1] — 2026-05-01
 
 ### Added
