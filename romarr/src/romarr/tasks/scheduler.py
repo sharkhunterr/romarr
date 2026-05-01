@@ -70,6 +70,9 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import async_sessionmaker
     from sqlalchemy.ext.asyncio.session import AsyncSession
 
+    from romarr.tasks.execution.auto_pause import AutoPause
+    from romarr.tasks.execution.cancellation import CancellationRegistry
+
 _logger = logging.getLogger(__name__)
 
 
@@ -113,10 +116,14 @@ class SchedulerService:
         session_factory: async_sessionmaker[AsyncSession],
         runners: JobRegistry,
         misfire_grace_seconds: int = 3600,
+        auto_pause: AutoPause | None = None,
+        cancellation_registry: CancellationRegistry | None = None,
     ) -> None:
         self._session_factory = session_factory
         self._runners = dict(runners)
         self._misfire_grace_seconds = misfire_grace_seconds
+        self._auto_pause = auto_pause
+        self._cancellation_registry = cancellation_registry
         self._scheduler = AsyncIOScheduler()
         self._inflight: dict[str, set[asyncio.Task[None]]] = {}
         self._inflight_lock = asyncio.Lock()
@@ -224,10 +231,31 @@ class SchedulerService:
           * :class:`JobAlreadyRunning` — at
             ``max_concurrent_instances``.
 
+        Auto-pause (FR-018, SC-005): when an ``AutoPause`` is
+        wired and reports paused, ``triggered_by=SCHEDULED``
+        triggers are silently suppressed (logged at info,
+        return -1). Manual / command / event triggers are
+        unaffected unless ``force=False`` AND the auto-pause
+        gate explicitly applies — but the spec only requires
+        the suppression on scheduled ticks (US5.2: manual
+        triggers always go through).
+
         The concurrency check + the JobRun insert + the inflight
         registration are all done while holding ``_inflight_lock``
         so two concurrent triggers can't both pass the cap check.
         """
+        if (
+            self._auto_pause is not None
+            and triggered_by is TriggerKind.SCHEDULED
+            and not force
+            and await self._auto_pause.is_paused()
+        ):
+            _logger.info(
+                "auto-pause suppressing scheduled trigger: job_id=%s",
+                job_id,
+            )
+            return -1
+
         async with self._inflight_lock:
             async with self._session_factory() as session:
                 job = await session.get(Job, job_id)
@@ -362,6 +390,18 @@ class SchedulerService:
             cancellation_event=cancellation_event,
             parameters=dict(parameters),
         )
+        # Register with the cancellation registry (when wired)
+        # so the cancel-endpoint can signal this run by id.
+        # Registration is best-effort — the cancel feature is
+        # opt-in at construction time.
+        if self._cancellation_registry is not None:
+            current_task = asyncio.current_task()
+            if current_task is not None:
+                await self._cancellation_registry.register(
+                    job_run_id=job_run_id,
+                    cancellation_event=cancellation_event,
+                    task=current_task,
+                )
 
         # Accept both adapter-object runners (`runner.run(ctx)`)
         # and plain async-callable runners (`runner(ctx)`) — the

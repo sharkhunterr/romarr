@@ -305,23 +305,38 @@ runner.
       progress event is cancelled so the UI's last frame is
       the terminal one. Plus `test_event_payload_shape` for
       the WebSocket-layer contract.
-- [ ] T035 [P] [EXEC] `tests/tasks/execution/test_cancellation.py::test_cooperative_cancel`
-      — set `cancellation_event`; runner observes it within its
-      loop and returns `status='cancelled'` (US for the cancel
-      endpoint).
-- [ ] T036 [P] [EXEC] `tests/tasks/execution/test_cancellation.py::test_force_terminate_after_5s`
-      — runner ignores `cancellation_event`; after 5 s the executor
-      force-terminates and writes
-      `cancellation_forced = true` (FR-021).
-- [ ] T037 [P] [EXEC] `tests/tasks/execution/test_auto_pause.py::test_error_severity_suppresses`
-      — health snapshot has `error`; scheduled tick suppressed;
-      audit log records the suppression (FR-018, SC-005).
-- [ ] T038 [P] [EXEC] `tests/tasks/execution/test_auto_pause.py::test_force_overrides_pause`
-      — manual trigger with `?force=true` succeeds even during
-      auto-pause (FR-018 + US5.2).
-- [ ] T039 [P] [EXEC] `tests/tasks/execution/test_auto_pause.py::test_inflight_runs_continue`
-      — health degrades while a job is running; the running job
-      finishes; only new triggers are suppressed (US5.3).
+- [X] T035 [P] [EXEC] `tests/tasks/execution/test_cancellation.py::test_cooperative_cancel_emits_cancelled_status`
+      — runner observes ``cancellation_event`` and returns
+      ``status=CANCELLED``; JobRun row records the terminal
+      state without ``cancellation_forced=True``.
+- [X] T036 [P] [EXEC] `tests/tasks/execution/test_cancellation.py::test_force_terminate_after_window`
+      — runner ignores the event; after the configured window
+      the executor force-terminates and writes
+      ``cancellation_forced = True`` (FR-021). Plus
+      ``test_cancel_unknown_run_returns_false`` for the cancel-
+      endpoint 404 path, ``test_is_registered_reflects_current_state``
+      for the registry's bookkeeping, and
+      ``test_cancel_all_signals_every_registered_run`` for the
+      lifespan-shutdown drain.
+- [X] T037 [P] [EXEC] `tests/tasks/execution/test_auto_pause.py::test_scheduled_trigger_suppressed_when_paused`
+      — health snapshot reports ``error``; scheduled trigger
+      returns sentinel `-1` and writes no JobRun row (FR-018,
+      SC-005). Plus four predicate-level tests:
+      ``test_auto_pause_paused_when_health_error``,
+      ``test_auto_pause_not_paused_when_health_ok``,
+      ``test_auto_pause_not_paused_when_health_warning``
+      (warnings are informational only — RSS sync still
+      fires), and ``test_auto_pause_soft_gate_on_provider_error``
+      (a broken health system fails open so the scheduler
+      isn't paralysed).
+- [X] T038 [P] [EXEC] `tests/tasks/execution/test_auto_pause.py::test_force_overrides_pause`
+      — manual trigger fires regardless of pause (US5.2). Plus
+      ``test_force_true_bypasses_even_for_scheduled_kind`` for
+      the documented force=True override on SCHEDULED triggers.
+- [X] T039 [P] [EXEC] `tests/tasks/execution/test_auto_pause.py::test_inflight_run_continues_when_health_degrades`
+      — health goes from ok → error mid-run; the in-flight
+      runner completes normally; new scheduled triggers are
+      suppressed (US5.3).
 
 ### Implementation
 
@@ -343,13 +358,31 @@ runner.
       bypass the throttle and clear any pending trailing
       progress event so the UI's last frame is the terminal
       one.
-- [ ] T042 [P] [EXEC] Create
-      `src/romarr/tasks/execution/cancellation.py` — registry of
-      live `cancellation_event` per `job_run_id`; force-terminate
-      timeout helper.
-- [ ] T043 [EXEC] Create `src/romarr/tasks/execution/auto_pause.py`
-      — `is_paused() -> bool` consults spec 011's `HealthEngine`
-      snapshot; integrated into `SchedulerService.trigger`.
+- [X] T042 [P] [EXEC] Create
+      `src/romarr/tasks/execution/cancellation.py` —
+      ``CancellationRegistry`` mapping ``job_run_id`` →
+      ``(cancellation_event, task)``. ``register(...)`` adds
+      entries and auto-removes on task completion via
+      ``add_done_callback``. ``cancel(job_run_id)`` runs the
+      two-phase protocol: signal the event, wait up to the
+      configured force-terminate window (default 5 s) for
+      cooperative shutdown, then ``task.cancel()`` and await
+      to record ``cancellation_forced=True``.
+      ``cancel_all()`` is the lifespan-shutdown drain.
+      ``is_registered(...)`` is the cheap predicate for
+      cancel-endpoint 404 surfacing.
+- [X] T043 [EXEC] Create `src/romarr/tasks/execution/auto_pause.py`
+      — ``AutoPause`` predicate consults spec 011's
+      ``HealthEngine`` snapshot via an injected provider
+      callable. ``is_paused()`` returns True iff
+      ``overall_status`` is in ``PAUSING_STATUSES`` (currently
+      ``{"error"}`` only — warnings are informational per
+      FR-018). The gate fails open on provider errors so a
+      broken health system can't paralyse the scheduler.
+      Integrated into ``SchedulerService.trigger``: when
+      ``triggered_by=SCHEDULED`` and ``not force``, the gate
+      short-circuits before ``start_run`` (no JobRun row is
+      written for suppressed cycles).
 
 **Checkpoint**: EXEC tests green.
 
