@@ -467,46 +467,70 @@ fallback, idempotency-by-SHA-1, and fault-injection resilience.
 
 ### Tests
 
-- [ ] T060 [P] [MOVE] `tests/importer/steps/test_move_hardlink.py::test_same_fs_hardlink`
-      — `os.stat(dest).st_ino == os.stat(source).st_ino` after move
-      (Constitution Article XII; SC-003).
-- [ ] T061 [P] [MOVE] `tests/importer/steps/test_move_crossfs.py::test_tmpfs_fallback_copy_verify_delete`
-      — mount tmpfs at a fixture path; mover detects different `st_dev`
-      and falls back to copy + verify SHA-1 + delete + atomic rename
-      (FR-024, US2.1).
-- [ ] T062 [P] [MOVE] `tests/importer/steps/test_move_crossfs.py::test_copy_hash_mismatch_keeps_source`
-      — inject a hash mismatch (truncated copy); the temp file is deleted,
-      `MoveError(reason='copy_hash_mismatch')` raised, source intact
-      (US2.2).
-- [ ] T063 [P] [MOVE] `tests/importer/steps/test_move_idempotent.py::test_existing_dest_matching_sha1`
-      — destination already exists with matching SHA-1; mover returns
-      no-op success (FR-025, SC-002).
-- [ ] T064 [P] [MOVE] `tests/importer/steps/test_move_idempotent.py::test_existing_dest_mismatching_sha1_no_force`
-      — destination exists with different SHA-1 and `force=false` ⇒
-      `MoveError(reason='dest_exists')` raised; nothing written
-      (FR-026).
-- [ ] T065 [P] [MOVE] `tests/importer/steps/test_move_fault_injection.py::test_crash_mid_copy_no_partial_dest`
-      — monkeypatch `aiofiles` to raise mid-write; assert no file at the
-      canonical destination, no `*.tmp` artefact left (SC-009).
-- [ ] T066 [P] [MOVE] `tests/importer/steps/test_move_fault_injection.py::test_disk_full_no_source_delete`
-      — simulate `OSError(ENOSPC)`; the source is preserved; `OnHealthIssue`
-      is emitted (edge case).
+- [X] T060 [P] [MOVE] `tests/importer/steps/test_move.py::test_same_fs_hardlink`
+      — same-fs ``os.link`` ⇒ ``MoveResult(used_hardlink=True,
+      coalesced=False, bytes_copied=0)``; source and dest share an
+      inode (Constitution Article XII; SC-003).
+- [X] T061 [P] [MOVE] `tests/importer/steps/test_move.py::test_cross_fs_fallback_copy_verify`
+      — monkeypatch ``os.link`` to raise ``EXDEV``; the mover falls
+      back to ``shutil.copy2`` (mtime preserved) + SHA-1 verify +
+      ``os.replace``. ``MoveResult.bytes_copied`` reports the
+      copied size; no leftover ``.tmp`` (FR-024, US2.1).
+- [X] T062 [P] [MOVE] `tests/importer/steps/test_move.py::test_copy_hash_mismatch_keeps_source`
+      — corrupt the copy after ``shutil.copy2``; ``move_atomic``
+      raises ``MoveError(rejection_reason=
+      MOVE_HASH_MISMATCH)``; source survives untouched, no
+      partial dest, no ``.tmp`` artefact (US2.2).
+- [X] T063 [P] [MOVE] `tests/importer/steps/test_move.py::test_existing_dest_matching_sha1_coalesces`
+      — destination already exists with matching SHA-1 ⇒
+      ``MoveResult(coalesced=True)``; both files preserved
+      (FR-025, SC-002).
+- [X] T064 [P] [MOVE] `tests/importer/steps/test_move.py::test_existing_dest_mismatching_sha1_no_force_raises`
+      — dest exists with different SHA-1 and ``force=False`` ⇒
+      ``MoveError(rejection_reason=DESTINATION_COLLISION)``; both
+      files survive (FR-026). Plus
+      ``test_existing_dest_mismatching_sha1_with_force_overwrites``
+      proving ``force=True`` overwrites cleanly.
+- [X] T065 [P] [MOVE] `tests/importer/steps/test_move.py::test_crash_mid_copy_no_partial_dest`
+      — monkeypatch ``shutil.copy2`` to raise ``OSError(EIO)``
+      mid-write; assert no file at the canonical destination, no
+      ``.tmp`` artefact left, source preserved (SC-009).
+- [X] T066 [P] [MOVE] `tests/importer/steps/test_move.py::test_disk_full_preserves_source`
+      — simulate ``OSError(ENOSPC)`` ⇒
+      ``MoveError(rejection_reason=MOVE_DISK_FULL)``; source
+      preserved. Plus
+      ``test_permission_denied_maps_to_permission_error`` so
+      ``EACCES`` / ``EPERM`` map to the right structured reason.
+      (``OnHealthIssue`` emission lives in spec 011's notification
+      consumer.)
 
 ### Implementation
 
-- [ ] T067 [MOVE] Create `src/romarr/importer/steps/move.py` —
-      `move_atomic(source, dest, *, expected_sha1, force=False) -> MoveResult`:
-      1. Pre-flight: if `dest` exists and `sha1(dest) == expected_sha1`,
-         return no-op.
-      2. Pre-flight: if `dest` exists and SHA-1 differs and `force=false`,
-         raise.
-      3. Try `os.link(source, dest)` (hardlink). On `OSError(EXDEV)`,
-         fall back to step 4.
-      4. Cross-fs path: copy source → `dest.tmp` via aiofiles; compute
-         `sha1(dest.tmp)`; if mismatch, delete `dest.tmp` and raise.
-      5. `os.replace(dest.tmp, dest)` (atomic).
-      6. Per the library's lifecycle policy, optionally delete the
-         source (move_and_remove path; copy_and_keep keeps it).
+- [X] T067 [MOVE] Create `src/romarr/importer/steps/move.py` — async
+      ``move_atomic(*, source, dest, expected_sha1, force=False)
+      -> MoveResult``. Strict ordering:
+        1. Idempotent check: dest exists with matching sha1 ⇒
+           coalesced no-op.
+        2. Collision check: dest exists with different sha1 ⇒
+           MoveError(DESTINATION_COLLISION) when force=False;
+           overwrite when force=True.
+        3. Hardlink attempt via ``os.link`` (in
+           ``asyncio.to_thread``). EXDEV ⇒ step 4. Other
+           OSError wraps to MoveError with the right rejection
+           reason (ENOSPC → MOVE_DISK_FULL,
+           EACCES/EPERM → MOVE_PERMISSION_ERROR, default →
+           MOVE_FAILED).
+        4. Cross-fs: ``shutil.copy2`` source → dest.tmp; verify
+           SHA-1 (``Hasher().hash_path(dest.tmp).sha1``);
+           mismatch ⇒ unlink + raise. The copy uses sync
+           ``shutil.copy2`` inside ``asyncio.to_thread`` rather
+           than aiofiles because aiofiles' streaming benefits
+           don't apply to a one-shot copy and the synchronous
+           path is simpler to reason about.
+        5. ``os.replace(dest.tmp, dest)`` atomic rename.
+      Source deletion (``move_and_remove`` lifecycle policy)
+      lives with the LIFECYCLE step — this step focuses on
+      landing dest correctly.
 
 **Checkpoint**: every MOVE test green; the fault-injection suite passes
 in 100% of trials (SC-009).

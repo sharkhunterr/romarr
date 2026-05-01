@@ -31,6 +31,7 @@ from romarr.importer.steps.game_match import (
 )
 from romarr.importer.steps.hash_step import FormatRule, hash_candidates
 from romarr.importer.steps.identify import identify_file
+from romarr.importer.steps.move import MoveResult, move_atomic
 from romarr.importer.steps.multi_disc import (
     DiscMember,
     MultiDiscGroup,
@@ -52,6 +53,7 @@ __all__ = [
     "FormatRule",
     "GameCandidate",
     "GameMatchResult",
+    "MoveResult",
     "MultiDiscGroup",
     "ProfileGateResult",
     "RenderedDestination",
@@ -63,6 +65,7 @@ __all__ = [
     "match_candidates",
     "match_dat",
     "match_to_game",
+    "move_atomic",
     "parse_cue_referenced_files",
     "render_destination",
 ]
