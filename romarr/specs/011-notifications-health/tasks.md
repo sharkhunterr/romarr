@@ -111,30 +111,54 @@ test endpoint → API → hardening.
 
 ### Tests
 
-- [ ] T015 [P] [CHANNEL] `tests/notifications/test_channel.py::test_back_pressure_caps_at_10k`
-      — emit 10 001 events; assert oldest is dropped and a
-      structured warning recorded (FR-026, SC-008).
-- [ ] T016 [P] [CHANNEL] `tests/notifications/test_channel.py::test_serial_per_notification`
-      — two notifications subscribe; events are serial per-
-      notification and parallel across notifications (FR-027).
-- [ ] T017 [P] [CHANNEL] `tests/notifications/test_apprise_wrapper.py::test_5_services`
-      — respx-mocked Discord, Telegram, ntfy, Slack, Gotify;
-      each delivers correctly with the encrypted URL decrypted
-      at call time.
-- [ ] T018 [P] [CHANNEL] `tests/notifications/test_apprise_wrapper.py::test_invalid_url_400`
-      — `Apprise.add(...)` returns False; the wrapper raises
-      `AppriseInvalidUrl` carrying Apprise's own message
-      (FR-004).
+- [X] T015 [P] [CHANNEL] `tests/notifications/test_channel.py::test_back_pressure_drops_oldest_when_full`
+      — fill the queue without consumers, publish 6 with
+      max_buffer=5, assert oldest dropped and dropped_count
+      incremented (FR-026, SC-008). Plus
+      ``test_dropped_count_per_notification`` proving the
+      counter is per-notification — a slow consumer doesn't lose
+      events for a fast one.
+- [X] T016 [P] [CHANNEL] `tests/notifications/test_channel.py::test_serial_per_notification`
+      — within one notification, callbacks run one at a time
+      (timeline assertion: enter-0/exit-0/enter-1/exit-1/...).
+      Plus ``test_parallel_across_notifications`` (asyncio.Event
+      handshake that would deadlock if dispatch were globally
+      serial) and ``test_subscriber_failure_recorded_and_dispatch_continues``
+      (a flaky callback doesn't poison the channel).
+- [X] T017 [P] [CHANNEL] `tests/notifications/test_apprise_wrapper.py::test_happy_path_returns_success`
+      — parametrised over 5 services (Discord, Telegram, ntfys,
+      Slack, Gotify) with apprise.notify mocked to True; each
+      returns ``AppriseSendResult(success=True)``.
+- [X] T018 [P] [CHANNEL] `tests/notifications/test_apprise_wrapper.py::test_invalid_apprise_url_raises`
+      — Apprise rejects the URL ⇒ wrapper raises
+      ``AppriseInvalidUrl`` carrying the scheme prefix only
+      (FR-004). Plus ``test_apprise_returns_false_surfaces_error``,
+      ``test_apprise_raises_surfaces_error``, and
+      ``test_url_decrypted_per_call`` (Fernet plaintext doesn't
+      live in memory between dispatches).
 
 ### Implementation
 
-- [ ] T019 [CHANNEL] Create `src/romarr/notifications/channel.py`
-      — async pub/sub with a 10 000-event ceiling and an
-      overflow-drops-oldest policy; serial-per-notification dispatch.
-- [ ] T020 [CHANNEL] Create `src/romarr/notifications/apprise_wrapper.py`
-      — `send(notification, message_body)` async helper that
-      decrypts the URL, instantiates an Apprise object,
-      `Apprise.notify(...)` in a threadpool, returns success/error.
+- [X] T019 [CHANNEL] Create `src/romarr/notifications/channel.py`
+      — ``EventChannel`` with per-notification ``asyncio.Queue``
+      (default 10 000-event cap), overflow-drops-oldest +
+      dropped_count per notification, serial-per-notification
+      dispatch via one task per subscriber, per-subscriber
+      ``last_error`` recording. ``publish`` yields via
+      ``await asyncio.sleep(0)`` so a tight publish loop doesn't
+      starve dispatcher tasks. ``drain`` uses ``Queue.join()``
+      to wait for in-flight callbacks too, not just empty
+      queues.
+- [X] T020 [CHANNEL] Create `src/romarr/notifications/apprise_wrapper.py`
+      — async ``send(*, notification, title, body, notify_type)
+      -> AppriseSendResult``. Decrypts the Fernet-wrapped URL on
+      every call (no plaintext in memory between dispatches);
+      validates via ``Apprise.add`` (False ⇒
+      ``AppriseInvalidUrl``); ``apobj.notify`` runs in a
+      threadpool. Failure paths surface as
+      ``AppriseSendResult(success=False, error_message=...)`` so
+      the dispatcher can record the audit row and keep draining;
+      only validation-time misuse raises.
 
 **Checkpoint**: channel back-pressure works; Apprise wrapper
 delivers 5 services in mock tests.

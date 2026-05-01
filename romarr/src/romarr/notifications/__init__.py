@@ -26,6 +26,13 @@ dispatcher + health engine + API + lifespan wiring land in
 subsequent slices.
 """
 
+from romarr.notifications.apprise_wrapper import (
+    AppriseSendResult,
+)
+from romarr.notifications.apprise_wrapper import (
+    send as apprise_send,
+)
+from romarr.notifications.channel import EventChannel
 from romarr.notifications.errors import (
     AppriseInvalidUrl,
     HealthCheckTimeout,
@@ -56,9 +63,11 @@ from romarr.notifications.types import (
 
 __all__ = [
     "AppriseInvalidUrl",
+    "AppriseSendResult",
     "ComponentCategory",
     "DownloadClientRef",
     "DumpRef",
+    "EventChannel",
     "EventPayload",
     "EventType",
     "GameRef",
@@ -78,4 +87,5 @@ __all__ = [
     "ReleaseRef",
     "TemplateError",
     "WebhookRetryExhausted",
+    "apprise_send",
 ]
