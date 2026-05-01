@@ -67,9 +67,6 @@ from romarr.search.api import (
     blocklist_router as search_blocklist_router,
 )
 from romarr.search.api import (
-    command_router as search_command_router,
-)
-from romarr.search.api import (
     grab_router as search_grab_router,
 )
 from romarr.search.api import (
@@ -77,6 +74,9 @@ from romarr.search.api import (
 )
 from romarr.search.api import (
     search_router,
+)
+from romarr.tasks.api import (
+    command_router as tasks_command_router,
 )
 from romarr.tasks.api import (
     runs_router as tasks_runs_router,
@@ -208,7 +208,6 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     app.include_router(search_router)
     app.include_router(search_grab_router)
     app.include_router(search_history_router)
-    app.include_router(search_command_router)
     app.include_router(search_blocklist_router)
     # Importer subsystem (spec 008).
     app.include_router(importer_webhook_router)
@@ -227,4 +226,5 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     # because the run paths are deeper (``/{job_id}/runs*``).
     app.include_router(tasks_router)
     app.include_router(tasks_runs_router)
+    app.include_router(tasks_command_router)
     return app

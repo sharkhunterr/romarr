@@ -504,19 +504,59 @@ end-to-end.
 
 ### Tests
 
-- [ ] T058 [P] [CMD] `tests/tasks/test_command_aliases.py::test_known_names_map`
-      — table-driven over the 8+ documented Sonarr-compat names;
-      each maps to the right job.
-- [ ] T059 [P] [CMD] `tests/tasks/test_command_aliases.py::test_unknown_command_400`
-      — POST `/api/v3/command` with `{"name": "Foo"}`; HTTP 400
-      reason `unknown_command`.
-- [ ] T060 [P] [CMD] `tests/tasks/api/test_command_endpoint.py::test_post_returns_command_id`
-      — happy path; HTTP 201 with id; GET
-      `/api/v3/command/{id}` returns `CommandStatus` JSON.
-- [ ] T061 [P] [CMD] `tests/tasks/api/test_command_endpoint.py::test_kwargs_pass_through`
-      — `{"name": "RefreshGame", "gameId": 42}`; the runner
-      receives `kwargs = {"gameId": 42}`; the underlying spec 002
-      function is called with `game_id=42`.
+- [X] T058 [P] [CMD] `tests/tasks/test_command_aliases.py::test_known_names_map_to_expected_jobs`
+      — parametrised over the 10 documented Sonarr-compat
+      names (the documented FR-016 minimum 8 + RefreshGameMetadata
+      and HealthCheck for completeness); each maps to the right
+      job_id. Plus ``test_at_least_eight_documented_commands``
+      (SC-008 floor) and
+      ``test_every_alias_targets_a_seeded_job`` (drift guard).
+- [X] T059 [P] [CMD] `tests/tasks/test_command_aliases.py::test_unknown_command_raises`
+      — unit-level: ``resolve_command(name="Foo")`` raises
+      ``UnknownCommand`` with the name in the message.
+      The HTTP-level 400 with ``errorCode="unknown_command"``
+      lives in ``test_command_endpoint.py::test_unknown_command_returns_400``.
+- [X] T060 [P] [CMD] `tests/tasks/api/test_command_endpoint.py::test_post_known_command_returns_201_with_status`
+      + ``test_get_command_status_returns_running_in_flight``
+      — POST returns 201 with the Sonarr-shape ``CommandStatus``
+      JSON (id, name, commandName, status, started, triggeredBy);
+      GET on the command id while the runner is in-flight returns
+      ``status="started"`` (the Sonarr terminology mapping).
+- [X] T061 [P] [CMD] `tests/tasks/api/test_command_endpoint.py::test_kwargs_flow_into_job_context`
+      — ``{"name": "RefreshGame", "gameId": 42}`` flows
+      through ``resolve_command`` → ``scheduler.trigger`` →
+      runner's ``JobContext.parameters = {"gameId": 42}``.
+      Plus 8 more endpoint tests covering: missing name
+      (400), unknown command (400), no scheduler (503),
+      unknown command id (404), admin gate on POST,
+      readonly access to GET, ``GET /_known`` lists every
+      registered command name.
+
+### Implementation
+
+- [X] T062 [CMD] Create `src/romarr/tasks/command_aliases.py`
+      — pure mapping from Sonarr command names to Romarr
+      job_ids + per-alias ``allowed_kwargs`` whitelist.
+      Unknown payload keys are silently dropped (matches
+      Sonarr's permissive behaviour). Ten aliases shipped:
+      MissingSearch / CutoffSearch / RssSync / RefreshGame
+      (gameId) / RescanLibrary (libraryId) / DownloadDats /
+      IndexerSearch (alias of RssSync) / Backup / HealthCheck /
+      RefreshGameMetadata.
+- [X] T063 [CMD] Create `src/romarr/tasks/api/command.py` —
+      FastAPI router for ``POST /api/v3/command`` (admin) and
+      ``GET /api/v3/command/{id}`` (readonly), plus
+      ``GET /api/v3/command/_known`` for discovery. Maps
+      ``JobStatus`` to Sonarr's status vocabulary
+      (running→started, success/partial→completed,
+      failed→failed, cancelled→aborted) and serialises to
+      camelCase keys (``commandName``, ``triggeredBy``,
+      ``lastExecutionTime``). Note: the legacy
+      ``/api/v3/command`` router from spec 007 was removed
+      in this slice — spec 012 is the canonical owner per
+      FR-016. The four superseded tests in
+      ``tests/search/api/test_command_endpoint.py`` were
+      deleted along with the module.
 
 ### Implementation
 
