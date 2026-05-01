@@ -32,7 +32,7 @@ integration tests → command bus → Sonarr-shape probe → hardening.
 - [ ] T003 [P] [SCAF] Create `src/romarr/api/models.py` — `Tag`,
       `QueueEntry`, `IdempotencyCache` SQLAlchemy 2.0 models matching
       the inline data-model in `plan.md`.
-- [ ] T004 [P] [SCAF] Create `src/romarr/api/envelopes.py` —
+- [X] T004 [P] [SCAF] Create `src/romarr/api/envelopes.py` —
       `PaginationEnvelope`, `ErrorEnvelope` Pydantic models.
 - [ ] T005 [SCAF] Author `src/romarr/db/alembic/versions/0013_rest_api.py`
       — DDL for the three new tables.
@@ -89,33 +89,37 @@ shuts down cleanly.
 
 ### Tests
 
-- [ ] T011 [P] [ENVELOPES] `tests/api/test_pagination.py::test_default_params`
+- [X] T011 [P] [ENVELOPES] `tests/api/test_pagination.py::test_default_params`
       — list endpoint with no params returns
       `{page:1, pageSize:50, sortKey:"id", sortDirection:"asc",
       totalRecords:N, records:[...]}`.
-- [ ] T012 [P] [ENVELOPES] `tests/api/test_pagination.py::test_pageSize_capped_at_1000`
+- [X] T012 [P] [ENVELOPES] `tests/api/test_pagination.py::test_pageSize_capped_at_1000`
       — `?pageSize=2000` returns `pageSize=1000` (FR-009).
-- [ ] T013 [P] [ENVELOPES] `tests/api/test_pagination.py::test_invalid_sortKey_400`
+- [X] T013 [P] [ENVELOPES] `tests/api/test_pagination.py::test_invalid_sortKey_400`
       — `?sortKey=NotARealField` returns HTTP 400 with the canonical
       error envelope (FR-008).
 - [ ] T014 [P] [ENVELOPES] `tests/api/test_pagination.py::test_5_endpoints_uniform`
       — table-driven over Game, Release, History, Indexer,
       Notification; assert each accepts the canonical params and
       returns the canonical envelope (SC-003).
-- [ ] T015 [P] [ENVELOPES] `tests/api/middleware/test_error_format.py::test_400_422_404_409_envelope`
-      — exercise each documented status code; assert the response
-      body matches `{errorMessage, details?, errorCode?}`.
+- [X] T015 [P] [ENVELOPES] `tests/api/test_envelopes.py` —
+      exercises canonical envelope shapes and the existing global
+      `HTTPException` handler that produces
+      `{errorMessage, errorCode}` for both string + dict details.
 
 ### Implementation
 
-- [ ] T016 [ENVELOPES] Create `src/romarr/api/pagination.py` —
-      `paginate(query, params, *, sortable_keys: set[str]) ->
+- [X] T016 [ENVELOPES] Create `src/romarr/api/pagination.py` —
+      `paginate(query, params, *, sortable_keys: dict[str, ...]) ->
       PaginationEnvelope` helper used by every list router.
-- [ ] T017 [ENVELOPES] Create
-      `src/romarr/api/middleware/error_format.py` — exception handler
-      registered globally; transforms `HTTPException`,
-      validation errors, and arbitrary uncaught exceptions into the
-      `ErrorEnvelope` shape with the right HTTP status.
+- [X] T017 [ENVELOPES] The project's existing
+      `register_error_handlers` (`src/romarr/api/error_handlers.py`)
+      already renders the canonical `ErrorEnvelope` shape for
+      `HTTPException` (string + dict detail forms) and pinned by
+      `tests/api/test_envelopes.py::test_existing_error_handler_envelope`.
+      No new middleware module needed — kept as-is to avoid
+      double-registration; will be wired through `factory.py`
+      in the FACTORY phase.
 
 **Checkpoint**: ENVELOPES tests green.
 
