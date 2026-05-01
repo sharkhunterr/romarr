@@ -151,33 +151,67 @@ task and the webhook returns within the 1 s p95 budget.
 
 ### Tests
 
-- [ ] T023 [P] [EXTRACT] `tests/importer/steps/test_extract.py::test_zip`
-      — fixture `archives/good_zip.zip` extracts cleanly to a tmpdir.
-- [ ] T024 [P] [EXTRACT] `tests/importer/steps/test_extract.py::test_7z`
-      — fixture `archives/good_7z.7z` via `py7zr`.
-- [ ] T025 [P] [EXTRACT] `tests/importer/steps/test_extract.py::test_rar`
-      — fixture `archives/good_rar.rar` via `rarfile` (skip on systems
-      without `unrar`).
-- [ ] T026 [P] [EXTRACT] `tests/importer/steps/test_extract.py::test_recursive_two_levels`
-      — `nested_zip_in_zip.zip` extracts at level 1 then level 2.
-- [ ] T027 [P] [EXTRACT] `tests/importer/steps/test_extract.py::test_depth_exceeded`
-      — `too_deep_4_levels.zip` raises with reason
-      `extract:depth-exceeded` (FR-004).
-- [ ] T028 [P] [EXTRACT] `tests/importer/steps/test_extract.py::test_idempotent_skip`
-      — pre-existing extracted folder with matching content hash → no
-      double-extract (FR-006).
-- [ ] T029 [P] [EXTRACT] `tests/importer/steps/test_extract.py::test_corrupted_archive`
-      — fixture `archives/corrupted.7z` raises `ExtractError`.
+- [X] T023 [P] [EXTRACT] `tests/importer/steps/test_extract.py::test_zip_extracts_cleanly`
+      — programmatically-built zip extracts cleanly; sentinel
+      file ``.romarr-extracted-from-<sha1[:16]>`` written.
+- [X] T024 [P] [EXTRACT] `tests/importer/steps/test_extract.py::test_7z_extracts_cleanly`
+      — py7zr round-trip. The extractor chmods extracted files
+      to ensure owner-read because py7zr propagates restrictive
+      modes from ``writestr``-built archives.
+- [X] T025 [P] [EXTRACT] `tests/importer/steps/test_extract.py::test_rar_extracts_cleanly`
+      — rarfile round-trip; skipped automatically when neither
+      ``unrar`` nor ``unar`` is on PATH.
+- [X] T026 [P] [EXTRACT] `tests/importer/steps/test_extract.py::test_recursive_zip_in_zip`
+      — outer.zip whose only member is inner.zip extracts both
+      levels in one ``extract`` call (depth=0 -> depth=1).
+- [X] T027 [P] [EXTRACT] `tests/importer/steps/test_extract.py::test_depth_exceeded_raises`
+      — 3-level chain with ``max_depth=1`` raises
+      ``extract:depth-exceeded`` on the third recursion (FR-004).
+- [X] T028 [P] [EXTRACT] `tests/importer/steps/test_extract.py::test_idempotent_re_extract_skips`
+      — second ``extract`` call against the same dest finds the
+      sentinel and returns ``archive_was_processed=False`` /
+      ``bytes_written=0`` (FR-006).
+- [X] T029 [P] [EXTRACT] `tests/importer/steps/test_extract.py::test_corrupted_archive_raises`
+      — non-archive bytes saved with a ``.7z`` extension raise
+      ``ExtractError(EXTRACT_BAD_ARCHIVE)``. Plus
+      ``test_unsupported_format_raises`` covering the unknown-
+      extension path,
+      ``test_bomb_detected_when_expansion_exceeds_cap`` proving
+      the FR-004a cap aborts cleanly with leftover files
+      removed, and
+      ``test_zip_with_path_traversal_member_raises`` rejecting
+      ``../../etc/passwd``-style members before any bytes land.
 - [ ] T030 [P] [EXTRACT] `tests/importer/steps/test_extract.py::test_preserve_archive_flag`
-      — when `preserve_archive = false` (default), the archive is deleted
-      after a successful import; when `true`, kept (FR-005).
+      — when ``preserve_archive=false`` the archive is deleted
+      after a successful import; when ``true``, kept (FR-005).
+      *(Deferred to the orchestrator slice — FR-005 is a
+      lifecycle decision the orchestrator owns; ``extract``
+      itself never touches the source archive.)*
 
 ### Implementation
 
-- [ ] T031 [EXTRACT] Create `src/romarr/importer/steps/extract.py` —
-      `extract(archive_path: Path, dest_dir: Path, depth: int = 0) -> list[Path]`
-      with the depth-3 ceiling, supporting `.zip` (stdlib `zipfile`),
-      `.7z` (`py7zr`), `.rar` (`rarfile`).
+- [X] T031 [EXTRACT] Create `src/romarr/importer/steps/extract.py` —
+      async ``extract(*, archive_path, dest_dir, depth=0,
+      max_depth=3) -> ExtractResult``. Three independent
+      defenses:
+        1. **Depth limit (FR-004)**: ``depth > max_depth`` =>
+           ``ExtractError(EXTRACT_DEPTH_EXCEEDED)``.
+        2. **Bomb defense (FR-004a)**: cumulative output capped
+           at ``max(4 x compressed_size, 5 GiB)``, enforced
+           **incrementally** on zip / rar via a 64 KB streaming
+           writer; pre-validated against archive metadata for
+           7z (py7zr's API doesn't expose per-byte streaming).
+           Overrun => partial files cleaned up,
+           ``ExtractError(EXTRACT_BOMB_DETECTED)``.
+        3. **Idempotent skip (FR-006)**: sentinel file
+           ``.romarr-extracted-from-<sha1[:16]>`` carries the
+           source archive's SHA-1; a subsequent extract finds
+           the sentinel and short-circuits.
+      Path-traversal members are pre-rejected via ``_safe_join``
+      before any bytes hit disk, regardless of format.
+      Format-specific work runs inside ``asyncio.to_thread``.
+      ``rarfile`` shells out to ``unrar`` / ``unar`` — production
+      Docker images include the binary; tests skip when absent.
 
 **Checkpoint**: EXTRACT tests green; the depth-3 limit holds; idempotent
 re-extract skips.

@@ -141,6 +141,12 @@ disallow_untyped_defs = true
 module = ["lxml.*"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+# rarfile has no type stubs published; we wrap its narrow surface
+# (RarFile + BadRarFile + Error) inside the importer's extract step.
+module = ["rarfile.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
