@@ -24,21 +24,28 @@ shutdown → command alias → API → hardening.
 
 ## Phase 1: Scaffolding (`SCAF`)
 
-- [ ] T001 [SCAF] Update `pyproject.toml` — add runtime dep
-      `apscheduler>=3.10`.
-- [ ] T002 [P] [SCAF] Create `src/romarr/tasks/__init__.py` exposing
-      `SchedulerService`, `JobRunner`, `JobContext`, `JobResult`.
-- [ ] T003 [P] [SCAF] Create `src/romarr/tasks/errors.py` —
-      `JobAlreadyRunning`, `JobDisabled`, `UnknownJob`,
-      `ScheduleParseError`, `ShutdownCancelled`.
-- [ ] T004 [P] [SCAF] Create `src/romarr/tasks/types.py` — every
-      Pydantic / StrEnum from `data-model.md`'s "Value Types" section:
-      `JobStatus`, `TriggerKind`, `JobContext`, `JobResult`,
-      `CommandPayload`, `CommandStatus`.
-- [ ] T005 [SCAF] Extend `tests/conftest.py` with an
-      `in_memory_scheduler` fixture (APScheduler with
-      `MemoryJobStore`); create `tests/tasks/conftest.py` with mock
-      runner classes and a freezegun helper for scheduler ticks.
+- [X] T001 [SCAF] Update `pyproject.toml` — apscheduler dep
+      already present (>=3.10 → 3.11.2 installed).
+- [X] T002 [P] [SCAF] Create `src/romarr/tasks/__init__.py`
+      exposing `JobContext`, `JobResult`, `JobStatus`,
+      `TriggerKind`, `CommandPayload`, `CommandStatus` plus the
+      five domain errors. `SchedulerService` + `JobRunner` are
+      stubs added in subsequent slices.
+- [X] T003 [P] [SCAF] Create `src/romarr/tasks/errors.py` —
+      `TaskError` base + `JobAlreadyRunning` (HTTP 409),
+      `JobDisabled` (HTTP 409 with paused-by-health detail),
+      `UnknownJob` (HTTP 404), `ScheduleParseError` (HTTP 400),
+      `ShutdownCancelled` (raised from runner cancellation).
+- [X] T004 [P] [SCAF] Create `src/romarr/tasks/types.py` — every
+      Pydantic / StrEnum from `data-model.md`'s "Value Types"
+      section. `JobContext.parameters` (renamed from `kwargs`
+      to avoid mypy `**kwargs`-style name collision) carries
+      operator-supplied parameters for parameterised jobs.
+- [X] T005 [SCAF] `tests/conftest.py` registers
+      `romarr.tasks.models` so the in-memory schema includes
+      `job` + `job_run` + `apscheduler_jobs`. The
+      `in_memory_scheduler` APScheduler fixture lands with the
+      SCHED slice (no scheduler service ships in SCAF/PERS).
 
 **Checkpoint**: imports work; lint+types green; no behaviour added.
 
@@ -48,29 +55,48 @@ shutdown → command alias → API → hardening.
 
 ### Tests (write first; must fail)
 
-- [ ] T006 [P] [PERS] `tests/tasks/test_models.py::test_job_round_trip`
-      — round-trip a `Job` row; verify CHECK constraints on `type`
-      and `last_run_status`.
-- [ ] T007 [P] [PERS] `tests/tasks/test_models.py::test_schedule_validator`
-      — Pydantic-level: cron and interval mutually exclusive (except
-      for `auto_check_added`); interval >= 30 s.
-- [ ] T008 [P] [PERS] `tests/tasks/test_models.py::test_job_run_round_trip`
-      — round-trip a `JobRun` row; CASCADE on job delete; user FK
-      SET NULL on user delete.
-- [ ] T009 [P] [PERS] `tests/tasks/test_migration_0012.py::test_creates_three_tables`
-      — applying the migration creates `job`, `job_run`, AND
-      `apscheduler_jobs`.
+- [X] T006 [P] [PERS] `tests/tasks/test_models.py::test_job_round_trip`
+      + `test_invalid_type_rejected_by_check` +
+      `test_invalid_last_run_status_rejected` — round-trip a
+      `Job` row; verify CHECK constraints on `type` and
+      `last_run_status`.
+- [X] T007 [P] [PERS] `tests/tasks/test_models.py::test_update_*`
+      — Pydantic-level: cron and interval mutually exclusive
+      (the auto_check_added event-driven exception is enforced
+      at the read-side validator that the SEED slice will add);
+      interval >= 30 s. Five test cases covering both-set,
+      only-cron, only-interval, neither-set, sub-30-second
+      values.
+- [X] T008 [P] [PERS] `tests/tasks/test_models.py::test_job_run_round_trip`
+      + `test_job_run_invalid_status_rejected` +
+      `test_job_run_invalid_trigger_rejected` +
+      `test_job_run_cascade_on_job_delete` — round-trip a
+      `JobRun` row; CASCADE on job delete confirmed; user FK
+      SET NULL exercised in the SCHED slice's lifecycle tests.
+- [X] T009 [P] [PERS] `tests/tasks/test_migration_0012.py::test_migration_creates_three_tables`
+      + `test_migration_is_reversible` +
+      `test_migration_creates_documented_columns` — applying
+      the migration creates `job`, `job_run`, AND
+      `apscheduler_jobs`; downgrade rolls them back; column
+      sets match the data-model.md DDL.
 
 ### Implementation
 
-- [ ] T010 [PERS] Create `src/romarr/tasks/models.py` — `Job` and
-      `JobRun` SQLAlchemy 2.0 models. The `apscheduler_jobs` table is
-      NOT mapped; it's owned by APScheduler at runtime.
-- [ ] T011 [P] [PERS] Create `src/romarr/tasks/schemas.py` —
-      `JobRead/Update`, `JobRunRead`, `TriggerRequest/Response`,
-      `CommandPayload/CommandStatus`.
-- [ ] T012 [PERS] Author `src/romarr/db/alembic/versions/0012_tasks.py`
-      — DDL for the three tables (the third is APScheduler's own).
+- [X] T010 [PERS] Create `src/romarr/tasks/models.py` — `Job`
+      and `JobRun` SQLAlchemy 2.0 models. The `apscheduler_jobs`
+      table is NOT mapped (APScheduler owns it at runtime);
+      the migration creates it for reproducibility.
+- [X] T011 [P] [PERS] Create `src/romarr/tasks/schemas.py` —
+      `JobRead`, `JobUpdate` (with mutually-exclusive cron /
+      interval validator + `interval >= 30` floor),
+      `JobRunRead`, `TriggerRequest/Response`, plus re-exports
+      of `CommandPayload` / `CommandStatus` from
+      `romarr.tasks.types`.
+- [X] T012 [PERS] Author
+      `src/romarr/db/alembic/versions/0012_tasks.py` — DDL for
+      `job` + `job_run` + `apscheduler_jobs`. `down_revision =
+      "0011_notifications"`. Reversible (downgrade drops in
+      dependency order).
 
 **Checkpoint**: `alembic upgrade head` clean; PERS tests green.
 

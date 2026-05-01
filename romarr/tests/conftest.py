@@ -34,6 +34,7 @@ from romarr.notifications import models as _notification_models  # noqa: F401
 from romarr.platform_packs import models as _platform_pack_models  # noqa: F401
 from romarr.profiles import models as _profile_models  # noqa: F401
 from romarr.search import models as _search_models  # noqa: F401
+from romarr.tasks import models as _tasks_models  # noqa: F401
 
 
 @pytest_asyncio.fixture
