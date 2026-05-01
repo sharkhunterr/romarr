@@ -3,6 +3,96 @@
 All notable changes to Romarr land here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semver.
 
+## [0.9.0a1] — 2026-05-01
+
+### Added
+
+- **Spec 008 — Import Pipeline** (partial: 12 of 13 pipeline
+  steps + webhook + read-side API. Orchestrator end-to-end +
+  manual / retry / match POST endpoints land with the
+  follow-up integration slice; polling watcher waits on
+  ``DownloadClient.list_managed_downloads`` being added to spec
+  005's ABC).
+  - One new table (``import_history``) + three column
+    extensions on ``unidentified_dump``
+    (``rejection_reason``, ``library_id``, ``suggested_game_id``).
+    Alembic ``0008`` chains after ``0009_libraries`` and
+    finalises the gated ``unidentified_dump.library_id`` FK
+    when the library table exists.
+  - ``ImportLockManager`` — per-(release_id, sha1)
+    :class:`asyncio.Lock` registry with a 60-s timeout
+    (FR-033 / FR-034). Test seam supports timeout-on-contention
+    via real ``asyncio.wait_for``.
+  - ``ImportContext`` / ``ImportOutcome`` /
+    ``LifecycleAction`` / ``MultiDiscGroup`` /
+    ``RejectionReason`` frozen Pydantic value types — Article
+    XVII purity-by-construction so the orchestrator threads
+    them between steps without mutation.
+  - Twelve pipeline steps under ``romarr.importer.steps``:
+      * ``EXTRACT`` — zip/7z/rar with depth-3 limit, bomb
+        defense (``max(4 × compressed, 5 GiB)`` cap with
+        incremental enforcement on zip/rar), idempotent skip
+        via sentinel file, path-traversal rejection.
+      * ``HASH`` — directory walker filtered by extension +
+        per-platform-format ``min_size_bytes`` floor; hashes
+        via spec 001's ``Hasher`` in
+        ``asyncio.to_thread``.
+      * ``DATMATCH`` — wraps spec 001's
+        ``HashMatchCascade``; non-VERIFIED winners propagate
+        ``dump_status`` while flipping ``dat_verified`` to
+        False (US5.3).
+      * ``IDENTIFY`` — wraps spec 001's ``Identifier`` with
+        precomputed-hashes pass-through (hash-once invariant).
+      * ``GAMEMATCH`` — case-insensitive exact + RapidFuzz
+        threshold-90 against monitored Games + threshold-95
+        unmonitored fallback for the FR-016
+        ``suggested_game_id`` hint.
+      * ``MULTIDISC`` — cue/bin > filename-pattern > side-A/B
+        detection; primary_file is the .bin for cue/bin pairs
+        (FR-019). Hypothesis property test asserts the
+        detector never produces an invalid tree across 200
+        random layouts.
+      * ``PROFILEGATE`` — composes spec 006's
+        ``ProfileEvaluator`` with fixed Q→R→D→L ordering;
+        ``force=True`` flips rejection into a
+        ``force_overrode:<reason>`` warning (US4.2).
+      * ``RENDER`` — composes spec 006's
+        ``NamingTemplateEngine`` and resolves the full
+        destination including platform / multi-disc subfolders.
+      * ``MOVE`` — atomic mover. Hardlink-first, EXDEV
+        fallback to ``shutil.copy2`` + SHA-1 verify. Idempotent
+        on matching dest, collision-protected on mismatching
+        dest, fault-injection clean (no partial dest, no
+        leftover .tmp). Maps ``OSError`` to structured
+        ``RejectionReason`` codes.
+      * ``DBUPDATE`` — inserts the fresh Dump, optionally
+        retires prior Dumps when ``keep_dump_history=False``
+        (FR-028), transitions Release.status →
+        ``imported``.
+      * ``LIFECYCLE`` — async dispatch by
+        ``LifecycleAction.kind``. ``schedule_remove`` spawns a
+        fire-and-forget task that sleeps the grace window then
+        removes (FR-029); ``ImportOutcome`` publishes BEFORE
+        the grace window completes (FR-030).
+      * ``NOTIFY`` — ``ImporterEventBus`` in-process pub/sub +
+        ``OnImport`` (FR-031) + ``OnUpgrade`` (FR-032)
+        emitter. Spec 011's notification subsystem will
+        subscribe Apprise / WebSocket / library exporters on
+        top.
+  - Webhook entry point: POST
+    ``/api/v3/webhook/download-complete`` with constant-time
+    ``secrets.compare_digest`` token check, sliding-window
+    10-req/60s/IP rate limit, schema validation. Returns 202
+    ACCEPTED in ~0.34 ms p50 / 0.66 ms p95 (~1500x under the
+    1 s SC-008 budget); recorded in
+    ``specs/008-import-pipeline/research.md``.
+  - Read-side API: ``GET /api/v3/rom/import/history`` (paginated,
+    filterable) and ``GET /api/v3/rom/unidentified`` +
+    ``DELETE /api/v3/rom/unidentified/{id}`` (admin-only;
+    FR-038 — does NOT delete the source file).
+  - Coverage: 93.13 % on ``romarr.importer`` (target ≥ 75 %);
+    full importer suite 91 passing.
+
 ## [0.8.0a1] — 2026-05-01
 
 ### Added
