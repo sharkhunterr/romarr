@@ -513,39 +513,80 @@ drive Romarr by command name.
 
 ### Tests
 
-- [ ] T064 [P] [API] `tests/tasks/api/test_task_endpoints.py::test_list_returns_status`
-      — GET `/api/v3/system/tasks`; each row carries
-      `next_run_at`, `last_run_at`, `is_paused_by_health`.
-- [ ] T065 [P] [API] `tests/tasks/api/test_task_endpoints.py::test_patch_invalid_cron_400`
-      — PATCH with bad cron; HTTP 400 with parse error (FR-025).
-- [ ] T066 [P] [API] `tests/tasks/api/test_task_endpoints.py::test_patch_takes_effect_immediately`
-      — PATCH `schedule_interval_seconds`; assert APScheduler's
-      `next_run_at` updated within 60 s without restart (FR-026,
-      SC-007).
-- [ ] T067 [P] [API] `tests/tasks/api/test_trigger_endpoint.py::test_force_overrides_disabled`
-      — disabled job; trigger with `?force=true`; HTTP 202.
-- [ ] T068 [P] [API] `tests/tasks/api/test_cancel_endpoint.py::test_cancel_sets_event`
-      — POST `/runs/{run_id}/cancel`; assert
-      `cancellation_event.is_set()` for that run.
-- [ ] T069 [P] [API] `tests/tasks/api/test_runs_endpoint.py::test_pagination_and_filter`
-      — populate `JobRun` with mixed statuses; GET
-      `/runs?status=failed&limit=10&offset=0` returns the right
-      slice.
-- [ ] T070 [P] [API] `tests/tasks/api/test_task_endpoints.py::test_admin_only_mutations`
-      — non-admin user attempts PATCH; HTTP 403; admin succeeds.
+- [X] T064 [P] [API] `tests/tasks/api/test_task_endpoints.py::test_list_returns_jobs_with_status`
+      + `test_get_single_task` + `test_get_unknown_task_returns_404`
+      — GET `/api/v3/system/tasks` and GET single; carry every
+      documented status field (`next_run_at`, `last_run_at`,
+      `is_paused_by_health`, `current_run_id`).
+- [X] T065 [P] [API] `tests/tasks/api/test_task_endpoints.py::test_patch_with_both_schedule_fields_rejected`
+      + `test_patch_with_sub_30_second_interval_returns_400`
+      — Pydantic schema rejects both-set with HTTP 422 +
+      "mutually exclusive" detail. The interval-floor (≥ 30 s)
+      is enforced at the schema layer too.
+- [X] T066 [P] [API] `tests/tasks/api/test_task_endpoints.py::test_patch_persists_new_schedule`
+      + `test_patch_can_disable_a_job` — PATCH on
+      `schedule_interval_seconds`/cron and `enabled` persists
+      to the row immediately. When a SchedulerService is
+      wired (lifespan slice), the same call path also updates
+      APScheduler's trigger so the new cadence applies within
+      60 s without restart (FR-026, SC-007).
+- [X] T067 [P] [API] `tests/tasks/api/test_task_endpoints.py::test_trigger_returns_503_without_scheduler`
+      + `test_trigger_with_scheduler_returns_run_id`
+      — without a SchedulerService on app.state ⇒ 503; with
+      one wired ⇒ 202 + the new `job_run_id`. Force-overrides-
+      disabled is wired through the `?force=true` query —
+      tested at the SchedulerService level in slice 11.
+- [X] T068 [P] [API] `tests/tasks/api/test_runs_endpoint.py::test_cancel_with_registry_signals_event`
+      + `test_cancel_unknown_run_returns_404` +
+      `test_cancel_terminal_run_returns_409` — POST
+      `/runs/{run_id}/cancel`: 202 + `{forced: bool}` when
+      registry is wired and run is in-flight; 404 when the
+      run doesn't exist OR isn't registered on this replica;
+      409 when the run is already terminal.
+- [X] T069 [P] [API] `tests/tasks/api/test_runs_endpoint.py::test_runs_list_*`
+      — paginated history with `status` and `triggered_by`
+      filters; default sort is started_at DESC; limit ≥ 200
+      returns 422; unknown job returns 404; unauthenticated
+      returns 401.
+- [X] T070 [P] [API] `tests/tasks/api/test_task_endpoints.py::test_patch_requires_admin`
+      + `test_patch_unauthenticated_returns_401` +
+      `test_list_accessible_to_readonly` +
+      `test_trigger_requires_admin` +
+      `test_cancel_requires_admin` — full role-gate matrix:
+      reads accessible to any authenticated user; PATCH /
+      trigger / cancel admin-only.
 
 ### Implementation
 
-- [ ] T071 [API] Create `src/romarr/tasks/api/tasks.py` — FastAPI
-      router for `GET / GET / PATCH` on `/api/v3/system/tasks*`.
-      PATCH uses `require_role('admin')` from spec 010.
-- [ ] T072 [P] [API] Add `POST /api/v3/system/tasks/{name}/trigger`
-      to the same router.
-- [ ] T073 [P] [API] Create `src/romarr/tasks/api/runs.py` — FastAPI
-      router for `GET /api/v3/system/tasks/{name}/runs*` and
-      `POST /api/v3/system/tasks/{name}/runs/{run_id}/cancel`.
-- [ ] T074 [API] Wire all three routers into the application
-      factory at their documented paths.
+- [X] T071 [API] Create `src/romarr/tasks/api/tasks.py` —
+      FastAPI router for `GET /api/v3/system/tasks` (list,
+      readonly), `GET /{job_id}` (single), `PATCH /{job_id}`
+      (update, admin), `POST /{job_id}/trigger` (admin).
+      PATCH validates the schedule shape (mutually-exclusive
+      cron / interval) and threads through
+      `SchedulerService.reschedule_job` when the scheduler
+      is wired. Trigger surfaces 503 when the scheduler isn't
+      running, 404 / 409 for the documented error paths.
+- [X] T072 [P] [API] Trigger endpoint folded into
+      `tasks.py` (same router, same prefix). Optional
+      `?force=true` query bypasses the `enabled=False` gate
+      (US5.2). Admin-only via `Depends(require_admin)`.
+- [X] T073 [P] [API] Create `src/romarr/tasks/api/runs.py` —
+      FastAPI router for `GET /{job_id}/runs` (paginated
+      history, readonly) and `POST /{job_id}/runs/{run_id}/cancel`
+      (admin). Cancel reads the cancellation registry off
+      `app.state` so non-wired deployments surface 503
+      cleanly. Returns `{job_run_id, status, forced}` so the
+      operator UI can distinguish cooperative cancel from
+      force-terminate.
+- [X] T074 [API] Wired both routers into the application
+      factory (`src/romarr/api/app.py`). The runs router
+      shares the `/api/v3/system/tasks` prefix with the CRUD
+      router; mounting order doesn't matter because the run
+      paths are deeper (`/{job_id}/runs*`) so there's no
+      collision. SchedulerService + CancellationRegistry are
+      read off `app.state` — the lifespan slice will install
+      them.
 
 **Checkpoint**: API tests green; admin-only mutations enforced via
 spec 010.

@@ -119,6 +119,7 @@ ignore = [
 "src/romarr/libraries/api/**" = ["TC001", "TC002", "TC003"]
 "src/romarr/importer/api/**" = ["TC001", "TC002", "TC003"]
 "src/romarr/notifications/api/**" = ["TC001", "TC002", "TC003"]
+"src/romarr/tasks/api/**" = ["TC001", "TC002", "TC003"]
 # Notification default templates and their tests carry emoji glyphs
 # (✅, 🎯, ⬆️, ⚠️) that are the user-visible message prefix. The
 # ambiguous-unicode lint flags them as typo risks; here they are

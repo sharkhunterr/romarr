@@ -49,6 +49,12 @@ from romarr.notifications.api import (
     notifications_router,
     webhook_payloads_md_router,
 )
+from romarr.tasks.api import (
+    runs_router as tasks_runs_router,
+)
+from romarr.tasks.api import (
+    tasks_router,
+)
 from romarr.platform_packs.api import (
     packs_router,
 )
@@ -166,4 +172,10 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     app.include_router(webhook_payloads_md_router)
     app.include_router(notifications_router)
     app.include_router(notifications_health_router)
+    # Tasks & Scheduler subsystem (spec 012). The runs router
+    # shares the /api/v3/system/tasks prefix with the CRUD
+    # router; mounting order doesn't matter for collision
+    # because the run paths are deeper (``/{job_id}/runs*``).
+    app.include_router(tasks_router)
+    app.include_router(tasks_runs_router)
     return app
