@@ -256,36 +256,46 @@ all rejected.
 
 ### Tests
 
-- [ ] T035 [P] [DISPATCH] `tests/notifications/test_dispatcher.py::test_event_flag_filter`
+- [X] T035 [P] [DISPATCH] `tests/notifications/test_dispatcher.py::test_event_flag_filter_blocks_unsubscribed`
       — notification with `on_import = true`, `on_grab = false`;
       OnGrab event ⇒ NOT delivered; OnImport ⇒ delivered.
-- [ ] T036 [P] [DISPATCH] `tests/notifications/test_dispatcher.py::test_tag_filter_intersection`
-      — notification with `tags = ["family-friendly"]`;
+- [X] T036 [P] [DISPATCH] `tests/notifications/test_dispatcher.py::test_tag_filter_intersection_match`
+      / `test_tag_filter_no_intersection_skips`
+      / `test_tag_filter_empty_game_tags_skips` —
+      notification with `tags = ["family-friendly"]`;
       Game tags `["family-friendly", "platformer"]` ⇒ delivered;
-      empty Game tags ⇒ NOT delivered (FR-014).
-- [ ] T037 [P] [DISPATCH] `tests/notifications/test_dispatcher.py::test_empty_tags_match_all`
+      non-overlapping or empty Game tags ⇒ NOT delivered (FR-014).
+- [X] T037 [P] [DISPATCH] `tests/notifications/test_dispatcher.py::test_empty_tags_match_all`
       — notification with `tags = []`; every event ⇒ delivered
       (FR-015).
-- [ ] T038 [P] [DISPATCH] `tests/notifications/test_dispatcher.py::test_disabled_skipped`
+- [X] T038 [P] [DISPATCH] `tests/notifications/test_dispatcher.py::test_disabled_notification_never_delivers`
       — notification with `enabled = false` ⇒ never delivered.
-- [ ] T039 [P] [DISPATCH] `tests/notifications/test_dispatcher.py::test_upgrade_fires_both_events`
+- [X] T039 [P] [DISPATCH] `tests/notifications/test_dispatcher.py::test_upgrade_fires_both_events`
       — `OnUpgrade` is emitted alongside `OnImport` for an upgrade;
       a notification subscribed to both flags receives **two**
       messages (US8.1).
-- [ ] T040 [P] [DISPATCH] `tests/notifications/test_dispatcher.py::test_records_last_status`
-      — successful delivery sets `last_status = "success"`;
-      failure sets `"failed"` with `last_error` populated.
+- [X] T040 [P] [DISPATCH] `tests/notifications/test_dispatcher.py::test_records_last_status_on_success`
+      / `test_records_last_status_on_failure` /
+      `test_apprise_exception_recorded_as_failure` — successful
+      delivery sets `last_status = "success"`; failure (returned
+      OR raised) sets `"failed"` with `last_error` populated.
 
 ### Implementation
 
-- [ ] T041 [DISPATCH] Create `src/romarr/notifications/dispatcher.py`
-      — async dispatcher loop:
-      1. dequeue event from channel;
-      2. for each enabled notification: check event flag → check
-         tag intersection → render template → call
-         `apprise_wrapper.send` OR `webhook.send_webhook`;
-      3. update `last_used_at`, `last_status`, `last_error` in
-         a fire-and-forget background task.
+- [X] T041 [DISPATCH] Create `src/romarr/notifications/dispatcher.py`
+      — pure-function `dispatch_to_notification(*, notification,
+      event, send_apprise, send_webhook) -> DispatchOutcome`:
+      1. enabled / event-flag / health-severity / tag-intersection
+         filters (in order);
+      2. render via the appropriate builder
+         (`build_apprise_message` for Apprise schemes,
+         `build_sonarr_webhook_body` for `json`/`jsons`);
+      3. call the right transport (Apprise vs httpx webhook);
+      4. update `last_used_at`, `last_status`, `last_error` on
+         the ORM row in place; caller commits.
+      The transport callables are injected so tests can stub
+      them without HTTP. The `EventChannel` from slice 2 supplies
+      the per-notification fan-out / serialization.
 
 **Checkpoint**: dispatcher tests green; tag and event filtering
 work; double-event for upgrades works.
