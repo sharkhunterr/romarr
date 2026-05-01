@@ -57,7 +57,8 @@ from romarr.tasks.errors import (
     ScheduleParseError,
     UnknownJob,
 )
-from romarr.tasks.models import Job, JobRun
+from romarr.tasks.execution.lifecycle import finish_run, start_run
+from romarr.tasks.models import Job
 from romarr.tasks.types import (
     JobContext,
     JobStatus,
@@ -248,16 +249,13 @@ class SchedulerService:
                     )
                 self._inflight[job.id] = still_running
 
-                run = JobRun(
+                run = await start_run(
+                    session,
                     job_id=job.id,
-                    started_at=datetime.now(UTC),
-                    status=JobStatus.RUNNING.value,
-                    triggered_by=triggered_by.value,
+                    triggered_by=triggered_by,
                     triggered_by_user_id=triggered_by_user_id,
                 )
-                session.add(run)
                 await session.commit()
-                await session.refresh(run)
                 run_id = run.id
 
             task = asyncio.create_task(
@@ -415,40 +413,20 @@ class SchedulerService:
         cancellation_forced: bool = False,
     ) -> None:
         async with self._session_factory() as session:
-            run = await session.get(JobRun, job_run_id)
+            run = await finish_run(
+                session,
+                job_run_id=job_run_id,
+                status=status,
+                items_processed=items_processed,
+                output_summary=output_summary,
+                error_message=error_message,
+                cancellation_forced=cancellation_forced,
+            )
             if run is None:
                 _logger.warning(
                     "job_run row vanished mid-run: id=%s", job_run_id
                 )
                 return
-            now = datetime.now(UTC)
-            run.finished_at = now
-            run.status = status.value
-            run.error_message = error_message
-            run.items_processed = items_processed
-            run.output_summary = output_summary
-            run.cancellation_forced = cancellation_forced
-            # SQLite via aiosqlite drops tzinfo on round-trip, so
-            # ``run.started_at`` may come back naive even when
-            # written with UTC. Re-attach UTC so the subtraction
-            # works on every backend.
-            started = run.started_at
-            if started.tzinfo is None:
-                started = started.replace(tzinfo=UTC)
-            duration_ms = int(
-                (now - started).total_seconds() * 1000
-            )
-            run.duration_ms = duration_ms
-
-            # Mirror onto the parent Job row for the operator's
-            # at-a-glance "last run" view.
-            job = await session.get(Job, run.job_id)
-            if job is not None:
-                job.last_run_at = now
-                job.last_run_duration_ms = duration_ms
-                job.last_run_status = status.value
-                job.last_error = error_message
-
             await session.commit()
 
     # ------------------------------------------------------------------

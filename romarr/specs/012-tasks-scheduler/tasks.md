@@ -278,18 +278,33 @@ runner.
 
 ### Tests
 
-- [ ] T031 [P] [EXEC] `tests/tasks/execution/test_lifecycle.py::test_run_row_created_on_start`
-      — call `lifecycle.start_run(...)`; assert a `JobRun` row
-      appears with `status='running'`.
-- [ ] T032 [P] [EXEC] `tests/tasks/execution/test_lifecycle.py::test_run_row_finalised_on_finish`
-      — call `lifecycle.finish_run(...)`; row carries final status,
-      `finished_at`, `duration_ms`.
-- [ ] T033 [P] [EXEC] `tests/tasks/execution/test_progress.py::test_throttling_ten_per_second`
-      — invoke `progress_callback` 50 times in 1 s; assert at most
-      10 WS events emitted (FR-023, SC-008).
-- [ ] T034 [P] [EXEC] `tests/tasks/execution/test_progress.py::test_final_event_never_throttled`
-      — `taskFinished` always goes through even if it lands within
-      the 100-ms throttle window.
+- [X] T031 [P] [EXEC] `tests/tasks/execution/test_lifecycle.py::test_start_run_creates_running_row`
+      + `test_start_run_records_triggered_by_user` — call
+      `lifecycle.start_run(...)`; row appears with
+      `status='running'`; user FK SET NULL exercised.
+- [X] T032 [P] [EXEC] `tests/tasks/execution/test_lifecycle.py::test_finish_run_marks_terminal`
+      + `test_finish_run_mirrors_onto_job` +
+      `test_finish_run_on_missing_row_returns_none` +
+      `test_fail_run_records_error_message` +
+      `test_cancel_run_unforced` +
+      `test_cancel_run_forced_records_flag` — terminal
+      transitions write final status, `finished_at`,
+      `duration_ms`, mirror onto Job, defensive None on
+      missing row, plus the FR-021 `cancellation_forced`
+      audit flag.
+- [X] T033 [P] [EXEC] `tests/tasks/execution/test_progress.py::test_throttling_caps_event_rate`
+      — burst of 50 calls within the quiet window collapses
+      to ≤ 2 events (1 leading + 1 trailing) carrying the
+      latest values (FR-023, SC-008). Plus
+      `test_throttle_per_run_id` (per-runId scope) and
+      `test_calls_separated_by_window_all_emit` (no false
+      throttling outside the window).
+- [X] T034 [P] [EXEC] `tests/tasks/execution/test_progress.py::test_finished_event_bypasses_throttle`
+      + `test_finished_clears_pending_trailing_event` —
+      `taskFinished` always emits, and any pending trailing
+      progress event is cancelled so the UI's last frame is
+      the terminal one. Plus `test_event_payload_shape` for
+      the WebSocket-layer contract.
 - [ ] T035 [P] [EXEC] `tests/tasks/execution/test_cancellation.py::test_cooperative_cancel`
       — set `cancellation_event`; runner observes it within its
       loop and returns `status='cancelled'` (US for the cancel
@@ -310,13 +325,24 @@ runner.
 
 ### Implementation
 
-- [ ] T040 [EXEC] Create `src/romarr/tasks/execution/lifecycle.py`
-      — async `start_run(...)`, `finish_run(...)`, `fail_run(...)`,
-      `cancel_run(...)` helpers writing to `JobRun`.
-- [ ] T041 [P] [EXEC] Create `src/romarr/tasks/execution/progress.py`
-      — `WebSocketBroadcaster` with per-runId throttling (≤ 10/s
-      per runId; 100-ms quiet window). Final `taskFinished` events
-      bypass throttle.
+- [X] T040 [EXEC] Create `src/romarr/tasks/execution/lifecycle.py`
+      — session-scoped helpers `start_run`, `finish_run`,
+      `fail_run`, `cancel_run`. Caller opens the session and
+      commits — keeping the helpers pure (SQL only) lets the
+      scheduler batch start_run + dispatch into one
+      transaction. The scheduler now delegates to these
+      helpers (extracted from the inline path in slice 11).
+- [X] T041 [P] [EXEC] Create `src/romarr/tasks/execution/progress.py`
+      — `ProgressBroadcaster` with per-runId throttling
+      (≤ 10 events/sec; 100 ms quiet window). Bursts collapse
+      to a leading + trailing emission carrying the latest
+      values. The transport-agnostic `emit` callable is
+      injected at construction time so tests can record
+      events without a real WebSocket broadcaster (spec 013
+      wires the production sink). `taskFinished` events
+      bypass the throttle and clear any pending trailing
+      progress event so the UI's last frame is the terminal
+      one.
 - [ ] T042 [P] [EXEC] Create
       `src/romarr/tasks/execution/cancellation.py` — registry of
       live `cancellation_event` per `job_run_id`; force-terminate
