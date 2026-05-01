@@ -209,14 +209,14 @@ byte-for-byte.
 
 ### Tests
 
-- [ ] T029 [P] [TEMPLATES] `tests/notifications/templates/test_defaults.py::test_all_seven_render`
+- [X] T029 [P] [TEMPLATES] `tests/notifications/templates/test_defaults.py::test_all_seven_render`
       — render each of the seven default templates against fixture
       `EventPayload`s; assert the documented expected strings.
-- [ ] T030 [P] [TEMPLATES] `tests/notifications/templates/test_renderer.py::test_uses_spec_006_sandbox`
+- [X] T030 [P] [TEMPLATES] `tests/notifications/templates/test_renderer.py::test_uses_spec_006_sandbox`
       — confirm the renderer imports
       `romarr.profiles.naming.engine.NamingTemplateEngine`-style
       sandbox primitives; static-analysis-style assertion.
-- [ ] T031 [P] [TEMPLATES] `tests/notifications/templates/test_unknown_variable.py::test_corpus_of_10_bad_templates`
+- [X] T031 [P] [TEMPLATES] `tests/notifications/templates/test_unknown_variable.py::test_corpus_of_10_bad_templates`
       — at least 10 templates from
       `tests/fixtures/notifications/bad_templates/`; each is
       rejected at save with the documented structured error
@@ -224,14 +224,17 @@ byte-for-byte.
 - [ ] T032 [P] [TEMPLATES] `tests/notifications/templates/test_payload_builders.py::test_apprise_vs_webhook_differ`
       — same `OnImportPayload` produces a string for Apprise and
       a dict for Sonarr-webhook; the dict matches the fixture.
+      *(Deferred to WEBHOOK phase — payload builders depend on the
+      Sonarr-format webhook serializer that is out of scope for
+      this slice.)*
 
 ### Implementation
 
-- [ ] T033 [TEMPLATES] Create
+- [X] T033 [TEMPLATES] Create
       `src/romarr/notifications/templates/defaults.py` — Python
       strings for the 7 default templates (verbatim from
       `data-model.md`).
-- [ ] T034 [TEMPLATES] Create
+- [X] T034 [TEMPLATES] Create
       `src/romarr/notifications/templates/renderer.py` —
       `render_event(notification, payload) -> str` consulting
       `notification.<event>_format` first, falling back to the
