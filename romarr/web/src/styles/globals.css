@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Spec 014 SCAF: minimal global stylesheet — Tailwind directives
+   plus the body baseline. The shadcn/ui CSS-variable palette
+   (--background, --foreground, etc.) lands with the shadcn
+   primitives slice. */
+
+@layer base {
+  body {
+    @apply bg-zinc-950 text-zinc-50 antialiased;
+  }
+  :focus-visible {
+    @apply outline-2 outline-brand outline-offset-2;
+  }
+}

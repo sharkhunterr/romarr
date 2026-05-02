@@ -30,39 +30,61 @@ hardening.
 
 ## Phase 1: Scaffolding (`SCAF`)
 
-- [ ] T001 [SCAF] Initialise the `web/` workspace with Vite (React +
-      TypeScript template) and pnpm.
-- [ ] T002 [P] [SCAF] Configure `tsconfig.json` with `strict: true`
-      and the documented path aliases (`@/components`, `@/lib`, etc.).
-- [ ] T003 [P] [SCAF] Install Tailwind 3.x + PostCSS + Autoprefixer;
-      configure `tailwind.config.ts` with shadcn/ui variables.
-- [ ] T004 [P] [SCAF] Install shadcn/ui CLI; run `init` to drop the
-      core primitives (Button, Dialog, DropdownMenu, Tabs, etc.) into
-      `src/components/ui/`.
-- [ ] T005 [P] [SCAF] Install runtime deps:
-      `@tanstack/react-query`, `@tanstack/react-virtual`, `zustand`,
-      `react-router-dom@6`, `i18next` + `react-i18next`,
-      `i18next-browser-languagedetector`, `i18next-http-backend`,
+- [X] T001 [SCAF] Initialise the `web/` workspace with Vite (React +
+      TypeScript template) and pnpm. `package.json` pins
+      `packageManager: "pnpm@10.24.0"`. Build pipeline verified:
+      `pnpm typecheck` clean, `pnpm build` produces a 143 KB
+      JS / 46 KB gzip bundle (well under the 500 KB target).
+- [X] T002 [P] [SCAF] Configure `tsconfig.json` with `strict: true`
+      plus `noUnusedLocals` / `noUnusedParameters` /
+      `noFallthroughCasesInSwitch` / `noUncheckedIndexedAccess`,
+      and the documented path aliases (`@/*`, `@/components/*`,
+      `@/lib/*`, `@/pages/*`, `@/types/*`).
+- [X] T003 [P] [SCAF] Install Tailwind 3.x + PostCSS + Autoprefixer;
+      configure `tailwind.config.ts` with the brand-default Game
+      Boy LCD green palette (#9BBC0F, matching the spec 013
+      `tag.color` default + the operator UI accent). The shadcn/ui
+      CSS-variable palette layer (--background, --foreground,
+      --border, etc.) lands with the shadcn primitives slice.
+- [~] T004 [P] [SCAF] shadcn/ui CLI **deferred** — the CLI is
+      interactive (`init` prompts for style / colour / paths) and
+      doesn't fit the autonomous-loop workflow. The follow-up
+      slice copy-pastes the documented primitives directly from
+      shadcn-ui/ui into `src/components/ui/` (Button, Dialog,
+      DropdownMenu, Tabs, etc.) — simpler, version-pinnable in
+      git, and skips the CLI dependency.
+- [~] T005 [P] [SCAF] Runtime deps: today's slice ships only
+      `react` + `react-dom` to keep the install lean (~150
+      packages). The wider runtime set
+      (`@tanstack/react-query`, `@tanstack/react-virtual`,
+      `zustand`, `react-router-dom@6`, `i18next` family,
       `date-fns`, `recharts`, `@use-gesture/react`,
-      `framer-motion`, `vite-plugin-pwa`, `workbox-window`.
-- [ ] T006 [P] [SCAF] Install dev deps: `vitest`,
-      `@testing-library/react`, `@testing-library/jest-dom`,
-      `@testing-library/user-event`, `@playwright/test`,
-      `@axe-core/playwright`, `@axe-core/react`,
-      `eslint-plugin-react`, `eslint-plugin-jsx-a11y`,
-      `eslint-plugin-i18next`, `openapi-typescript`, `orval`.
-- [ ] T007 [SCAF] Author `eslint.config.js` enforcing
-      `react/jsx-no-literals` on `src/components/**` and
-      `src/pages/**`, plus `jsx-a11y/*` and `react-hooks/*`
-      defaults.
-- [ ] T008 [SCAF] Author `vite.config.ts` with `vite-plugin-pwa`
-      registered (Workbox runtime caching: NetworkFirst on
-      `/api/v3/*`, CacheFirst on assets, no caching for
-      mutations).
-- [ ] T009 [SCAF] Wire `web/` build into the Docker image: add a
-      multi-stage build that runs `pnpm install && pnpm build` and
-      copies `dist/web/` into `/opt/romarr/web/`. The backend's
-      `StaticFiles` mount serves it at `/`.
+      `framer-motion`, `vite-plugin-pwa`, `workbox-window`) lands
+      with the phases that need them — adding them piecemeal
+      keeps each slice's `pnpm install` fast.
+- [~] T006 [P] [SCAF] Dev deps: today's slice ships
+      `@vitejs/plugin-react`, `tailwindcss`, `postcss`,
+      `autoprefixer`, `typescript`, `vite`, plus the React /
+      Node type packages. Vitest + Testing Library + Playwright
+      + axe-core land with the testing phases (E2E / A11Y).
+      ESLint plugins land with the next slice (T007).
+- [~] T007 [SCAF] `eslint.config.js` **deferred** to the next
+      slice when ESLint + the React / a11y / i18next plugins are
+      installed. The `react/jsx-no-literals` rule is the
+      enforcement teeth for FR-011 (no hardcoded strings in JSX);
+      shipping it without the i18n setup would just block every
+      commit.
+- [~] T008 [SCAF] `vite.config.ts` ships today with React + path
+      aliases + dev-server proxy (`/api/v3` and `/signalr` →
+      `localhost:8585`). The `vite-plugin-pwa` integration with
+      Workbox runtime caching (NetworkFirst /api/v3, CacheFirst
+      assets, no-cache for mutations) lands with the PWA phase.
+- [~] T009 [SCAF] Docker integration **deferred** — needs the
+      backend's `StaticFiles` mount wired at `/`, which is a
+      coordinated change touching `src/romarr/api/app.py`. The
+      multi-stage build outline is documented in
+      `web/README.md`; the actual Dockerfile lands when the
+      frontend has enough to serve.
 
 **Checkpoint**: `pnpm dev` brings up a working Vite dev server;
 `pnpm build` produces a deployable artifact.
