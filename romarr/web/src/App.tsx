@@ -35,6 +35,7 @@ import {
   SettingsPage,
   SetupPage,
 } from "@/pages/placeholders";
+import { TagsPage } from "@/pages/Settings/Tags";
 import { SystemPage } from "@/pages/System";
 import { WantedPage } from "@/pages/Wanted";
 
@@ -58,13 +59,15 @@ const router = createBrowserRouter([
           { path: "/wanted", element: <WantedPage /> },
           { path: "/activity", element: <ActivityPage /> },
           { path: "/calendar", element: <CalendarPage /> },
-          // Settings is a layout with sub-routes; today the
-          // sub-routes share the same placeholder page.
+          // Settings is a layout with sub-routes. The Tags
+          // sub-page is shipped (slice 51); the rest fall
+          // through to the placeholder until their phase lands.
           {
             path: "/settings",
             element: <Outlet />,
             children: [
               { index: true, element: <SettingsPage /> },
+              { path: "tags", element: <TagsPage /> },
               { path: ":sub", element: <SettingsPage /> },
             ],
           },

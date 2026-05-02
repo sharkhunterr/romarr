@@ -644,6 +644,17 @@ manageable; each ships ≥ 1 test + an implementation.
 - [ ] T098 [P] [P-SET] `tests/unit/pages/Settings/test_Indexers.tsx::test_test_button`
       — test button fires the documented endpoint and shows
       success/error.
+- [X] T098.5 [P] [P-SET] **Tags sub-page** (slice 51) — spec
+      013 introduced polymorphic tags (slice 24) with a
+      complete /api/v3/tag* CRUD surface; the Settings >
+      Tags sub-page exercises it end-to-end. Full create
+      (slug + label + color) / inline edit / delete with the
+      documented force-cascade fallback when the tag is in
+      use (errorCode "tag_in_use" → operator confirms a
+      force-delete). Ships ahead of the documented Settings
+      sub-page list because the backend surface is already
+      live and exercises mutations the rest of the SPA hasn't
+      yet.
 - [~] T099 [P] [P-SYS] Vitest test_trigger_button **deferred**
       — Vitest not yet installed. The contract is implemented:
       TasksTab's "Run now" button POSTs to /api/v3/command via
