@@ -61,6 +61,7 @@ dev = [
     "mypy>=1.8",
     "freezegun>=1.4",
     "hypothesis>=6.100",
+    "openapi-spec-validator>=0.7",
 ]
 
 [project.scripts]

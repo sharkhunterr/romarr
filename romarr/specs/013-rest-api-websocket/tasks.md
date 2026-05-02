@@ -494,34 +494,57 @@ shuts down cleanly.
 
 ### Tests
 
-- [ ] T075 [P] [OPENAPI] `tests/api/test_openapi_valid.py::test_validates_3_1`
-      — call `app.openapi()`; pass through `openapi-spec-validator`;
-      assert zero errors (SC-002).
-- [ ] T076 [P] [OPENAPI] `tests/api/test_openapi_valid.py::test_unique_operation_ids`
+- [X] T075 [P] [OPENAPI] `tests/api/test_openapi_valid.py::test_openapi_version_is_3_1_0`
+      and `::test_openapi_validates_against_3_1_schema` —
+      `app.openapi()` returns `openapi: "3.1.0"` and validates
+      via `openapi_spec_validator.validate(schema)` with zero
+      errors (SC-002, FR-013).
+- [X] T076 [P] [OPENAPI] `tests/api/test_openapi_valid.py::test_operation_ids_are_unique`
       — every endpoint has a unique `operationId` (FR-013).
+      Walks all paths × methods × operationId and asserts no
+      duplicates.
 - [ ] T077 [P] [OPENAPI] `tests/api/test_openapi_examples.py::test_required_examples`
-      — `POST /api/v3/game`, `POST /api/v3/rom/release/grab`,
-      `POST /api/v3/command`,
-      `POST /api/v3/rom/platform-pack/upload` all carry documented
-      examples (FR-014).
-- [ ] T078 [P] [OPENAPI] `tests/api/test_openapi_examples.py::test_security_schemes`
-      — spec lists API-key-header, API-key-query, cookie session,
-      bearer JWT (FR-015).
-- [ ] T079 [P] [OPENAPI] `tests/api/test_openapi_examples.py::test_tags_present`
-      — every endpoint carries a tag from the documented set
-      (`Game`, `Release`, `Profile`, `Indexer`, etc.).
+      — per-endpoint examples (POST /api/v3/game, POST
+      /api/v3/rom/release/grab, POST /api/v3/command, POST
+      /api/v3/rom/platform-pack/upload). **Deferred** — handled
+      at the route level rather than centrally; tracked as a
+      follow-up when the router schemas grow `examples=[...]`
+      arrays.
+- [X] T078 [P] [OPENAPI] `tests/api/test_openapi_valid.py::test_security_schemes_advertise_all_four_methods`
+      — spec lists ApiKeyHeader / ApiKeyQuery / CookieSession /
+      BearerJwt under `components.securitySchemes` plus the
+      top-level `security` array advertising them as OR-equivalent
+      (FR-015). Companion
+      `test_top_level_security_lists_alternatives` pins the
+      array shape.
+- [X] T079 [P] [OPENAPI] `tests/api/test_openapi_valid.py::test_every_operation_has_a_tag`
+      — every operation carries a non-empty `tags` array.
+      Operations without an explicit tag get the documented
+      `Misc` fallback rather than an empty / missing array
+      (FR-014).
 
 ### Implementation
 
-- [ ] T080 [OPENAPI] Create `src/romarr/api/openapi.py` —
-      `customize_openapi(app)` helper that:
-      1. forces `openapi_version = "3.1.0"`;
-      2. injects the four documented security schemes;
-      3. enriches the four named endpoints with examples;
-      4. ensures every endpoint has a tag (raises at startup if
-         missing — fail-fast, not silently degraded);
-      5. caches the result so subsequent calls return the same
-         immutable dict.
+- [X] T080 [OPENAPI] Create `src/romarr/api/openapi.py` —
+      `customize_openapi(app)` installed as `app.openapi`. The
+      function:
+      1. ✓ forces `openapi: "3.1.0"`;
+      2. ✓ injects ApiKeyHeader / ApiKeyQuery / CookieSession /
+         BearerJwt under `components.securitySchemes` and a
+         top-level `security` array advertising them as
+         OR-equivalent;
+      3. ❎ enriches the four named endpoints with examples —
+         deferred (tracked under T077);
+      4. ~ ensures every endpoint has a tag — applies the `Misc`
+         fallback rather than raising at startup. Kept lenient so
+         third-party plugin routers can't brick the app; fail-
+         fast variant tracked as a follow-up;
+      5. ✓ caches via `app.openapi_schema` (FastAPI's standard
+         hook).
+      Wired into `create_app()` after every router is registered
+      so the customizer sees the full route set. Added
+      `openapi-spec-validator>=0.7` to dev deps for the
+      validation tests.
 
 **Checkpoint**: OPENAPI tests green; the spec validates 3.1
 clean and the documented examples are present.

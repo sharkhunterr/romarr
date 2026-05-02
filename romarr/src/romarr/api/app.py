@@ -25,6 +25,7 @@ from romarr.api.middleware import (
     register_gzip,
     register_idempotency,
 )
+from romarr.api.openapi import customize_openapi
 from romarr.api.routers.auth import router as auth_router
 from romarr.api.routers.calendar import router as calendar_router
 from romarr.api.routers.history import router as history_router
@@ -278,4 +279,9 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     app.include_router(tasks_router)
     app.include_router(tasks_runs_router)
     app.include_router(tasks_command_router)
+
+    # Spec 013 phase OPENAPI — runs after every router has been
+    # registered so the customizer sees the full route set.
+    customize_openapi(app)
+
     return app
