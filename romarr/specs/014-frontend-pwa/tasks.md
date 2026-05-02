@@ -774,6 +774,19 @@ manageable; each ships ≥ 1 test + an implementation.
       surfaced inline. Test surfaces client_version when
       present (e.g. "Connected — qBittorrent 4.6.5"). Add-new
       form deferred to a per-type slice.
+
+      `src/pages/Settings/Connect/index.tsx` shipped (slice
+      62) with `useNotifications` + `useDeleteNotification` +
+      `useTestNotification` against /api/v3/notification.
+      Per-row Test/Delete actions, double-confirm delete,
+      last-status badge (success / partial / failed / never).
+      Per-event pills surface only the enabled subscriptions
+      out of the seven documented events (Grab / Import /
+      Upgrade / Fail / Health / DAT / Added). The redacted
+      Apprise URL renders inline (raw URL never leaves the
+      backend). Add-new + edit forms deferred — the canonical
+      UX is a 3-step modal with URL → events → optional Jinja
+      templates; lands in a follow-up slice.
 - [~] T107 [P-SYS] `src/pages/System/index.tsx` shipped with
       four tabs: Status / Tasks / Logs / Backup.
       * **StatusTab** renders the full Sonarr v3+v4 union

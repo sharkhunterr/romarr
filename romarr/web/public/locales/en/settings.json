@@ -29,6 +29,43 @@
     "unknownTitle": "Unknown section",
     "unknownBody": "No Settings section is registered at this path. Pick another from the side nav."
   },
+  "connect": {
+    "title": "Notifications",
+    "subtitle": "Outbound notification targets routed through Apprise. Each row carries event subscriptions and a redacted URL — the raw URL is encrypted at rest.",
+    "empty": {
+      "title": "No notifications configured",
+      "body": "Add an Apprise URL to start routing OnGrab / OnImport / OnFail / health events outbound."
+    },
+    "events": {
+      "onGrab": "Grab",
+      "onImport": "Import",
+      "onUpgrade": "Upgrade",
+      "onFail": "Fail",
+      "onHealthIssue": "Health",
+      "onDatUpdate": "DAT",
+      "onGameAdded": "Added"
+    },
+    "lastStatus": {
+      "success": "Last: success",
+      "partial": "Last: partial",
+      "failed": "Last: failed",
+      "never": "Never used"
+    },
+    "test": {
+      "button": "Send test",
+      "running": "Sending…",
+      "success": "Test delivered",
+      "failure": "{{message}}"
+    },
+    "delete": {
+      "button": "Delete",
+      "confirmTitle": "Remove this notification target?",
+      "confirmBody": "Future events won't be routed to {{name}}.",
+      "confirm": "Remove",
+      "cancel": "Cancel"
+    },
+    "disabled": "Disabled"
+  },
   "downloadClients": {
     "title": "Download Clients",
     "subtitle": "Torrent + Usenet clients Romarr hands grabs to. Each client carries its own protocol enables and lifecycle policy.",

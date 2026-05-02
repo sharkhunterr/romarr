@@ -29,6 +29,43 @@
     "unknownTitle": "Section inconnue",
     "unknownBody": "Aucune section n'est enregistrée à ce chemin. Choisissez-en une autre dans le menu latéral."
   },
+  "connect": {
+    "title": "Notifications",
+    "subtitle": "Cibles de notification sortantes routées via Apprise. Chaque ligne porte ses abonnements aux événements et une URL caviardée — l'URL brute est chiffrée au repos.",
+    "empty": {
+      "title": "Aucune notification configurée",
+      "body": "Ajoutez une URL Apprise pour commencer à router les événements OnGrab / OnImport / OnFail / santé."
+    },
+    "events": {
+      "onGrab": "Grab",
+      "onImport": "Import",
+      "onUpgrade": "Upgrade",
+      "onFail": "Échec",
+      "onHealthIssue": "Santé",
+      "onDatUpdate": "DAT",
+      "onGameAdded": "Ajout"
+    },
+    "lastStatus": {
+      "success": "Dernier : succès",
+      "partial": "Dernier : partiel",
+      "failed": "Dernier : échec",
+      "never": "Jamais utilisée"
+    },
+    "test": {
+      "button": "Envoyer test",
+      "running": "Envoi…",
+      "success": "Test livré",
+      "failure": "{{message}}"
+    },
+    "delete": {
+      "button": "Supprimer",
+      "confirmTitle": "Supprimer cette cible de notification ?",
+      "confirmBody": "Les futurs événements ne seront plus routés vers {{name}}.",
+      "confirm": "Supprimer",
+      "cancel": "Annuler"
+    },
+    "disabled": "Désactivé"
+  },
   "downloadClients": {
     "title": "Clients de téléchargement",
     "subtitle": "Clients Torrent + Usenet auxquels Romarr délègue les téléchargements. Chaque client porte ses propres protocoles activés et sa politique de cycle de vie.",

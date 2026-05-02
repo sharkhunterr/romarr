@@ -34,6 +34,7 @@ import {
   NotFoundPage,
 } from "@/pages/placeholders";
 import { SetupPage } from "@/pages/Setup";
+import { ConnectPage } from "@/pages/Settings/Connect";
 import { DownloadClientsPage } from "@/pages/Settings/DownloadClients";
 import { IndexersPage } from "@/pages/Settings/Indexers";
 import { SettingsHome } from "@/pages/Settings/SettingsHome";
@@ -80,6 +81,7 @@ const router = createBrowserRouter([
                 path: "download-clients",
                 element: <DownloadClientsPage />,
               },
+              { path: "connect", element: <ConnectPage /> },
               { path: ":sub", element: <SettingsPlaceholder /> },
             ],
           },
