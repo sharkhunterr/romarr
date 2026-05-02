@@ -550,12 +550,23 @@ shuts down cleanly.
 - [ ] T065 [P] [WS] `tests/api/ws/test_messages.py::test_queueupdated`
       — populate a queue entry; update it; assert
       `queueUpdated` event sent.
-- [ ] T066 [P] [WS] `tests/api/ws/test_messages.py::test_12_message_types`
-      — table-driven over the 12 documented `messageType` strings;
-      each is emittable from the bridge.
-- [ ] T067 [P] [WS] `tests/api/ws/test_lossy.py::test_no_replay_on_reconnect`
-      — disconnect during a job; reconnect; assert no missed events
-      replayed (FR-019).
+- [X] T066 [P] [WS] `tests/api/ws/test_messages.py::test_each_message_type_round_trips_to_subscriber`
+      — parametrized over every `MessageType` value; each
+      broadcast through `SubscriptionRegistry.broadcast()`
+      reaches the connected client as a canonical
+      `{messageType, data}` envelope (SC-004). Companion
+      `test_all_12_documented_types_are_covered` pins the
+      table-vs-StrEnum no-drift invariant; companion
+      `test_broadcast_reaches_every_subscriber` covers the
+      multi-tab case (one operator, two connections, both
+      receive).
+- [X] T067 [P] [WS] `tests/api/ws/test_lossy.py::test_disconnected_client_does_not_replay_on_reconnect`
+      — open WS A → broadcast E1 (A receives) → disconnect →
+      reconnect as B → assert no replay → broadcast E2 → B
+      receives E2 only. Pins FR-019. Companion
+      `test_disconnect_removes_subscription_from_registry`
+      pins the handler's `finally` cleanup (otherwise dead
+      subs would leak across disconnects).
 - [ ] T068 [P] [WS] `tests/api/ws/test_bridge.py::test_pubsub_to_subscribers`
       — emit an event onto the in-process channel from spec 011;
       assert WS subscribers receive it.
