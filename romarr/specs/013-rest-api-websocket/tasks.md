@@ -555,37 +555,50 @@ clean and the documented examples are present.
 
 ### Tests
 
-- [ ] T081 [P] [WIRE] `tests/api/test_endpoint_coverage.py::test_every_route_authenticated`
-      — iterate `app.routes`; assert every route NOT in the public
-      set requires auth via the chain from spec 010 (FR-004).
-- [ ] T082 [P] [WIRE] `tests/api/test_endpoint_coverage.py::test_required_role_declared`
-      — every route has a documented `require_role` dependency
-      (FR-005).
-- [ ] T083 [P] [WIRE] `tests/api/test_endpoint_coverage.py::test_route_count_at_least_90`
-      — count distinct routes; assert ≥ 90 (FR-001).
+- [X] T081 [P] [WIRE] `tests/api/test_endpoint_coverage.py::test_every_non_public_route_requires_authentication`
+      — iterates every `APIRoute` and recurses through its
+      `dependant` tree; routes outside the documented
+      `PUBLIC_PATHS` allow-list MUST reach `require_admin` /
+      `require_user` / `require_readonly` OR call
+      `get_current_principal` directly (auth-tiered pattern).
+      The allow-list is documented in the test module —
+      bootstrap auth (setup/login/logout), the importer
+      webhook (token-gated separately), the public docs URLs,
+      and the webhook-payloads doc.
+- [X] T082 [P] [WIRE] `tests/api/test_endpoint_coverage.py::test_every_protected_route_declares_a_role_guard`
+      — every non-public, non-tiered route must declare one of
+      the three role guards (FR-005). Tiered routes
+      (`/api/v3/system/status`, `/api/v3/health`) are tracked in
+      `TIERED_PATHS` because they branch on
+      `get_current_principal` directly. Companion sanity tests
+      pin that `PUBLIC_PATHS` and `TIERED_PATHS` reference real
+      routes (typos / removed endpoints can't silently grow the
+      allow-list).
+- [~] T083 [P] [WIRE] `tests/api/test_endpoint_coverage.py::test_route_count_does_not_regress_below_floor`
+      — the FR-001 ≥ 90 target is the spec-013 completion
+      contract. The current floor is 85 (88 distinct paths
+      observed) — log + backup routers (T054 / T055) and the
+      queue DELETE / retry endpoints (T045 / T046) close the
+      remaining gap. Today's test catches accidental endpoint
+      *removal*; the floor will be raised to 90 when log /
+      backup ship.
 
 ### Implementation
 
-- [ ] T084 [WIRE] In `src/romarr/api/factory.py`, import every
-      router from prior specs and `app.include_router(...)` each
-      under its documented path. The list:
-      - `metadata.api.providers`, `metadata.api.field_priority`,
-        `metadata.api.refresh` (spec 002)
-      - `platform_packs.api.packs`, `platform_packs.api.platforms` (spec 003)
-      - `indexers.api.applications`, `indexers.api.indexers`,
-        `indexers.api.tests` (spec 004)
-      - `downloaders.api.clients`, `downloaders.api.schema` (spec 005)
-      - `profiles.api.{quality,region,dump,language,naming,custom_format}`
-        (spec 006)
-      - `search.api.{search,grab,history,blocklist}` and
-        `search.api.command` (spec 007 — replaced here by Phase 9's
-        unified command bus)
-      - `importer.api.{manual,history,unidentified,webhook}` (spec 008)
-      - `libraries.api.{libraries,scan,exporters,manual_import}` (spec 009)
-      - `auth.api.{auth,setup,api_keys,oidc,users}` (spec 010)
-      - `notifications.api.{notifications,health}` (spec 011)
-      - `tasks.api.{tasks,runs}` (spec 012; the command router from
-        spec 012 is replaced by Phase 9's unified bus).
+- [X] T084 [WIRE] All prior-spec routers are wired into
+      `create_app()` (the `app.py` implementation referenced by
+      `factory.py`'s thin re-export). The full list as of this
+      slice: auth + users (010), metadata providers / field
+      priority / refresh (002), platform_packs packs / platforms
+      (003), indexer applications / indexers (004), download
+      clients schema + clients (005), all six profile routers
+      (006), search + grab + history + blocklist (007), importer
+      webhook + history + unidentified (008), libraries (009),
+      notifications health + notifications + webhook-payloads
+      doc (011), tasks + runs + command (012). Spec-013-native
+      routers added inline: status (T053), tag (T060), queue
+      (T057 partial), wanted (T056 partial), calendar (T059),
+      history (T058). Audited end-to-end by T081/T082/T083.
 
 **Checkpoint**: WIRE tests green; route count ≥ 90.
 
