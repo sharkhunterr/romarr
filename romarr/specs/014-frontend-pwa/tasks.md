@@ -685,9 +685,12 @@ manageable; each ships ≥ 1 test + an implementation.
 - [ ] T097 [P] [P-SET] `tests/unit/pages/Settings/test_CustomFormats.tsx::test_visual_builder`
       — operator can add an OR-grouped condition via the visual
       builder.
-- [ ] T098 [P] [P-SET] `tests/unit/pages/Settings/test_Indexers.tsx::test_test_button`
-      — test button fires the documented endpoint and shows
-      success/error.
+- [~] T098 [P] [P-SET] `tests/unit/pages/Settings/test_Indexers.tsx::test_test_button`
+      **deferred** — Vitest not yet installed. Contract is
+      implemented (`pages/Settings/Indexers/IndexerRow.tsx`):
+      Test button fires POST /api/v3/indexer/{id}/test and
+      surfaces ok/category/message inline. Error path renders
+      a red role=alert below the row.
 - [X] T098.5 [P] [P-SET] **Tags sub-page** (slice 51) — spec
       013 introduced polymorphic tags (slice 24) with a
       complete /api/v3/tag* CRUD surface; the Settings >
@@ -743,8 +746,21 @@ manageable; each ships ≥ 1 test + an implementation.
       (the `:sub` route) renders an EmptyState pointing at the
       slice that will wire each sub-page up. Tags (shipped slice
       51) lives under the same shell.
-- [ ] T106 [P] [P-SET] Create the 11 sub-pages under
-      `src/pages/Settings/` per the spec.
+- [ ] T106 [P] [P-SET] The 12 sub-pages under
+      `src/pages/Settings/`. Progress: Tags (slice 51), UI
+      (slice 56), and Indexers (slice 60) shipped. Remaining 9
+      land per slice as their REST surfaces stabilize.
+
+      `src/pages/Settings/Indexers/index.tsx` shipped with
+      `useIndexers` (list) + `useDeleteIndexer` + `useTestIndexer`
+      (slice 60). Per-row Test/Delete actions, inline test
+      result surface, double-confirm delete with name echoed
+      in the body. Health badge (ok / auth / protocol /
+      connectivity / circuit_open / untested) derived from
+      `last_health_*`. Source pill marks Prowlarr-pushed vs
+      manually-added rows. Add-new form deferred — IndexerCreate
+      carries ~17 required fields and the canonical UX is
+      Prowlarr push via /api/v3/applications.
 - [~] T107 [P-SYS] `src/pages/System/index.tsx` shipped with
       four tabs: Status / Tasks / Logs / Backup.
       * **StatusTab** renders the full Sonarr v3+v4 union

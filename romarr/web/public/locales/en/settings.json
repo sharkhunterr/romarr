@@ -29,6 +29,52 @@
     "unknownTitle": "Unknown section",
     "unknownBody": "No Settings section is registered at this path. Pick another from the side nav."
   },
+  "indexers": {
+    "title": "Indexers",
+    "subtitle": "Newznab + Torznab sources Romarr searches when grabbing a release. Prowlarr-managed indexers sync automatically.",
+    "empty": {
+      "title": "No indexers configured",
+      "body": "Add an indexer manually below, or push one from Prowlarr — Romarr is registered as a Prowlarr application and accepts pushed sources."
+    },
+    "table": {
+      "name": "Name",
+      "url": "URL",
+      "source": "Source",
+      "priority": "Priority",
+      "health": "Health",
+      "actions": "Actions"
+    },
+    "source": {
+      "manual": "Manual",
+      "prowlarr": "Prowlarr"
+    },
+    "health": {
+      "ok": "Healthy",
+      "auth": "Auth failed",
+      "protocol": "Protocol error",
+      "connectivity": "Unreachable",
+      "circuit_open": "Circuit open",
+      "untested": "Not tested",
+      "lastTested": "Last tested {{when}}"
+    },
+    "test": {
+      "button": "Test",
+      "running": "Testing…",
+      "successCaps": "Caps OK",
+      "successSearch": "Search OK",
+      "failure": "{{message}}"
+    },
+    "delete": {
+      "button": "Delete",
+      "confirmTitle": "Remove this indexer?",
+      "confirmBody": "Searches won't include {{name}} anymore. This is reversible — re-add the same source via Prowlarr or the manual form.",
+      "confirm": "Remove",
+      "cancel": "Cancel"
+    },
+    "rss": "RSS",
+    "auto": "Auto",
+    "interactive": "Interactive"
+  },
   "ui": {
     "title": "UI preferences",
     "subtitle": "Theme, language, and other operator-facing display preferences.",

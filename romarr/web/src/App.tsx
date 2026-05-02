@@ -34,6 +34,7 @@ import {
   NotFoundPage,
 } from "@/pages/placeholders";
 import { SetupPage } from "@/pages/Setup";
+import { IndexersPage } from "@/pages/Settings/Indexers";
 import { SettingsHome } from "@/pages/Settings/SettingsHome";
 import { SettingsLayout } from "@/pages/Settings/SettingsLayout";
 import { SettingsPlaceholder } from "@/pages/Settings/SettingsPlaceholder";
@@ -73,6 +74,7 @@ const router = createBrowserRouter([
               { index: true, element: <SettingsHome /> },
               { path: "tags", element: <TagsPage /> },
               { path: "ui", element: <SettingsUiPage /> },
+              { path: "indexers", element: <IndexersPage /> },
               { path: ":sub", element: <SettingsPlaceholder /> },
             ],
           },

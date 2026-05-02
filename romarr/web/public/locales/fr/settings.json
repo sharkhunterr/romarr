@@ -29,6 +29,52 @@
     "unknownTitle": "Section inconnue",
     "unknownBody": "Aucune section n'est enregistrée à ce chemin. Choisissez-en une autre dans le menu latéral."
   },
+  "indexers": {
+    "title": "Indexeurs",
+    "subtitle": "Sources Newznab + Torznab que Romarr interroge pour récupérer une release. Les indexeurs gérés par Prowlarr se synchronisent automatiquement.",
+    "empty": {
+      "title": "Aucun indexeur configuré",
+      "body": "Ajoutez un indexeur manuellement ci-dessous, ou poussez-en un depuis Prowlarr — Romarr est enregistré comme application Prowlarr et accepte les sources poussées."
+    },
+    "table": {
+      "name": "Nom",
+      "url": "URL",
+      "source": "Source",
+      "priority": "Priorité",
+      "health": "État",
+      "actions": "Actions"
+    },
+    "source": {
+      "manual": "Manuel",
+      "prowlarr": "Prowlarr"
+    },
+    "health": {
+      "ok": "OK",
+      "auth": "Auth échouée",
+      "protocol": "Erreur protocole",
+      "connectivity": "Injoignable",
+      "circuit_open": "Disjoncteur ouvert",
+      "untested": "Non testé",
+      "lastTested": "Dernier test {{when}}"
+    },
+    "test": {
+      "button": "Tester",
+      "running": "Test…",
+      "successCaps": "Caps OK",
+      "successSearch": "Search OK",
+      "failure": "{{message}}"
+    },
+    "delete": {
+      "button": "Supprimer",
+      "confirmTitle": "Supprimer cet indexeur ?",
+      "confirmBody": "Les recherches n'incluront plus {{name}}. Action réversible — ré-ajoutez la même source via Prowlarr ou le formulaire manuel.",
+      "confirm": "Supprimer",
+      "cancel": "Annuler"
+    },
+    "rss": "RSS",
+    "auto": "Auto",
+    "interactive": "Interactif"
+  },
   "ui": {
     "title": "Préférences d'interface",
     "subtitle": "Thème, langue et autres préférences d'affichage côté opérateur.",
