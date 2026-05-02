@@ -22,6 +22,7 @@ from romarr import __version__
 from romarr.api.error_handlers import register_error_handlers
 from romarr.api.middleware import (
     register_cors,
+    register_csrf,
     register_gzip,
     register_idempotency,
 )
@@ -211,10 +212,15 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     settings = get_settings()
     register_gzip(app, min_size_bytes=settings.gzip_min_size_bytes)
     register_cors(app, allowed_origins=settings.cors_allowed_origins)
+    # CSRF middleware (FR-027). Registered after CORS so
+    # cross-origin preflights succeed before CSRF kicks in.
+    # Defaults to disabled — flipped on once the spec 014
+    # frontend wires cookie-reading + header-echoing.
+    register_csrf(app, enabled=settings.csrf_protect)
     # Idempotency-Key middleware (FR-020 / FR-025). Registered last
     # in the MW stack so it's nearest the routes — it intercepts
-    # mutating methods after CORS has cleared the request, but
-    # before the route handler runs the actual mutation.
+    # mutating methods after CORS / CSRF have cleared the request,
+    # but before the route handler runs the actual mutation.
     register_idempotency(app)
 
     register_error_handlers(app)

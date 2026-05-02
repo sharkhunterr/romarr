@@ -117,6 +117,20 @@ class Settings(BaseSettings):
         "manage backup files for the operator UI.",
     )
 
+    # CSRF protection (spec 013, FR-027)
+    csrf_protect: bool = Field(
+        default=False,
+        description="Spec 013 FR-027. When True, mutating "
+        "requests (POST / PUT / PATCH / DELETE) authenticated "
+        "via cookie session MUST carry the X-CSRF-Token header "
+        "matching the csrf_token cookie value (double-submit "
+        "cookie pattern). API-key and Bearer-JWT callers always "
+        "bypass — they aren't subject to CSRF. Defaults to "
+        "False today; the spec 014 frontend wiring enables it "
+        "via ROMARR_CSRF_PROTECT=true once the SPA reads the "
+        "cookie + echoes the header on every mutation.",
+    )
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

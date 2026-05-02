@@ -167,13 +167,22 @@ shuts down cleanly.
       echoed back; non-matching origin gets the header omitted;
       preflight succeeds with `Access-Control-Allow-Credentials`
       for the matching origin.
-- [ ] T021 [P] [MW] `tests/api/middleware/test_csrf.py::test_cookie_post_blocked_without_token`
-      — cookie-authenticated POST without `X-CSRF-Token` header
-      returns HTTP 403 reason `csrf_token_missing` (US7, SC-007).
-- [ ] T022 [P] [MW] `tests/api/middleware/test_csrf.py::test_apikey_bypass`
-      — POST with `X-Api-Key`; no CSRF token; succeeds (FR-027).
-- [ ] T023 [P] [MW] `tests/api/middleware/test_csrf.py::test_get_bypass`
-      — GET request; no CSRF check (FR-028).
+- [X] T021 [P] [MW] `tests/api/middleware/test_csrf.py::test_cookie_post_without_token_returns_403`
+      — cookie-authenticated POST without `X-CSRF-Token`
+      header returns HTTP 403 with errorCode
+      `csrf_token_missing` (US7, SC-007). Companion tests pin
+      the matching-token success path,
+      mismatched-token-still-403, and the
+      anonymous-POST-still-403 defensive case.
+- [X] T022 [P] [MW] `tests/api/middleware/test_csrf.py::test_apikey_header_bypasses_csrf`
+      — POST with `X-Api-Key` (and the `?apikey=` query form,
+      and Bearer JWT) bypasses CSRF — these auth methods
+      aren't subject to the cross-site cookie-attach problem
+      (FR-027).
+- [X] T023 [P] [MW] `tests/api/middleware/test_csrf.py::test_get_request_bypasses_csrf`
+      — safe methods (GET / HEAD / OPTIONS / TRACE) bypass.
+      Companion test pins OPTIONS preflight bypass +
+      `/api/v3/auth/login` bootstrap path bypass.
 - [ ] T024 [P] [MW] `tests/api/middleware/test_rate_limit.py::test_login_5_per_minute`
       — 6 logins from one IP in 60 s; 6th returns HTTP 429 with
       `Retry-After` (FR-022, SC-006).
@@ -223,9 +232,24 @@ shuts down cleanly.
       cookie-session SPA flow; methods/headers wildcarded so the
       operator decides ORIGIN, the rest is pass-through. Wired
       into `create_app()` after GZip.
-- [ ] T033 [P] [MW] Create `src/romarr/api/middleware/csrf.py` —
-      `fastapi-csrf-protect` integration; bypass when the resolved
-      `AuthMethod` from spec 010 is `API_KEY` / `JWT` / `PROXY`.
+- [X] T033 [P] [MW] Create `src/romarr/api/middleware/csrf.py` —
+      hand-rolled double-submit-cookie CSRF guard rather than
+      pulling in `fastapi-csrf-protect`. Pure-ASGI middleware
+      with explicit bypass for: safe methods (GET / HEAD /
+      OPTIONS / TRACE), bootstrap paths
+      (`/api/v3/auth/{login,setup,logout}` and
+      `/api/v3/webhook/download-complete`), and non-cookie
+      auth (X-Api-Key header + `?apikey=` query + Bearer JWT
+      header). Cookie-session callers must send
+      `X-CSRF-Token` matching the `csrf_token` cookie
+      (`secrets.compare_digest` for timing-safe comparison).
+      Gated by `Settings.csrf_protect` (env
+      `ROMARR_CSRF_PROTECT`), default False so the existing
+      cookie-session test suite keeps passing; the spec 014
+      frontend wiring flips it to True once the SPA reads the
+      cookie + echoes the header on every mutation. Wired
+      into `create_app()` after CORS so cross-origin
+      preflights still succeed.
 - [ ] T034 [P] [MW] Create `src/romarr/api/middleware/rate_limit.py`
       — slowapi setup with three keying strategies:
       `login`/`setup`/`oidc` keyed by IP, default keyed by API key
