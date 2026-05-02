@@ -277,17 +277,22 @@ T172).
 
 ### Implementation
 
-- [~] T041 [ROUTING] `src/App.tsx` wires `<ThemeProvider>` +
-      `<RouterProvider>`. `<QueryClientProvider>`,
-      `<I18nextProvider>`, and `<Toaster>` slot in when their
+- [~] T041 [ROUTING] `src/App.tsx` wires `<QueryProvider>` →
+      `<ThemeProvider>` → `<RouterProvider>` (slice 46).
+      `<I18nextProvider>` and `<Toaster>` slot in when their
       runtime deps ship in their respective phases.
 - [X] T042 [ROUTING] `src/components/shared/AuthGuard.tsx` —
-      reads `auth.status` from the zustand store. `loading`
-      shows a minimal placeholder; `unauthed` →
+      drives off the real `useCurrentPrincipal` TanStack
+      Query (slice 46). `isPending` → `<LoadingSurface />`;
+      `error` (401 or any other failure) →
       `<Navigate to="/login?returnTo=<encoded path>" replace>`;
-      `authed` → `<Outlet />`. The TanStack Query probe
-      against `/api/v3/auth/me` lands when the query runtime
-      ships; today's LoginPage stub writes the auth state.
+      `data.is_active === false` → documented "Account
+      deactivated" surface; `data` → `<Outlet />`. The dead
+      `useAuthStore` from slice 44 is now removed; TanStack
+      Query is the auth source of truth. LoginPage uses
+      `useLogin()` mutation against POST /api/v3/auth/login;
+      success invalidates the auth/me cache and navigates to
+      the decoded `returnTo` URL.
 - [X] T043 [ROUTING] `src/components/shared/ThemeProvider.tsx` —
       applies `class="dark"` / `class="light"` on `<html>`
       from the resolved theme. `auto` mode subscribes to
@@ -295,8 +300,9 @@ T172).
       `index.html` reads `THEME_STORAGE_KEY` BEFORE React
       hydrates so the very first paint is correct.
       `src/lib/store/theme.ts` (zustand + persist) holds the
-      operator's choice; `src/lib/store/auth.ts` holds the
-      auth-status store.
+      operator's choice. (The slice-44 `auth.ts` zustand
+      store was removed in slice 46 once TanStack Query
+      replaced it as the auth source of truth.)
 - [X] T044 [ROUTING] `App.tsx` route table declares the 11
       documented routes: `/login`, `/setup` public;
       `/` (Dashboard), `/library`, `/add`, `/game/:gameId`,

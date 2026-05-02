@@ -1,15 +1,15 @@
 /**
- * Spec 014 ROUTING — application root.
+ * Spec 014 — application root.
  *
  * Wires:
- *   1. ThemeProvider — applies dark/light/auto on <html>.
- *   2. RouterProvider — React Router v6 data router, 11 page
+ *   1. QueryProvider — TanStack Query client (slice 46).
+ *   2. ThemeProvider — applies dark/light/auto on <html>.
+ *   3. RouterProvider — React Router v6 data router, 11 page
  *      routes (Login / Setup public; everything else under
- *      AuthGuard).
+ *      AuthGuard → AppLayout → page outlet).
  *
- * QueryClientProvider, I18nextProvider, and Toaster will
- * wrap RouterProvider once their runtime deps land in their
- * respective phases.
+ * I18nextProvider and Toaster will wrap RouterProvider once
+ * their runtime deps land in their respective phases.
  */
 
 import { type ReactElement } from "react";
@@ -22,6 +22,7 @@ import {
 import { AppLayout } from "@/components/shared/AppLayout";
 import { AuthGuard } from "@/components/shared/AuthGuard";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
+import { QueryProvider } from "@/lib/api/QueryProvider";
 import {
   ActivityPage,
   AddNewPage,
@@ -85,8 +86,10 @@ const router = createBrowserRouter([
 
 export default function App(): ReactElement {
   return (
-    <ThemeProvider>
-      <RouterProvider router={router} />
-    </ThemeProvider>
+    <QueryProvider>
+      <ThemeProvider>
+        <RouterProvider router={router} />
+      </ThemeProvider>
+    </QueryProvider>
   );
 }
