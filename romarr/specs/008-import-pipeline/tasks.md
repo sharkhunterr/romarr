@@ -1020,6 +1020,18 @@ contributors, the WATCH and EXTRACT phases (Day 2-3) split cleanly.
 > coalesce when same-sha1 dump exists, hash-from-disk when
 > caller omits hashes, and `imported_via` round-trip. Full
 > importer test sweep: 150 passed.
+>
+> **Slice 84 (2026-05-02)** — wired the
+> `POST /api/v3/rom/unidentified/{id}/match` endpoint in
+> `importer/api/unidentified.py`. Validates Game + Release
+> exist + agree (404 / 409), reuses the unidentified row's
+> hashes when complete (else `manual_import_known` re-hashes),
+> imports in-place (dest_path = source path), drops the
+> unidentified row on success, returns `ImportHistoryRead`.
+> Admin-gated per CL005. 5 new tests: insert + drop, 404
+> missing entry, 422 missing release_id, 409 release-game
+> mismatch, 403 user-role forbidden. Full importer suite:
+> 155 passed.
 
 - [~] CL001 [P] [US6] Subreason-aware auto-blocklist —
       **gated on orchestrator**. The taxonomy (`RejectionReason`
@@ -1059,12 +1071,14 @@ contributors, the WATCH and EXTRACT phases (Day 2-3) split cleanly.
       documented manual endpoints — partially done.
       `DELETE /api/v3/rom/unidentified/{id}` is gated on
       `require_admin` (`importer/api/unidentified.py`).
-      The other three endpoints
-      (`POST /import/manual`, `POST /unidentified/{id}/match`,
+      `POST /api/v3/rom/unidentified/{id}/match` shipped
+      slice 84 with `require_admin`; the
+      `test_match_unidentified_user_role_forbidden` test
+      pins the 403 response.
+      The other two endpoints (`POST /import/manual`,
       `POST /import/retry/{id}`) are documented as
-      **landing with the HARD slice** (the orchestrator's
-      manual-flow surface); admin gates ship from day one
-      with those endpoints.
+      **landing with the HARD slice**; admin gates ship from
+      day one with those endpoints.
 - [X] CL006 [P] Webhook handler bypasses the user-session /
       API-key auth chain — confirmed by inspection
       (`importer/webhook.py::download_complete` carries no
