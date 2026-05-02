@@ -1,0 +1,58 @@
+{
+  "title": "Tableau de bord",
+  "subtitle": "Vue d'ensemble de la santé système, de l'activité récente et des actions rapides.",
+  "stats": {
+    "version": "Version",
+    "instance": "Instance",
+    "uptime": "Disponibilité",
+    "runtime": "Runtime",
+    "uptimeHint": "depuis le démarrage",
+    "uptimeDash": "—",
+    "uptimeSeconds": "{{count}}s",
+    "uptimeMinutes": "{{count}}min",
+    "uptimeHours": "{{hours}}h{{minutes}}",
+    "uptimeDays": "{{days}}j {{hours}}h"
+  },
+  "sections": {
+    "quickActions": "Actions rapides",
+    "recentActivity": "Activité récente"
+  },
+  "health": {
+    "title": "Santé système",
+    "ariaLabel": "Santé : {{status}}",
+    "noMessage": "(sans message)",
+    "categoryFallback": "système"
+  },
+  "activity": {
+    "loadError": "Impossible de charger l'activité",
+    "empty": {
+      "title": "Pas d'activité récente",
+      "body": "Imports, recherches et tâches planifiées apparaîtront ici dès qu'elles tournent."
+    },
+    "eventLabel": {
+      "import": "Importé",
+      "search": "Recherché",
+      "job_run": "Tâche exécutée"
+    },
+    "subjectGame": "jeu n°{{id}}",
+    "subjectRelease": "release n°{{id}}",
+    "subjectEvent": "événement n°{{id}}",
+    "statusOk": "ok",
+    "statusFailed": "échec"
+  },
+  "quickActions": {
+    "working": "En cours…",
+    "missingSearch": {
+      "label": "Recherche manquants",
+      "hint": "Rechercher chaque release souhaitée."
+    },
+    "backup": {
+      "label": "Sauvegarder",
+      "hint": "Déclencher une sauvegarde immédiate."
+    },
+    "openWanted": {
+      "label": "Ouvrir Souhaits",
+      "hint": "Plonger dans les listes manquants + cutoff."
+    }
+  }
+}

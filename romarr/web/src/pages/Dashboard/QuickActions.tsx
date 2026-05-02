@@ -8,12 +8,13 @@
  * The mutation surfaces a brief inline state on the firing
  * button — full toast feedback lands with the shadcn/ui
  * useToast slice.
+ *
+ * Strings resolve through `dashboard:quickActions.*`
+ * (slice 67).
  */
 
-/* eslint-disable react/jsx-no-literals -- replaced by i18n in
-   the I18N phase. */
-
 import { type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { useTriggerCommand } from "@/lib/api/queries/system";
@@ -21,13 +22,14 @@ import { useTriggerCommand } from "@/lib/api/queries/system";
 interface ActionButtonProps {
   label: string;
   hint: string;
+  busyLabel: string;
   onClick: () => void;
   busy?: boolean;
   disabled?: boolean;
 }
 
 function ActionButton(props: ActionButtonProps): ReactElement {
-  const { label, hint, onClick, busy, disabled } = props;
+  const { label, hint, busyLabel, onClick, busy, disabled } = props;
   return (
     <button
       type="button"
@@ -44,7 +46,7 @@ function ActionButton(props: ActionButtonProps): ReactElement {
       ].join(" ")}
     >
       <p className="text-sm font-medium text-zinc-100">
-        {busy ? "Working…" : label}
+        {busy ? busyLabel : label}
       </p>
       <p className="mt-1 text-[0.7rem] text-zinc-500">{hint}</p>
     </button>
@@ -52,6 +54,7 @@ function ActionButton(props: ActionButtonProps): ReactElement {
 }
 
 export function QuickActions(): ReactElement {
+  const { t } = useTranslation("dashboard");
   const navigate = useNavigate();
   const trigger = useTriggerCommand();
 
@@ -59,25 +62,30 @@ export function QuickActions(): ReactElement {
     trigger.mutate({ name });
   };
 
+  const busyLabel = t("quickActions.working");
+
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
       <ActionButton
-        label="Missing search"
-        hint="Search every wanted release."
+        label={t("quickActions.missingSearch.label")}
+        hint={t("quickActions.missingSearch.hint")}
+        busyLabel={busyLabel}
         onClick={() => fire("MissingSearch")}
         busy={
           trigger.isPending && trigger.variables?.name === "MissingSearch"
         }
       />
       <ActionButton
-        label="Backup now"
-        hint="Trigger an immediate backup."
+        label={t("quickActions.backup.label")}
+        hint={t("quickActions.backup.hint")}
+        busyLabel={busyLabel}
         onClick={() => fire("Backup")}
         busy={trigger.isPending && trigger.variables?.name === "Backup"}
       />
       <ActionButton
-        label="Open wanted"
-        hint="Drill into missing + cutoff lists."
+        label={t("quickActions.openWanted.label")}
+        hint={t("quickActions.openWanted.hint")}
+        busyLabel={busyLabel}
         onClick={() => navigate("/wanted")}
       />
     </div>

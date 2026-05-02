@@ -5,22 +5,16 @@
  * search_history / job_run from spec 013 T058) sorted by date
  * descending, capped at 10 rows for the dashboard. The full
  * paginated history view lives on the Activity page (P-ACT).
+ *
+ * Strings resolve through `dashboard:activity.*` (slice 67).
  */
 
-/* eslint-disable react/jsx-no-literals -- replaced by i18n in
-   the I18N phase. */
-
 import { type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useHistory } from "@/lib/api/queries/system";
-
-const EVENT_LABEL: Record<string, string> = {
-  import: "Imported",
-  search: "Searched",
-  job_run: "Task ran",
-};
 
 function formatRelative(dateStr: string): string {
   // Lightweight relative-time formatter — date-fns would do
@@ -34,6 +28,7 @@ function formatRelative(dateStr: string): string {
 }
 
 export function ActivityFeed(): ReactElement {
+  const { t } = useTranslation("dashboard");
   const { data, isPending, isError, error } = useHistory({
     pageSize: 10,
     sortKey: "date",
@@ -47,7 +42,7 @@ export function ActivityFeed(): ReactElement {
   if (isError) {
     return (
       <EmptyState
-        title="Couldn't load activity"
+        title={t("activity.loadError")}
         description={error?.message}
       />
     );
@@ -56,8 +51,8 @@ export function ActivityFeed(): ReactElement {
   if (data.records.length === 0) {
     return (
       <EmptyState
-        title="No recent activity"
-        description="Imports, searches, and scheduled tasks land here as they happen."
+        title={t("activity.empty.title")}
+        description={t("activity.empty.body")}
       />
     );
   }
@@ -76,14 +71,16 @@ export function ActivityFeed(): ReactElement {
           <div className="min-w-0 flex-1">
             <p className="truncate text-zinc-100">
               <span className="font-mono text-[0.65rem] uppercase tracking-wider text-zinc-500">
-                {EVENT_LABEL[event.eventType] ?? event.eventType}
+                {t(`activity.eventLabel.${event.eventType}`, {
+                  defaultValue: event.eventType,
+                })}
               </span>
               <span className="ml-2 text-zinc-300">
                 {event.gameId
-                  ? `game #${event.gameId}`
+                  ? t("activity.subjectGame", { id: event.gameId })
                   : event.releaseId
-                    ? `release #${event.releaseId}`
-                    : `event #${event.id}`}
+                    ? t("activity.subjectRelease", { id: event.releaseId })
+                    : t("activity.subjectEvent", { id: event.id })}
               </span>
             </p>
             <p className="text-[0.7rem] text-zinc-500">
@@ -98,7 +95,7 @@ export function ActivityFeed(): ReactElement {
                 : "bg-red-700/30 text-red-200 ring-red-500/40",
             ].join(" ")}
           >
-            {event.successful ? "ok" : "failed"}
+            {event.successful ? t("activity.statusOk") : t("activity.statusFailed")}
           </span>
         </li>
       ))}

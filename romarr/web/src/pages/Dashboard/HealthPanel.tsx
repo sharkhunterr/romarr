@@ -5,12 +5,15 @@
  * when the authenticated tier carries a per-category breakdown.
  * The colour bar at the top reflects the worst entry: ``ok``
  * (green) → ``warning`` (amber) → ``error`` (red).
+ *
+ * Strings resolve through `dashboard:health.*` (slice 67).
+ * The status pill itself stays untranslated — `ok` /
+ * `warning` / `error` are the documented enum values, not
+ * operator-facing copy.
  */
 
-/* eslint-disable react/jsx-no-literals -- replaced by i18n in
-   the I18N phase. */
-
 import { type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useHealth, type HealthEntry } from "@/lib/api/queries/system";
 
@@ -36,6 +39,7 @@ const STATUS_BORDER: Record<string, string> = {
 };
 
 export function HealthPanel(): ReactElement | null {
+  const { t } = useTranslation("dashboard");
   const { data, isPending, isError } = useHealth();
 
   if (isPending || isError || !data) {
@@ -44,9 +48,6 @@ export function HealthPanel(): ReactElement | null {
 
   const entries = Array.isArray(data.entries) ? data.entries : [];
 
-  // Hide the panel when everything is green AND there are no
-  // entries to surface — keeps the dashboard quiet when the
-  // operator has nothing to act on.
   if (data.status === "ok" && entries.length === 0) {
     return null;
   }
@@ -61,11 +62,11 @@ export function HealthPanel(): ReactElement | null {
         borderColour,
         "p-4",
       ].join(" ")}
-      aria-label={`Health: ${data.status}`}
+      aria-label={t("health.ariaLabel", { status: data.status })}
     >
       <header className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-zinc-100">
-          System health
+          {t("health.title")}
         </h2>
         <span
           className={[
@@ -97,10 +98,10 @@ export function HealthPanel(): ReactElement | null {
               />
               <span className="flex-1">
                 <span className="font-mono text-[0.7rem] uppercase text-zinc-500">
-                  {entry.category ?? "system"}
+                  {entry.category ?? t("health.categoryFallback")}
                 </span>
                 <span className="ml-2">
-                  {entry.message ?? "(no message)"}
+                  {entry.message ?? t("health.noMessage")}
                 </span>
               </span>
             </li>

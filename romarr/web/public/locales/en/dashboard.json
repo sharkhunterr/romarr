@@ -1,0 +1,58 @@
+{
+  "title": "Dashboard",
+  "subtitle": "Overview of system health, recent activity, and quick actions.",
+  "stats": {
+    "version": "Version",
+    "instance": "Instance",
+    "uptime": "Uptime",
+    "runtime": "Runtime",
+    "uptimeHint": "since process boot",
+    "uptimeDash": "—",
+    "uptimeSeconds": "{{count}}s",
+    "uptimeMinutes": "{{count}}m",
+    "uptimeHours": "{{hours}}h {{minutes}}m",
+    "uptimeDays": "{{days}}d {{hours}}h"
+  },
+  "sections": {
+    "quickActions": "Quick actions",
+    "recentActivity": "Recent activity"
+  },
+  "health": {
+    "title": "System health",
+    "ariaLabel": "Health: {{status}}",
+    "noMessage": "(no message)",
+    "categoryFallback": "system"
+  },
+  "activity": {
+    "loadError": "Couldn't load activity",
+    "empty": {
+      "title": "No recent activity",
+      "body": "Imports, searches, and scheduled tasks land here as they happen."
+    },
+    "eventLabel": {
+      "import": "Imported",
+      "search": "Searched",
+      "job_run": "Task ran"
+    },
+    "subjectGame": "game #{{id}}",
+    "subjectRelease": "release #{{id}}",
+    "subjectEvent": "event #{{id}}",
+    "statusOk": "ok",
+    "statusFailed": "failed"
+  },
+  "quickActions": {
+    "working": "Working…",
+    "missingSearch": {
+      "label": "Missing search",
+      "hint": "Search every wanted release."
+    },
+    "backup": {
+      "label": "Backup now",
+      "hint": "Trigger an immediate backup."
+    },
+    "openWanted": {
+      "label": "Open wanted",
+      "hint": "Drill into missing + cutoff lists."
+    }
+  }
+}
