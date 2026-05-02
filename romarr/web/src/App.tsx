@@ -19,6 +19,7 @@ import {
   Outlet,
 } from "react-router-dom";
 
+import { AppLayout } from "@/components/shared/AppLayout";
 import { AuthGuard } from "@/components/shared/AuthGuard";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
 import {
@@ -41,33 +42,39 @@ const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
   { path: "/setup", element: <SetupPage /> },
 
-  // Protected routes — sit behind the AuthGuard outlet.
+  // Protected routes — sit behind the AuthGuard outlet, then
+  // inside the AppLayout (header + bottom nav).
   {
     element: <AuthGuard />,
     children: [
-      { path: "/", element: <DashboardPage /> },
-      { path: "/library", element: <LibraryPage /> },
-      { path: "/add", element: <AddNewPage /> },
-      { path: "/game/:gameId", element: <GameDetailPage /> },
-      { path: "/wanted", element: <WantedPage /> },
-      { path: "/activity", element: <ActivityPage /> },
-      { path: "/calendar", element: <CalendarPage /> },
-      // Settings is a layout with sub-routes; today the
-      // sub-routes share the same placeholder page.
       {
-        path: "/settings",
-        element: <Outlet />,
+        element: <AppLayout />,
         children: [
-          { index: true, element: <SettingsPage /> },
-          { path: ":sub", element: <SettingsPage /> },
-        ],
-      },
-      {
-        path: "/system",
-        element: <Outlet />,
-        children: [
-          { index: true, element: <SystemPage /> },
-          { path: ":sub", element: <SystemPage /> },
+          { path: "/", element: <DashboardPage /> },
+          { path: "/library", element: <LibraryPage /> },
+          { path: "/add", element: <AddNewPage /> },
+          { path: "/game/:gameId", element: <GameDetailPage /> },
+          { path: "/wanted", element: <WantedPage /> },
+          { path: "/activity", element: <ActivityPage /> },
+          { path: "/calendar", element: <CalendarPage /> },
+          // Settings is a layout with sub-routes; today the
+          // sub-routes share the same placeholder page.
+          {
+            path: "/settings",
+            element: <Outlet />,
+            children: [
+              { index: true, element: <SettingsPage /> },
+              { path: ":sub", element: <SettingsPage /> },
+            ],
+          },
+          {
+            path: "/system",
+            element: <Outlet />,
+            children: [
+              { index: true, element: <SystemPage /> },
+              { path: ":sub", element: <SystemPage /> },
+            ],
+          },
         ],
       },
     ],

@@ -138,44 +138,47 @@ hook; TypeScript compiles.
 
 ### Tests
 
-- [ ] T015 [P] [SHARED] `tests/components/shared/test_BottomNav.tsx`
-      — renders the 5 documented entries; on a 360 px viewport it
-      is visible; on ≥ 768 px viewport it is hidden.
-- [ ] T016 [P] [SHARED] `tests/components/shared/test_OfflineIndicator.tsx`
-      — appears after 10 s of disconnection (freezegun-equivalent
-      via `vi.useFakeTimers`).
-- [ ] T017 [P] [SHARED] `tests/components/shared/test_ActionSheet.tsx`
-      — opens from the bottom on mobile; standard Dialog on
-      desktop.
-- [ ] T018 [P] [SHARED] `tests/components/shared/test_PullToRefresh.tsx`
-      — gesture triggers the documented refetch callback.
+- [~] T015 [P] [SHARED] Vitest BottomNav test **deferred** —
+      Vitest not yet installed. The 5-entry visibility-on-mobile-
+      only contract is implemented via `md:hidden`.
+- [~] T016 [P] [SHARED] OfflineIndicator **deferred** — needs
+      WebSocket client (T053) for the 10s-disconnect signal.
+- [~] T017 [P] [SHARED] ActionSheet **deferred** — needs Framer
+      Motion + shadcn Dialog primitive.
+- [~] T018 [P] [SHARED] PullToRefresh **deferred** — needs
+      `@use-gesture/react` runtime dep.
 
 ### Implementation
 
-- [ ] T019 [SHARED] Create `src/components/shared/Header.tsx` —
-      app title, theme toggle, language toggle, profile menu,
-      OfflineIndicator slot, ⌘+K hint.
-- [ ] T020 [P] [SHARED] Create `src/components/shared/BottomNav.tsx`
-      — Library / Wanted / Activity / Settings / Search. Hidden
-      ≥ 768 px.
-- [ ] T021 [P] [SHARED] Create
-      `src/components/shared/OfflineIndicator.tsx` — appears when
-      WebSocket is offline > 10 s OR navigator.onLine is false.
-- [ ] T022 [P] [SHARED] Create
-      `src/components/shared/EmptyState.tsx` — illustration +
-      i18n message + optional CTA.
-- [ ] T023 [P] [SHARED] Create
-      `src/components/shared/LoadingSkeleton.tsx` — shimmer for
-      list/card/detail variants.
-- [ ] T024 [P] [SHARED] Create
-      `src/components/shared/ActionSheet.tsx` — wraps shadcn/ui
-      Dialog with bottom-sheet animation on mobile via Framer
-      Motion.
-- [ ] T025 [P] [SHARED] Create
-      `src/components/shared/FloatingActionButton.tsx`.
-- [ ] T026 [P] [SHARED] Create
-      `src/components/shared/PullToRefresh.tsx` — `@use-gesture/react`
-      pan-y handler.
+- [X] T019 [SHARED] `src/components/shared/Header.tsx` —
+      sticky-top, app title + theme toggle (cycles dark →
+      light → auto). Language toggle, profile menu, ⌘+K hint
+      land with their owning phases (I18N / P-AUTH / SEARCH).
+- [X] T020 [P] [SHARED] `src/components/shared/BottomNav.tsx`
+      — 5 documented entries (Library / Wanted / Activity /
+      Settings / Search). `md:hidden` so the desktop UX uses
+      the sidebar. 44 × 44 px hit targets per FR-002.
+      `pb-[env(safe-area-inset-bottom)]` for iOS PWA.
+- [~] T021 [P] [SHARED] OfflineIndicator **deferred** — lands
+      with the WebSocket client slice (T053).
+- [X] T022 [P] [SHARED] `src/components/shared/EmptyState.tsx`
+      — composable empty-state with optional icon + title +
+      description + CTA slot.
+- [X] T023 [P] [SHARED] `src/components/shared/LoadingSkeleton.tsx`
+      — exports `Skeleton`, `ListSkeleton`, `CardGridSkeleton`,
+      `DetailSkeleton`. Pure Tailwind `animate-pulse`.
+- [~] T024 [P] [SHARED] ActionSheet **deferred** — needs
+      Framer Motion + shadcn/ui Dialog primitive.
+- [X] T025 [P] [SHARED] `src/components/shared/FloatingActionButton.tsx`
+      — fixed bottom-right, `md:hidden`, sits above BottomNav
+      with safe-area inset. Brand-coloured circle.
+- [~] T026 [P] [SHARED] PullToRefresh **deferred** — needs
+      `@use-gesture/react`.
+
+Plus `src/components/shared/AppLayout.tsx` — app shell
+(Header + `<Outlet />` + BottomNav) wrapped around every
+authenticated route. Slots between AuthGuard and the per-page
+outlet in App.tsx's route table.
 
 **Checkpoint**: every component renders correctly on 360 px AND
 ≥ 768 px in Storybook (or in the test suite's RTL snapshots).
