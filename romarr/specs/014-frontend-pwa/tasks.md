@@ -644,8 +644,11 @@ manageable; each ships ≥ 1 test + an implementation.
 - [ ] T098 [P] [P-SET] `tests/unit/pages/Settings/test_Indexers.tsx::test_test_button`
       — test button fires the documented endpoint and shows
       success/error.
-- [ ] T099 [P] [P-SYS] `tests/unit/pages/System/test_Tasks.tsx::test_trigger_button`
-      — trigger button POSTs to the documented endpoint.
+- [~] T099 [P] [P-SYS] Vitest test_trigger_button **deferred**
+      — Vitest not yet installed. The contract is implemented:
+      TasksTab's "Run now" button POSTs to /api/v3/command via
+      `useTriggerCommand` keyed by the job id, with per-row
+      busy state.
 - [ ] T100 [P] [P-AUTH] `tests/unit/pages/test_Login.tsx::test_forms_login`
       — submit credentials; cookie set; redirect to `returnTo`.
 - [ ] T101 [P] [P-AUTH] `tests/unit/pages/test_Login.tsx::test_oidc_button`
@@ -667,8 +670,30 @@ manageable; each ships ≥ 1 test + an implementation.
       sidebar nav.
 - [ ] T106 [P] [P-SET] Create the 11 sub-pages under
       `src/pages/Settings/` per the spec.
-- [ ] T107 [P-SYS] Create `src/pages/System/index.tsx` with the
-      five sub-pages (Status, Logs, Tasks, Backup, Updates).
+- [~] T107 [P-SYS] `src/pages/System/index.tsx` shipped with
+      four tabs: Status / Tasks / Logs / Backup.
+      * **StatusTab** renders the full Sonarr v3+v4 union
+        (12 fields) from `useSystemStatus`.
+      * **TasksTab** lists the spec 012 scheduled jobs from
+        `useTasks`. Each row shows id / cron-or-interval /
+        next-run / last-run + status badge. "Run now" button
+        per row POSTs to /api/v3/command via
+        `useTriggerCommand` (slice 47), keyed by job id, with
+        per-row busy state.
+      * **LogsTab** lists log files from `useLogFiles`
+        (spec 013 slice 34). "Download" link points at
+        admin-only /api/v3/system/log/file/{filename}; cookie
+        session carries auth.
+      * **BackupsTab** lists backups from `useBackups`
+        (spec 013 slice 35) plus a "Backup now" button that
+        fires the Sonarr-shape Backup command and refetches
+        the list after 1.5s.
+      Updates tab **deferred** per the spec ("UI placeholder").
+
+      `src/lib/api/queries/system-extras.ts` shipped:
+      `useLogFiles`, `useBackups`, `useTasks` — three more
+      typed TanStack Query hooks against the spec 012/013
+      surfaces.
 - [ ] T108 [P-AUTH] Create `src/pages/Login/index.tsx`.
 - [ ] T109 [P-SETUP] Create `src/pages/Setup/index.tsx` with the
       5-step wizard.

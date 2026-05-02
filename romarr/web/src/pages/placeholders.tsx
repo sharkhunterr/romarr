@@ -93,14 +93,8 @@ export function SettingsPage(): ReactElement {
   );
 }
 
-export function SystemPage(): ReactElement {
-  return (
-    <PageShell
-      title="System"
-      subtitle="Status / Logs / Tasks / Backup / Updates (P-SYS phase)."
-    />
-  );
-}
+// SystemPage is the fourth real page implementation; lives at
+// @/pages/System/index.tsx (slice 50, P-SYS).
 
 export function LoginPage(): ReactElement {
   const [params] = useSearchParams();

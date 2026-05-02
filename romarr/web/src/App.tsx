@@ -34,8 +34,8 @@ import {
   NotFoundPage,
   SettingsPage,
   SetupPage,
-  SystemPage,
 } from "@/pages/placeholders";
+import { SystemPage } from "@/pages/System";
 import { WantedPage } from "@/pages/Wanted";
 
 const router = createBrowserRouter([

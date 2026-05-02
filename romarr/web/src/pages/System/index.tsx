@@ -1,0 +1,95 @@
+/**
+ * System page (P-SYS, T099 partial).
+ *
+ * Four documented tabs:
+ *   * Status — Sonarr-shape v3+v4 union from
+ *     /api/v3/system/status.
+ *   * Logs — file list + admin-only download from
+ *     /api/v3/system/log/file.
+ *   * Backup — file list + manual-trigger button from
+ *     /api/v3/system/backup + POST /api/v3/command.
+ *   * Tasks — scheduled jobs from /api/v3/system/tasks with
+ *     manual-trigger per row.
+ *
+ * The Updates tab is deferred per the spec ("UI placeholder").
+ */
+
+/* eslint-disable react/jsx-no-literals -- replaced by i18n in
+   the I18N phase. */
+
+import { useState, type ReactElement } from "react";
+
+import { BackupsTab } from "./BackupsTab";
+import { LogsTab } from "./LogsTab";
+import { StatusTab } from "./StatusTab";
+import { TasksTab } from "./TasksTab";
+
+type Tab = "status" | "tasks" | "logs" | "backup";
+
+const TAB_LABEL: Record<Tab, string> = {
+  status: "Status",
+  tasks: "Tasks",
+  logs: "Logs",
+  backup: "Backup",
+};
+
+interface TabButtonProps {
+  tab: Tab;
+  active: boolean;
+  onClick: (tab: Tab) => void;
+}
+
+function TabButton(props: TabButtonProps): ReactElement {
+  const { tab, active, onClick } = props;
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(tab)}
+      className={[
+        "flex-1 rounded-md px-3 py-2 text-sm font-medium",
+        "transition-colors",
+        active
+          ? "bg-zinc-800 text-zinc-100"
+          : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200",
+        "focus-visible:outline-none focus-visible:ring-2",
+        "focus-visible:ring-brand",
+      ].join(" ")}
+      aria-pressed={active}
+    >
+      {TAB_LABEL[tab]}
+    </button>
+  );
+}
+
+export function SystemPage(): ReactElement {
+  const [tab, setTab] = useState<Tab>("status");
+
+  return (
+    <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-6 md:py-8">
+      <header className="mb-6">
+        <h1 className="font-mono text-xl font-semibold text-brand">
+          System
+        </h1>
+        <p className="mt-1 text-sm text-zinc-400">
+          Status, scheduled tasks, log files, and backups.
+        </p>
+      </header>
+
+      <div
+        role="tablist"
+        aria-label="System tabs"
+        className="mb-4 grid grid-cols-4 gap-1 rounded-md border border-zinc-800 bg-zinc-900/40 p-1"
+      >
+        <TabButton tab="status" active={tab === "status"} onClick={setTab} />
+        <TabButton tab="tasks" active={tab === "tasks"} onClick={setTab} />
+        <TabButton tab="logs" active={tab === "logs"} onClick={setTab} />
+        <TabButton tab="backup" active={tab === "backup"} onClick={setTab} />
+      </div>
+
+      {tab === "status" && <StatusTab />}
+      {tab === "tasks" && <TasksTab />}
+      {tab === "logs" && <LogsTab />}
+      {tab === "backup" && <BackupsTab />}
+    </div>
+  );
+}
