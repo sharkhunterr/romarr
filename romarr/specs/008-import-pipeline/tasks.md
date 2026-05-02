@@ -963,6 +963,20 @@ contributors, the WATCH and EXTRACT phases (Day 2-3) split cleanly.
 > passes non-`None` so the first signal wins. 4 tests
 > cover insert, update-with-bump, hint preservation, and
 > the suggested-game-with-platform variant.
+>
+> **Slice 80 (2026-05-02)** — landed
+> `src/romarr/importer/_context.py` with
+> `load_library_context`. Eager-loads the Library + its
+> 5 profile bindings (Quality / Region / Dump / Language
+> / Naming) + the m2m CustomFormat list (sorted by score
+> descending) for one-shot consumption by the orchestrator.
+> Frozen :class:`LibraryContext` dataclass so the loaded
+> profiles can't be mutated mid-pipeline.
+> :class:`LibraryContextNotFound` raised when the
+> library_id doesn't resolve so the orchestrator can map
+> it to a structured rejection. 4 tests: full-shape
+> round-trip, custom-formats-by-score, unknown-id raises,
+> dataclass-is-frozen.
 
 - [~] CL001 [P] [US6] Subreason-aware auto-blocklist —
       **gated on orchestrator**. The taxonomy (`RejectionReason`
