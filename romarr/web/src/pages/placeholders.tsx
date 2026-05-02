@@ -39,14 +39,8 @@ function PageShell(props: {
   );
 }
 
-export function DashboardPage(): ReactElement {
-  return (
-    <PageShell
-      title="Dashboard"
-      subtitle="Stats, health, and recent activity (P-DASH phase)."
-    />
-  );
-}
+// DashboardPage is the first real page implementation; lives at
+// @/pages/Dashboard/index.tsx (slice 47, P-DASH).
 
 export function LibraryPage(): ReactElement {
   return (

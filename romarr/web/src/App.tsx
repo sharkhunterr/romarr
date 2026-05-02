@@ -23,11 +23,11 @@ import { AppLayout } from "@/components/shared/AppLayout";
 import { AuthGuard } from "@/components/shared/AuthGuard";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
 import { QueryProvider } from "@/lib/api/QueryProvider";
+import { DashboardPage } from "@/pages/Dashboard";
 import {
   ActivityPage,
   AddNewPage,
   CalendarPage,
-  DashboardPage,
   GameDetailPage,
   LibraryPage,
   LoginPage,
