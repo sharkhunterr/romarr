@@ -1,0 +1,12 @@
+{
+  "_comment": "Hand-crafted probe payload representing what Notifiarr (and similar *arr-aware tooling: Recyclarr, Homepage, Homarr, Janitorr) sends when first connecting to Romarr. The probe is a single GET /api/v3/system/status with X-Api-Key in the header, no request body. The response (Sonarr-shape JSON) is what these tools cache to recognise Romarr as an *arr peer.",
+  "method": "GET",
+  "path": "/api/v3/system/status",
+  "headers": {
+    "X-Api-Key": "<operator-supplied-api-key>",
+    "Accept": "application/json",
+    "User-Agent": "Notifiarr/0.7.0"
+  },
+  "expected_status": 200,
+  "expected_content_type": "application/json"
+}

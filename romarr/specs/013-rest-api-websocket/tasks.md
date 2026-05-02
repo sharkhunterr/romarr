@@ -656,26 +656,42 @@ documented Sonarr-compat name.
 
 ### Tests
 
-- [ ] T090 [P] [SONARR] `tests/api/test_sonarr_status_compat.py::test_status_fixture_match`
-      — fixture `tests/fixtures/api/sonarr_status_fixture.json`
-      contains the canonical key set; assert
-      `GET /api/v3/system/status` returns a superset (every key
-      Sonarr expects is present; Romarr may add extra
-      ROM-specific keys) (SC-001).
-- [ ] T091 [P] [SONARR] `tests/api/test_sonarr_status_compat.py::test_notifiarr_probe`
-      — replay the captured Notifiarr probe payload
-      (`tests/fixtures/api/notifiarr_probe_payload.json`) against
-      the running app; assert HTTP 200 and the Sonarr-shaped
-      body validates against the fixture.
+- [X] T090 [P] [SONARR] `tests/api/test_sonarr_status_compat.py::test_status_response_is_superset_of_sonarr_fixture`
+      — `tests/fixtures/api/sonarr_status_fixture.json` contains
+      the documented Sonarr v4 key set; `GET /api/v3/system/status`
+      authenticated via X-Api-Key returns a superset of the
+      v3+v4 documented union (version, isProduction, instanceName,
+      urlBase, osName, runtimeVersion, appData, startTime,
+      databaseType, databaseVersion, migrationVersion,
+      runtimeName) — SC-001. Companion test
+      `test_status_response_keys_match_documented_set_exactly`
+      pins the exact key set so future routers can't silently
+      drop a Sonarr-required field. Companion
+      `test_unauthenticated_probe_gets_minimal_peer_recognition_shape`
+      pins the public tier shape.
+- [X] T091 [P] [SONARR] `tests/api/test_sonarr_status_compat.py::test_notifiarr_probe_succeeds_with_api_key`
+      — replays `tests/fixtures/api/notifiarr_probe_payload.json`
+      (method, path, headers) against the live app with a
+      seeded ApiKey row substituted for the placeholder; asserts
+      HTTP 200, JSON content type, and Sonarr-shape body
+      (instanceName=Romarr, isProduction=True, version present).
 
 ### Implementation
 
-- [ ] T092 [SONARR] Capture `sonarr_status_fixture.json` from a
-      real Sonarr v4 installation (or use a documented snapshot)
-      and commit it under `tests/fixtures/api/`.
-- [ ] T093 [SONARR] Capture or hand-craft a
-      `notifiarr_probe_payload.json` representing the request
-      Notifiarr sends when adding a Sonarr-compat *arr.
+- [X] T092 [SONARR] Hand-crafted
+      `tests/fixtures/api/sonarr_status_fixture.json` from
+      Sonarr v4's documented OpenAPI. Values are placeholders;
+      only the key set is asserted by the compat test (SC-001
+      mandates "every key Sonarr expects is present", not "the
+      values match"). Includes Sonarr's full surface (mono /
+      docker / package metadata) so a future "track every
+      Sonarr key" tightening has the reference data.
+- [X] T093 [SONARR] Hand-crafted
+      `tests/fixtures/api/notifiarr_probe_payload.json` —
+      method=GET, path=/api/v3/system/status, X-Api-Key +
+      Accept + User-Agent headers, expected_status=200,
+      expected_content_type=application/json. Replayed by
+      T091.
 
 **Checkpoint**: SONARR tests green; ecosystem-tooling
 compatibility is locked.
