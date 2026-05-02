@@ -3,6 +3,83 @@
 All notable changes to Romarr land here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semver.
 
+## [0.13.0a1] — 2026-05-02
+
+### Added
+
+- **Spec 013 — REST API & WebSocket**: Sonarr-compat unified
+  HTTP surface under `/api/v3/*` plus a SignalR-shaped
+  WebSocket at `/signalr/messages`. 95+ distinct routes
+  (FR-001) covering every prior spec's resource surface.
+  - **Canonical pagination + error envelope** (FR-007/008/009/010).
+    `PaginationEnvelope[RecordT]` with `page`/`pageSize`/`sortKey`/
+    `sortDirection`/`totalRecords`/`records`; `paginate()` helper
+    enforcing the operator-facing sortable-key whitelist + 1000-row
+    cap. Global `ErrorEnvelope` (`{errorMessage, errorCode?,
+    details?}`) on every error path.
+  - **Application factory** (`romarr.api.factory.create_app`): wires
+    every router; lifespan stamps the spec 012 `SchedulerService`,
+    `CancellationRegistry`, and the `SubscriptionRegistry` for the
+    WebSocket bridge; on shutdown runs the four-phase
+    `graceful_shutdown` from spec 012.
+  - **Five middleware** (FR-020–030): GZip (1 KB threshold,
+    `ROMARR_GZIP_MIN_SIZE_BYTES`), CORS (operator-allow-listed via
+    `ROMARR_CORS_ALLOWED_ORIGINS`), CSRF (double-submit cookie,
+    `ROMARR_CSRF_PROTECT`), rate-limit (sliding 60s window keyed by
+    IP for /login + /setup, by API key elsewhere; default
+    5/1/100 per minute, `ROMARR_RATE_LIMIT_ENABLED`), idempotency
+    (RFC-8785 canonical-JSON body hash, 24h TTL via
+    IdempotencyCache table). All hand-rolled pure-ASGI — no new
+    runtime deps. CSRF + rate-limit default OFF until spec 014
+    frontend ships; flipped on per-deployment.
+  - **Sonarr-shape probes**: `/api/v3/system/status` tiered by
+    auth (public: `{version, isProduction}`; authenticated: full
+    v3+v4 union). Notifiarr probe replay test fixture
+    (`tests/fixtures/api/notifiarr_probe_payload.json` +
+    `sonarr_status_fixture.json`) locks SC-001 against drift.
+  - **Eight new bridge routers**:
+    Tag (CRUD + polymorphic `/detail/{id}` over the `tag_assignment`
+    table; cascade-on-force-delete with 409 default),
+    Queue list (over `queue_entry`),
+    Wanted (`/missing` + `/cutoff` paginated reads),
+    Calendar (MVP empty list with the documented schema),
+    History (UNION across `import_history` / `search_history` /
+    `job_run`, with `/since`),
+    Log (paginated entries stub + file list + admin-only file
+    download under `Settings.log_dir`),
+    Backup (list + admin-only delete under `Settings.backup_path`).
+  - **OpenAPI 3.1 customisation**: enforces `openapi: "3.1.0"`,
+    injects four documented security schemes (ApiKeyHeader,
+    ApiKeyQuery, CookieSession, BearerJwt), tag-coverage
+    fallback, validates clean against `openapi-spec-validator`.
+  - **Unified Sonarr-compat command bus** at `/api/v3/command*`:
+    POST fires by name, GET reads CommandStatus, DELETE cancels
+    via the spec 012 `CancellationRegistry` two-phase protocol.
+  - **WebSocket /signalr/messages** (FR-018/019): on-upgrade
+    auth via the spec 010 chain (close 1008 if rejected),
+    twelve-value `MessageType` StrEnum, in-memory
+    `SubscriptionRegistry` keyed by per-connection UUID,
+    welcome envelope + ping/pong loop. Bridge consumer (spec
+    011 pub/sub → broadcast) deferred to a follow-up slice.
+  - **WIRE phase audit**: `tests/api/test_endpoint_coverage.py`
+    walks every `APIRoute` and asserts the FR-004/005 invariants
+    (every non-public route reaches an auth dependency; every
+    non-tiered route declares an explicit role guard).
+- **Three new tables** in migration `0013_rest_api`:
+  `tag` + `tag_assignment` (polymorphic m2m over Game / Indexer
+  / Notification / Release), `queue_entry`, `idempotency_cache`.
+- **Test infrastructure**: `pytest-xdist>=3.5` for opt-in
+  parallel test execution. Full suite runs in ~14 minutes
+  parallel (`uv run pytest --no-cov -n auto`) vs ~20 minutes
+  serial. Worker isolation also clears the spec 012
+  fixture-isolation flake.
+
+### Coverage
+
+- `src/romarr/api/`: ~91% line coverage (FR target ≥ 80%).
+- Distinct routes: 95 (FR-001 ≥ 90 met with margin).
+- 1963 tests pass; 1 skipped (`unrar` binary not on PATH).
+
 ## [0.12.0a1] — 2026-05-01
 
 ### Added

@@ -1,6 +1,6 @@
 [project]
 name = "romarr"
-version = "0.12.0a1"
+version = "0.13.0a1"
 description = "Self-hosted ROM acquisition manager for the *arr ecosystem"
 license = { text = "GPL-3.0-or-later" }
 authors = [{ name = "Jérémie Dathée" }]
