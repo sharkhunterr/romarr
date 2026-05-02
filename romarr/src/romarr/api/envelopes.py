@@ -33,9 +33,17 @@ class PaginationEnvelope[RecordT](BaseModel):
     Indexer, Notification, JobRun, ...) returns this exact
     shape. The frontend's TanStack Query layer relies on the
     keys being identical across resources.
+
+    ``populate_by_name=True`` lets the schema validate input
+    dicts whose keys are either the snake_case Python field
+    names or the camelCase aliases. FastAPI's response_model
+    machinery dumps a returned envelope to dict with snake_case
+    keys (regardless of ``response_model_by_alias``) before
+    revalidating; without ``populate_by_name`` that revalidation
+    would fail because the aliases would be missing.
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, populate_by_name=True)
 
     page: int = Field(ge=1)
     page_size: int = Field(alias="pageSize", ge=1, le=1000)

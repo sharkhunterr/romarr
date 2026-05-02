@@ -290,9 +290,14 @@ shuts down cleanly.
       — POST `/api/v3/wanted/missing/search` with
       `{releaseIds: [...]}` triggers a one-shot search per release
       via spec 007's `run_manual_search`; admin or user.
-- [ ] T044 [P] [ROUTERS] `tests/api/routers/test_queue.py::test_lists_in_flight`
-      — populate `queue_entry`; GET returns active downloads with
-      progress / eta / state.
+- [X] T044 [P] [ROUTERS] `tests/api/routers/test_queue.py::test_lists_in_flight_with_canonical_envelope`
+      — seed `queue_entry` rows; GET returns the canonical
+      pagination envelope with the documented camelCase record
+      keys (releaseId / downloadClientId / state / progress /
+      etaSeconds / sizeBytes / etc.). Companion tests pin
+      `?pageSize=N` capping, sort-by-state-desc, invalid sortKey
+      400 (FR-008), 401 unauthenticated, and the empty-queue
+      shape.
 - [ ] T045 [P] [ROUTERS] `tests/api/routers/test_queue.py::test_delete_with_remove_from_client`
       — DELETE `?removeFromClient=true` calls spec 005's
       `DownloadClient.remove(...)` and removes the queue row.
@@ -346,10 +351,22 @@ shuts down cleanly.
 - [ ] T056 [P] [ROUTERS] Create
       `src/romarr/api/routers/wanted.py` — `/missing` and `/cutoff`
       paginated; bulk search triggers.
-- [ ] T057 [P] [ROUTERS] Create
-      `src/romarr/api/routers/queue.py` — backed by `queue_entry`
-      table; reads from spec 005's clients on demand for fresh
-      progress data.
+- [~] T057 [P] [ROUTERS] Create
+      `src/romarr/api/routers/queue.py` — list endpoint shipped:
+      GET `/api/v3/queue` returns the canonical pagination
+      envelope of `queue_entry` rows, sortable by
+      `last_updated_at` / `state` / `progress` / `created_at` /
+      `id`, with the Sonarr-shape camelCase JSON field set.
+      Read-only via `require_readonly`. **Deferred to a follow-up
+      slice**: DELETE `?removeFromClient=true` (needs spec 005's
+      `DownloadClient.remove`) and POST `/{id}/retry` (needs
+      spec 005's add helpers). Tasks T045 / T046 stay open.
+
+      As part of this slice, `PaginationEnvelope.model_config`
+      now sets `populate_by_name=True` so FastAPI's response_model
+      revalidation accepts both snake_case Python names and the
+      camelCase aliases — needed for any router that returns
+      `PaginationEnvelope[X]` directly via `response_model=`.
 - [ ] T058 [P] [ROUTERS] Create
       `src/romarr/api/routers/history.py` — UNION query across
       `import_history`, `search_history`, `job_run`.

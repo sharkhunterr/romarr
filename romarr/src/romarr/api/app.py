@@ -26,6 +26,7 @@ from romarr.api.middleware import (
     register_idempotency,
 )
 from romarr.api.routers.auth import router as auth_router
+from romarr.api.routers.queue import router as queue_router
 from romarr.api.routers.status import router as system_status_router
 from romarr.api.routers.tag import router as tag_router
 from romarr.api.routers.users import router as users_router
@@ -219,6 +220,9 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     # registered before the {tag_id} catch-all in the router so
     # FastAPI's path matcher hits the literal first.
     app.include_router(tag_router)
+    # Spec 013 — Queue mirror (T057). List endpoint only in this
+    # slice; DELETE / retry land with the spec 005 client wiring.
+    app.include_router(queue_router)
     app.include_router(providers_router)
     app.include_router(field_priority_router)
     app.include_router(refresh_router)
