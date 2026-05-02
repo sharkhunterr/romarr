@@ -316,9 +316,13 @@ shuts down cleanly.
 - [ ] T048 [P] [ROUTERS] `tests/api/routers/test_history.py::test_since_timestamp`
       — GET `/api/v3/history/since?date=2026-04-29T00:00:00Z`
       returns events after the given moment.
-- [ ] T049 [P] [ROUTERS] `tests/api/routers/test_calendar.py::test_empty_schema_valid`
-      — GET `/api/v3/calendar?start=...&end=...` returns
-      `[]` with a documented schema (MVP — data sources TBD).
+- [X] T049 [P] [ROUTERS] `tests/api/routers/test_calendar.py::test_returns_empty_list_with_valid_range`
+      — GET `/api/v3/calendar?start=...&end=...` returns `[]`
+      (MVP — data sources TBD). Companion tests pin: required
+      `start` + `end` query params (422), inverted-range 400
+      with errorCode `calendar_invalid_range`, equal-range 400
+      (empty range is a bug not a feature), invalid ISO-8601
+      422, and unauthenticated 401.
 - [X] T050 [P] [ROUTERS] `tests/api/routers/test_tag.py::test_post_get_put_delete_round_trip`
       — POST/GET (list + single)/PUT/DELETE round-trip on
       `/api/v3/tag*`. Default colour matches the brand
@@ -387,9 +391,17 @@ shuts down cleanly.
 - [ ] T058 [P] [ROUTERS] Create
       `src/romarr/api/routers/history.py` — UNION query across
       `import_history`, `search_history`, `job_run`.
-- [ ] T059 [P] [ROUTERS] Create
-      `src/romarr/api/routers/calendar.py` — MVP empty list with the
-      documented schema.
+- [X] T059 [P] [ROUTERS] Create
+      `src/romarr/api/routers/calendar.py` — MVP empty list
+      backed by the `CalendarEvent` schema (id / title /
+      platformId / kind / releaseDate (YYYY-MM-DD) /
+      releaseDateUtc (ISO-8601) / monitored / summary /
+      sourceUrl). The schema is pinned so the frontend
+      month-view can wire against it now; a future data-source
+      slice will populate without contract churn. Read-only
+      via `require_readonly`. Range validation: `end > start` —
+      a future data-source slice replaces the empty-list return
+      with the matching events query.
 - [X] T060 [P] [ROUTERS] Create `src/romarr/api/routers/tag.py` —
       full CRUD + force-delete + `/detail/{id}` polymorphic
       lookup. Read endpoints gated by `require_readonly`; write

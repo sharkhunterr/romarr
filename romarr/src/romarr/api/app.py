@@ -26,6 +26,7 @@ from romarr.api.middleware import (
     register_idempotency,
 )
 from romarr.api.routers.auth import router as auth_router
+from romarr.api.routers.calendar import router as calendar_router
 from romarr.api.routers.queue import router as queue_router
 from romarr.api.routers.status import router as system_status_router
 from romarr.api.routers.tag import router as tag_router
@@ -228,6 +229,9 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     # paginated reads. Bulk-search trigger lands with the spec 007
     # run_manual_search hook.
     app.include_router(wanted_router)
+    # Spec 013 — Calendar (T059): MVP empty list. The schema is
+    # pinned so the frontend can wire the month view now.
+    app.include_router(calendar_router)
     app.include_router(providers_router)
     app.include_router(field_priority_router)
     app.include_router(refresh_router)
