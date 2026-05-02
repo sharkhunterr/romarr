@@ -179,9 +179,143 @@ async def make_failure_outcome(
     )
 
 
+# ---------------------------------------------------------------------------
+# Success path — symmetric with the failure helpers above. The
+# orchestrator records every successful import (including coalesced
+# no-ops) so the audit trail stays complete (FR-031).
+
+
+async def persist_success_history(
+    *,
+    session: AsyncSession,
+    context: ImportContext,
+    started_at: datetime,
+    duration_ms: int,
+    dest_path: str,
+    game_id: int,
+    release_id: int,
+    dump_id: int,
+    source_hash_sha1: str,
+    confidence: float | None = None,
+    coalesced: bool = False,
+    warning: str | None = None,
+) -> ImportHistory:
+    """Insert a ``success=True`` row, return the persisted ORM
+    object so the caller can read its ``id``.
+
+    Caller is responsible for committing — the orchestrator
+    composes the success-write with the same-transaction
+    Dump / Release status updates from the DBUPDATE step.
+
+    `coalesced=True` records "this was a re-import of a file
+    we already had" — the row carries the same dest_path /
+    dump_id as the original but the operator can audit the
+    re-attempt.
+    """
+    row = ImportHistory(
+        source_path=str(context.source_path),
+        dest_path=dest_path,
+        download_client_id=context.download_client_id,
+        download_client_native_id=context.download_client_native_id,
+        game_id=game_id,
+        release_id=release_id,
+        dump_id=dump_id,
+        source_hash_sha1=source_hash_sha1,
+        confidence=confidence,
+        imported_via=context.imported_via,
+        success=True,
+        coalesced=coalesced,
+        warning=warning,
+        error_msg=None,
+        imported_by=context.imported_by,
+        correlation_id=str(context.correlation_id),
+        started_at=started_at,
+        finished_at=datetime.now(UTC),
+        duration_ms=duration_ms,
+    )
+    session.add(row)
+    await session.flush()  # populates row.id
+    return row
+
+
+def outcome_from_success_history(
+    *,
+    history: ImportHistory,
+    context: ImportContext,
+    duration_ms: int,
+) -> ImportOutcome:
+    """Project a freshly-persisted success :class:`ImportHistory`
+    into the :class:`ImportOutcome` shape callers consume.
+
+    Pure projection — no DB. The orchestrator pre-computes the
+    duration once at the top of the success-path branch and
+    reuses it for both the persistence and the projection so
+    the two reports agree to the millisecond.
+    """
+    return ImportOutcome(
+        success=True,
+        coalesced=history.coalesced,
+        dest_path=history.dest_path,  # type: ignore[arg-type]  # str -> Path coerced by Pydantic
+        dump_id=history.dump_id,
+        release_id=history.release_id,
+        game_id=history.game_id,
+        confidence=(
+            float(history.confidence) if history.confidence is not None else None
+        ),
+        warning=history.warning,
+        error_msg=None,
+        rejection_reason=None,
+        history_id=history.id,
+        correlation_id=context.correlation_id,
+        duration_ms=duration_ms,
+    )
+
+
+async def make_success_outcome(
+    *,
+    session: AsyncSession,
+    context: ImportContext,
+    started_at: datetime,
+    duration_ms: int,
+    dest_path: str,
+    game_id: int,
+    release_id: int,
+    dump_id: int,
+    source_hash_sha1: str,
+    confidence: float | None = None,
+    coalesced: bool = False,
+    warning: str | None = None,
+) -> ImportOutcome:
+    """Convenience: persist + project in one call. Mirrors
+    :func:`make_failure_outcome` so the orchestrator's two
+    branches (success / failure) read symmetrically."""
+    history = await persist_success_history(
+        session=session,
+        context=context,
+        started_at=started_at,
+        duration_ms=duration_ms,
+        dest_path=dest_path,
+        game_id=game_id,
+        release_id=release_id,
+        dump_id=dump_id,
+        source_hash_sha1=source_hash_sha1,
+        confidence=confidence,
+        coalesced=coalesced,
+        warning=warning,
+    )
+    return outcome_from_success_history(
+        history=history,
+        context=context,
+        duration_ms=duration_ms,
+    )
+
+
 __all__ = [
     "make_failure_outcome",
+    "make_success_outcome",
     "map_exception_to_reason",
     "outcome_from_failure_history",
+    "outcome_from_success_history",
     "persist_failure_history",
+    "persist_success_history",
 ]

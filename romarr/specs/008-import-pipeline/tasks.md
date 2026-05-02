@@ -933,6 +933,20 @@ contributors, the WATCH and EXTRACT phases (Day 2-3) split cleanly.
 > can now wrap each step in `try/except` that funnels
 > through `make_failure_outcome` instead of re-implementing
 > the persist + project dance per call site.
+>
+> **Slice 78 (2026-05-02)** — symmetric success-path
+> helpers added to `_outcome.py`:
+> `persist_success_history` (DB write with success=True +
+> coalesced flag + Game/Release/Dump FKs +
+> source_hash_sha1 + confidence + warning),
+> `outcome_from_success_history` (pure projection), and
+> `make_success_outcome` (composite). 4 new tests bring
+> the file to 16 total: round-trip, coalesced marker
+> round-trip, pure-projection, and composite end-to-end.
+> The orchestrator's success-path branch now reads
+> symmetrically with the failure-path branch — both reach
+> for `make_<kind>_outcome` and inherit a known-good
+> persist + project pair.
 
 - [~] CL001 [P] [US6] Subreason-aware auto-blocklist —
       **gated on orchestrator**. The taxonomy (`RejectionReason`
