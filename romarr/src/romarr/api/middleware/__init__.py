@@ -9,5 +9,6 @@ independently testable.
 
 from romarr.api.middleware.cors import register_cors
 from romarr.api.middleware.gzip import register_gzip
+from romarr.api.middleware.idempotency import register_idempotency
 
-__all__ = ["register_cors", "register_gzip"]
+__all__ = ["register_cors", "register_gzip", "register_idempotency"]

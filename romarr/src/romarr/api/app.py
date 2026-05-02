@@ -20,7 +20,11 @@ from fastapi.responses import JSONResponse
 
 from romarr import __version__
 from romarr.api.error_handlers import register_error_handlers
-from romarr.api.middleware import register_cors, register_gzip
+from romarr.api.middleware import (
+    register_cors,
+    register_gzip,
+    register_idempotency,
+)
 from romarr.api.routers.auth import router as auth_router
 from romarr.api.routers.status import router as system_status_router
 from romarr.api.routers.tag import router as tag_router
@@ -200,6 +204,11 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     settings = get_settings()
     register_gzip(app, min_size_bytes=settings.gzip_min_size_bytes)
     register_cors(app, allowed_origins=settings.cors_allowed_origins)
+    # Idempotency-Key middleware (FR-020 / FR-025). Registered last
+    # in the MW stack so it's nearest the routes — it intercepts
+    # mutating methods after CORS has cleared the request, but
+    # before the route handler runs the actual mutation.
+    register_idempotency(app)
 
     register_error_handlers(app)
     app.include_router(auth_router)

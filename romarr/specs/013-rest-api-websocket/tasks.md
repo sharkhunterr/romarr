@@ -184,15 +184,30 @@ shuts down cleanly.
       (FR-024).
 - [ ] T027 [P] [MW] `tests/api/middleware/test_rate_limit.py::test_health_exempt`
       — `GET /api/v3/health` not subject to per-IP rate limit.
-- [ ] T028 [P] [MW] `tests/api/middleware/test_idempotency.py::test_replay_returns_cached`
-      — POST with `Idempotency-Key`; replay; assert response body and
-      status match byte-for-byte (FR-020, SC-005).
-- [ ] T029 [P] [MW] `tests/api/middleware/test_idempotency.py::test_body_mismatch_422`
-      — replay with different body; HTTP 422 reason
-      `idempotency_key_body_mismatch` (FR-021).
-- [ ] T030 [P] [MW] `tests/api/middleware/test_idempotency.py::test_24h_ttl`
-      — freezegun-advance 25 h; the same key is treated as a fresh
-      request.
+- [X] T028 [P] [MW] `tests/api/middleware/test_idempotency.py::test_replay_returns_cached_response`
+      — POST /api/v3/tag with `Idempotency-Key`; replay with same
+      body; assert second response body and status match the
+      first byte-for-byte. The cache short-circuits the
+      duplicate-name guard at the handler level (would have been
+      409 without the middleware). Replay is tagged with
+      `X-Idempotent-Replay: true` so callers can detect it
+      (FR-020, SC-005). Companion
+      `test_no_idempotency_key_passes_through` proves the
+      middleware is a no-op without the header.
+- [X] T029 [P] [MW] `tests/api/middleware/test_idempotency.py::test_body_mismatch_returns_422`
+      — replay with same key + different body; HTTP 422 with
+      errorCode `idempotency_key_body_mismatch` (FR-021). The
+      original cached response is *not* served.
+- [X] T030 [P] [MW] `tests/api/middleware/test_idempotency.py::test_expired_cache_row_is_treated_as_miss`
+      — write the cache row's `expires_at` to one hour ago
+      (deterministic equivalent of freezegun-advancing 25 h);
+      replay; assert the handler runs (returns 409 from the
+      duplicate-name guard, proving the cache wasn't served).
+      Companion `test_get_request_with_idempotency_key_bypasses`
+      pins the safe-method bypass; companion
+      `test_canonical_json_normalisation` pins JCS-style
+      key-reordering equivalence (re-ordered JSON serialises to
+      the same body hash).
 
 ### Implementation
 
@@ -215,11 +230,25 @@ shuts down cleanly.
       — slowapi setup with three keying strategies:
       `login`/`setup`/`oidc` keyed by IP, default keyed by API key
       id (or session user id).
-- [ ] T035 [P] [MW] Create `src/romarr/api/middleware/idempotency.py`
-      — looks at `Idempotency-Key`; computes `sha256(request.body)`;
-      checks the cache; serves the cached response on hit; otherwise
-      forwards the request, captures the response, and writes the
-      cache row.
+- [X] T035 [P] [MW] Create `src/romarr/api/middleware/idempotency.py`
+      — pure-ASGI middleware (NOT BaseHTTPMiddleware, which would
+      consume the body and break downstream readers). Reads
+      Idempotency-Key, hashes the body via JCS-style canonical
+      JSON serialisation (sort_keys + tight separators) for
+      `application/json` bodies and raw SHA-256 for binary /
+      multipart, looks up `(endpoint, key)` in the
+      IdempotencyCache table from spec 013 data-model. Hit +
+      matching body hash → replays cached status / headers / body
+      with `X-Idempotent-Replay: true`. Hit + differing body →
+      HTTP 422 + errorCode `idempotency_key_body_mismatch`.
+      Hit + expired (`expires_at < now`) → delete row, run
+      handler. Miss → run handler with replayed body, capture
+      response, write cache row when status < 500 (5xx server
+      errors aren't cached so transient issues stay retryable).
+      Wired into `create_app()` after CORS so it's the innermost
+      MW layer — closest to the routes. Redis backend swap
+      stays narrow (single `_lookup_cache` / `_write_cache` /
+      `_delete_cache` indirection).
 
 **Checkpoint**: MW tests green.
 
