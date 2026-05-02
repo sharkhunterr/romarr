@@ -131,6 +131,38 @@ class Settings(BaseSettings):
         "cookie + echoes the header on every mutation.",
     )
 
+    # Rate limiting (spec 013, FR-022 / FR-023 / FR-024)
+    rate_limit_enabled: bool = Field(
+        default=False,
+        description="Spec 013 FR-022. When True, per-IP and "
+        "per-API-key rate limits apply. Defaults to False so "
+        "the test suite (which fires repeated POSTs at "
+        "/login / /setup) doesn't 429 on the 6th call. "
+        "Production deployments should set "
+        "ROMARR_RATE_LIMIT_ENABLED=true.",
+    )
+    rate_limit_login_per_minute: int = Field(
+        default=5,
+        ge=1,
+        description="Spec 013 FR-022. Max attempts on "
+        "/api/v3/auth/login per IP per 60-second window.",
+    )
+    rate_limit_setup_per_minute: int = Field(
+        default=1,
+        ge=1,
+        description="Spec 013 FR-023. Max attempts on "
+        "/api/v3/auth/setup per IP per 60-second window.",
+    )
+    rate_limit_default_per_minute: int = Field(
+        default=100,
+        ge=1,
+        description="Spec 013 FR-024. Default per-key "
+        "rate limit on every other endpoint per 60-second "
+        "window. Keyed by API key id (or session user id) "
+        "rather than IP — multiple operators behind a NAT "
+        "shouldn't share a single budget.",
+    )
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

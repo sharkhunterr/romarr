@@ -11,10 +11,12 @@ from romarr.api.middleware.cors import register_cors
 from romarr.api.middleware.csrf import register_csrf
 from romarr.api.middleware.gzip import register_gzip
 from romarr.api.middleware.idempotency import register_idempotency
+from romarr.api.middleware.rate_limit import register_rate_limit
 
 __all__ = [
     "register_cors",
     "register_csrf",
     "register_gzip",
     "register_idempotency",
+    "register_rate_limit",
 ]

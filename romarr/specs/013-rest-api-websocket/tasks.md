@@ -183,16 +183,22 @@ shuts down cleanly.
       — safe methods (GET / HEAD / OPTIONS / TRACE) bypass.
       Companion test pins OPTIONS preflight bypass +
       `/api/v3/auth/login` bootstrap path bypass.
-- [ ] T024 [P] [MW] `tests/api/middleware/test_rate_limit.py::test_login_5_per_minute`
-      — 6 logins from one IP in 60 s; 6th returns HTTP 429 with
-      `Retry-After` (FR-022, SC-006).
-- [ ] T025 [P] [MW] `tests/api/middleware/test_rate_limit.py::test_setup_1_per_minute`
-      — 2 setup attempts in 60 s; 2nd returns HTTP 429 (FR-023).
-- [ ] T026 [P] [MW] `tests/api/middleware/test_rate_limit.py::test_apikey_100_per_minute`
-      — 101st request with same API key in 60 s returns HTTP 429
-      (FR-024).
-- [ ] T027 [P] [MW] `tests/api/middleware/test_rate_limit.py::test_health_exempt`
-      — `GET /api/v3/health` not subject to per-IP rate limit.
+- [X] T024 [P] [MW] `tests/api/middleware/test_rate_limit.py::test_login_allows_first_5_then_429s`
+      — 5 logins from one IP succeed; the 6th returns HTTP 429
+      with `Retry-After` (FR-022, SC-006). Companion tests pin
+      window-slides-and-clears, X-Forwarded-For per-IP keying,
+      and Retry-After-shrinks-as-window-ages.
+- [X] T025 [P] [MW] `tests/api/middleware/test_rate_limit.py::test_setup_allows_first_then_429s_immediately`
+      — 1 setup attempt succeeds; the 2nd returns HTTP 429
+      (FR-023).
+- [X] T026 [P] [MW] `tests/api/middleware/test_rate_limit.py::test_default_allows_first_100_then_429s_for_same_apikey`
+      — 100 requests with same X-Api-Key succeed; the 101st
+      returns 429 (FR-024). Companion tests pin per-API-key
+      independence and session-cookie fallback for cookie
+      callers.
+- [X] T027 [P] [MW] `tests/api/middleware/test_rate_limit.py::test_health_endpoint_exempt_from_rate_limit`
+      — `GET /api/v3/health` bypasses rate limiting (cluster
+      orchestrators / uptime probes hit it every few seconds).
 - [X] T028 [P] [MW] `tests/api/middleware/test_idempotency.py::test_replay_returns_cached_response`
       — POST /api/v3/tag with `Idempotency-Key`; replay with same
       body; assert second response body and status match the
@@ -250,10 +256,32 @@ shuts down cleanly.
       cookie + echoes the header on every mutation. Wired
       into `create_app()` after CORS so cross-origin
       preflights still succeed.
-- [ ] T034 [P] [MW] Create `src/romarr/api/middleware/rate_limit.py`
-      — slowapi setup with three keying strategies:
-      `login`/`setup`/`oidc` keyed by IP, default keyed by API key
-      id (or session user id).
+- [X] T034 [P] [MW] Create `src/romarr/api/middleware/rate_limit.py`
+      — hand-rolled pure-ASGI sliding-window rate limiter
+      rather than pulling in slowapi. Three keying strategies:
+      * `login` / `oidc/start` / `oidc/callback` → keyed by
+        client IP (X-Forwarded-For first hop, then ASGI
+        client tuple); default 5/min.
+      * `setup` → keyed by client IP; default 1/min.
+      * everything else → keyed by API key plaintext (header
+        or `?apikey=` query) with session cookie fallback,
+        IP fallback for unauthenticated callers; default
+        100/min.
+      `/api/v3/health` is unconditionally exempt. In-memory
+      `dict[(strategy, key)] -> deque[timestamp]` with a
+      threading.Lock for coordination across uvicorn worker
+      threads. 429 responses carry the standard `Retry-After`
+      header.
+
+      Settings: `rate_limit_enabled` (default False — the
+      test suite POSTs /login repeatedly, would 429 after 5);
+      `rate_limit_login_per_minute=5`,
+      `rate_limit_setup_per_minute=1`,
+      `rate_limit_default_per_minute=100`. Production sets
+      `ROMARR_RATE_LIMIT_ENABLED=true`. For multi-replica
+      deployments, the next slice swaps the in-memory backing
+      for Redis (same indirection pattern as the idempotency
+      cache).
 - [X] T035 [P] [MW] Create `src/romarr/api/middleware/idempotency.py`
       — pure-ASGI middleware (NOT BaseHTTPMiddleware, which would
       consume the body and break downstream readers). Reads

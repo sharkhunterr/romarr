@@ -25,6 +25,7 @@ from romarr.api.middleware import (
     register_csrf,
     register_gzip,
     register_idempotency,
+    register_rate_limit,
 )
 from romarr.api.openapi import customize_openapi
 from romarr.api.routers.auth import router as auth_router
@@ -217,6 +218,17 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     # Defaults to disabled — flipped on once the spec 014
     # frontend wires cookie-reading + header-echoing.
     register_csrf(app, enabled=settings.csrf_protect)
+    # Rate-limit middleware (FR-022 / FR-023 / FR-024).
+    # Defaults to disabled so the test suite (which fires
+    # repeated POSTs at /login / /setup) doesn't 429 on the
+    # 6th call. Production sets ROMARR_RATE_LIMIT_ENABLED=true.
+    register_rate_limit(
+        app,
+        enabled=settings.rate_limit_enabled,
+        login_limit=settings.rate_limit_login_per_minute,
+        setup_limit=settings.rate_limit_setup_per_minute,
+        default_limit=settings.rate_limit_default_per_minute,
+    )
     # Idempotency-Key middleware (FR-020 / FR-025). Registered last
     # in the MW stack so it's nearest the routes — it intercepts
     # mutating methods after CORS / CSRF have cleared the request,
