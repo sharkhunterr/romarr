@@ -40,6 +40,25 @@
     "deactivatedTitle": "Account deactivated",
     "deactivatedBody": "Contact your Romarr administrator to re-enable your account."
   },
+  "toast": {
+    "dismiss": "Dismiss",
+    "viewportLabel": "Notifications",
+    "kindAria": {
+      "info": "Information",
+      "success": "Success",
+      "warning": "Warning",
+      "error": "Error"
+    },
+    "ws": {
+      "welcome": "Connected as {{username}}",
+      "pong": "",
+      "generic": "{{kind}}"
+    },
+    "command": {
+      "fired": "{{name}} queued",
+      "failed": "{{name}} failed: {{message}}"
+    }
+  },
   "placeholder": {
     "comingSoon": "coming soon · placeholder",
     "library": {

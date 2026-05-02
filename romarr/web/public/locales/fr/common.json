@@ -40,6 +40,25 @@
     "deactivatedTitle": "Compte désactivé",
     "deactivatedBody": "Contactez votre administrateur Romarr pour réactiver votre compte."
   },
+  "toast": {
+    "dismiss": "Fermer",
+    "viewportLabel": "Notifications",
+    "kindAria": {
+      "info": "Information",
+      "success": "Succès",
+      "warning": "Avertissement",
+      "error": "Erreur"
+    },
+    "ws": {
+      "welcome": "Connecté en tant que {{username}}",
+      "pong": "",
+      "generic": "{{kind}}"
+    },
+    "command": {
+      "fired": "{{name}} en attente",
+      "failed": "{{name}} échoué : {{message}}"
+    }
+  },
   "placeholder": {
     "comingSoon": "à venir · placeholder",
     "library": {

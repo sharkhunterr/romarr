@@ -20,6 +20,7 @@ import {
   useGlobalSearchHotkey,
 } from "@/components/shared/GlobalSearchModal";
 import { Header } from "@/components/shared/Header";
+import { ToastViewport } from "@/components/shared/ToastViewport";
 import { useWebSocketBridge } from "@/lib/ws/useWebSocketBridge";
 
 export function AppLayout(): ReactElement {
@@ -34,6 +35,7 @@ export function AppLayout(): ReactElement {
       </div>
       <BottomNav />
       <GlobalSearchModal />
+      <ToastViewport />
     </div>
   );
 }

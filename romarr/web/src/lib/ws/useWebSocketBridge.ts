@@ -1,13 +1,16 @@
 /**
- * React bridge for the WebSocket client (T050).
+ * React bridge for the WebSocket client (T050, T073-toast).
  *
  * Lifecycle:
  *   1. Reads the current principal via `useCurrentPrincipal`.
  *   2. Boots a single `WebSocketClient` instance once the
  *      operator is authenticated.
- *   3. Wires the client's `onMessage` to the QueryClient: every
- *      key returned by `eventToInvalidations` triggers a
- *      re-fetch.
+ *   3. Wires the client's `onMessage` to:
+ *        a. the QueryClient — every key returned by
+ *           `eventToInvalidations` triggers a re-fetch.
+ *        b. the toast viewport — `systemMessage` envelopes
+ *           surface as info-level toasts (welcome / pong /
+ *           generic). Pong is silenced.
  *   4. Wires the client's `onStatusChange` to the Zustand
  *      connection store.
  *   5. On unauth (logout, principal cleared), shuts the client
@@ -26,14 +29,28 @@
 import { useEffect } from "react";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 import { useCurrentPrincipal } from "@/lib/api/queries/auth";
 import { useConnectionStore } from "@/lib/store/connection";
+import { useToastStore } from "@/lib/store/toast";
 
 import { WebSocketClient } from "./client";
 import { eventToInvalidations } from "./invalidations";
+import type { WsEnvelope } from "./types";
+
+interface SystemMessageData {
+  kind?: string;
+  username?: string;
+  [key: string]: unknown;
+}
+
+function isSystemMessage(env: WsEnvelope): env is WsEnvelope<SystemMessageData> {
+  return env.messageType === "systemMessage";
+}
 
 export function useWebSocketBridge(): void {
+  const { t } = useTranslation("common");
   const queryClient = useQueryClient();
   const principal = useCurrentPrincipal();
   const setStatus = useConnectionStore((state) => state.setStatus);
@@ -45,8 +62,6 @@ export function useWebSocketBridge(): void {
 
   useEffect(() => {
     if (principalId === null) {
-      // Not authenticated — make sure any prior client is down
-      // and the status reads "idle".
       setStatus("idle");
       return;
     }
@@ -57,6 +72,24 @@ export function useWebSocketBridge(): void {
         for (const queryKey of keys) {
           void queryClient.invalidateQueries({ queryKey });
         }
+
+        if (isSystemMessage(envelope)) {
+          const kind = envelope.data.kind ?? "";
+          if (kind === "pong") {
+            // Server keepalive — never user-facing.
+            return;
+          }
+          let title: string;
+          if (kind === "welcome" && envelope.data.username) {
+            title = t("toast.ws.welcome", { username: envelope.data.username });
+          } else if (kind === "" || kind === undefined) {
+            return;
+          } else {
+            title = t("toast.ws.generic", { kind });
+          }
+          if (title.length === 0) return;
+          useToastStore.getState().push({ kind: "info", title });
+        }
       },
       onStatusChange: setStatus,
     });
@@ -66,5 +99,5 @@ export function useWebSocketBridge(): void {
     return () => {
       client.stop();
     };
-  }, [principalId, queryClient, setStatus]);
+  }, [principalId, queryClient, setStatus, t]);
 }
