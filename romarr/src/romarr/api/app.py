@@ -30,6 +30,7 @@ from romarr.api.routers.queue import router as queue_router
 from romarr.api.routers.status import router as system_status_router
 from romarr.api.routers.tag import router as tag_router
 from romarr.api.routers.users import router as users_router
+from romarr.api.routers.wanted import router as wanted_router
 from romarr.config import get_settings
 from romarr.db.session import create_engine, create_sessionmaker
 from romarr.downloaders.api import (
@@ -223,6 +224,10 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     # Spec 013 — Queue mirror (T057). List endpoint only in this
     # slice; DELETE / retry land with the spec 005 client wiring.
     app.include_router(queue_router)
+    # Spec 013 — Wanted lists (T056): /missing + /cutoff
+    # paginated reads. Bulk-search trigger lands with the spec 007
+    # run_manual_search hook.
+    app.include_router(wanted_router)
     app.include_router(providers_router)
     app.include_router(field_priority_router)
     app.include_router(refresh_router)

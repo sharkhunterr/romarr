@@ -283,9 +283,15 @@ shuts down cleanly.
 - [ ] T041 [P] [ROUTERS] `tests/api/routers/test_backup.py::test_create_backup_now`
       — POST triggers spec 012's `BackupRunner` and returns the
       command id; admin-only.
-- [ ] T042 [P] [ROUTERS] `tests/api/routers/test_wanted.py::test_missing_paginated`
+- [X] T042 [P] [ROUTERS] `tests/api/routers/test_wanted.py::test_missing_returns_only_wanted_monitored_releases`
       — GET `/api/v3/wanted/missing` returns Releases with
-      `status='wanted'`; canonical envelope.
+      `status='wanted' AND monitored=true`; canonical envelope.
+      Imported and unmonitored rows are excluded. Companion
+      tests pin pagination + sort + 401 + 400 invalid sortKey.
+      Plus `/cutoff` companion endpoint:
+      `test_cutoff_returns_imported_below_ceiling` returns rows
+      with `status='imported' AND cutoff_met=false AND
+      monitored=true`.
 - [ ] T043 [P] [ROUTERS] `tests/api/routers/test_wanted.py::test_bulk_search`
       — POST `/api/v3/wanted/missing/search` with
       `{releaseIds: [...]}` triggers a one-shot search per release
@@ -348,9 +354,20 @@ shuts down cleanly.
 - [ ] T055 [P] [ROUTERS] Create
       `src/romarr/api/routers/backup.py` — list backups + manually
       trigger spec 012's `BackupRunner`.
-- [ ] T056 [P] [ROUTERS] Create
+- [~] T056 [P] [ROUTERS] Create
       `src/romarr/api/routers/wanted.py` — `/missing` and `/cutoff`
-      paginated; bulk search triggers.
+      paginated reads shipped: GET `/api/v3/wanted/missing`
+      returns Releases with `status='wanted' AND
+      monitored=true`; GET `/api/v3/wanted/cutoff` returns
+      `status='imported' AND cutoff_met=false AND
+      monitored=true`. Both use the canonical pagination
+      envelope with the Sonarr-shape camelCase release fields
+      (gameId / dumpStatus / namingConvention / cutoffMet /
+      libraryId / discNumber / discTotal / parentReleaseId).
+      Read-only via `require_readonly`. **Deferred to a
+      follow-up slice**: POST `/wanted/missing/search` bulk
+      search trigger (T043) — needs the spec 007
+      `run_manual_search` integration.
 - [~] T057 [P] [ROUTERS] Create
       `src/romarr/api/routers/queue.py` — list endpoint shipped:
       GET `/api/v3/queue` returns the canonical pagination
