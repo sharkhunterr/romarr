@@ -22,6 +22,11 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# Allow frontend lib/ (the Python ``lib/`` ignore is a venv
+# artefact that would otherwise swallow web/src/lib).
+!web/src/lib/
+!web/src/lib/**
+
 # Virtual environments
 .venv/
 venv/

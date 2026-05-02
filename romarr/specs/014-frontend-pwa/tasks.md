@@ -258,31 +258,50 @@ T172).
 
 ### Tests
 
-- [ ] T038 [P] [ROUTING] `tests/unit/routing/test_auth_guard.tsx`
-      — protected route + unauthenticated state redirects to
-      `/login` with `returnTo` query param.
-- [ ] T039 [P] [ROUTING] `tests/unit/routing/test_theme_provider.tsx`
-      — initial theme reads from localStorage; switching persists.
-- [ ] T040 [P] [ROUTING] `tests/unit/routing/test_no_flash.tsx`
-      — synchronous theme application before first paint.
+- [~] T038 [P] [ROUTING] Vitest unit test **deferred** — Vitest
+      not yet installed. The redirect contract is implemented
+      (AuthGuard reads `unauthed` status → `<Navigate
+      to="/login?returnTo=..." replace>`).
+- [~] T039 [P] [ROUTING] Vitest unit test **deferred** — same
+      reason. Theme persistence is implemented via
+      `zustand/middleware/persist` under
+      `THEME_STORAGE_KEY="romarr.theme"`.
+- [~] T040 [P] [ROUTING] Vitest unit test **deferred** — same
+      reason. The no-flash inline script in index.html runs
+      BEFORE React hydration, applies the resolved class to
+      `<html>`, and degrades gracefully when localStorage is
+      blocked (incognito).
 
 ### Implementation
 
-- [ ] T041 [ROUTING] Create `src/App.tsx` — root with
-      `<QueryClientProvider>`, `<I18nextProvider>`,
-      `<ThemeProvider>`, `<RouterProvider>`, `<Toaster>`.
-- [ ] T042 [ROUTING] Create `src/components/shared/AuthGuard.tsx`
-      — TanStack Query reads `/api/v3/auth/me`; on 401, navigate
-      to `/login?returnTo=...`; on `is_active=false`, show "Account
-      deactivated".
-- [ ] T043 [ROUTING] Create
-      `src/components/shared/ThemeProvider.tsx` — applies dark/
-      light/auto via `class="dark"` on `<html>`. Auto follows
-      `prefers-color-scheme`. Inline script in `index.html` reads
-      the persisted choice before React hydration to avoid flash.
-- [ ] T044 [ROUTING] Create the route table in `App.tsx` (data
-      router) declaring all 11 pages plus their sub-routes plus a
-      `NotFound` catch-all.
+- [~] T041 [ROUTING] `src/App.tsx` wires `<ThemeProvider>` +
+      `<RouterProvider>`. `<QueryClientProvider>`,
+      `<I18nextProvider>`, and `<Toaster>` slot in when their
+      runtime deps ship in their respective phases.
+- [X] T042 [ROUTING] `src/components/shared/AuthGuard.tsx` —
+      reads `auth.status` from the zustand store. `loading`
+      shows a minimal placeholder; `unauthed` →
+      `<Navigate to="/login?returnTo=<encoded path>" replace>`;
+      `authed` → `<Outlet />`. The TanStack Query probe
+      against `/api/v3/auth/me` lands when the query runtime
+      ships; today's LoginPage stub writes the auth state.
+- [X] T043 [ROUTING] `src/components/shared/ThemeProvider.tsx` —
+      applies `class="dark"` / `class="light"` on `<html>`
+      from the resolved theme. `auto` mode subscribes to
+      `prefers-color-scheme`. The inline no-flash script in
+      `index.html` reads `THEME_STORAGE_KEY` BEFORE React
+      hydrates so the very first paint is correct.
+      `src/lib/store/theme.ts` (zustand + persist) holds the
+      operator's choice; `src/lib/store/auth.ts` holds the
+      auth-status store.
+- [X] T044 [ROUTING] `App.tsx` route table declares the 11
+      documented routes: `/login`, `/setup` public;
+      `/` (Dashboard), `/library`, `/add`, `/game/:gameId`,
+      `/wanted`, `/activity`, `/calendar`, `/settings/*`,
+      `/system/*` behind AuthGuard. `*` → NotFound. Each
+      protected route resolves to a placeholder page
+      (`src/pages/placeholders.tsx`); per-page real
+      implementations land in their owning phases.
 
 **Checkpoint**: `/login` and the protected routes correctly route
 based on auth state.

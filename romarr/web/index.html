@@ -6,6 +6,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0D1001" />
     <title>Romarr</title>
+
+    <!-- No-flash theme application (T040, FR-013). Runs BEFORE
+         React hydrates so the very first paint already has the
+         right ``class="dark"`` toggle. The persisted choice
+         lives under THEME_STORAGE_KEY = "romarr.theme" (matches
+         src/lib/store/theme.ts). Default = "dark" per the
+         constitution. -->
+    <script>
+      (function () {
+        try {
+          var key = "romarr.theme";
+          var raw = localStorage.getItem(key);
+          var theme = "dark";
+          if (raw) {
+            try {
+              theme = (JSON.parse(raw).state || {}).theme || "dark";
+            } catch (e) {
+              theme = "dark";
+            }
+          }
+          var resolved = theme;
+          if (theme === "auto") {
+            resolved = window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+          }
+          var html = document.documentElement;
+          html.classList.toggle("dark", resolved === "dark");
+          html.classList.toggle("light", resolved === "light");
+        } catch (e) {
+          // localStorage unavailable (incognito / blocked) — keep
+          // the static class="dark" attribute.
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
