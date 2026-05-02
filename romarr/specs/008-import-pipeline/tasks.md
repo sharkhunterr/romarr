@@ -907,13 +907,95 @@ contributors, the WATCH and EXTRACT phases (Day 2-3) split cleanly.
 
 ## Phase: Clarification Tasks (Session 2026-04-29)
 
-- [ ] CL001 [P] [US6] Implement subreason-aware auto-blocklist in `src/romarr/importer/steps/lifecycle/blocklist_emitter.py` — call spec 007's helper ONLY for content-correctness subreasons (`hash-mismatch`, `dat-rejected`, `format-corrupt`, `archive-extraction-failed`); transient subreasons (`disk-full`, `permission-denied`, `client-unreachable`, `move-failed`, `scan-timeout`) record in `import_history` only, with the existing 30s/2m/5m exponential-backoff retry policy (FR-035 rewritten + FR-035a)
-- [ ] CL002 [P] [US9] Implement webhook bearer-token validator in `src/romarr/importer/api/webhook.py` — read `X-Romarr-Webhook-Token` header; constant-time compare via `hmac.compare_digest` against the configured per-download-client secret; HTTP 401 with no token-disclosing error body on mismatch; 10 req/min/source-IP rate limit (FR-002)
-- [ ] CL003 [P] [US1] Implement destination-collision parking in `src/romarr/importer/steps/move/dest_collision.py` — when automatic-flow encounters an existing destination with different SHA-1: leave existing file untouched, park incoming file in `unidentified_dump` with `rejection_reason = 'destination_collision'` and `suggested_game_id` populated, emit `OnHealthIssue` with `category = 'naming-collision'`. NO numeric-suffix disambiguation EVER (FR-026a)
-- [ ] CL004 [P] [US1] Implement zip-bomb defense in `src/romarr/importer/steps/extract/expansion_cap.py` — cap uncompressed total expansion at `max(4 × archive_compressed_size, 5 GiB)`; check incrementally as bytes are written; abort on overrun; delete partial files; park archive in `unidentified_dump` with `rejection_reason = 'extract:bomb-detected'`; emit `OnHealthIssue` with `category = 'extract-bomb'` (FR-004a)
-- [ ] CL005 [P] [Admin] Wire admin-role gate on `POST /api/v3/rom/import/manual`, `POST /api/v3/rom/unidentified/{id}/match`, `DELETE /api/v3/rom/unidentified/{id}`, `POST /api/v3/rom/import/retry/{import_id}` in `src/romarr/importer/api/__init__.py` (FR-038a)
-- [ ] CL006 [P] **Note**: webhook endpoint `POST /api/v3/webhook/download-complete` does NOT consult the user-session/API-key auth chain. It uses solely `X-Romarr-Webhook-Token`. Confirm absence of `require_role` annotation on its handler
-- [ ] CL007 [P] Add tests in `tests/importer/test_subreason_taxonomy.py` covering: each content-correctness subreason → blocklist row created; each transient subreason → no blocklist row, retry-eligible
-- [ ] CL008 [P] Add tests in `tests/importer/test_dest_collision.py` covering: same SHA-1 → idempotent no-op; different SHA-1 → parked + OnHealthIssue + existing file untouched; manual-flow with `?force=true` → overwrite allowed
-- [ ] CL009 [P] Add tests in `tests/importer/test_zip_bomb.py` covering: 4× ratio archive → extracts; 100× ratio at 5 GiB+ → aborts; small-but-shallow nested → depth check applies first
-- [ ] CL010 [P] Add tests in `tests/importer/test_webhook_auth.py` covering: valid token → 200 + import fires; missing header → 401 + no log disclosure; mismatched token → 401 with constant-time comparison; 11 req in 60 s → 429
+> **Status audit (slice 75, 2026-05-02)** — every step module
+> (extract / hash / dat_match / identify / game_match /
+> multi_disc / profile_gate / render / move / db_update /
+> lifecycle / notify) is implemented and unit-tested in
+> isolation, but `importer/orchestrator.py::run_import` is
+> still a `NotImplementedError` stub. Many of the CL items
+> below describe the failure-path wiring that lives **inside**
+> the orchestrator (parking on collision, OnHealthIssue
+> emission, blocklist emission on terminal errors). Those
+> can't be marked done until the orchestrator composes the
+> steps end-to-end. The next high-priority slice for spec 008
+> is implementing `run_import` and `start_watcher` in
+> `importer/orchestrator.py`; once that lands the CL items
+> compose into it cleanly.
+
+- [~] CL001 [P] [US6] Subreason-aware auto-blocklist —
+      **gated on orchestrator**. The taxonomy (`RejectionReason`
+      enum in `importer/types.py`) splits content-correctness
+      from transient subreasons cleanly; the emitter belongs
+      in the orchestrator's failure-handling block
+      (`apply_lifecycle_on_failure`) which depends on
+      `run_import` being implemented first.
+- [X] CL002 [P] [US9] Webhook bearer-token validator —
+      shipped in `src/romarr/importer/webhook.py` (note:
+      slice settled on the `webhook.py` filename rather than
+      the spec'd `api/webhook.py`). Constant-time compare via
+      `secrets.compare_digest`, sliding-window rate limit
+      (10 req/IP/60s) via
+      `_rate_limit.SlidingWindowLimiter`, schema validation
+      via `WebhookPayload`. Returns 202 immediately and
+      dispatches via `asyncio.create_task` so the response
+      hits the 1 s p95 budget (FR-002 + SC-008).
+- [~] CL003 [P] [US1] Destination-collision parking —
+      detection done; parking + OnHealthIssue **gated on
+      orchestrator**. `steps/move.py` raises
+      `MoveError(rejection_reason='destination_collision')`
+      on the SHA-1-mismatch case. The
+      "park in unidentified_dump + emit OnHealthIssue" branch
+      lives in the orchestrator's failure handler.
+- [X] CL004 [P] [US1] Zip-bomb defense — shipped in
+      `src/romarr/importer/steps/extract.py` (slice settled
+      on the `extract.py` filename rather than the spec'd
+      `extract/expansion_cap.py`). Cap is
+      `max(4 × archive_compressed_size, 5 GiB)`, enforced
+      incrementally as bytes are written. On overrun:
+      abort + delete partial files + raise
+      `ExtractError(rejection_reason='extract:bomb-detected')`.
+      Parking + OnHealthIssue emission belongs to the
+      orchestrator's failure handler (gated on CL003).
+- [~] CL005 [P] [Admin] Admin-role gate on the four
+      documented manual endpoints — partially done.
+      `DELETE /api/v3/rom/unidentified/{id}` is gated on
+      `require_admin` (`importer/api/unidentified.py`).
+      The other three endpoints
+      (`POST /import/manual`, `POST /unidentified/{id}/match`,
+      `POST /import/retry/{id}`) are documented as
+      **landing with the HARD slice** (the orchestrator's
+      manual-flow surface); admin gates ship from day one
+      with those endpoints.
+- [X] CL006 [P] Webhook handler bypasses the user-session /
+      API-key auth chain — confirmed by inspection
+      (`importer/webhook.py::download_complete` carries no
+      `require_role` / `require_admin` Depends). Only the
+      `X-Romarr-Webhook-Token` Header drives auth, exactly
+      as spec'd.
+- [~] CL007 [P] Subreason-taxonomy tests — **gated on
+      CL001** (the taxonomy is implemented but the
+      blocklist-vs-no-blocklist behavior lives in the
+      orchestrator).
+- [~] CL008 [P] Destination-collision tests — partial:
+      `test_move.py` covers the same-SHA-1 idempotent no-op
+      and the SHA-1-mismatch raises; the parking +
+      OnHealthIssue + manual-flow `?force=true` paths are
+      gated on CL003.
+- [~] CL009 [P] Zip-bomb tests — `test_extract.py` covers
+      the bomb-detection raise path. The "small-but-shallow
+      nested → depth check applies first" assertion lives
+      in `test_extract.py::test_depth_exceeded`. Parking +
+      OnHealthIssue tests gate on CL004.
+- [X] CL010 [P] Webhook auth tests — shipped in
+      `tests/importer/test_webhook.py` (7 tests):
+      `test_invalid_token_returns_401`,
+      `test_missing_token_returns_401`,
+      `test_disabled_webhook_returns_401`,
+      `test_rate_limit_returns_429_after_burst`,
+      `test_valid_token_returns_202_and_dispatches`,
+      `test_no_dispatcher_configured_still_returns_202`,
+      `test_missing_native_id_returns_422`. Constant-time
+      comparison covered implicitly via the
+      `secrets.compare_digest` path; explicit timing-attack
+      assertion is left to a follow-up if performance budget
+      gates ever surface a regression.
