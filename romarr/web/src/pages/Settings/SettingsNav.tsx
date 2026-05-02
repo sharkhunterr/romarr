@@ -30,7 +30,7 @@ export const SETTINGS_NAV_ENTRIES: readonly SettingsNavEntry[] = [
   { to: "/settings/media-management", slug: "media-management", emoji: "📁" },
   { to: "/settings/quality-definitions", slug: "quality-definitions", emoji: "📐" },
   { to: "/settings/indexers", slug: "indexers", emoji: "🔍", shipped: true },
-  { to: "/settings/download-clients", slug: "download-clients", emoji: "⬇️" },
+  { to: "/settings/download-clients", slug: "download-clients", emoji: "⬇️", shipped: true },
   { to: "/settings/dat-sources", slug: "dat-sources", emoji: "📋" },
   { to: "/settings/metadata-sources", slug: "metadata-sources", emoji: "🗂️" },
   { to: "/settings/platforms", slug: "platforms", emoji: "🎮" },

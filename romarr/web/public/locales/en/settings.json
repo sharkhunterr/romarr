@@ -29,6 +29,49 @@
     "unknownTitle": "Unknown section",
     "unknownBody": "No Settings section is registered at this path. Pick another from the side nav."
   },
+  "downloadClients": {
+    "title": "Download Clients",
+    "subtitle": "Torrent + Usenet clients Romarr hands grabs to. Each client carries its own protocol enables and lifecycle policy.",
+    "empty": {
+      "title": "No download clients configured",
+      "body": "Add a qBittorrent or SABnzbd client to start grabbing. Other clients (Transmission, Deluge, NZBGet) land in v1+."
+    },
+    "type": {
+      "qbittorrent": "qBittorrent",
+      "sabnzbd": "SABnzbd",
+      "transmission": "Transmission",
+      "deluge": "Deluge",
+      "nzbget": "NZBGet"
+    },
+    "protocol": {
+      "torrent": "Torrent",
+      "usenet": "Usenet"
+    },
+    "health": {
+      "ok": "Healthy",
+      "auth": "Auth failed",
+      "connection": "Unreachable",
+      "tls": "TLS error",
+      "version": "Version mismatch",
+      "internal": "Internal error",
+      "untested": "Not tested"
+    },
+    "test": {
+      "button": "Test",
+      "running": "Testing…",
+      "success": "Connected — {{version}}",
+      "successNoVersion": "Connected"
+    },
+    "delete": {
+      "button": "Delete",
+      "confirmTitle": "Remove this client?",
+      "confirmBody": "Romarr won't hand grabs to {{name}} anymore. In-progress downloads stay where they are.",
+      "confirm": "Remove",
+      "cancel": "Cancel"
+    },
+    "disabled": "Disabled",
+    "category": "Category"
+  },
   "indexers": {
     "title": "Indexers",
     "subtitle": "Newznab + Torznab sources Romarr searches when grabbing a release. Prowlarr-managed indexers sync automatically.",

@@ -748,8 +748,9 @@ manageable; each ships ≥ 1 test + an implementation.
       51) lives under the same shell.
 - [ ] T106 [P] [P-SET] The 12 sub-pages under
       `src/pages/Settings/`. Progress: Tags (slice 51), UI
-      (slice 56), and Indexers (slice 60) shipped. Remaining 9
-      land per slice as their REST surfaces stabilize.
+      (slice 56), Indexers (slice 60), and Download Clients
+      (slice 61) shipped. Remaining 8 land per slice as their
+      REST surfaces stabilize.
 
       `src/pages/Settings/Indexers/index.tsx` shipped with
       `useIndexers` (list) + `useDeleteIndexer` + `useTestIndexer`
@@ -761,6 +762,18 @@ manageable; each ships ≥ 1 test + an implementation.
       manually-added rows. Add-new form deferred — IndexerCreate
       carries ~17 required fields and the canonical UX is
       Prowlarr push via /api/v3/applications.
+
+      `src/pages/Settings/DownloadClients/index.tsx` shipped
+      (slice 61) with `useDownloadClients` + `useDeleteDownloadClient`
+      + `useTestDownloadClient` against /api/v3/downloadclient.
+      Per-row Test/Delete actions, double-confirm delete,
+      health badge with the spec 006 error_code taxonomy
+      (auth / connection / tls / version / internal /
+      untested). Type pill (qBittorrent / SABnzbd / etc.),
+      protocol pills (Torrent / Usenet), default-category
+      surfaced inline. Test surfaces client_version when
+      present (e.g. "Connected — qBittorrent 4.6.5"). Add-new
+      form deferred to a per-type slice.
 - [~] T107 [P-SYS] `src/pages/System/index.tsx` shipped with
       four tabs: Status / Tasks / Logs / Backup.
       * **StatusTab** renders the full Sonarr v3+v4 union

@@ -29,6 +29,49 @@
     "unknownTitle": "Section inconnue",
     "unknownBody": "Aucune section n'est enregistrée à ce chemin. Choisissez-en une autre dans le menu latéral."
   },
+  "downloadClients": {
+    "title": "Clients de téléchargement",
+    "subtitle": "Clients Torrent + Usenet auxquels Romarr délègue les téléchargements. Chaque client porte ses propres protocoles activés et sa politique de cycle de vie.",
+    "empty": {
+      "title": "Aucun client de téléchargement configuré",
+      "body": "Ajoutez un client qBittorrent ou SABnzbd pour commencer à télécharger. Les autres clients (Transmission, Deluge, NZBGet) arriveront en v1+."
+    },
+    "type": {
+      "qbittorrent": "qBittorrent",
+      "sabnzbd": "SABnzbd",
+      "transmission": "Transmission",
+      "deluge": "Deluge",
+      "nzbget": "NZBGet"
+    },
+    "protocol": {
+      "torrent": "Torrent",
+      "usenet": "Usenet"
+    },
+    "health": {
+      "ok": "OK",
+      "auth": "Auth échouée",
+      "connection": "Injoignable",
+      "tls": "Erreur TLS",
+      "version": "Version incompatible",
+      "internal": "Erreur interne",
+      "untested": "Non testé"
+    },
+    "test": {
+      "button": "Tester",
+      "running": "Test…",
+      "success": "Connecté — {{version}}",
+      "successNoVersion": "Connecté"
+    },
+    "delete": {
+      "button": "Supprimer",
+      "confirmTitle": "Supprimer ce client ?",
+      "confirmBody": "Romarr n'enverra plus de téléchargements à {{name}}. Les téléchargements en cours restent là où ils sont.",
+      "confirm": "Supprimer",
+      "cancel": "Annuler"
+    },
+    "disabled": "Désactivé",
+    "category": "Catégorie"
+  },
   "indexers": {
     "title": "Indexeurs",
     "subtitle": "Sources Newznab + Torznab que Romarr interroge pour récupérer une release. Les indexeurs gérés par Prowlarr se synchronisent automatiquement.",
