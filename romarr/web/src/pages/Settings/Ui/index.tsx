@@ -20,11 +20,13 @@
 import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
+import { InstallButton } from "@/components/shared/InstallButton";
 import {
   setLanguage,
   SUPPORTED_LANGUAGES,
   type Language,
 } from "@/lib/i18n";
+import { useInstallPrompt } from "@/lib/pwa/install";
 import { useThemeStore, type Theme } from "@/lib/store/theme";
 
 const THEMES: readonly Theme[] = ["dark", "light", "auto"];
@@ -68,6 +70,7 @@ export function SettingsUiPage(): ReactElement {
   const theme = useThemeStore((s) => s.theme);
   const setTheme = useThemeStore((s) => s.setTheme);
   const currentLang = (i18n.resolvedLanguage ?? "en") as Language;
+  const install = useInstallPrompt();
 
   return (
     <div className="space-y-6">
@@ -129,6 +132,26 @@ export function SettingsUiPage(): ReactElement {
           ))}
         </div>
       </section>
+
+      {(install.canInstall || install.isInstalled) && (
+        <section className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
+          <h3 className="text-sm font-medium text-zinc-100">
+            {t("settings:ui.install.label")}
+          </h3>
+          <p className="mt-1 text-xs text-zinc-500">
+            {t("settings:ui.install.help")}
+          </p>
+          <div className="mt-3">
+            {install.isInstalled
+              ? (
+                <p className="text-xs text-zinc-500" role="status">
+                  ✓ {t("settings:ui.install.label")}
+                </p>
+                )
+              : <InstallButton />}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

@@ -29,5 +29,10 @@
     "connected": "En direct",
     "reconnecting": "Reconnexion…",
     "offline": "Hors ligne"
+  },
+  "offline": {
+    "title": "Vous êtes hors ligne",
+    "body": "Romarr n'arrive pas à joindre le réseau. Vérifiez votre connexion et réessayez.",
+    "retry": "Réessayer"
   }
 }

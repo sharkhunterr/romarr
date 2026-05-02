@@ -29,5 +29,10 @@
     "connected": "Live",
     "reconnecting": "Reconnecting…",
     "offline": "Offline"
+  },
+  "offline": {
+    "title": "You're offline",
+    "body": "Romarr can't reach the network right now. Check your connection and try again.",
+    "retry": "Try again"
   }
 }

@@ -39,6 +39,11 @@
     "language": {
       "label": "Language",
       "help": "Applies immediately. Stored locally under romarr.lang."
+    },
+    "install": {
+      "label": "Install Romarr",
+      "help": "Add Romarr to your home screen for a full-screen experience and offline reads.",
+      "button": "Install"
     }
   }
 }

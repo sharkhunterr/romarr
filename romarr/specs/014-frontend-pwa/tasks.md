@@ -382,24 +382,44 @@ invalidations.
 
 ### Implementation
 
-- [ ] T054 [PWA] Configure `vite-plugin-pwa` with the Workbox
-      runtime caching rules: `NetworkFirst` for `/api/v3/*`
-      (with a 5-minute cache fallback), `CacheFirst` for
-      `/static/*` and `/icons/*`. Exclude POST/PUT/PATCH/DELETE
-      from any cache.
-- [ ] T055 [PWA] Author `public/manifest.webmanifest` with the
-      documented icon sizes (192, 512, maskable) and theme color.
-- [ ] T056 [PWA] Implement `beforeinstallprompt` handler in
-      `src/lib/pwa/install.ts`; surface the install button in
-      Header on the second visit.
-- [ ] T057 [PWA] Implement Web Push registration scaffolding in
-      `src/lib/pwa/push.ts`. Subscribe to push only when the
-      operator opts in via Settings (UI lives in P-SET phase).
-- [ ] T058 [PWA] Create `src/pages/Offline.tsx` — graceful page
-      shown when navigation lands without a cache hit; "Try
-      again" button.
-
-**Checkpoint**: Lighthouse PWA gate passes on the production build.
+- [X] T054 [PWA] `vite.config.ts` configures `vite-plugin-pwa`
+      (slice 57). `registerType: "autoUpdate"`. Workbox runtime
+      caching: NetworkFirst for `/api/v3/*` (5-min cache fallback,
+      5 s network timeout, GET-only — POST/PUT/PATCH/DELETE
+      bypass the SW); StaleWhileRevalidate for
+      `/locales/{lng}/{ns}.json`; CacheFirst for static
+      `.js|.css|.woff2|.svg|.png|.ico`. NavigateFallback wires
+      `/index.html` with denylist for `/api/*` + `/signalr/*`.
+      Precache covers js/css/html/svg/png/ico/woff2; locales +
+      openapi snapshots are runtime-cached.
+- [X] T055 [PWA] Manifest authored inline via vite-plugin-pwa
+      (slice 57). Standalone display, portrait orientation,
+      brand `#9bbc0f` theme color, `#0a0a0a` background. Three
+      icons (any 192 + 512, maskable 512) generated as PNGs in
+      `web/public/`. The dev workflow needs `pnpm build` to
+      exercise the SW; `devOptions.enabled` stays false so the
+      Vite dev server doesn't ship a half-baked SW.
+- [X] T056 [PWA] `src/lib/pwa/install.ts` captures
+      `beforeinstallprompt` via a global listener bound from
+      `main.tsx`. The deferred event is held in a Zustand store
+      (`useInstallStore`); `useInstallPrompt()` exposes
+      `{ canInstall, isInstalled, promptInstall }`. Surfaced via
+      `components/shared/InstallButton.tsx` on the
+      `/settings/ui` sub-page (slice 56) with an i18n'd label +
+      help line. Already-installed (display-mode standalone)
+      flips the store's `isInstalled` flag so the section
+      renders a ✓ acknowledgement instead of the button.
+- [ ] T057 [PWA] Web Push registration scaffolding in
+      `src/lib/pwa/push.ts`. Lands when the spec 012
+      notification surface ships the VAPID key + push
+      subscription endpoint.
+- [X] T058 [PWA] `src/pages/Offline.tsx` ships an i18n'd
+      offline fallback. Title + body resolve through
+      `common:offline.*`; the "Try again" button triggers
+      `window.location.reload()`. Wired as the documented
+      navigateFallback in the SW config (returns the SPA
+      shell first; the offline page is the last-resort
+      surface for navigations the SW can't satisfy).
 
 ---
 
