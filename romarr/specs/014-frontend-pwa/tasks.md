@@ -806,12 +806,20 @@ is small but cross-cutting.
 - [ ] T118 [P] [I18N] `lib/i18n/dates.ts` — date-fns locale
       switching. Lands when the first page using formatted
       dates migrates.
-- [ ] T119 [P] [I18N] Canonical language switcher in
-      `pages/Settings/Ui.tsx` (T119). Slice 55 ships a
-      lightweight EN/FR pill in the header
-      (`components/shared/LanguageToggle.tsx`) so the operator
-      can flip the language now; the Settings/UI sub-page
-      replaces it once that slice lands.
+- [X] T119 [P] [I18N] `pages/Settings/Ui/index.tsx` shipped
+      (slice 56). Two labeled controls: theme (dark / light /
+      auto) + language (EN / FR), each rendered as a
+      44 px-tall pill row with `aria-pressed` semantics + a
+      help line explaining the storage key. Lives under the
+      shared SettingsLayout; the always-on header
+      LanguageToggle stays as the operator escape hatch.
+
+      `public/locales/{en,fr}/settings.json` shipped with the
+      `title`, `subtitle`, `nav.<slug>`, `home.*`,
+      `placeholder.*`, and `ui.*` keys covering the entire
+      Settings shell. SettingsNav / SettingsLayout /
+      SettingsHome / SettingsPlaceholder migrated to
+      `useTranslation("settings")`.
 - [ ] T120 [I18N] CI gate: `eslint react/jsx-no-literals` zero
       warnings on `components/` and `pages/` (FR-011). The
       chrome (Header, BottomNav, ConnectionIndicator) is

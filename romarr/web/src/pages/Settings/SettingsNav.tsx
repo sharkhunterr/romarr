@@ -1,42 +1,43 @@
 /**
- * Settings sidebar / mobile list nav (T105).
+ * Settings sidebar / mobile list nav (T105, T117/T119 partial).
  *
  * Twelve entries, in workflow order. Desktop: 16-rem sidebar
  * column (md+). Mobile: vertical list above the outlet (the
  * grid collapses to a single column).
  *
- * Tags is the only sub-page implemented today (slice 51); the
- * rest land in their own slices and currently render the
- * placeholder. The "shipped" badge marks pages that have a
+ * Tags + UI are the implemented sub-pages today (slices 51 +
+ * 56); the rest land in their own slices and currently render
+ * the placeholder. The "shipped" badge marks pages that have a
  * real implementation behind them.
+ *
+ * Labels resolve through `settings:nav.<slug>` (slice 56).
  */
 
-/* eslint-disable react/jsx-no-literals -- replaced by i18n in
-   the I18N phase. */
-
 import { type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
 
-interface NavEntry {
+export interface SettingsNavEntry {
   to: string;
-  label: string;
+  /** Path slug used as the i18n key under `settings:nav.<slug>`. */
+  slug: string;
   emoji: string;
   shipped?: boolean;
 }
 
-const ENTRIES: readonly NavEntry[] = [
-  { to: "/settings/profiles", label: "Profiles", emoji: "🎚️" },
-  { to: "/settings/media-management", label: "Media Management", emoji: "📁" },
-  { to: "/settings/quality-definitions", label: "Quality Definitions", emoji: "📐" },
-  { to: "/settings/indexers", label: "Indexers", emoji: "🔍" },
-  { to: "/settings/download-clients", label: "Download Clients", emoji: "⬇️" },
-  { to: "/settings/dat-sources", label: "DAT Sources", emoji: "📋" },
-  { to: "/settings/metadata-sources", label: "Metadata Sources", emoji: "🗂️" },
-  { to: "/settings/platforms", label: "Platforms", emoji: "🎮" },
-  { to: "/settings/connect", label: "Connect", emoji: "🔔" },
-  { to: "/settings/tags", label: "Tags", emoji: "🏷️", shipped: true },
-  { to: "/settings/ui", label: "UI", emoji: "🎨" },
-  { to: "/settings/general", label: "General", emoji: "⚙️" },
+export const SETTINGS_NAV_ENTRIES: readonly SettingsNavEntry[] = [
+  { to: "/settings/profiles", slug: "profiles", emoji: "🎚️" },
+  { to: "/settings/media-management", slug: "media-management", emoji: "📁" },
+  { to: "/settings/quality-definitions", slug: "quality-definitions", emoji: "📐" },
+  { to: "/settings/indexers", slug: "indexers", emoji: "🔍" },
+  { to: "/settings/download-clients", slug: "download-clients", emoji: "⬇️" },
+  { to: "/settings/dat-sources", slug: "dat-sources", emoji: "📋" },
+  { to: "/settings/metadata-sources", slug: "metadata-sources", emoji: "🗂️" },
+  { to: "/settings/platforms", slug: "platforms", emoji: "🎮" },
+  { to: "/settings/connect", slug: "connect", emoji: "🔔" },
+  { to: "/settings/tags", slug: "tags", emoji: "🏷️", shipped: true },
+  { to: "/settings/ui", slug: "ui", emoji: "🎨", shipped: true },
+  { to: "/settings/general", slug: "general", emoji: "⚙️" },
 ];
 
 function entryClass(isActive: boolean): string {
@@ -52,12 +53,13 @@ function entryClass(isActive: boolean): string {
 }
 
 export function SettingsNav(): ReactElement {
+  const { t } = useTranslation("settings");
   return (
     <nav
-      aria-label="Settings sub-pages"
+      aria-label={t("nav.ariaLabel")}
       className="flex flex-col gap-1 md:sticky md:top-20 md:self-start"
     >
-      {ENTRIES.map((entry) => (
+      {SETTINGS_NAV_ENTRIES.map((entry) => (
         <NavLink
           key={entry.to}
           to={entry.to}
@@ -67,14 +69,14 @@ export function SettingsNav(): ReactElement {
           <span aria-hidden="true" className="text-base leading-none">
             {entry.emoji}
           </span>
-          <span className="flex-1">{entry.label}</span>
+          <span className="flex-1">{t(`nav.${entry.slug}`)}</span>
           {entry.shipped !== true && (
             <span
               aria-hidden="true"
               className="rounded-full bg-zinc-800 px-1.5 py-0.5 text-[0.55rem] font-medium uppercase tracking-wider text-zinc-500"
-              title="Coming soon"
+              title={t("nav.comingSoon")}
             >
-              soon
+              {t("nav.comingSoon")}
             </span>
           )}
         </NavLink>
@@ -82,5 +84,3 @@ export function SettingsNav(): ReactElement {
     </nav>
   );
 }
-
-export const SETTINGS_NAV_ENTRIES = ENTRIES;

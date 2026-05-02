@@ -38,6 +38,7 @@ import { SettingsHome } from "@/pages/Settings/SettingsHome";
 import { SettingsLayout } from "@/pages/Settings/SettingsLayout";
 import { SettingsPlaceholder } from "@/pages/Settings/SettingsPlaceholder";
 import { TagsPage } from "@/pages/Settings/Tags";
+import { SettingsUiPage } from "@/pages/Settings/Ui";
 import { SystemPage } from "@/pages/System";
 import { WantedPage } from "@/pages/Wanted";
 
@@ -71,6 +72,7 @@ const router = createBrowserRouter([
             children: [
               { index: true, element: <SettingsHome /> },
               { path: "tags", element: <TagsPage /> },
+              { path: "ui", element: <SettingsUiPage /> },
               { path: ":sub", element: <SettingsPlaceholder /> },
             ],
           },

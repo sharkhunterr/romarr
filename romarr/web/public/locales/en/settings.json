@@ -1,0 +1,44 @@
+{
+  "title": "Settings",
+  "subtitle": "Profiles, indexers, download clients, identification sources, and notifications.",
+  "nav": {
+    "ariaLabel": "Settings sub-pages",
+    "comingSoon": "soon",
+    "profiles": "Profiles",
+    "media-management": "Media Management",
+    "quality-definitions": "Quality Definitions",
+    "indexers": "Indexers",
+    "download-clients": "Download Clients",
+    "dat-sources": "DAT Sources",
+    "metadata-sources": "Metadata Sources",
+    "platforms": "Platforms",
+    "connect": "Connect",
+    "tags": "Tags",
+    "ui": "UI",
+    "general": "General"
+  },
+  "home": {
+    "welcomeTitle": "Welcome to Settings",
+    "welcomeBody": "Pick a section from the side nav. Each sub-page configures one slice of the acquisition pipeline.",
+    "availableNow": "Available now",
+    "comingSoon": "Coming soon"
+  },
+  "placeholder": {
+    "knownTitle": "{{section}}",
+    "knownBody": "This Settings sub-page is documented in the spec but hasn't shipped yet. The slice that wires it up against its REST surface is coming.",
+    "unknownTitle": "Unknown section",
+    "unknownBody": "No Settings section is registered at this path. Pick another from the side nav."
+  },
+  "ui": {
+    "title": "UI preferences",
+    "subtitle": "Theme, language, and other operator-facing display preferences.",
+    "theme": {
+      "label": "Theme",
+      "help": "Auto follows your operating system's prefers-color-scheme setting."
+    },
+    "language": {
+      "label": "Language",
+      "help": "Applies immediately. Stored locally under romarr.lang."
+    }
+  }
+}

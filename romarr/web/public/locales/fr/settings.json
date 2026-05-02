@@ -1,0 +1,44 @@
+{
+  "title": "Paramètres",
+  "subtitle": "Profils, indexeurs, clients de téléchargement, sources d'identification et notifications.",
+  "nav": {
+    "ariaLabel": "Sous-sections des paramètres",
+    "comingSoon": "bientôt",
+    "profiles": "Profils",
+    "media-management": "Gestion des médias",
+    "quality-definitions": "Définitions de qualité",
+    "indexers": "Indexeurs",
+    "download-clients": "Clients de téléchargement",
+    "dat-sources": "Sources DAT",
+    "metadata-sources": "Sources de métadonnées",
+    "platforms": "Plateformes",
+    "connect": "Notifications",
+    "tags": "Étiquettes",
+    "ui": "Interface",
+    "general": "Général"
+  },
+  "home": {
+    "welcomeTitle": "Bienvenue dans les paramètres",
+    "welcomeBody": "Choisissez une section dans le menu latéral. Chaque sous-page configure une étape du pipeline d'acquisition.",
+    "availableNow": "Disponible maintenant",
+    "comingSoon": "À venir"
+  },
+  "placeholder": {
+    "knownTitle": "{{section}}",
+    "knownBody": "Cette sous-page est documentée dans la spec mais n'a pas encore été livrée. Le slice qui la branche sur son endpoint REST est en route.",
+    "unknownTitle": "Section inconnue",
+    "unknownBody": "Aucune section n'est enregistrée à ce chemin. Choisissez-en une autre dans le menu latéral."
+  },
+  "ui": {
+    "title": "Préférences d'interface",
+    "subtitle": "Thème, langue et autres préférences d'affichage côté opérateur.",
+    "theme": {
+      "label": "Thème",
+      "help": "Auto suit le réglage prefers-color-scheme du système d'exploitation."
+    },
+    "language": {
+      "label": "Langue",
+      "help": "Appliqué immédiatement. Stocké localement sous romarr.lang."
+    }
+  }
+}
