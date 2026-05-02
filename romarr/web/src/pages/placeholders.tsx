@@ -75,14 +75,10 @@ export function GameDetailPage(): ReactElement {
 // ActivityPage is the third real page implementation; lives at
 // @/pages/Activity/index.tsx (slice 49, P-ACT).
 
-export function CalendarPage(): ReactElement {
-  return (
-    <PageShell
-      title="Calendar"
-      subtitle="Preservation events month view (P-CAL phase)."
-    />
-  );
-}
+// CalendarPage is the fifth real page implementation; lives at
+// @/pages/Calendar/index.tsx (slice 52, P-CAL). Intentionally
+// not surfaced in the bottom nav — kept reachable by direct
+// URL only.
 
 export function SettingsPage(): ReactElement {
   return (

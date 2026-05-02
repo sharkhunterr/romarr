@@ -632,7 +632,12 @@ manageable; each ships ≥ 1 test + an implementation.
 
 - [ ] T094 [P] [P-CAL] `tests/unit/pages/test_Calendar.tsx::test_empty_state`
       — no calendar source configured; EmptyState renders
-      gracefully.
+      gracefully. **Note**: Calendar is implemented but
+      intentionally NOT surfaced in the primary nav per
+      operator feedback (Romarr targets decades-old ROMs;
+      no upcoming-release calendar to display). The page
+      stays reachable by direct URL for tooling parity with
+      the spec 013 /api/v3/calendar endpoint.
 - [ ] T095 [P] [P-SET] `tests/unit/pages/test_Settings.tsx::test_sidebar_nav`
       — every documented sub-route is reachable from the sidebar.
 - [ ] T096 [P] [P-SET] `tests/unit/pages/Settings/test_Profiles.tsx::test_six_subtabs`
@@ -675,8 +680,18 @@ manageable; each ships ≥ 1 test + an implementation.
 
 ### Implementation
 
-- [ ] T104 [P-CAL] Create `src/pages/Calendar/index.tsx` (MVP =
-      EmptyState + month grid skeleton).
+- [X] T104 [P-CAL] `src/pages/Calendar/index.tsx` ships a
+      month-grid skeleton + range query against
+      /api/v3/calendar (slice 52). Page is reachable by
+      direct URL only — intentionally not linked from the
+      bottom nav or future header per operator feedback
+      (Romarr targets decades-old ROMs; no planned releases
+      to surface). Kept in case a future homebrew /
+      translation calendar source is wired up.
+
+      `src/lib/api/queries/calendar.ts` shipped:
+      `useCalendar({ start, end })` typed against
+      `components["schemas"]["CalendarEvent"]`.
 - [ ] T105 [P-SET] Create `src/pages/Settings/index.tsx` with the
       sidebar nav.
 - [ ] T106 [P] [P-SET] Create the 11 sub-pages under

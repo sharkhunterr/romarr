@@ -24,10 +24,10 @@ import { AuthGuard } from "@/components/shared/AuthGuard";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
 import { QueryProvider } from "@/lib/api/QueryProvider";
 import { ActivityPage } from "@/pages/Activity";
+import { CalendarPage } from "@/pages/Calendar";
 import { DashboardPage } from "@/pages/Dashboard";
 import {
   AddNewPage,
-  CalendarPage,
   GameDetailPage,
   LibraryPage,
   LoginPage,
