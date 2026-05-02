@@ -990,6 +990,19 @@ contributors, the WATCH and EXTRACT phases (Day 2-3) split cleanly.
 > can pass through without normalising. 5 tests cover
 > match / case-insensitive / wrong release / wrong sha1 /
 > empty DB.
+>
+> **Slice 82 (2026-05-02)** — landed
+> `src/romarr/importer/_release_facts.py` with
+> `build_release_facts(merged, file_format, dat_verified, ...)`.
+> Single source of truth for assembling the
+> :class:`ReleaseFacts` value the PROFILEGATE step
+> consumes. Field-by-field passthrough from
+> :class:`MergedIdentification` plus the file-level
+> signals (file_format, dat_verified, release_size,
+> indexer_source, release_group, tags). 5 tests cover
+> minimum-passthrough, None-title coercion, optional
+> signals, UNKNOWN dump_status pass-through, and the
+> frozen-immutability invariant.
 
 - [~] CL001 [P] [US6] Subreason-aware auto-blocklist —
       **gated on orchestrator**. The taxonomy (`RejectionReason`
