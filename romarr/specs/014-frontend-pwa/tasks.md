@@ -775,6 +775,18 @@ manageable; each ships ≥ 1 test + an implementation.
       present (e.g. "Connected — qBittorrent 4.6.5"). Add-new
       form deferred to a per-type slice.
 
+      `src/pages/Settings/MetadataSources/index.tsx` shipped
+      (slice 63) with `useMetadataProviders` +
+      `useUpdateMetadataProvider` + `useTestMetadataProvider`
+      against /api/v3/metadata/provider. Lists each provider
+      sorted by `priority_global`. Per-row enable toggle
+      (PUT enabled), priority stepper (PUT priority_global on
+      blur), test button (POST /test). Health dot from
+      `last_health_check_*`. Credentials-required and disabled
+      pills surface inline. Drag-and-drop per-field provider
+      priority editor (against /api/v3/metadata/field-priority)
+      deferred — hint surfaced at the bottom of the page.
+
       `src/pages/Settings/Connect/index.tsx` shipped (slice
       62) with `useNotifications` + `useDeleteNotification` +
       `useTestNotification` against /api/v3/notification.

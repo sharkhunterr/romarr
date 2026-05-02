@@ -109,6 +109,43 @@
     "disabled": "Désactivé",
     "category": "Catégorie"
   },
+  "metadataSources": {
+    "title": "Sources de métadonnées",
+    "subtitle": "Agrégation par champ sur les neuf fournisseurs documentés (IGDB, ScreenScraper, MobyGames, LaunchBox, SteamGridDB, RetroAchievements, HowLongToBeat, Hasheous, PlayMatch). Activez, priorisez et testez chacun ici.",
+    "empty": {
+      "title": "Aucun fournisseur de métadonnées",
+      "body": "Le catalogue par défaut devrait être fourni avec Romarr. Si cette liste est vide, lancez la migration de seed."
+    },
+    "providerName": {
+      "igdb": "IGDB",
+      "screenscraper": "ScreenScraper",
+      "mobygames": "MobyGames",
+      "launchbox": "LaunchBox Games DB",
+      "steamgriddb": "SteamGridDB",
+      "retroachievements": "RetroAchievements",
+      "howlongtobeat": "HowLongToBeat",
+      "hasheous": "Hasheous",
+      "playmatch": "PlayMatch"
+    },
+    "configured": "Configuré",
+    "needsCredentials": "Identifiants requis",
+    "disabled": "Désactivé",
+    "priority": {
+      "label": "Priorité",
+      "help": "Le nombre le plus bas gagne en cas d'égalité quand deux fournisseurs portent le même champ."
+    },
+    "test": {
+      "button": "Tester",
+      "running": "Test…",
+      "success": "Joignable",
+      "failure": "{{message}}"
+    },
+    "toggle": {
+      "enable": "Activer",
+      "disable": "Désactiver"
+    },
+    "fieldPriorityHint": "L'ordre par champ se configure via /api/v3/metadata/field-priority — l'éditeur drag-and-drop arrive dans un slice à venir."
+  },
   "indexers": {
     "title": "Indexeurs",
     "subtitle": "Sources Newznab + Torznab que Romarr interroge pour récupérer une release. Les indexeurs gérés par Prowlarr se synchronisent automatiquement.",

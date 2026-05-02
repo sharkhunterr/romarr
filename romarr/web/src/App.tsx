@@ -37,6 +37,7 @@ import { SetupPage } from "@/pages/Setup";
 import { ConnectPage } from "@/pages/Settings/Connect";
 import { DownloadClientsPage } from "@/pages/Settings/DownloadClients";
 import { IndexersPage } from "@/pages/Settings/Indexers";
+import { MetadataSourcesPage } from "@/pages/Settings/MetadataSources";
 import { SettingsHome } from "@/pages/Settings/SettingsHome";
 import { SettingsLayout } from "@/pages/Settings/SettingsLayout";
 import { SettingsPlaceholder } from "@/pages/Settings/SettingsPlaceholder";
@@ -82,6 +83,10 @@ const router = createBrowserRouter([
                 element: <DownloadClientsPage />,
               },
               { path: "connect", element: <ConnectPage /> },
+              {
+                path: "metadata-sources",
+                element: <MetadataSourcesPage />,
+              },
               { path: ":sub", element: <SettingsPlaceholder /> },
             ],
           },

@@ -109,6 +109,43 @@
     "disabled": "Disabled",
     "category": "Category"
   },
+  "metadataSources": {
+    "title": "Metadata Sources",
+    "subtitle": "Per-field aggregation across the nine documented providers (IGDB, ScreenScraper, MobyGames, LaunchBox, SteamGridDB, RetroAchievements, HowLongToBeat, Hasheous, PlayMatch). Enable, prioritize, and test each one here.",
+    "empty": {
+      "title": "No metadata providers",
+      "body": "The default provider catalogue should ship with Romarr. If this list is empty, run the seed migration."
+    },
+    "providerName": {
+      "igdb": "IGDB",
+      "screenscraper": "ScreenScraper",
+      "mobygames": "MobyGames",
+      "launchbox": "LaunchBox Games DB",
+      "steamgriddb": "SteamGridDB",
+      "retroachievements": "RetroAchievements",
+      "howlongtobeat": "HowLongToBeat",
+      "hasheous": "Hasheous",
+      "playmatch": "PlayMatch"
+    },
+    "configured": "Configured",
+    "needsCredentials": "Needs credentials",
+    "disabled": "Disabled",
+    "priority": {
+      "label": "Priority",
+      "help": "Lower number wins ties when two providers carry the same field."
+    },
+    "test": {
+      "button": "Test",
+      "running": "Testing…",
+      "success": "Reachable",
+      "failure": "{{message}}"
+    },
+    "toggle": {
+      "enable": "Enable",
+      "disable": "Disable"
+    },
+    "fieldPriorityHint": "Per-field provider order is configured at /api/v3/metadata/field-priority — the drag-and-drop editor lands in a follow-up slice."
+  },
   "indexers": {
     "title": "Indexers",
     "subtitle": "Newznab + Torznab sources Romarr searches when grabbing a release. Prowlarr-managed indexers sync automatically.",
