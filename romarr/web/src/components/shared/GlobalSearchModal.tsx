@@ -180,7 +180,7 @@ export function GlobalSearchModal(): ReactElement | null {
         className="w-full max-w-lg overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="border-b border-zinc-800 p-3">
+        <div className="flex items-center gap-2 border-b border-zinc-800 p-3">
           <input
             ref={inputRef}
             type="text"
@@ -194,6 +194,19 @@ export function GlobalSearchModal(): ReactElement | null {
             aria-label={t("search:ariaLabel")}
             className="w-full bg-transparent px-2 py-1.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus-visible:outline-none"
           />
+          <button
+            type="button"
+            onClick={closeModal}
+            aria-label={t("search:close")}
+            title={t("search:close")}
+            className={[
+              "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
+              "text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+            ].join(" ")}
+          >
+            <span aria-hidden="true">×</span>
+          </button>
         </div>
 
         <div className="max-h-[60vh] overflow-y-auto p-2">

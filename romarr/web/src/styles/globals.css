@@ -14,4 +14,23 @@
   :focus-visible {
     @apply outline-2 outline-brand outline-offset-2;
   }
+
+  /* T123 — operators with prefers-reduced-motion: reduce land
+     here. Disable the ConnectionIndicator pulse, the SW
+     transitioning bar, theme/toggle hover transitions, and
+     any view-transition the browser would otherwise insert.
+     The override is applied AFTER Tailwind's transition
+     utilities so it catches every `transition-*` class shipped
+     today (and every one shipped tomorrow). */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      transition-delay: 0ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }

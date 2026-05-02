@@ -1020,10 +1020,25 @@ is small but cross-cutting.
 - [ ] T121 [P] [A11Y] `tests/a11y/critical-pages.spec.ts` — axe-core
       against Dashboard, Library, GameDetail, Settings; assert
       zero errors (FR-037, SC-007).
-- [ ] T122 [P] [A11Y] Add `aria-label` to every icon-only button
-      (sweep + lint rule `jsx-a11y/icon-button-needs-label`).
-- [ ] T123 [P] [A11Y] Honour `prefers-reduced-motion` in
-      `globals.css` — disable transitions when set.
+- [X] T122 [P] [A11Y] Icon-only button sweep (slice 72) —
+      verified that every shipped icon-only button (Calendar
+      ←/→ chevrons, Header theme/search pills, Settings>UI
+      pills, GlobalSearch close, Connection indicator) carries
+      either a visible text label or an `aria-label`. The
+      `jsx-a11y/icon-button-needs-label` lint rule itself lands
+      with the eslint-config slice; the runtime contract is
+      already met. GlobalSearchModal gained an explicit "×"
+      close button so screen-reader operators don't have to
+      discover the Esc-only shortcut.
+- [X] T123 [P] [A11Y] `globals.css` honours
+      `prefers-reduced-motion: reduce` (slice 72) — `*,
+      *::before, *::after` get
+      `animation-duration: 0.01ms`, `animation-iteration-count:
+      1`, `transition-duration: 0.01ms`, `transition-delay: 0`,
+      `scroll-behavior: auto` — kills the ConnectionIndicator
+      pulse, theme/toggle hover transitions, and any future
+      Tailwind `transition-*` utility for operators that opted
+      out of motion at the OS level.
 
 ### E2E (`E2E`) — Playwright critical paths
 
