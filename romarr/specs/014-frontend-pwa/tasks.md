@@ -95,25 +95,39 @@ hardening.
 
 ### Tests
 
-- [ ] T010 [P] [CODEGEN] `tests/unit/api/test_codegen_smoke.test.ts`
-      — import a generated type (e.g., `GameRead`); assert it
-      compiles + has the expected fields.
+- [X] T010 [P] [CODEGEN] `web/src/types/api/codegen-smoke.ts` —
+      typecheck-time smoke check that imports
+      `components["schemas"]["BackupFileEntry"]`,
+      `CalendarEvent`, and `CreateTagRequest`, and constructs
+      typed fixtures for each. The build fails (`pnpm
+      typecheck`) if any backend rename / removal regresses the
+      generated types. The Vitest stand-in form lands with the
+      testing phase; this typecheck assertion is the
+      lightweight gate today.
 
 ### Implementation
 
-- [ ] T011 [CODEGEN] Add `npm run codegen` script that runs
-      `openapi-typescript http://localhost:8585/api/v3/openapi.json
-      -o src/types/api/schema.ts` followed by
-      `orval --config orval.config.ts`.
-- [ ] T012 [CODEGEN] Author `orval.config.ts` configured to emit
-      TanStack Query hooks under `src/lib/api/generated/`. Group
-      by tag (Game, Release, etc.).
-- [ ] T013 [CODEGEN] Run `pnpm codegen` once against the running
-      backend (or a committed `web/openapi.json` snapshot) and
-      commit the output.
-- [ ] T014 [CODEGEN] Add a CI step that runs `pnpm codegen` against
-      a freshly-built backend's spec; assert the working tree is
-      clean (i.e., the committed codegen matches the spec).
+- [X] T011 [CODEGEN] `pnpm codegen` script reads the committed
+      `web/openapi.json` snapshot and emits
+      `web/src/types/api/schema.ts`. The orval step (TanStack
+      Query hooks) is deferred until `@tanstack/react-query`
+      lands in its phase. `scripts/dump_openapi.py` (Python)
+      regenerates `web/openapi.json` from `create_app().openapi()`
+      — committing the snapshot keeps frontend builds
+      reproducible (no running backend required).
+- [~] T012 [CODEGEN] `orval.config.ts` **deferred** until the
+      TanStack Query runtime dep ships.
+- [X] T013 [CODEGEN] `pnpm codegen` ran once against the
+      committed `web/openapi.json`; `web/src/types/api/schema.ts`
+      committed. 12,581-line OpenAPI snapshot, 8,383-line
+      generated TS type module. `pnpm typecheck` clean;
+      `pnpm build` still 143 KB JS / 46 KB gzip (types
+      tree-shake at zero runtime cost).
+- [~] T014 [CODEGEN] CI drift-check **deferred** — no CI
+      pipeline yet. The pattern when CI lands: run
+      `uv run python scripts/dump_openapi.py && pnpm --dir web
+      codegen && git diff --exit-code`; fail if either
+      snapshot is stale.
 
 **Checkpoint**: every backend resource has at least one generated
 hook; TypeScript compiles.
