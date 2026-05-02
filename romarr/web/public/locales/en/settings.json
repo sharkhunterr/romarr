@@ -252,6 +252,40 @@
     "auto": "Auto",
     "interactive": "Interactive"
   },
+  "tags": {
+    "title": "Tags",
+    "subtitle": "Polymorphic tags applied across Games, Indexers, Notifications, and Releases. Renaming a tag updates every entity it touches.",
+    "existing": "Existing tags",
+    "empty": {
+      "title": "No tags yet",
+      "body": "Create one above to start tagging Games, Indexers, Notifications, or Releases."
+    },
+    "loadError": "Couldn't load tags",
+    "create": {
+      "heading": "Create tag",
+      "slug": "Slug",
+      "slugPlaceholder": "family-friendly",
+      "label": "Label",
+      "labelPlaceholder": "Family Friendly",
+      "color": "Color",
+      "submit": "Create tag",
+      "submitting": "Creating…",
+      "errors": {
+        "conflict": "A tag with that slug already exists."
+      }
+    },
+    "row": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "delete": "Delete",
+      "forceDelete": "Force delete",
+      "saving": "…",
+      "deleting": "…",
+      "inUseHint": "Tag is assigned to one or more entities. Click \"Force delete\" to cascade-remove the assignments.",
+      "forcePrompt": "Tag \"{{label}}\" is currently assigned to one or more entities. Force-delete the assignments?"
+    }
+  },
   "ui": {
     "title": "UI preferences",
     "subtitle": "Theme, language, and other operator-facing display preferences.",

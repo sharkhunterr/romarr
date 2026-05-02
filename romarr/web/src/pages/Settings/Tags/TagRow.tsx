@@ -5,12 +5,12 @@
  * inputs; "Save" runs `useUpdateTag`; "Delete" runs
  * `useDeleteTag`. The 409 "tag_in_use" path prompts the
  * operator to confirm a force-delete.
+ *
+ * Strings resolve through `settings:tags.row.*` (slice 66).
  */
 
-/* eslint-disable react/jsx-no-literals -- replaced by i18n in
-   the I18N phase. */
-
 import { useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   useDeleteTag,
@@ -24,6 +24,7 @@ export interface TagRowProps {
 
 export function TagRow(props: TagRowProps): ReactElement {
   const { tag } = props;
+  const { t } = useTranslation("settings");
   const [editing, setEditing] = useState(false);
   const [label, setLabel] = useState(tag.label);
   const [color, setColor] = useState(tag.color);
@@ -50,9 +51,7 @@ export function TagRow(props: TagRowProps): ReactElement {
 
   const onForceDelete = (): void => {
     if (
-      window.confirm(
-        `Tag "${tag.label}" is currently assigned to one or more entities. Force-delete the assignments?`,
-      )
+      window.confirm(t("tags.row.forcePrompt", { label: tag.label }))
     ) {
       remove.mutate({ id: tag.id, force: true });
     }
@@ -83,6 +82,7 @@ export function TagRow(props: TagRowProps): ReactElement {
                 type="text"
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
+                aria-label={t("tags.create.label")}
                 className={[
                   "rounded-md bg-zinc-950 px-2 py-1 text-sm text-zinc-100",
                   "ring-1 ring-inset ring-zinc-700",
@@ -94,6 +94,7 @@ export function TagRow(props: TagRowProps): ReactElement {
                 type="color"
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
+                aria-label={t("tags.create.color")}
                 className={[
                   "h-8 w-12 rounded-md bg-zinc-950",
                   "ring-1 ring-inset ring-zinc-700",
@@ -126,7 +127,7 @@ export function TagRow(props: TagRowProps): ReactElement {
                   "focus-visible:ring-brand",
                 ].join(" ")}
               >
-                {update.isPending ? "…" : "Save"}
+                {update.isPending ? t("tags.row.saving") : t("tags.row.save")}
               </button>
               <button
                 type="button"
@@ -138,7 +139,7 @@ export function TagRow(props: TagRowProps): ReactElement {
                   "focus-visible:ring-brand",
                 ].join(" ")}
               >
-                Cancel
+                {t("tags.row.cancel")}
               </button>
             </>
           ) : (
@@ -153,7 +154,7 @@ export function TagRow(props: TagRowProps): ReactElement {
                   "focus-visible:ring-brand",
                 ].join(" ")}
               >
-                Edit
+                {t("tags.row.edit")}
               </button>
               {inUse ? (
                 <button
@@ -168,7 +169,7 @@ export function TagRow(props: TagRowProps): ReactElement {
                     "disabled:opacity-60",
                   ].join(" ")}
                 >
-                  Force delete
+                  {t("tags.row.forceDelete")}
                 </button>
               ) : (
                 <button
@@ -183,7 +184,9 @@ export function TagRow(props: TagRowProps): ReactElement {
                     "disabled:opacity-60",
                   ].join(" ")}
                 >
-                  {remove.isPending ? "…" : "Delete"}
+                  {remove.isPending
+                    ? t("tags.row.deleting")
+                    : t("tags.row.delete")}
                 </button>
               )}
             </>
@@ -197,10 +200,7 @@ export function TagRow(props: TagRowProps): ReactElement {
         </p>
       )}
       {inUse && (
-        <p className="text-xs text-amber-300">
-          Tag is assigned to one or more entities. Click "Force
-          delete" to cascade-remove the assignments.
-        </p>
+        <p className="text-xs text-amber-300">{t("tags.row.inUseHint")}</p>
       )}
     </li>
   );

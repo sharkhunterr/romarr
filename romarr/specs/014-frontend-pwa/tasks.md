@@ -718,7 +718,11 @@ manageable; each ships ≥ 1 test + an implementation.
       force-delete). Ships ahead of the documented Settings
       sub-page list because the backend surface is already
       live and exercises mutations the rest of the SPA hasn't
-      yet.
+      yet. **Migrated to react-i18next under
+      `settings:tags.*` (slice 66)** — outer page wrapper
+      stripped (SettingsLayout owns it), all visible strings
+      + force-delete `window.confirm` prompt resolve through
+      the translation catalogue.
 - [~] T099 [P] [P-SYS] Vitest test_trigger_button **deferred**
       — Vitest not yet installed. The contract is implemented:
       TasksTab's "Run now" button POSTs to /api/v3/command via

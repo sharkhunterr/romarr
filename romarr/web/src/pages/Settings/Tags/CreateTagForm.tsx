@@ -7,18 +7,19 @@
  * useCreateTag mutation; on success the form clears and the
  * tag list re-queries automatically (mutation onSuccess
  * invalidates).
+ *
+ * Strings resolve through `settings:tags.create.*` (slice 66).
  */
 
-/* eslint-disable react/jsx-no-literals -- replaced by i18n in
-   the I18N phase. */
-
 import { type FormEvent, useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useCreateTag } from "@/lib/api/queries/tags";
 
 const DEFAULT_COLOR = "#9BBC0F";
 
 export function CreateTagForm(): ReactElement {
+  const { t } = useTranslation("settings");
   const create = useCreateTag();
   const [name, setName] = useState("");
   const [label, setLabel] = useState("");
@@ -38,10 +39,14 @@ export function CreateTagForm(): ReactElement {
     );
   }
 
-  const errorMessage =
-    create.error?.errorCode === "tag_name_conflict"
-      ? "A tag with that slug already exists."
-      : create.error?.message;
+  let errorMessage: string | null = null;
+  if (create.error !== null) {
+    if (create.error.errorCode === "tag_name_conflict") {
+      errorMessage = t("tags.create.errors.conflict");
+    } else {
+      errorMessage = create.error.message;
+    }
+  }
 
   return (
     <form
@@ -51,7 +56,9 @@ export function CreateTagForm(): ReactElement {
         "p-4 space-y-3",
       ].join(" ")}
     >
-      <h3 className="text-sm font-medium text-zinc-100">Create tag</h3>
+      <h3 className="text-sm font-medium text-zinc-100">
+        {t("tags.create.heading")}
+      </h3>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="space-y-1">
@@ -59,7 +66,7 @@ export function CreateTagForm(): ReactElement {
             htmlFor="tag-name"
             className="block text-[0.7rem] font-medium text-zinc-400"
           >
-            Slug
+            {t("tags.create.slug")}
           </label>
           <input
             id="tag-name"
@@ -68,7 +75,7 @@ export function CreateTagForm(): ReactElement {
             onChange={(e) => setName(e.target.value)}
             required
             pattern="^[a-z0-9-]+$"
-            placeholder="family-friendly"
+            placeholder={t("tags.create.slugPlaceholder")}
             className={[
               "w-full rounded-md bg-zinc-950 px-2.5 py-1.5",
               "text-xs font-mono text-zinc-100",
@@ -84,7 +91,7 @@ export function CreateTagForm(): ReactElement {
             htmlFor="tag-label"
             className="block text-[0.7rem] font-medium text-zinc-400"
           >
-            Label
+            {t("tags.create.label")}
           </label>
           <input
             id="tag-label"
@@ -92,7 +99,7 @@ export function CreateTagForm(): ReactElement {
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             required
-            placeholder="Family Friendly"
+            placeholder={t("tags.create.labelPlaceholder")}
             className={[
               "w-full rounded-md bg-zinc-950 px-2.5 py-1.5",
               "text-xs text-zinc-100",
@@ -108,7 +115,7 @@ export function CreateTagForm(): ReactElement {
             htmlFor="tag-color"
             className="block text-[0.7rem] font-medium text-zinc-400"
           >
-            Color
+            {t("tags.create.color")}
           </label>
           <input
             id="tag-color"
@@ -125,7 +132,7 @@ export function CreateTagForm(): ReactElement {
         </div>
       </div>
 
-      {errorMessage && (
+      {errorMessage !== null && (
         <p role="alert" className="text-xs text-red-400">
           {errorMessage}
         </p>
@@ -142,7 +149,9 @@ export function CreateTagForm(): ReactElement {
           "disabled:cursor-not-allowed disabled:opacity-60",
         ].join(" ")}
       >
-        {create.isPending ? "Creating…" : "Create tag"}
+        {create.isPending
+          ? t("tags.create.submitting")
+          : t("tags.create.submit")}
       </button>
     </form>
   );

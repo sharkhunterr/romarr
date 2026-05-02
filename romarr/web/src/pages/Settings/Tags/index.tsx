@@ -9,12 +9,15 @@
  * Polymorphic /detail/{id} drill-in is deferred until a
  * dedicated tag-detail surface lands; today the row carries
  * just the tag itself.
+ *
+ * Strings resolve through `settings:tags.*` (slice 66).
+ * Lives under SettingsLayout (slice 53) so the outer
+ * page chrome (header / sidebar) is owned upstream — this
+ * component renders only the tab content.
  */
 
-/* eslint-disable react/jsx-no-literals -- replaced by i18n in
-   the I18N phase. */
-
 import { type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
@@ -24,39 +27,36 @@ import { CreateTagForm } from "./CreateTagForm";
 import { TagRow } from "./TagRow";
 
 export function TagsPage(): ReactElement {
+  const { t } = useTranslation("settings");
   const { data, isPending, isError, error } = useTags();
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-6 md:px-6 md:py-8">
-      <header className="mb-6">
-        <h1 className="font-mono text-xl font-semibold text-brand">
-          Tags
-        </h1>
-        <p className="mt-1 text-sm text-zinc-400">
-          Polymorphic tags applied across Games, Indexers,
-          Notifications, and Releases. Renaming a tag updates
-          every entity it touches.
-        </p>
+    <div className="space-y-4">
+      <header>
+        <h2 className="text-base font-medium text-zinc-100">
+          {t("tags.title")}
+        </h2>
+        <p className="mt-1 text-sm text-zinc-400">{t("tags.subtitle")}</p>
       </header>
 
       <CreateTagForm />
 
-      <section className="mt-6">
-        <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-zinc-500">
-          Existing tags
-        </h2>
+      <section>
+        <h3 className="mb-3 font-mono text-xs uppercase tracking-widest text-zinc-500">
+          {t("tags.existing")}
+        </h3>
 
         {isPending ? (
           <ListSkeleton rows={4} />
         ) : isError ? (
           <EmptyState
-            title="Couldn't load tags"
+            title={t("tags.loadError")}
             description={error.message}
           />
         ) : data.length === 0 ? (
           <EmptyState
-            title="No tags yet"
-            description="Create one above to start tagging Games, Indexers, Notifications, or Releases."
+            title={t("tags.empty.title")}
+            description={t("tags.empty.body")}
           />
         ) : (
           <ul className="space-y-2">

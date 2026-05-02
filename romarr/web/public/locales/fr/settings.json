@@ -252,6 +252,40 @@
     "auto": "Auto",
     "interactive": "Interactif"
   },
+  "tags": {
+    "title": "Étiquettes",
+    "subtitle": "Étiquettes polymorphiques appliquées aux Jeux, Indexeurs, Notifications et Releases. Renommer une étiquette met à jour chaque entité qui la porte.",
+    "existing": "Étiquettes existantes",
+    "empty": {
+      "title": "Aucune étiquette",
+      "body": "Créez-en une ci-dessus pour commencer à étiqueter les Jeux, Indexeurs, Notifications ou Releases."
+    },
+    "loadError": "Impossible de charger les étiquettes",
+    "create": {
+      "heading": "Créer une étiquette",
+      "slug": "Slug",
+      "slugPlaceholder": "tout-public",
+      "label": "Libellé",
+      "labelPlaceholder": "Tout public",
+      "color": "Couleur",
+      "submit": "Créer l'étiquette",
+      "submitting": "Création…",
+      "errors": {
+        "conflict": "Une étiquette avec ce slug existe déjà."
+      }
+    },
+    "row": {
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "forceDelete": "Forcer la suppression",
+      "saving": "…",
+      "deleting": "…",
+      "inUseHint": "Cette étiquette est assignée à une ou plusieurs entités. Cliquez sur « Forcer la suppression » pour supprimer aussi les assignations.",
+      "forcePrompt": "L'étiquette « {{label}} » est actuellement assignée à une ou plusieurs entités. Forcer la suppression des assignations ?"
+    }
+  },
   "ui": {
     "title": "Préférences d'interface",
     "subtitle": "Thème, langue et autres préférences d'affichage côté opérateur.",
