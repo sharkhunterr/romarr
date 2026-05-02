@@ -38,6 +38,7 @@ from romarr.api.routers.status import router as system_status_router
 from romarr.api.routers.tag import router as tag_router
 from romarr.api.routers.users import router as users_router
 from romarr.api.routers.wanted import router as wanted_router
+from romarr.api.ws import SubscriptionRegistry, ws_router
 from romarr.config import get_settings
 from romarr.db.session import create_engine, create_sessionmaker
 from romarr.downloaders.api import (
@@ -202,6 +203,11 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     # process, so this is functionally the process boot time.
     app.state._start_time = datetime.now(UTC)
 
+    # Spec 013 phase WS — process-local subscription registry.
+    # The bridge consumer (lands in a follow-up slice) reads
+    # this off app.state to broadcast events to subscribers.
+    app.state.ws_subscriptions = SubscriptionRegistry()
+
     @app.get("/", include_in_schema=False)
     async def _root() -> JSONResponse:
         return JSONResponse({"name": "romarr", "version": __version__})
@@ -306,6 +312,12 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     app.include_router(tasks_router)
     app.include_router(tasks_runs_router)
     app.include_router(tasks_command_router)
+
+    # Spec 013 phase WS — /signalr/messages WebSocket route.
+    # Registered after the REST routers so the OpenAPI
+    # customisation that follows sees the full HTTP surface;
+    # WebSocket routes don't appear in the OpenAPI doc.
+    app.include_router(ws_router)
 
     # Spec 013 phase OPENAPI — runs after every router has been
     # registered so the customizer sees the full route set.

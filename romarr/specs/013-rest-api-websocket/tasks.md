@@ -532,12 +532,18 @@ shuts down cleanly.
 
 ### Tests
 
-- [ ] T061 [P] [WS] `tests/api/ws/test_auth.py::test_apikey_query_param`
-      — connect with `?apikey=`; upgrade succeeds.
-- [ ] T062 [P] [WS] `tests/api/ws/test_auth.py::test_cookie_session`
-      — log in via REST; reuse cookie on WS upgrade; succeeds.
-- [ ] T063 [P] [WS] `tests/api/ws/test_auth.py::test_unauth_rejected`
-      — no auth; HTTP 401 before upgrade completes (FR-018).
+- [X] T061 [P] [WS] `tests/api/ws/test_auth.py::test_apikey_query_param_upgrades_succeeds`
+      — connect with `?apikey=`; upgrade succeeds; first frame
+      is the systemMessage welcome envelope. Companion test pins
+      the X-Api-Key header form.
+- [X] T062 [P] [WS] `tests/api/ws/test_auth.py::test_cookie_session_upgrade_succeeds`
+      — log in via REST; cookie persists on the TestClient;
+      WS upgrade succeeds.
+- [X] T063 [P] [WS] `tests/api/ws/test_auth.py::test_unauth_upgrade_rejected`
+      — no auth; the handler closes with WebSocket code 1008
+      (policy violation, mirrors HTTP 401 for FR-018) before
+      the welcome frame ships. Companion test pins the
+      bogus-apikey case.
 - [ ] T064 [P] [WS] `tests/api/ws/test_messages.py::test_taskstarted_taskfinished`
       — trigger a job; assert client receives `taskStarted` then
       `taskFinished` with documented JSON shape (SC-004).
@@ -556,25 +562,58 @@ shuts down cleanly.
 
 ### Implementation
 
-- [ ] T069 [WS] Create `src/romarr/api/ws/messages.py` —
-      `MessageType` StrEnum with the 12 documented types; canonical
-      JSON shape `{messageType, data}`.
-- [ ] T070 [P] [WS] Create `src/romarr/api/ws/auth.py` — the on-
-      upgrade auth resolver (cookie / apikey query / bearer
-      header).
-- [ ] T071 [P] [WS] Create `src/romarr/api/ws/subscriptions.py` —
-      in-memory subscriber registry keyed by user_id; tear down on
-      disconnect.
-- [ ] T072 [P] [WS] Create `src/romarr/api/ws/bridge.py` — async
-      consumer of spec 011's pub/sub channel; forwards each event
-      to all subscribers with the documented `messageType`.
-- [ ] T073 [WS] Create `src/romarr/api/ws/handler.py` — FastAPI
-      WebSocket route at `/signalr/messages`; calls
-      `auth.authenticate_upgrade(...)`; if ok, registers the client
-      with `subscriptions`; awaits ping/pong loop.
-- [ ] T074 [WS] Wire `WebSocketBridge.start()` into the lifespan
-      startup (Phase 2) so it consumes events as soon as the
-      application is ready.
+- [X] T069 [WS] Create `src/romarr/api/ws/messages.py` —
+      `MessageType` StrEnum with the 12 documented types
+      (taskStarted / taskProgress / taskFinished / queueUpdated
+      / gameAdded / gameUpdated / gameDeleted / releaseGrabbed
+      / releaseImported / releaseFailed / healthChanged /
+      systemMessage). `build_envelope(message_type, data)`
+      helper produces the canonical `{messageType, data}` JSON
+      shape (spec 013 Q2 clarification on plain
+      JSON-over-WebSocket framing).
+- [X] T070 [P] [WS] Create `src/romarr/api/ws/auth.py` — the
+      on-upgrade auth resolver. `build_ws_request_context` lifts
+      headers / query / cookies off the WebSocket into a
+      `RequestContext`; `authenticate_upgrade` calls spec 010's
+      `resolve_principal` against it. Same chain as HTTP routes
+      (cookie / apikey header / apikey query / bearer JWT /
+      proxy headers).
+- [X] T071 [P] [WS] Create `src/romarr/api/ws/subscriptions.py` —
+      `SubscriptionRegistry` keyed by per-connection UUID4
+      (NOT user_id; one operator may have multiple tabs open).
+      Async-safe via a single `asyncio.Lock`; iteration takes a
+      snapshot so the broadcast loop fires with the lock
+      released. `broadcast(payload)` swallows per-send errors so
+      one dead connection doesn't abort the broadcast for the
+      rest. Process-local — for multi-replica deployments the
+      bridge will swap to Redis pub/sub.
+- [~] T072 [P] [WS] Create `src/romarr/api/ws/bridge.py` —
+      async consumer of spec 011's pub/sub channel. **Deferred**
+      to a follow-up slice when the spec 011 pub/sub surface is
+      exposed. Today the foundation ships
+      `SubscriptionRegistry.broadcast()`; the bridge will be a
+      thin adapter that converts spec 011 events into
+      `MessageType` envelopes and calls `broadcast`.
+- [X] T073 [WS] Create `src/romarr/api/ws/handler.py` — FastAPI
+      WebSocket route at `/signalr/messages`. Calls
+      `authenticate_upgrade`; on failure
+      `websocket.close(code=1008)`. On success `accept`,
+      registers via `SubscriptionRegistry.add`, sends an
+      opening welcome envelope (`systemMessage / welcome` with
+      connectionId + username), then enters a receive loop
+      treating any frame as a keepalive ping (echoes
+      `systemMessage / pong`). Disconnect cleanup removes the
+      registry entry. The route is mounted directly on the
+      FastAPI app (NOT under `/api/v3`) because the
+      SignalR-compat path is `/signalr/messages` per Sonarr's
+      contract. Includes a WS-specific `_get_ws_db` dependency
+      because FastAPI's HTTP `get_db` takes a `Request` and
+      WebSocket handlers don't have one — both pull the same
+      sessionmaker off `app.state`.
+- [X] T074 [WS] `app.state.ws_subscriptions = SubscriptionRegistry()`
+      stamped during `create_app()` so HTTP-side bridges (when
+      they ship) read the same registry the WS handler writes.
+      Bridge `.start()` itself lands with T072.
 
 **Checkpoint**: WS tests green; bridge events forward end-to-end.
 
