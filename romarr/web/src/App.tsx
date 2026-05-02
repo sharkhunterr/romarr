@@ -23,9 +23,9 @@ import { AppLayout } from "@/components/shared/AppLayout";
 import { AuthGuard } from "@/components/shared/AuthGuard";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
 import { QueryProvider } from "@/lib/api/QueryProvider";
+import { ActivityPage } from "@/pages/Activity";
 import { DashboardPage } from "@/pages/Dashboard";
 import {
-  ActivityPage,
   AddNewPage,
   CalendarPage,
   GameDetailPage,

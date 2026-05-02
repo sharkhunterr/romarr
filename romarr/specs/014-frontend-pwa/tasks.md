@@ -589,16 +589,35 @@ viewport; SC-002 (60 fps on 10 000 items) is met in a perf test.
 
 ### Tests
 
-- [ ] T091 [P] [P-ACT] `tests/unit/pages/test_Activity.tsx::test_queue_live_updates`
-      — fixture queue rows; emit a `queueUpdated` WS event;
-      assert the row updates.
-- [ ] T092 [P] [P-ACT] `tests/unit/pages/test_Activity.tsx::test_swipe_remove`
-      — swipe-left on a queue card; remove action fires.
+- [~] T091 [P] [P-ACT] `test_queue_live_updates` **deferred**
+      — Vitest not yet installed. Plus the WS path needs the
+      spec 013 T072 bridge slice to forward `queueUpdated`
+      events. Today's QueueList polls every 5s instead.
+- [~] T092 [P] [P-ACT] Swipe-to-remove **deferred** — needs
+      `@use-gesture/react` plus the spec 013 queue DELETE
+      endpoint (T045).
 
 ### Implementation
 
-- [ ] T093 [P-ACT] Create `src/pages/Activity/index.tsx` with the
-      Queue + History tabs; live progress bars; swipe gestures.
+- [~] T093 [P-ACT] `src/pages/Activity/index.tsx` shipped with
+      the Queue | History tab switcher.
+      * **Queue** (`QueueList.tsx`): polls `/api/v3/queue`
+        every 5 s via `useQueue`. Each row carries
+        downloadClientNativeId + state badge + progress bar
+        with ARIA `role="progressbar"` + size + ETA. Error
+        message surface for failed-state rows. Per-row
+        pause/resume/remove deferred to spec 005 integration.
+      * **History** (`HistoryList.tsx`): paginated audit
+        trail via `useHistory({ pageSize: 50 })`. Previous /
+        Next pager + total count. Filter chips deferred.
+      Live updates via WebSocket invalidation will land
+      with the spec 013 T072 bridge slice — drop-in
+      replacement for the polling.
+
+      `src/lib/api/queries/queue.ts` shipped: `useQueue`
+      against the spec 013 queue router (slice 26). 5 s
+      polling default; QueryProvider's 30 s staleTime is
+      narrowed to 5 s for this hook so progress feels live.
 
 **Checkpoint**: Activity page mobile-friendly with swipe gestures.
 

@@ -72,14 +72,8 @@ export function GameDetailPage(): ReactElement {
 // WantedPage is the second real page implementation; lives at
 // @/pages/Wanted/index.tsx (slice 48, P-WANT).
 
-export function ActivityPage(): ReactElement {
-  return (
-    <PageShell
-      title="Activity"
-      subtitle="Queue | History tabs (P-ACT phase)."
-    />
-  );
-}
+// ActivityPage is the third real page implementation; lives at
+// @/pages/Activity/index.tsx (slice 49, P-ACT).
 
 export function CalendarPage(): ReactElement {
   return (
