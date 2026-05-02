@@ -1,0 +1,53 @@
+{
+  "title": "Activité",
+  "tabs": {
+    "queue": "File",
+    "history": "Historique",
+    "ariaLabel": "Onglets Activité"
+  },
+  "tabHint": {
+    "queue": "Téléchargements actifs, rafraîchis toutes les 5 s.",
+    "history": "Imports, recherches et tâches planifiées sur tout l'historique."
+  },
+  "queue": {
+    "loadError": "Impossible de charger la file",
+    "empty": {
+      "title": "La file est vide",
+      "body": "Aucun téléchargement actif. Lancer une recherche des manquants ajoute des grabs ici."
+    },
+    "subtitle": "release n°{{releaseId}} · client n°{{clientId}}",
+    "attempt": " · tentative {{count}}",
+    "size": "taille {{value}}",
+    "eta": "eta {{value}}",
+    "dash": "—",
+    "bytes": "{{value}} o",
+    "kilobytes": "{{value}} Ko",
+    "megabytes": "{{value}} Mo",
+    "gigabytes": "{{value}} Go",
+    "etaSeconds": "{{value}}s",
+    "etaMinutes": "{{value}}min",
+    "etaHoursMinutes": "{{hours}}h{{minutes}}",
+    "progressLabel": "Progression du téléchargement {{pct}}%"
+  },
+  "history": {
+    "loadError": "Impossible de charger l'historique",
+    "empty": {
+      "title": "Pas d'historique",
+      "body": "Imports, recherches et tâches planifiées apparaîtront ici dès qu'elles tournent."
+    },
+    "eventLabel": {
+      "import": "Importé",
+      "search": "Recherché",
+      "job_run": "Tâche exécutée"
+    },
+    "subjectGame": "jeu n°{{id}}",
+    "subjectRelease": "release n°{{id}}",
+    "subjectEvent": "événement n°{{id}}",
+    "statusOk": "ok",
+    "statusFailed": "échec",
+    "previous": "← Précédent",
+    "next": "Suivant →",
+    "pagination": "page {{page}} / {{total}} · {{count}} événements",
+    "paginationAria": "Pagination historique"
+  }
+}

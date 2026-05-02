@@ -1,0 +1,26 @@
+{
+  "title": "Wanted",
+  "tabs": {
+    "missing": "Missing",
+    "cutoff": "Cutoff",
+    "ariaLabel": "Wanted lists"
+  },
+  "tabHint": {
+    "missing": "Releases marked monitored but not yet acquired.",
+    "cutoff": "Imported releases below the upgrade cutoff."
+  },
+  "missing": {
+    "loadError": "Couldn't load missing releases",
+    "empty": {
+      "title": "No missing releases",
+      "body": "Every monitored release has been acquired."
+    }
+  },
+  "cutoff": {
+    "loadError": "Couldn't load cutoff releases",
+    "empty": {
+      "title": "No cutoff candidates",
+      "body": "Every imported release meets the upgrade cutoff."
+    }
+  }
+}

@@ -6,12 +6,16 @@
  * Per-row pause/resume/remove actions land in a follow-up
  * slice when the spec 005 DownloadClient.remove + add
  * helpers are wired (T045/T046 in spec 013).
+ *
+ * Strings resolve through `activity:queue.*` (slice 68).
+ * The state pill itself is intentionally untranslated — the
+ * documented enum values (`queued` / `downloading` / etc.)
+ * are contract values, not operator copy.
  */
 
-/* eslint-disable react/jsx-no-literals -- replaced by i18n in
-   the I18N phase. */
-
 import { type ReactElement } from "react";
+import { type TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
@@ -27,25 +31,36 @@ const STATE_BADGE: Record<string, string> = {
   pending_retry: "bg-amber-700/30 text-amber-200 ring-amber-500/40",
 };
 
-function formatBytes(bytes: number | null | undefined): string {
-  if (bytes === null || bytes === undefined) return "—";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+function formatBytes(bytes: number | null | undefined, t: TFunction): string {
+  if (bytes === null || bytes === undefined) return t("queue.dash");
+  if (bytes < 1024) return t("queue.bytes", { value: bytes });
+  if (bytes < 1024 * 1024) {
+    return t("queue.kilobytes", { value: Math.round(bytes / 1024) });
+  }
+  if (bytes < 1024 * 1024 * 1024) {
+    return t("queue.megabytes", {
+      value: (bytes / (1024 * 1024)).toFixed(1),
+    });
+  }
+  return t("queue.gigabytes", {
+    value: (bytes / (1024 * 1024 * 1024)).toFixed(2),
+  });
 }
 
-function formatEta(seconds: number | null | undefined): string {
-  if (seconds === null || seconds === undefined) return "—";
-  if (seconds < 60) return `${seconds}s`;
+function formatEta(seconds: number | null | undefined, t: TFunction): string {
+  if (seconds === null || seconds === undefined) return t("queue.dash");
+  if (seconds < 60) return t("queue.etaSeconds", { value: seconds });
   const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 60) return t("queue.etaMinutes", { value: minutes });
   const hours = Math.floor(minutes / 60);
-  return `${hours}h${(minutes % 60).toString().padStart(2, "0")}m`;
+  return t("queue.etaHoursMinutes", {
+    hours,
+    minutes: (minutes % 60).toString().padStart(2, "0"),
+  });
 }
 
 function QueueRow(props: { entry: QueueEntry }): ReactElement {
+  const { t } = useTranslation("activity");
   const { entry } = props;
   const stateClass =
     STATE_BADGE[entry.state] ??
@@ -60,9 +75,12 @@ function QueueRow(props: { entry: QueueEntry }): ReactElement {
             {entry.downloadClientNativeId}
           </p>
           <p className="text-[0.7rem] text-zinc-500">
-            release #{entry.releaseId} · client #{entry.downloadClientId}
+            {t("queue.subtitle", {
+              releaseId: entry.releaseId,
+              clientId: entry.downloadClientId,
+            })}
             {entry.attemptCount > 0 &&
-              ` · attempt ${entry.attemptCount}`}
+              t("queue.attempt", { count: entry.attemptCount })}
           </p>
         </div>
         <span
@@ -83,7 +101,7 @@ function QueueRow(props: { entry: QueueEntry }): ReactElement {
           aria-valuenow={progressPct}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label={`Download progress ${progressPct}%`}
+          aria-label={t("queue.progressLabel", { pct: progressPct })}
         >
           <div
             className="h-full bg-brand transition-[width]"
@@ -96,8 +114,8 @@ function QueueRow(props: { entry: QueueEntry }): ReactElement {
       </div>
 
       <div className="mt-2 flex justify-between font-mono text-[0.65rem] text-zinc-500">
-        <span>size {formatBytes(entry.sizeBytes)}</span>
-        <span>eta {formatEta(entry.etaSeconds)}</span>
+        <span>{t("queue.size", { value: formatBytes(entry.sizeBytes, t) })}</span>
+        <span>{t("queue.eta", { value: formatEta(entry.etaSeconds, t) })}</span>
       </div>
 
       {entry.errorMsg && (
@@ -110,6 +128,7 @@ function QueueRow(props: { entry: QueueEntry }): ReactElement {
 }
 
 export function QueueList(): ReactElement {
+  const { t } = useTranslation("activity");
   const { data, isPending, isError, error } = useQueue({
     pageSize: 50,
     sortKey: "last_updated_at",
@@ -120,7 +139,7 @@ export function QueueList(): ReactElement {
   if (isError) {
     return (
       <EmptyState
-        title="Couldn't load queue"
+        title={t("queue.loadError")}
         description={error.message}
       />
     );
@@ -128,8 +147,8 @@ export function QueueList(): ReactElement {
   if (data.records.length === 0) {
     return (
       <EmptyState
-        title="Queue is empty"
-        description="No active downloads. Triggering a missing search will queue grabs here."
+        title={t("queue.empty.title")}
+        description={t("queue.empty.body")}
       />
     );
   }

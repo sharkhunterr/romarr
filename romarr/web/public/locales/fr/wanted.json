@@ -1,0 +1,26 @@
+{
+  "title": "Souhaits",
+  "tabs": {
+    "missing": "Manquants",
+    "cutoff": "Cutoff",
+    "ariaLabel": "Listes Souhaits"
+  },
+  "tabHint": {
+    "missing": "Releases monitorées mais pas encore acquises.",
+    "cutoff": "Releases importées sous le seuil d'upgrade."
+  },
+  "missing": {
+    "loadError": "Impossible de charger les releases manquantes",
+    "empty": {
+      "title": "Aucune release manquante",
+      "body": "Toutes les releases monitorées sont acquises."
+    }
+  },
+  "cutoff": {
+    "loadError": "Impossible de charger les candidats cutoff",
+    "empty": {
+      "title": "Aucun candidat cutoff",
+      "body": "Toutes les releases importées passent le seuil d'upgrade."
+    }
+  }
+}

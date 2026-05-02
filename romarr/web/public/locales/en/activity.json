@@ -1,0 +1,53 @@
+{
+  "title": "Activity",
+  "tabs": {
+    "queue": "Queue",
+    "history": "History",
+    "ariaLabel": "Activity tabs"
+  },
+  "tabHint": {
+    "queue": "Active downloads, polled every 5 s.",
+    "history": "Imports, searches, and scheduled tasks across the whole audit trail."
+  },
+  "queue": {
+    "loadError": "Couldn't load queue",
+    "empty": {
+      "title": "Queue is empty",
+      "body": "No active downloads. Triggering a missing search will queue grabs here."
+    },
+    "subtitle": "release #{{releaseId}} · client #{{clientId}}",
+    "attempt": " · attempt {{count}}",
+    "size": "size {{value}}",
+    "eta": "eta {{value}}",
+    "dash": "—",
+    "bytes": "{{value}} B",
+    "kilobytes": "{{value}} KB",
+    "megabytes": "{{value}} MB",
+    "gigabytes": "{{value}} GB",
+    "etaSeconds": "{{value}}s",
+    "etaMinutes": "{{value}}m",
+    "etaHoursMinutes": "{{hours}}h{{minutes}}m",
+    "progressLabel": "Download progress {{pct}}%"
+  },
+  "history": {
+    "loadError": "Couldn't load history",
+    "empty": {
+      "title": "No history yet",
+      "body": "Imports, searches, and scheduled tasks land here as they happen."
+    },
+    "eventLabel": {
+      "import": "Imported",
+      "search": "Searched",
+      "job_run": "Task ran"
+    },
+    "subjectGame": "game #{{id}}",
+    "subjectRelease": "release #{{id}}",
+    "subjectEvent": "event #{{id}}",
+    "statusOk": "ok",
+    "statusFailed": "failed",
+    "previous": "← Previous",
+    "next": "Next →",
+    "pagination": "page {{page}} / {{total}} · {{count}} events",
+    "paginationAria": "History pagination"
+  }
+}

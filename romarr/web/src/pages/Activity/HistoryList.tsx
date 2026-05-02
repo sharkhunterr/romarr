@@ -8,24 +8,18 @@
  * The filter chips (eventType / successful) land in a
  * follow-up slice when the canonical filter URL state is
  * designed.
+ *
+ * Strings resolve through `activity:history.*` (slice 68).
  */
 
-/* eslint-disable react/jsx-no-literals -- replaced by i18n in
-   the I18N phase. */
-
 import { useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useHistory } from "@/lib/api/queries/system";
 
 const PAGE_SIZE = 50;
-
-const EVENT_LABEL: Record<string, string> = {
-  import: "Imported",
-  search: "Searched",
-  job_run: "Task ran",
-};
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -34,6 +28,7 @@ function formatDate(dateStr: string): string {
 }
 
 export function HistoryList(): ReactElement {
+  const { t } = useTranslation("activity");
   const [page, setPage] = useState(1);
   const { data, isPending, isError, error } = useHistory({
     page,
@@ -46,7 +41,7 @@ export function HistoryList(): ReactElement {
   if (isError) {
     return (
       <EmptyState
-        title="Couldn't load history"
+        title={t("history.loadError")}
         description={error.message}
       />
     );
@@ -54,8 +49,8 @@ export function HistoryList(): ReactElement {
   if (data.records.length === 0 && page === 1) {
     return (
       <EmptyState
-        title="No history yet"
-        description="Imports, searches, and scheduled tasks land here as they happen."
+        title={t("history.empty.title")}
+        description={t("history.empty.body")}
       />
     );
   }
@@ -80,14 +75,16 @@ export function HistoryList(): ReactElement {
             <div className="min-w-0 flex-1">
               <p className="truncate text-zinc-100">
                 <span className="font-mono text-[0.65rem] uppercase tracking-wider text-zinc-500">
-                  {EVENT_LABEL[event.eventType] ?? event.eventType}
+                  {t(`history.eventLabel.${event.eventType}`, {
+                    defaultValue: event.eventType,
+                  })}
                 </span>
                 <span className="ml-2 text-zinc-300">
                   {event.gameId
-                    ? `game #${event.gameId}`
+                    ? t("history.subjectGame", { id: event.gameId })
                     : event.releaseId
-                      ? `release #${event.releaseId}`
-                      : `event #${event.id}`}
+                      ? t("history.subjectRelease", { id: event.releaseId })
+                      : t("history.subjectEvent", { id: event.id })}
                 </span>
               </p>
               <p className="text-[0.7rem] text-zinc-500">
@@ -103,7 +100,9 @@ export function HistoryList(): ReactElement {
                   : "bg-red-700/30 text-red-200 ring-red-500/40",
               ].join(" ")}
             >
-              {event.successful ? "ok" : "failed"}
+              {event.successful
+                ? t("history.statusOk")
+                : t("history.statusFailed")}
             </span>
           </li>
         ))}
@@ -112,7 +111,7 @@ export function HistoryList(): ReactElement {
       {totalPages > 1 && (
         <nav
           className="flex items-center justify-between text-xs text-zinc-400"
-          aria-label="History pagination"
+          aria-label={t("history.paginationAria")}
         >
           <button
             type="button"
@@ -126,10 +125,14 @@ export function HistoryList(): ReactElement {
               "focus-visible:ring-brand",
             ].join(" ")}
           >
-            ← Previous
+            {t("history.previous")}
           </button>
           <span className="font-mono">
-            page {page} / {totalPages} · {data.totalRecords} events
+            {t("history.pagination", {
+              page,
+              total: totalPages,
+              count: data.totalRecords,
+            })}
           </span>
           <button
             type="button"
@@ -145,7 +148,7 @@ export function HistoryList(): ReactElement {
               "focus-visible:ring-brand",
             ].join(" ")}
           >
-            Next →
+            {t("history.next")}
           </button>
         </nav>
       )}
