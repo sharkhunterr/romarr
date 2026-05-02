@@ -794,17 +794,30 @@ manageable; each ships ≥ 1 test + an implementation.
 
       `src/pages/Settings/Profiles/index.tsx` shipped (slice
       64) with the six-tab bar (Quality / Region / Dump /
-      Language / Naming / Custom Formats). Custom Formats is
-      the only real tab today — `CustomFormatsTab` lists every
-      row from /api/v3/customformat with score chips, factory
-      + modified pills, expandable conditions list, and
+      Language / Naming / Custom Formats). Two tabs are real
+      today: Custom Formats (slice 64) and Quality (slice 65).
+      Quality is now the default tab on first paint.
+
+      `CustomFormatsTab` lists every row from
+      /api/v3/customformat with score chips, factory +
+      modified pills, expandable conditions list, and
       double-confirm delete (gated on `is_factory_default`).
       `useCustomFormats` + `useDeleteCustomFormat` hooks
-      shipped. The other five tabs render an i18n'd
-      "coming soon" EmptyState until their backend endpoints
-      land (Quality is next: /api/v3/qualityprofile is shipped
-      so Quality can move out of placeholder in a follow-up
-      slice).
+      shipped (slice 64).
+
+      `QualityTab` (slice 65) lists every Quality profile from
+      /api/v3/qualityprofile with: name + factory/modified
+      pills, preferred-format chip (brand), upgrade-until chip
+      (amber), allowed-format list, DAT-verified +
+      archive-double-compression display toggles, double-
+      confirm delete gated on `is_factory_default`. Hooks:
+      `useQualityProfiles` + `useDeleteQualityProfile`. Full
+      editor (drag-drop allowed list, format pickers, toggles)
+      deferred — hint surfaced inline.
+
+      The remaining four tabs (Region / Dump / Language /
+      Naming) render an i18n'd "coming soon" EmptyState until
+      their backend endpoints ship.
 
       `src/pages/Settings/MetadataSources/index.tsx` shipped
       (slice 63) with `useMetadataProviders` +

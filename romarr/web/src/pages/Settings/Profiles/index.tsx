@@ -24,6 +24,7 @@ import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/shared/EmptyState";
 
 import { CustomFormatsTab } from "./CustomFormatsTab";
+import { QualityTab } from "./QualityTab";
 
 type Tab =
   | "quality"
@@ -42,7 +43,10 @@ const TABS: readonly Tab[] = [
   "custom-formats",
 ];
 
-const SHIPPED_TABS: ReadonlySet<Tab> = new Set<Tab>(["custom-formats"]);
+const SHIPPED_TABS: ReadonlySet<Tab> = new Set<Tab>([
+  "quality",
+  "custom-formats",
+]);
 
 interface TabButtonProps {
   tab: Tab;
@@ -83,7 +87,7 @@ function TabButton(props: TabButtonProps): ReactElement {
 
 export function ProfilesPage(): ReactElement {
   const { t } = useTranslation("settings");
-  const [tab, setTab] = useState<Tab>("custom-formats");
+  const [tab, setTab] = useState<Tab>("quality");
 
   return (
     <div className="space-y-4">
@@ -111,8 +115,9 @@ export function ProfilesPage(): ReactElement {
         ))}
       </div>
 
+      {tab === "quality" && <QualityTab />}
       {tab === "custom-formats" && <CustomFormatsTab />}
-      {tab !== "custom-formats" && (
+      {tab !== "quality" && tab !== "custom-formats" && (
         <EmptyState
           title={t("profiles.comingSoonTitle")}
           description={t("profiles.comingSoonBody", {

@@ -121,7 +121,30 @@
       "custom-formats": "Custom Formats"
     },
     "comingSoonTitle": "Coming soon",
-    "comingSoonBody": "{{tab}} profile management lands in a follow-up slice. The backend endpoint isn't shipped yet — check back once the relevant spec lands."
+    "comingSoonBody": "{{tab}} profile management lands in a follow-up slice. The backend endpoint isn't shipped yet — check back once the relevant spec lands.",
+    "quality": {
+      "subtitle": "Each library binds to one Quality profile. The profile lists the formats Romarr will accept (allowed), the one it prefers as the upgrade target (preferred), and the ceiling beyond which it won't keep upgrading (upgrade-until).",
+      "empty": {
+        "title": "No quality profiles",
+        "body": "Romarr ships a factory-default catalogue. If this list is empty, run the seed migration."
+      },
+      "preferred": "Preferred",
+      "upgradeUntil": "Upgrade until",
+      "allowedFormats": "Allowed",
+      "datRequired": "DAT-verified required",
+      "archiveDouble": "Allow archive double-compression",
+      "factory": "Factory",
+      "modified": "Modified",
+      "delete": {
+        "button": "Delete",
+        "confirmTitle": "Remove this profile?",
+        "confirmBody": "Libraries bound to {{name}} will need a replacement profile before their next decision runs.",
+        "confirm": "Remove",
+        "cancel": "Cancel",
+        "factoryBlocked": "Factory-default profiles can't be deleted; reset them with the seed migration if needed."
+      },
+      "editorHint": "The full Quality profile editor (drag-drop allowed-formats list, preferred / upgrade-until pickers, DAT + archive toggles) lands in a follow-up slice."
+    }
   },
   "customFormats": {
     "title": "Custom Formats",

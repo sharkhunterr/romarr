@@ -121,7 +121,30 @@
       "custom-formats": "Formats personnalisés"
     },
     "comingSoonTitle": "Bientôt",
-    "comingSoonBody": "La gestion du profil {{tab}} arrive dans un slice à venir. L'endpoint backend n'est pas encore livré — repassez une fois la spec correspondante shippée."
+    "comingSoonBody": "La gestion du profil {{tab}} arrive dans un slice à venir. L'endpoint backend n'est pas encore livré — repassez une fois la spec correspondante shippée.",
+    "quality": {
+      "subtitle": "Chaque ludothèque s'attache à un profil de qualité. Le profil liste les formats acceptés (allowed), celui visé comme cible d'upgrade (preferred) et le plafond au-delà duquel Romarr arrête d'upgrade (upgrade-until).",
+      "empty": {
+        "title": "Aucun profil de qualité",
+        "body": "Romarr fournit un catalogue factory par défaut. Si cette liste est vide, lancez la migration de seed."
+      },
+      "preferred": "Préféré",
+      "upgradeUntil": "Upgrade jusqu'à",
+      "allowedFormats": "Autorisés",
+      "datRequired": "DAT-vérifié requis",
+      "archiveDouble": "Autoriser archive double-compression",
+      "factory": "Factory",
+      "modified": "Modifié",
+      "delete": {
+        "button": "Supprimer",
+        "confirmTitle": "Supprimer ce profil ?",
+        "confirmBody": "Les ludothèques liées à {{name}} auront besoin d'un profil de remplacement avant leur prochaine décision.",
+        "confirm": "Supprimer",
+        "cancel": "Annuler",
+        "factoryBlocked": "Les profils factory ne peuvent pas être supprimés ; relancez la migration de seed pour les réinitialiser."
+      },
+      "editorHint": "L'éditeur complet de profil de qualité (liste allowed drag-drop, sélecteurs preferred / upgrade-until, toggles DAT + archive) arrivera dans un slice à venir."
+    }
   },
   "customFormats": {
     "title": "Formats personnalisés",
