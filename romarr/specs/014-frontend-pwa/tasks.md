@@ -781,8 +781,26 @@ manageable; each ships ≥ 1 test + an implementation.
       "Sign in with SSO" button (T101) is gated on the
       backend exposing /api/v3/auth/oidc/start + a status
       probe — deferred there.
-- [ ] T109 [P-SETUP] Create `src/pages/Setup/index.tsx` with the
-      5-step wizard.
+- [X] T109 [P-SETUP] `src/pages/Setup/index.tsx` ships a
+      3-step wizard (Welcome → Admin → Done) against
+      POST /api/v3/auth/setup (slice 59). The original spec's
+      5-step variant (Welcome / CreateAdmin / Library /
+      DownloadClient / Indexer / Done) collapses to 3 because
+      spec 013 only ships /api/v3/auth/setup — the other
+      steps are surfaced as deferred next-actions on the Done
+      screen pointing at /settings/media-management,
+      /settings/indexers, /settings/download-clients.
+
+      `src/lib/api/queries/setup.ts` shipped: `useSetup`
+      mutation with the X-Setup-Token header forwarding +
+      AUTH_ME_QUERY_KEY invalidation on success (FR-020 — the
+      setup call sets the session cookie atomically so the
+      operator is signed in immediately).
+
+      Strings under the new `setup` namespace
+      (`public/locales/{en,fr}/setup.json`); ApiError mapping
+      handles `setup_token_invalid`, `setup_already_done`,
+      422-validation, and a generic fallback.
 
 **Checkpoint**: every page in the documented set renders; key
 flows tested.

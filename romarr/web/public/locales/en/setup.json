@@ -1,0 +1,39 @@
+{
+  "title": "Welcome to Romarr",
+  "stepLabel": "Step {{current}} of {{total}}",
+  "next": "Next",
+  "back": "Back",
+  "finish": "Finish",
+  "skip": "Skip",
+  "welcome": {
+    "heading": "Let's get your library set up.",
+    "body": "Romarr is a self-hosted ROM acquisition manager. This short wizard creates the admin account; the rest is configured from the Settings page once you're signed in.",
+    "tokenHint": "The setup token was printed in the server logs the first time Romarr started. Look for a line beginning with \"Setup token:\"."
+  },
+  "admin": {
+    "heading": "Create the admin account",
+    "body": "This account holds the admin role and can configure every part of Romarr.",
+    "token": "Setup token",
+    "tokenPlaceholder": "Paste the X-Setup-Token from the boot logs",
+    "username": "Username",
+    "password": "Password",
+    "passwordHelp": "At least 8 characters.",
+    "submit": "Create admin",
+    "submitting": "Creating admin…"
+  },
+  "done": {
+    "heading": "All set",
+    "body": "Romarr is ready. Configure the rest of the pipeline from Settings whenever you're ready — none of it is required to sign in.",
+    "openDashboard": "Open the dashboard",
+    "configureLater": "Configure later",
+    "configureIndexers": "Indexers",
+    "configureDownloadClients": "Download clients",
+    "configureMediaManagement": "Libraries"
+  },
+  "errors": {
+    "setupTokenInvalid": "That setup token isn't valid. Check the server logs and paste it again.",
+    "setupAlreadyDone": "Romarr is already set up — sign in instead.",
+    "validation": "Some fields are invalid. Check them and try again.",
+    "fallback": "Setup failed. Check the server logs and try again."
+  }
+}

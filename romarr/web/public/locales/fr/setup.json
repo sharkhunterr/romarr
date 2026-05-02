@@ -1,0 +1,39 @@
+{
+  "title": "Bienvenue sur Romarr",
+  "stepLabel": "Étape {{current}} sur {{total}}",
+  "next": "Suivant",
+  "back": "Retour",
+  "finish": "Terminer",
+  "skip": "Passer",
+  "welcome": {
+    "heading": "Configurons votre ludothèque.",
+    "body": "Romarr est un gestionnaire d'acquisition de ROM auto-hébergé. Cet assistant crée le compte administrateur ; tout le reste se configure depuis Paramètres une fois connecté.",
+    "tokenHint": "Le jeton d'installation a été imprimé dans les logs du serveur au premier démarrage. Cherchez une ligne commençant par « Setup token: »."
+  },
+  "admin": {
+    "heading": "Créer le compte admin",
+    "body": "Ce compte porte le rôle admin et peut configurer chaque partie de Romarr.",
+    "token": "Jeton d'installation",
+    "tokenPlaceholder": "Collez le X-Setup-Token depuis les logs",
+    "username": "Identifiant",
+    "password": "Mot de passe",
+    "passwordHelp": "Au moins 8 caractères.",
+    "submit": "Créer l'admin",
+    "submitting": "Création en cours…"
+  },
+  "done": {
+    "heading": "Tout est prêt",
+    "body": "Romarr est prêt. Configurez le reste du pipeline depuis Paramètres quand vous voulez — rien n'est obligatoire pour se connecter.",
+    "openDashboard": "Ouvrir le tableau de bord",
+    "configureLater": "À configurer plus tard",
+    "configureIndexers": "Indexeurs",
+    "configureDownloadClients": "Clients de téléchargement",
+    "configureMediaManagement": "Ludothèques"
+  },
+  "errors": {
+    "setupTokenInvalid": "Ce jeton d'installation n'est pas valide. Vérifiez les logs du serveur et recollez-le.",
+    "setupAlreadyDone": "Romarr est déjà configuré — connectez-vous.",
+    "validation": "Certains champs sont invalides. Vérifiez-les et réessayez.",
+    "fallback": "Échec de l'installation. Vérifiez les logs du serveur et réessayez."
+  }
+}

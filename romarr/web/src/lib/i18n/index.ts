@@ -28,7 +28,7 @@ export type Language = (typeof SUPPORTED_LANGUAGES)[number];
 export const FALLBACK_LANGUAGE: Language = "en";
 export const LANG_STORAGE_KEY = "romarr.lang";
 
-export const NAMESPACES = ["common", "errors", "settings", "auth"] as const;
+export const NAMESPACES = ["common", "errors", "settings", "auth", "setup"] as const;
 export type Namespace = (typeof NAMESPACES)[number];
 
 void i18n

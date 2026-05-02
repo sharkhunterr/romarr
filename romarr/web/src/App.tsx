@@ -32,8 +32,8 @@ import {
   GameDetailPage,
   LibraryPage,
   NotFoundPage,
-  SetupPage,
 } from "@/pages/placeholders";
+import { SetupPage } from "@/pages/Setup";
 import { SettingsHome } from "@/pages/Settings/SettingsHome";
 import { SettingsLayout } from "@/pages/Settings/SettingsLayout";
 import { SettingsPlaceholder } from "@/pages/Settings/SettingsPlaceholder";

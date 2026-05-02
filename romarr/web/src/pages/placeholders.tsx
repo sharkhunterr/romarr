@@ -87,14 +87,7 @@ export function GameDetailPage(): ReactElement {
 
 // LoginPage is shipped (slice 58) at @/pages/Login/index.tsx.
 
-export function SetupPage(): ReactElement {
-  return (
-    <PageShell
-      title="Welcome to Romarr"
-      subtitle="First-boot wizard (P-SETUP phase)."
-    />
-  );
-}
+// SetupPage is shipped (slice 59) at @/pages/Setup/index.tsx.
 
 export function NotFoundPage(): ReactElement {
   return (
