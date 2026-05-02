@@ -947,6 +947,22 @@ contributors, the WATCH and EXTRACT phases (Day 2-3) split cleanly.
 > symmetrically with the failure-path branch — both reach
 > for `make_<kind>_outcome` and inherit a known-good
 > persist + project pair.
+>
+> **Slice 79 (2026-05-02)** — landed
+> `src/romarr/importer/_park.py` with
+> `park_in_unidentified`. The orchestrator's failure path
+> calls this helper when a parkable rejection happens
+> (CL001 content-correctness reasons, CL003 destination
+> collision, CL004 zip-bomb, GameNotMatched). Idempotent
+> on `path` (the unique constraint): a second park
+> UPDATEs the existing row, bumps `attempt_count`,
+> refreshes `rejection_reason` + `last_attempt_at` while
+> preserving `discovered_at`. Hint fields
+> (`suggested_platform_id`, `suggested_game_id`,
+> `library_id`, hashes) only overwrite when the caller
+> passes non-`None` so the first signal wins. 4 tests
+> cover insert, update-with-bump, hint preservation, and
+> the suggested-game-with-platform variant.
 
 - [~] CL001 [P] [US6] Subreason-aware auto-blocklist —
       **gated on orchestrator**. The taxonomy (`RejectionReason`
