@@ -104,6 +104,7 @@ async def paginate(
     page_request: PageRequest,
     sortable_keys: dict[str, Any],
     record_adapter: Any,
+    scalars: bool = True,
 ) -> PaginationEnvelope[Any]:
     """Apply pagination + sort to ``base_query`` and return the
     canonical envelope.
@@ -118,6 +119,14 @@ async def paginate(
     (each endpoint already has one — e.g. ``IndexerRead.from_orm`` /
     ``NotificationRead.from_orm_row``). The helper applies it to
     every fetched row.
+
+    ``scalars`` (default True) controls how rows are extracted.
+    For ORM-mapped queries (``select(Foo)``), the result of
+    ``.scalars().all()`` is a list of ``Foo`` instances — the
+    common case. For projection queries (``select(literal(...),
+    table.c.x, ...)`` and especially ``UNION`` subqueries), pass
+    ``scalars=False`` so the helper returns full ``Row`` objects
+    whose columns are addressable as attributes.
 
     The total-count query runs alongside the slice query; the
     envelope's ``totalRecords`` field reflects the unfiltered
@@ -158,15 +167,16 @@ async def paginate(
         .offset((page_request.page - 1) * page_request.page_size)
         .limit(page_request.page_size)
     )
-    rows = (await session.execute(paged)).scalars().all()
+    result = await session.execute(paged)
+    rows = result.scalars().all() if scalars else result.all()
     records = [record_adapter(row) for row in rows]
 
     return PaginationEnvelope(
         page=page_request.page,
-        pageSize=page_request.page_size,
-        sortKey=sort_key,
-        sortDirection=page_request.sort_direction,
-        totalRecords=int(total_records),
+        page_size=page_request.page_size,
+        sort_key=sort_key,
+        sort_direction=page_request.sort_direction,
+        total_records=int(total_records),
         records=records,
     )
 

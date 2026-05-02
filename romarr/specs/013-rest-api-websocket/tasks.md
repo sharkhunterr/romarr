@@ -310,12 +310,19 @@ shuts down cleanly.
 - [ ] T046 [P] [ROUTERS] `tests/api/routers/test_queue.py::test_retry_endpoint`
       — POST `/api/v3/queue/{id}/retry` resets the queue row to
       `state='queued'` and re-fires spec 005's add helpers.
-- [ ] T047 [P] [ROUTERS] `tests/api/routers/test_history.py::test_paginated_history`
+- [X] T047 [P] [ROUTERS] `tests/api/routers/test_history.py::test_paginated_history_unions_all_three_tables`
       — GET `/api/v3/history` aggregates `import_history`,
-      `search_history`, `job_run` rows into a unified shape.
-- [ ] T048 [P] [ROUTERS] `tests/api/routers/test_history.py::test_since_timestamp`
-      — GET `/api/v3/history/since?date=2026-04-29T00:00:00Z`
-      returns events after the given moment.
+      `search_history`, `job_run` rows into the unified
+      `HistoryEvent` shape (eventType / id / date / gameId /
+      releaseId / successful). Companion tests pin the
+      successful-derivation per source: ImportHistory.success,
+      SearchHistory.results_count > 0, JobRun.status == 'success'.
+      Plus empty-feed, 401, and invalid-sortKey 400 cases.
+- [X] T048 [P] [ROUTERS] `tests/api/routers/test_history.py::test_since_filters_to_events_after_threshold`
+      — GET `/api/v3/history/since?date=...` filters to
+      events with `date >= since`. Companion
+      `test_since_returns_all_when_threshold_in_past` pins the
+      "everything after the past" case.
 - [X] T049 [P] [ROUTERS] `tests/api/routers/test_calendar.py::test_returns_empty_list_with_valid_range`
       — GET `/api/v3/calendar?start=...&end=...` returns `[]`
       (MVP — data sources TBD). Companion tests pin: required
@@ -388,9 +395,22 @@ shuts down cleanly.
       revalidation accepts both snake_case Python names and the
       camelCase aliases — needed for any router that returns
       `PaginationEnvelope[X]` directly via `response_model=`.
-- [ ] T058 [P] [ROUTERS] Create
+- [X] T058 [P] [ROUTERS] Create
       `src/romarr/api/routers/history.py` — UNION query across
-      `import_history`, `search_history`, `job_run`.
+      `import_history`, `search_history`, `job_run`. Each branch
+      projects to a common 6-column shape (event_type, id, date,
+      game_id, release_id, successful) so the UNION is type-clean
+      across SQLite + PostgreSQL. Sortable whitelist: date
+      (default), event_type, id. Sonarr-shape camelCase JSON
+      response. Companion `/since` endpoint filters on
+      `date >= since` for cheap operator polling.
+
+      As part of this slice, `paginate()` gained a `scalars: bool
+      = True` kwarg — projection queries (UNION subqueries, raw
+      column selects) need `scalars=False` so the helper returns
+      full Row objects whose columns are addressable as
+      attributes. ORM-mapped queries still get the default
+      `.scalars().all()` extraction for backwards compat.
 - [X] T059 [P] [ROUTERS] Create
       `src/romarr/api/routers/calendar.py` — MVP empty list
       backed by the `CalendarEvent` schema (id / title /

@@ -27,6 +27,7 @@ from romarr.api.middleware import (
 )
 from romarr.api.routers.auth import router as auth_router
 from romarr.api.routers.calendar import router as calendar_router
+from romarr.api.routers.history import router as history_router
 from romarr.api.routers.queue import router as queue_router
 from romarr.api.routers.status import router as system_status_router
 from romarr.api.routers.tag import router as tag_router
@@ -232,6 +233,10 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     # Spec 013 — Calendar (T059): MVP empty list. The schema is
     # pinned so the frontend can wire the month view now.
     app.include_router(calendar_router)
+    # Spec 013 — Unified history (T058): UNION across
+    # import_history / search_history / job_run, paginated.
+    # /since variant filters by minimum date for cheap polling.
+    app.include_router(history_router)
     app.include_router(providers_router)
     app.include_router(field_priority_router)
     app.include_router(refresh_router)
