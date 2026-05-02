@@ -35,8 +35,8 @@ import {
   SettingsPage,
   SetupPage,
   SystemPage,
-  WantedPage,
 } from "@/pages/placeholders";
+import { WantedPage } from "@/pages/Wanted";
 
 const router = createBrowserRouter([
   // Public bootstrap routes — no AuthGuard.

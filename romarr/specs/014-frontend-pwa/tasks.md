@@ -551,17 +551,35 @@ viewport; SC-002 (60 fps on 10 000 items) is met in a perf test.
 
 ### Tests
 
-- [ ] T088 [P] [P-WANT] `tests/unit/pages/test_Wanted.tsx::test_two_tabs`
-      — Missing + Cutoff each load their respective endpoints.
-- [ ] T089 [P] [P-WANT] `tests/unit/pages/test_Wanted.tsx::test_bulk_search`
-      — select 3 rows; click "Search Selected"; the documented
-      bulk command POST fires.
+- [~] T088 [P] [P-WANT] Vitest two-tabs test **deferred** —
+      Vitest not yet installed. The contract is implemented:
+      `WantedPage` renders Missing | Cutoff tabs; switching
+      tabs triggers the matching endpoint via
+      `useWantedMissing` / `useWantedCutoff`.
+- [~] T089 [P] [P-WANT] Bulk-search test **deferred** — bulk
+      select + bulk-search trigger need the spec 013 T043
+      bulk-search endpoint (which depends on spec 007's
+      `run_manual_search` hook). The shadcn/ui Checkbox
+      primitive also lands separately. Until those ship,
+      each row is a Link to /game/:id (drill-in workflow).
 
 ### Implementation
 
-- [ ] T090 [P-WANT] Create `src/pages/Wanted/index.tsx` with the
-      Missing/Cutoff tabs; bulk-select state; FAB for
-      bulk-search trigger.
+- [~] T090 [P-WANT] `src/pages/Wanted/index.tsx` shipped with
+      the Missing | Cutoff tab switcher. `ReleaseRow.tsx`
+      composes the slice 43 ROM components (RegionBadge per
+      region, ConventionBadge, DumpStatusIcon iconOnly,
+      LanguagePills with overflow). EmptyState fallback +
+      ListSkeleton during initial load. Bulk-select +
+      bulk-search-trigger FAB **deferred** to a follow-up
+      slice when the spec 013 T043 endpoint and shadcn/ui
+      Checkbox primitive are ready.
+
+      `src/lib/api/queries/wanted.ts` shipped: `useWantedMissing`
+      and `useWantedCutoff` against the spec 013 wanted
+      router (`/api/v3/wanted/missing` and
+      `/api/v3/wanted/cutoff`). Both 30s staleTime, typed via
+      the `WantedReleaseRead` schema.
 
 **Checkpoint**: bulk-search workflow works end-to-end.
 

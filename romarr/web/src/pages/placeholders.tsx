@@ -69,14 +69,8 @@ export function GameDetailPage(): ReactElement {
   );
 }
 
-export function WantedPage(): ReactElement {
-  return (
-    <PageShell
-      title="Wanted"
-      subtitle="Missing | Cutoff tabs (P-WANT phase)."
-    />
-  );
-}
+// WantedPage is the second real page implementation; lives at
+// @/pages/Wanted/index.tsx (slice 48, P-WANT).
 
 export function ActivityPage(): ReactElement {
   return (
