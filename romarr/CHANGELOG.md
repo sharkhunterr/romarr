@@ -3,6 +3,146 @@
 All notable changes to Romarr land here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with semver.
 
+## [0.14.0a1] — 2026-05-02
+
+### Added
+
+- **Spec 014 — Frontend (React PWA)**: ships the operator-facing
+  SPA shipped at `web/` — React 18 + TypeScript strict + Vite +
+  Tailwind 3 + pnpm. Bundle ~448 KB / ~130 KB gzip on the
+  initial route, well under the 500 KB budget (FR-040,
+  SC-009). Mobile-first (every page validated at 360 px),
+  installable PWA, FR + EN end-to-end.
+
+  **Foundation**:
+
+  - **OpenAPI codegen**: `web/openapi.json` is the canonical
+    snapshot; `pnpm codegen` regenerates `src/types/api/schema.ts`
+    via `openapi-typescript`. Type-check-time smoke fixture
+    in `src/types/api/codegen-smoke.ts` pins the contract.
+  - **Routing**: React Router v6 data router with the 11
+    documented protected routes + 2 public (login / setup),
+    sitting under `AuthGuard` → `AppLayout` → page outlet.
+  - **Theme**: dark / light / auto via `useThemeStore`
+    (zustand-persist under `romarr.theme`); no-flash inline
+    script in `index.html` resolves the persisted choice
+    before React hydrates.
+  - **WebSocket bridge** (`useWebSocketBridge`): boots after
+    auth, exponential reconnection backoff
+    (1 s → 2 → 4 → 8 → 16 → 30 s cap), 30 s keepalive ping,
+    10 s offline-grace timer, auth-rejected (1008) abort.
+    `eventToInvalidations(messageType) -> QueryKey[]` drives
+    TanStack Query invalidations on the 12 documented
+    message types. `systemMessage` welcome envelopes
+    surface as info toasts.
+  - **PWA**: vite-plugin-pwa generates the manifest, service
+    worker, and registration shim. Workbox runtime caching:
+    `NetworkFirst` for `/api/v3/*` GETs (5-min cache, 5 s
+    timeout, mutating verbs bypass the SW),
+    `StaleWhileRevalidate` for `/locales/{lng}/{ns}.json`,
+    `CacheFirst` for static `.js/.css/.woff2/.svg/.png/.ico`.
+    `beforeinstallprompt` captured globally via
+    `useInstallPrompt`; Install button surfaces in
+    `/settings/ui`. Offline fallback page when the SPA shell
+    is missing.
+  - **i18n** (FR-011, FR-012): i18next + react-i18next +
+    i18next-http-backend + i18next-browser-languagedetector.
+    11 namespaces (`common`, `errors`, `settings`, `auth`,
+    `setup`, `dashboard`, `wanted`, `activity`, `system`,
+    `calendar`, `search`) shipped EN + FR end-to-end. Locale
+    bundles fetched lazily; persisted under `romarr.lang`.
+  - **Toast notifications** (`useToastStore` + `ToastViewport`):
+    five-kind palette (info / success / warning / error)
+    with hover-pause, mobile-top / desktop-bottom-right
+    placement, ARIA-live announcements.
+
+  **Reusable components**:
+
+  - **Ten ROM-specific components** (`components/rom/*`):
+    `RegionBadge`, `ConventionBadge`, `DumpStatusIcon`,
+    `MultiDiscAccordion`, `HashBadge`, `ScoreBadge`,
+    `LanguagePills`, `DatVerifiedBadge`, `PlatformIcon`,
+    `CoverImage`. First-class per the constitution.
+  - **Shared chrome**: `Header` (sticky, with theme +
+    language toggles + connection indicator + ⌘K search
+    pill on md+), `BottomNav` (mobile, 5 entries with 44 ×
+    44 px hit targets), `AppLayout` (auth-gated shell),
+    `ConnectionIndicator`, `LanguageToggle`,
+    `InstallButton`, `EmptyState`, `LoadingSkeleton`,
+    `FloatingActionButton`, `GlobalSearchModal`,
+    `ToastViewport`.
+
+  **Pages** (each i18n'd, mobile-first):
+
+  - **Dashboard** (`/`): system-status stat cards,
+    HealthPanel, recent-activity feed (last 10), three
+    Quick Actions (MissingSearch / Backup / Open Wanted)
+    with toast feedback.
+  - **Wanted** (`/wanted`): Missing | Cutoff tabs over the
+    spec 013 wanted router. ReleaseRow composes the ROM
+    badges (region, convention, dump-status, languages).
+  - **Activity** (`/activity`): Queue (5 s polling) +
+    History tabs over the spec 013 queue + history routers.
+    Per-row progress bars, paginated history nav.
+  - **System** (`/system`): Status + Tasks + Logs + Backups
+    tabs over the spec 011/012/013 system surfaces. Manual
+    job triggers, backup-now command, log download links.
+  - **Calendar** (`/calendar`): month-grid skeleton over
+    /api/v3/calendar — kept reachable by direct URL only,
+    intentionally unlinked from the nav (operator feedback:
+    decades-old ROMs have no upcoming-release calendar).
+  - **Login** (`/login`): username + password form against
+    /api/v3/auth/login with the documented `returnTo` flow
+    + i18n'd ApiError mapping.
+  - **Setup** (`/setup`): 3-step first-boot wizard
+    (Welcome / Admin / Done) consuming the X-Setup-Token
+    header. Done step links to the deferred Settings
+    sub-pages for Library / Indexers / Download Clients.
+  - **Settings shell** (`/settings`): SettingsLayout with a
+    12-entry sidebar nav (sticky on md+, vertical list on
+    mobile), SettingsHome welcome panel, SettingsPlaceholder
+    for sub-pages awaiting their backend slice.
+  - **Settings sub-pages shipped**: **Tags** (full CRUD with
+    polymorphic detail + force-delete on `tag_in_use`),
+    **UI** (canonical theme + language switchers + PWA
+    install panel), **Indexers** (list + test + delete),
+    **Download Clients** (list + test + delete with the
+    spec 006 `error_code` taxonomy), **Connect** /
+    notifications (list + test + delete with redacted Apprise
+    URLs), **Metadata Sources** (list + enable/priority +
+    test against the 9 documented providers), **Profiles**
+    (six-tab page with Quality + Custom Formats real, four
+    others coming soon). Remaining sub-pages
+    (media-management, quality-definitions, dat-sources,
+    platforms, general) render the placeholder until their
+    backend endpoints land.
+  - **Library / GameDetail / AddNew**: placeholder until
+    the Game backend surface ships.
+
+  **Operator UX**:
+
+  - **Global search** (⌘K): modal with three result groups
+    (Recent / Settings / Games + Releases). Settings
+    matches against slug + i18n label. Recent searches
+    persisted under `romarr.search.recent` (capped at 5,
+    dedup-on-push). Games + Releases marked deferred until
+    backend search lands.
+  - **Accessibility**: `prefers-reduced-motion: reduce`
+    honored globally (kills animations + transitions).
+    Icon-only buttons carry aria-labels. Focus-visible
+    outlines.
+
+  **Deferred** (gated on either backend specs or test
+  tooling): real `Library` / `GameDetail` / `AddNew` pages,
+  the four Profiles sub-tabs (Region / Dump / Language /
+  Naming), Settings sub-pages for media-management /
+  quality-definitions / dat-sources / platforms / general,
+  field-priority drag-and-drop editor, Web Push subscription
+  wiring, Vitest unit tests across 30+ deferred test cases,
+  Playwright E2E suite, Lighthouse CI gate, axe-core CI gate,
+  eslint config + react/jsx-no-literals lint enforcement.
+  Tracked in `specs/014-frontend-pwa/tasks.md`.
+
 ## [0.13.0a1] — 2026-05-02
 
 ### Added

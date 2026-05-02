@@ -1070,10 +1070,17 @@ is small but cross-cutting.
       Performance / Accessibility / Best Practices / PWA (SC-003).
 - [ ] T134 [HARD] Static check — every ROM component is imported
       by ≥ 2 pages (SC-009-equivalent for the components layer).
-- [ ] T135 [HARD] Update repo `CHANGELOG.md`: "0.14.0a1 — Frontend
-      (React PWA): mobile-first, installable PWA, FR + EN, 11
-      pages, 10 ROM components, OpenAPI codegen, SignalR-compat
-      WebSocket consumer."
+- [X] T135 [HARD] CHANGELOG.md gained the `[0.14.0a1] —
+      2026-05-02` entry (slice 74). Comprehensive frontend
+      summary: foundation (codegen / routing / theme / WS /
+      PWA / i18n / toasts), 10 ROM components + shared chrome,
+      every shipped page (Dashboard / Wanted / Activity /
+      System / Calendar / Login / Setup / Settings shell + 7
+      sub-pages), operator UX (global search + a11y), and the
+      explicit deferred list. Version bumped: pyproject.toml
+      + src/romarr/__init__.py 0.13.0a1 → 0.14.0a1, web/
+      package.json 0.0.0 → 0.14.0-alpha.1 (npm semver
+      friendly).
 - [ ] T136 [HARD] Final review: tick every Functional Requirement
       (FR-001 → FR-041) against a task ID; record gaps as follow-
       up items.

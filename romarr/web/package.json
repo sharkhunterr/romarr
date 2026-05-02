@@ -1,7 +1,7 @@
 {
   "name": "@romarr/web",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.14.0-alpha.1",
   "type": "module",
   "description": "Romarr's React 18 + TypeScript PWA frontend (spec 014).",
   "scripts": {
