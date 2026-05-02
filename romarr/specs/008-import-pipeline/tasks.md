@@ -1003,6 +1003,23 @@ contributors, the WATCH and EXTRACT phases (Day 2-3) split cleanly.
 > minimum-passthrough, None-title coercion, optional
 > signals, UNKNOWN dump_status pass-through, and the
 > frozen-immutability invariant.
+>
+> **Slice 83 (2026-05-02)** — landed
+> `src/romarr/importer/_manual.py` with
+> `manual_import_known(...)`. The first end-to-end orchestrator
+> entry point — composes the helpers from slices 77-81 into a
+> real flow for the manual-match path: hash (if not
+> precomputed) → coalesce check via `find_existing_dump` →
+> if hit: short-circuit `make_success_outcome(coalesced=True)`
+> else: `persist_dump` (delegates to spec 008's DBUPDATE step)
+> + `make_success_outcome(coalesced=False)`. Drives the future
+> `POST /api/v3/rom/unidentified/{id}/match` endpoint. Skips
+> EXTRACT / IDENTIFY / PROFILEGATE / RENDER / MOVE — manual
+> flow assumes the operator already chose dest_path + Release.
+> 4 tests cover insert + Release transition + history row,
+> coalesce when same-sha1 dump exists, hash-from-disk when
+> caller omits hashes, and `imported_via` round-trip. Full
+> importer test sweep: 150 passed.
 
 - [~] CL001 [P] [US6] Subreason-aware auto-blocklist —
       **gated on orchestrator**. The taxonomy (`RejectionReason`
