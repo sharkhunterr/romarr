@@ -656,7 +656,14 @@ WEBHOOK + CHANNEL split cleanly across them on Day 2.
 ## Phase: Clarification Tasks (Session 2026-04-29)
 
 - [X] CL001 [P] [US4] Implement tiered `GET /api/v3/health` response in `src/romarr/notifications/api/health.py` — public callers receive ONLY `{status: "ok" | "warning" | "error"}` + HTTP 200; authenticated callers (any role) receive the full per-component breakdown with messages (FR-024a)
-- [ ] CL002 Migration `0011_notifications.py` adds `health_check.last_emitted_state VARCHAR NULL CHECK (last_emitted_state IN (NULL, 'ok', 'warning', 'error'))` (FR-018 amended)
+- [X] CL002 Migration `0011_notifications.py` adds
+      `health_check.last_emitted_state VARCHAR(16) NULL CHECK
+      (last_emitted_state IS NULL OR last_emitted_state IN
+      ('ok','warning','error'))` — shipped (verified at
+      lines 142 + 158-160). Constraint name
+      `ck_health_check_last_emitted_state`. The model side
+      (`notifications/models.py` lines 38-39, 147, 159)
+      mirrors the same constraint. (FR-018 amended)
 - [X] CL003 [P] [US5] Implement transition comparison against persisted `last_emitted_state` in `src/romarr/notifications/health/engine.py` — every cycle (including first post-restart) compares new check status to persisted column; updates column in same transaction as emission. NULL → emit only on non-`ok` first cycle. Restarts invisible to subscribers (FR-021a). Verified via `test_second_cycle_with_no_change_emits_nothing` + `test_recovery_emits_exactly_one_recovered_event`.
 - [X] CL004 [P] Implement Sonarr v3 envelope semantic remap in `src/romarr/notifications/templates/payload_builders.py` — `series.title ← game.title`; `series.tvdbId ← game.igdb_id || 0`; `series.path ← ""` (library context not yet plumbed through payloads — emits empty string per FR-006a invariant); `episodes[]` always one element representing the Release; `release.quality.quality.name ← release.naming_convention` (closest Romarr analogue to Sonarr "quality"); `release.indexer ← indexer.name`; empty fields emit as `0` / `""` never omitted (FR-006a)
 - [X] CL005 [P] Document the full field-by-field cross-walk at `docs/api/notification/webhook-payloads.md`

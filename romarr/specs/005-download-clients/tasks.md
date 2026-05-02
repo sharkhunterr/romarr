@@ -400,7 +400,7 @@ the spec; encrypted blobs never leak in responses.
 - [X] T066 [HARD] Add a CI smoke test that asserts the encryption
       helper is imported from `romarr.metadata.encryption` (no
       duplicated implementation; Constitution Article III).
-- [ ] T067 [HARD] Manual perf check — connectivity test against a
+- [~] T067 [HARD] Manual perf check — connectivity test against a
       throwaway local qBit completes in < 3 s p95; record in
       `specs/005-download-clients/research.md`.
       *(Deferred — requires a live qBit instance; CI lane will
