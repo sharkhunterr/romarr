@@ -6,21 +6,24 @@
  * the admin-only download endpoint
  * /api/v3/system/log/file/{filename}; the cookie session
  * carries auth.
+ *
+ * Strings resolve through `system:logs.*` (slice 69).
  */
 
-/* eslint-disable react/jsx-no-literals -- replaced by i18n in
-   the I18N phase. */
-
 import { type ReactElement } from "react";
+import { type TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useLogFiles } from "@/lib/api/queries/system-extras";
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+function formatBytes(bytes: number, t: TFunction): string {
+  if (bytes < 1024) return t("logs.bytes", { value: bytes });
+  if (bytes < 1024 * 1024) {
+    return t("logs.kilobytes", { value: Math.round(bytes / 1024) });
+  }
+  return t("logs.megabytes", { value: (bytes / (1024 * 1024)).toFixed(1) });
 }
 
 function formatDate(dateStr: string): string {
@@ -30,13 +33,14 @@ function formatDate(dateStr: string): string {
 }
 
 export function LogsTab(): ReactElement {
+  const { t } = useTranslation("system");
   const { data, isPending, isError, error } = useLogFiles();
 
   if (isPending) return <ListSkeleton rows={5} />;
   if (isError) {
     return (
       <EmptyState
-        title="Couldn't load log files"
+        title={t("logs.loadError")}
         description={error.message}
       />
     );
@@ -44,8 +48,8 @@ export function LogsTab(): ReactElement {
   if (data.length === 0) {
     return (
       <EmptyState
-        title="No log files"
-        description="Romarr writes log files when file logging is configured. Operators may not have configured it yet."
+        title={t("logs.empty.title")}
+        description={t("logs.empty.body")}
       />
     );
   }
@@ -65,7 +69,7 @@ export function LogsTab(): ReactElement {
             </p>
             <p className="text-[0.7rem] text-zinc-500">
               {formatDate(file.lastWriteTime)} ·{" "}
-              {formatBytes(file.contentsSize)}
+              {formatBytes(file.contentsSize, t)}
             </p>
           </div>
           <a
@@ -80,7 +84,7 @@ export function LogsTab(): ReactElement {
               "focus-visible:ring-brand",
             ].join(" ")}
           >
-            Download
+            {t("logs.download")}
           </a>
         </li>
       ))}

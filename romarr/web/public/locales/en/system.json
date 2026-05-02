@@ -1,0 +1,76 @@
+{
+  "title": "System",
+  "subtitle": "Status, scheduled tasks, log files, and backups.",
+  "tabs": {
+    "status": "Status",
+    "tasks": "Tasks",
+    "logs": "Logs",
+    "backup": "Backup",
+    "ariaLabel": "System tabs"
+  },
+  "status": {
+    "loadError": "Couldn't load system status",
+    "dash": "—",
+    "empty": "(empty)",
+    "unset": "(unset)",
+    "true": "true",
+    "false": "false",
+    "labels": {
+      "version": "Version",
+      "instance": "Instance",
+      "production": "Production",
+      "os": "OS",
+      "runtime": "Runtime",
+      "runtimeVersion": "Runtime version",
+      "appData": "App data",
+      "urlBase": "URL base",
+      "databaseType": "Database type",
+      "databaseVersion": "Database version",
+      "migrationVersion": "Migration version",
+      "startTime": "Started at"
+    }
+  },
+  "tasks": {
+    "loadError": "Couldn't load tasks",
+    "empty": {
+      "title": "No scheduled tasks",
+      "body": "The seeder populates the factory-default jobs on first boot."
+    },
+    "schedule": {
+      "cron": "cron: {{value}}",
+      "intervalSeconds": "every {{count}}s",
+      "intervalMinutes": "every {{count}}m",
+      "intervalHours": "every {{count}}h",
+      "eventDriven": "event-driven"
+    },
+    "lastNext": "last: {{last}} · next: {{next}}",
+    "dash": "—",
+    "trigger": "Run now",
+    "triggering": "Triggering…"
+  },
+  "logs": {
+    "loadError": "Couldn't load log files",
+    "empty": {
+      "title": "No log files",
+      "body": "Romarr writes log files when file logging is configured. Operators may not have configured it yet."
+    },
+    "download": "Download",
+    "bytes": "{{value}} B",
+    "kilobytes": "{{value}} KB",
+    "megabytes": "{{value}} MB"
+  },
+  "backups": {
+    "intro": "Backups land under the configured backup directory.",
+    "trigger": "Backup now",
+    "running": "Running…",
+    "loadError": "Couldn't load backups",
+    "empty": {
+      "title": "No backups yet",
+      "body": "Run the scheduled Backup job or click Backup now to create one."
+    },
+    "bytes": "{{value}} B",
+    "kilobytes": "{{value}} KB",
+    "megabytes": "{{value}} MB",
+    "gigabytes": "{{value}} GB"
+  }
+}

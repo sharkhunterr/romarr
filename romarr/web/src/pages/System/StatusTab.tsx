@@ -6,12 +6,12 @@
  * runtimeVersion / appData / startTime / databaseType /
  * databaseVersion / migrationVersion / runtimeName) per the
  * spec 013 status endpoint authenticated tier.
+ *
+ * Strings resolve through `system:status.*` (slice 69).
  */
 
-/* eslint-disable react/jsx-no-literals -- replaced by i18n in
-   the I18N phase. */
-
 import { type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Skeleton } from "@/components/shared/LoadingSkeleton";
@@ -20,6 +20,7 @@ import { useSystemStatus } from "@/lib/api/queries/system";
 interface RowProps {
   label: string;
   value: string | undefined;
+  fallback: string;
 }
 
 function StatusRow(props: RowProps): ReactElement {
@@ -29,13 +30,14 @@ function StatusRow(props: RowProps): ReactElement {
         {props.label}
       </dt>
       <dd className="font-mono text-xs text-zinc-200">
-        {props.value ?? "—"}
+        {props.value ?? props.fallback}
       </dd>
     </div>
   );
 }
 
 export function StatusTab(): ReactElement {
+  const { t } = useTranslation("system");
   const { data, isPending, isError, error } = useSystemStatus();
 
   if (isPending) {
@@ -51,35 +53,84 @@ export function StatusTab(): ReactElement {
   if (isError) {
     return (
       <EmptyState
-        title="Couldn't load system status"
+        title={t("status.loadError")}
         description={error.message}
       />
     );
   }
 
+  const dash = t("status.dash");
+  const empty = t("status.empty");
+  const unset = t("status.unset");
+
   return (
     <dl className="rounded-md border border-zinc-800 bg-zinc-900/40 px-4">
-      <StatusRow label="Version" value={data.version} />
-      <StatusRow label="Instance" value={data.instanceName} />
       <StatusRow
-        label="Production"
-        value={data.isProduction ? "true" : "false"}
-      />
-      <StatusRow label="OS" value={data.osName} />
-      <StatusRow label="Runtime" value={data.runtimeName} />
-      <StatusRow label="Runtime version" value={data.runtimeVersion} />
-      <StatusRow label="App data" value={data.appData} />
-      <StatusRow label="URL base" value={data.urlBase || "(empty)"} />
-      <StatusRow label="Database type" value={data.databaseType} />
-      <StatusRow
-        label="Database version"
-        value={data.databaseVersion || "(unset)"}
+        label={t("status.labels.version")}
+        value={data.version}
+        fallback={dash}
       />
       <StatusRow
-        label="Migration version"
-        value={data.migrationVersion || "(unset)"}
+        label={t("status.labels.instance")}
+        value={data.instanceName}
+        fallback={dash}
       />
-      <StatusRow label="Started at" value={data.startTime} />
+      <StatusRow
+        label={t("status.labels.production")}
+        value={
+          data.isProduction === undefined
+            ? undefined
+            : data.isProduction
+              ? t("status.true")
+              : t("status.false")
+        }
+        fallback={dash}
+      />
+      <StatusRow
+        label={t("status.labels.os")}
+        value={data.osName}
+        fallback={dash}
+      />
+      <StatusRow
+        label={t("status.labels.runtime")}
+        value={data.runtimeName}
+        fallback={dash}
+      />
+      <StatusRow
+        label={t("status.labels.runtimeVersion")}
+        value={data.runtimeVersion}
+        fallback={dash}
+      />
+      <StatusRow
+        label={t("status.labels.appData")}
+        value={data.appData}
+        fallback={dash}
+      />
+      <StatusRow
+        label={t("status.labels.urlBase")}
+        value={data.urlBase || empty}
+        fallback={dash}
+      />
+      <StatusRow
+        label={t("status.labels.databaseType")}
+        value={data.databaseType}
+        fallback={dash}
+      />
+      <StatusRow
+        label={t("status.labels.databaseVersion")}
+        value={data.databaseVersion || unset}
+        fallback={dash}
+      />
+      <StatusRow
+        label={t("status.labels.migrationVersion")}
+        value={data.migrationVersion || unset}
+        fallback={dash}
+      />
+      <StatusRow
+        label={t("status.labels.startTime")}
+        value={data.startTime}
+        fallback={dash}
+      />
     </dl>
   );
 }

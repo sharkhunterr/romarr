@@ -1,0 +1,76 @@
+{
+  "title": "Système",
+  "subtitle": "État, tâches planifiées, fichiers de log et sauvegardes.",
+  "tabs": {
+    "status": "État",
+    "tasks": "Tâches",
+    "logs": "Logs",
+    "backup": "Sauvegarde",
+    "ariaLabel": "Onglets Système"
+  },
+  "status": {
+    "loadError": "Impossible de charger l'état système",
+    "dash": "—",
+    "empty": "(vide)",
+    "unset": "(non défini)",
+    "true": "true",
+    "false": "false",
+    "labels": {
+      "version": "Version",
+      "instance": "Instance",
+      "production": "Production",
+      "os": "OS",
+      "runtime": "Runtime",
+      "runtimeVersion": "Version runtime",
+      "appData": "Données app",
+      "urlBase": "Base d'URL",
+      "databaseType": "Type de base",
+      "databaseVersion": "Version de base",
+      "migrationVersion": "Version de migration",
+      "startTime": "Démarré à"
+    }
+  },
+  "tasks": {
+    "loadError": "Impossible de charger les tâches",
+    "empty": {
+      "title": "Aucune tâche planifiée",
+      "body": "Le seeder remplit le catalogue factory au premier démarrage."
+    },
+    "schedule": {
+      "cron": "cron : {{value}}",
+      "intervalSeconds": "toutes les {{count}}s",
+      "intervalMinutes": "toutes les {{count}}min",
+      "intervalHours": "toutes les {{count}}h",
+      "eventDriven": "déclenchée"
+    },
+    "lastNext": "dernier : {{last}} · prochain : {{next}}",
+    "dash": "—",
+    "trigger": "Exécuter",
+    "triggering": "Exécution…"
+  },
+  "logs": {
+    "loadError": "Impossible de charger les logs",
+    "empty": {
+      "title": "Aucun fichier de log",
+      "body": "Romarr écrit des fichiers de log si le logging fichier est configuré. L'opérateur ne l'a peut-être pas encore configuré."
+    },
+    "download": "Télécharger",
+    "bytes": "{{value}} o",
+    "kilobytes": "{{value}} Ko",
+    "megabytes": "{{value}} Mo"
+  },
+  "backups": {
+    "intro": "Les sauvegardes atterrissent dans le répertoire configuré.",
+    "trigger": "Sauvegarder",
+    "running": "En cours…",
+    "loadError": "Impossible de charger les sauvegardes",
+    "empty": {
+      "title": "Aucune sauvegarde",
+      "body": "Lancez la tâche planifiée Backup ou cliquez sur Sauvegarder pour en créer une."
+    },
+    "bytes": "{{value}} o",
+    "kilobytes": "{{value}} Ko",
+    "megabytes": "{{value}} Mo",
+    "gigabytes": "{{value}} Go"
+  }
+}

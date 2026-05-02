@@ -37,6 +37,7 @@ export const NAMESPACES = [
   "dashboard",
   "wanted",
   "activity",
+  "system",
 ] as const;
 export type Namespace = (typeof NAMESPACES)[number];
 

@@ -5,12 +5,13 @@
  * last-run status, and a manual-trigger button. Per-row pause
  * and edit-schedule UIs land with the dedicated task-editor
  * slice (P-SYS sub-slice).
+ *
+ * Strings resolve through `system:tasks.*` (slice 69).
  */
 
-/* eslint-disable react/jsx-no-literals -- replaced by i18n in
-   the I18N phase. */
-
 import { type ReactElement } from "react";
+import { type TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
@@ -25,22 +26,28 @@ const STATUS_BADGE: Record<string, string> = {
   running: "bg-sky-700/30 text-sky-200 ring-sky-500/40",
 };
 
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "—";
+function formatDate(dateStr: string | null | undefined, t: TFunction): string {
+  if (!dateStr) return t("tasks.dash");
   const date = new Date(dateStr);
   if (Number.isNaN(date.getTime())) return dateStr;
   return date.toLocaleString();
 }
 
-function formatSchedule(job: Job): string {
-  if (job.schedule_cron) return `cron: ${job.schedule_cron}`;
+function formatSchedule(job: Job, t: TFunction): string {
+  if (job.schedule_cron) return t("tasks.schedule.cron", { value: job.schedule_cron });
   if (job.schedule_interval_seconds) {
     const seconds = job.schedule_interval_seconds;
-    if (seconds < 60) return `every ${seconds}s`;
-    if (seconds < 3600) return `every ${Math.round(seconds / 60)}m`;
-    return `every ${Math.round(seconds / 3600)}h`;
+    if (seconds < 60) return t("tasks.schedule.intervalSeconds", { count: seconds });
+    if (seconds < 3600) {
+      return t("tasks.schedule.intervalMinutes", {
+        count: Math.round(seconds / 60),
+      });
+    }
+    return t("tasks.schedule.intervalHours", {
+      count: Math.round(seconds / 3600),
+    });
   }
-  return "event-driven";
+  return t("tasks.schedule.eventDriven");
 }
 
 interface TaskRowProps {
@@ -50,6 +57,7 @@ interface TaskRowProps {
 }
 
 function TaskRow(props: TaskRowProps): ReactElement {
+  const { t } = useTranslation("system");
   const { job, onTrigger, busy } = props;
   const statusClass =
     STATUS_BADGE[job.last_run_status ?? ""] ??
@@ -63,7 +71,7 @@ function TaskRow(props: TaskRowProps): ReactElement {
             {job.name}
           </p>
           <p className="font-mono text-[0.7rem] text-zinc-500">
-            {job.id} · {formatSchedule(job)}
+            {job.id} · {formatSchedule(job, t)}
           </p>
         </div>
         {job.last_run_status && (
@@ -81,8 +89,10 @@ function TaskRow(props: TaskRowProps): ReactElement {
 
       <div className="mt-2 flex items-center justify-between">
         <p className="text-[0.7rem] text-zinc-500">
-          last: {formatDate(job.last_run_at)} · next:{" "}
-          {formatDate(job.next_run_at)}
+          {t("tasks.lastNext", {
+            last: formatDate(job.last_run_at, t),
+            next: formatDate(job.next_run_at, t),
+          })}
         </p>
         {job.enabled && (
           <button
@@ -97,7 +107,7 @@ function TaskRow(props: TaskRowProps): ReactElement {
               "disabled:cursor-not-allowed disabled:opacity-60",
             ].join(" ")}
           >
-            {busy ? "Triggering…" : "Run now"}
+            {busy ? t("tasks.triggering") : t("tasks.trigger")}
           </button>
         )}
       </div>
@@ -112,6 +122,7 @@ function TaskRow(props: TaskRowProps): ReactElement {
 }
 
 export function TasksTab(): ReactElement {
+  const { t } = useTranslation("system");
   const { data, isPending, isError, error } = useTasks();
   const trigger = useTriggerCommand();
 
@@ -119,7 +130,7 @@ export function TasksTab(): ReactElement {
   if (isError) {
     return (
       <EmptyState
-        title="Couldn't load tasks"
+        title={t("tasks.loadError")}
         description={error.message}
       />
     );
@@ -127,8 +138,8 @@ export function TasksTab(): ReactElement {
   if (data.length === 0) {
     return (
       <EmptyState
-        title="No scheduled tasks"
-        description="The seeder populates the factory-default jobs on first boot."
+        title={t("tasks.empty.title")}
+        description={t("tasks.empty.body")}
       />
     );
   }

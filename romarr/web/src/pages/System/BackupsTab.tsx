@@ -7,24 +7,32 @@
  * (POST /api/v3/command {"name": "Backup"}); per-row delete
  * is admin-only and lives in a follow-up slice with the
  * destructive-confirm modal.
+ *
+ * Strings resolve through `system:backups.*` (slice 69).
  */
 
-/* eslint-disable react/jsx-no-literals -- replaced by i18n in
-   the I18N phase. */
-
 import { type ReactElement } from "react";
+import { type TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useTriggerCommand } from "@/lib/api/queries/system";
 import { useBackups } from "@/lib/api/queries/system-extras";
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+function formatBytes(bytes: number, t: TFunction): string {
+  if (bytes < 1024) return t("backups.bytes", { value: bytes });
+  if (bytes < 1024 * 1024) {
+    return t("backups.kilobytes", { value: Math.round(bytes / 1024) });
+  }
+  if (bytes < 1024 * 1024 * 1024) {
+    return t("backups.megabytes", {
+      value: (bytes / (1024 * 1024)).toFixed(1),
+    });
+  }
+  return t("backups.gigabytes", {
+    value: (bytes / (1024 * 1024 * 1024)).toFixed(2),
+  });
 }
 
 function formatDate(dateStr: string): string {
@@ -34,6 +42,7 @@ function formatDate(dateStr: string): string {
 }
 
 export function BackupsTab(): ReactElement {
+  const { t } = useTranslation("system");
   const { data, isPending, isError, error, refetch } = useBackups();
   const trigger = useTriggerCommand();
 
@@ -55,9 +64,7 @@ export function BackupsTab(): ReactElement {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-zinc-400">
-          Backups land under the configured backup directory.
-        </p>
+        <p className="text-xs text-zinc-400">{t("backups.intro")}</p>
         <button
           type="button"
           onClick={fireBackup}
@@ -69,7 +76,7 @@ export function BackupsTab(): ReactElement {
             "disabled:cursor-not-allowed disabled:opacity-60",
           ].join(" ")}
         >
-          {trigger.isPending ? "Running…" : "Backup now"}
+          {trigger.isPending ? t("backups.running") : t("backups.trigger")}
         </button>
       </div>
 
@@ -77,13 +84,13 @@ export function BackupsTab(): ReactElement {
         <ListSkeleton rows={4} />
       ) : isError ? (
         <EmptyState
-          title="Couldn't load backups"
+          title={t("backups.loadError")}
           description={error.message}
         />
       ) : data.length === 0 ? (
         <EmptyState
-          title="No backups yet"
-          description="Run the scheduled Backup job or click Backup now to create one."
+          title={t("backups.empty.title")}
+          description={t("backups.empty.body")}
         />
       ) : (
         <ul className="space-y-2">
@@ -101,7 +108,7 @@ export function BackupsTab(): ReactElement {
                 </p>
                 <p className="text-[0.7rem] text-zinc-500">
                   {formatDate(file.lastWriteTime)} ·{" "}
-                  {formatBytes(file.size)}
+                  {formatBytes(file.size, t)}
                 </p>
               </div>
             </li>

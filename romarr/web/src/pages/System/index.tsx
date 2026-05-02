@@ -12,12 +12,12 @@
  *     manual-trigger per row.
  *
  * The Updates tab is deferred per the spec ("UI placeholder").
+ *
+ * Strings resolve through the `system` namespace (slice 69).
  */
 
-/* eslint-disable react/jsx-no-literals -- replaced by i18n in
-   the I18N phase. */
-
 import { useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 
 import { BackupsTab } from "./BackupsTab";
 import { LogsTab } from "./LogsTab";
@@ -26,21 +26,15 @@ import { TasksTab } from "./TasksTab";
 
 type Tab = "status" | "tasks" | "logs" | "backup";
 
-const TAB_LABEL: Record<Tab, string> = {
-  status: "Status",
-  tasks: "Tasks",
-  logs: "Logs",
-  backup: "Backup",
-};
-
 interface TabButtonProps {
   tab: Tab;
   active: boolean;
+  label: string;
   onClick: (tab: Tab) => void;
 }
 
 function TabButton(props: TabButtonProps): ReactElement {
-  const { tab, active, onClick } = props;
+  const { tab, active, label, onClick } = props;
   return (
     <button
       type="button"
@@ -56,34 +50,53 @@ function TabButton(props: TabButtonProps): ReactElement {
       ].join(" ")}
       aria-pressed={active}
     >
-      {TAB_LABEL[tab]}
+      {label}
     </button>
   );
 }
 
 export function SystemPage(): ReactElement {
+  const { t } = useTranslation("system");
   const [tab, setTab] = useState<Tab>("status");
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-6 md:py-8">
       <header className="mb-6">
         <h1 className="font-mono text-xl font-semibold text-brand">
-          System
+          {t("title")}
         </h1>
-        <p className="mt-1 text-sm text-zinc-400">
-          Status, scheduled tasks, log files, and backups.
-        </p>
+        <p className="mt-1 text-sm text-zinc-400">{t("subtitle")}</p>
       </header>
 
       <div
         role="tablist"
-        aria-label="System tabs"
+        aria-label={t("tabs.ariaLabel")}
         className="mb-4 grid grid-cols-4 gap-1 rounded-md border border-zinc-800 bg-zinc-900/40 p-1"
       >
-        <TabButton tab="status" active={tab === "status"} onClick={setTab} />
-        <TabButton tab="tasks" active={tab === "tasks"} onClick={setTab} />
-        <TabButton tab="logs" active={tab === "logs"} onClick={setTab} />
-        <TabButton tab="backup" active={tab === "backup"} onClick={setTab} />
+        <TabButton
+          tab="status"
+          active={tab === "status"}
+          label={t("tabs.status")}
+          onClick={setTab}
+        />
+        <TabButton
+          tab="tasks"
+          active={tab === "tasks"}
+          label={t("tabs.tasks")}
+          onClick={setTab}
+        />
+        <TabButton
+          tab="logs"
+          active={tab === "logs"}
+          label={t("tabs.logs")}
+          onClick={setTab}
+        />
+        <TabButton
+          tab="backup"
+          active={tab === "backup"}
+          label={t("tabs.backup")}
+          onClick={setTab}
+        />
       </div>
 
       {tab === "status" && <StatusTab />}
