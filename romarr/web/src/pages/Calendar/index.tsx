@@ -11,12 +11,14 @@
  * release calendar to surface. The page is reachable by direct
  * URL only and kept in case a future homebrew / translation
  * calendar source is wired up.
+ *
+ * Strings resolve through the `calendar` namespace
+ * (slice 70). The localized month name comes from
+ * `Intl.DateTimeFormat` honoring the active i18next locale.
  */
 
-/* eslint-disable react/jsx-no-literals -- replaced by i18n in
-   the I18N phase. */
-
 import { useMemo, useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
@@ -25,19 +27,10 @@ import {
   type CalendarEvent,
 } from "@/lib/api/queries/calendar";
 
-const KIND_LABEL: Record<string, string> = {
-  "rom-hack": "ROM hack",
-  homebrew: "Homebrew",
-  translation: "Translation",
-  reissue: "Reissue",
-};
-
 function monthBounds(year: number, month: number): {
   start: string;
   end: string;
 } {
-  // Inclusive start, exclusive end. UTC anchored — the API contract is
-  // ISO-8601 datetime and the comparison is on releaseDateUtc.
   const start = new Date(Date.UTC(year, month, 1));
   const end = new Date(Date.UTC(year, month + 1, 1));
   return { start: start.toISOString(), end: end.toISOString() };
@@ -50,8 +43,9 @@ function MonthHeader(props: {
   onNext: () => void;
   onToday: () => void;
 }): ReactElement {
+  const { t, i18n } = useTranslation("calendar");
   const monthName = new Date(Date.UTC(props.year, props.month, 1))
-    .toLocaleDateString(undefined, {
+    .toLocaleDateString(i18n.resolvedLanguage ?? "en", {
       year: "numeric",
       month: "long",
       timeZone: "UTC",
@@ -62,7 +56,7 @@ function MonthHeader(props: {
         <button
           type="button"
           onClick={props.onPrev}
-          aria-label="Previous month"
+          aria-label={t("nav.previous")}
           className="rounded-md px-2 py-1 text-sm text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
           ←
@@ -72,12 +66,12 @@ function MonthHeader(props: {
           onClick={props.onToday}
           className="rounded-md px-2 py-1 text-xs font-medium text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
-          Today
+          {t("nav.today")}
         </button>
         <button
           type="button"
           onClick={props.onNext}
-          aria-label="Next month"
+          aria-label={t("nav.next")}
           className="rounded-md px-2 py-1 text-sm text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
           →
@@ -91,8 +85,9 @@ function MonthHeader(props: {
 }
 
 function EventCard(props: { event: CalendarEvent }): ReactElement {
+  const { t } = useTranslation("calendar");
   const { event } = props;
-  const kindLabel = KIND_LABEL[event.kind] ?? event.kind;
+  const kindLabel = t(`kind.${event.kind}`, { defaultValue: event.kind });
   return (
     <li className="rounded-md border border-zinc-800 bg-zinc-900/60 p-3">
       <div className="flex items-start justify-between gap-2">
@@ -106,7 +101,7 @@ function EventCard(props: { event: CalendarEvent }): ReactElement {
         </div>
         {event.monitored && (
           <span
-            aria-label="Monitored"
+            aria-label={t("monitoredAria")}
             className="rounded-full bg-brand/20 px-2 py-0.5 text-[0.6rem] font-medium uppercase tracking-wider text-brand"
           >
             ★
@@ -121,6 +116,7 @@ function EventCard(props: { event: CalendarEvent }): ReactElement {
 }
 
 export function CalendarPage(): ReactElement {
+  const { t } = useTranslation("calendar");
   const today = new Date();
   const [{ year, month }, setCursor] = useState({
     year: today.getUTCFullYear(),
@@ -143,11 +139,9 @@ export function CalendarPage(): ReactElement {
     <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-6 md:py-8">
       <header className="mb-6">
         <h1 className="font-mono text-xl font-semibold text-brand">
-          Calendar
+          {t("title")}
         </h1>
-        <p className="mt-1 text-sm text-zinc-400">
-          Preservation events for ROM hacks, homebrew, and fan translations.
-        </p>
+        <p className="mt-1 text-sm text-zinc-400">{t("subtitle")}</p>
       </header>
 
       <MonthHeader
@@ -167,15 +161,15 @@ export function CalendarPage(): ReactElement {
 
       {calendar.isError && (
         <EmptyState
-          title="Couldn't load calendar"
+          title={t("loadError")}
           description={calendar.error.message}
         />
       )}
 
       {calendar.isSuccess && calendar.data.length === 0 && (
         <EmptyState
-          title="Nothing scheduled"
-          description="No preservation events for this range. The Calendar surfaces upcoming homebrew, ROM hacks, and fan translations once a data source is configured."
+          title={t("empty.title")}
+          description={t("empty.body")}
         />
       )}
 

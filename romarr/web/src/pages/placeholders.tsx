@@ -3,33 +3,31 @@
  *
  * Each page is a stub that proves the route resolves and shows
  * the operator the title + a "coming soon" indicator. Real
- * implementations land in the per-page phases (P-DASH /
- * P-LIB / P-ADD / P-GAME / P-WANT / P-ACT / P-CAL / P-SET /
- * P-SYS / P-AUTH / P-SETUP).
+ * implementations land in the per-page phases (P-LIB / P-ADD /
+ * P-GAME).
  *
- * Login + Setup are the only public pages today (no AuthGuard);
- * the rest sit behind the guard in the route table.
+ * Strings resolve through `common:placeholder.*` (slice 70).
  */
 
-/* eslint-disable react/jsx-no-literals */
-
 import { type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 
-function PageShell(props: {
-  title: string;
-  subtitle?: string;
-}): ReactElement {
+interface PageShellProps {
+  titleKey: string;
+  subtitleKey: string;
+}
+
+function PageShell(props: PageShellProps): ReactElement {
+  const { t } = useTranslation("common");
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-50">
       <div className="mx-auto max-w-md px-4 py-12">
         <h1 className="font-mono text-2xl font-semibold text-brand">
-          {props.title}
+          {t(props.titleKey)}
         </h1>
-        {props.subtitle && (
-          <p className="mt-3 text-sm text-zinc-400">{props.subtitle}</p>
-        )}
+        <p className="mt-3 text-sm text-zinc-400">{t(props.subtitleKey)}</p>
         <p className="mt-8 font-mono text-xs uppercase tracking-widest text-zinc-600">
-          coming soon · placeholder
+          {t("placeholder.comingSoon")}
         </p>
       </div>
     </main>
@@ -42,8 +40,8 @@ function PageShell(props: {
 export function LibraryPage(): ReactElement {
   return (
     <PageShell
-      title="Library"
-      subtitle="Game grid with filtering / bulk select (P-LIB phase)."
+      titleKey="placeholder.library.title"
+      subtitleKey="placeholder.library.subtitle"
     />
   );
 }
@@ -51,8 +49,8 @@ export function LibraryPage(): ReactElement {
 export function AddNewPage(): ReactElement {
   return (
     <PageShell
-      title="Add New"
-      subtitle="IGDB/SS metadata search + add (P-ADD phase)."
+      titleKey="placeholder.addNew.title"
+      subtitleKey="placeholder.addNew.subtitle"
     />
   );
 }
@@ -60,8 +58,8 @@ export function AddNewPage(): ReactElement {
 export function GameDetailPage(): ReactElement {
   return (
     <PageShell
-      title="Game"
-      subtitle="Tabbed detail (Overview / Releases / History / Files / Manual Search / Notes) — P-GAME phase."
+      titleKey="placeholder.gameDetail.title"
+      subtitleKey="placeholder.gameDetail.subtitle"
     />
   );
 }
@@ -92,8 +90,8 @@ export function GameDetailPage(): ReactElement {
 export function NotFoundPage(): ReactElement {
   return (
     <PageShell
-      title="404 — Not found"
-      subtitle="The route you followed doesn't exist."
+      titleKey="placeholder.notFound.title"
+      subtitleKey="placeholder.notFound.subtitle"
     />
   );
 }

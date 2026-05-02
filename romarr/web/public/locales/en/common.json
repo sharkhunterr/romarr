@@ -34,5 +34,29 @@
     "title": "You're offline",
     "body": "Romarr can't reach the network right now. Check your connection and try again.",
     "retry": "Try again"
+  },
+  "guard": {
+    "loading": "Loading…",
+    "deactivatedTitle": "Account deactivated",
+    "deactivatedBody": "Contact your Romarr administrator to re-enable your account."
+  },
+  "placeholder": {
+    "comingSoon": "coming soon · placeholder",
+    "library": {
+      "title": "Library",
+      "subtitle": "Game grid with filtering / bulk select (P-LIB phase)."
+    },
+    "addNew": {
+      "title": "Add New",
+      "subtitle": "IGDB/SS metadata search + add (P-ADD phase)."
+    },
+    "gameDetail": {
+      "title": "Game",
+      "subtitle": "Tabbed detail (Overview / Releases / History / Files / Manual Search / Notes) — P-GAME phase."
+    },
+    "notFound": {
+      "title": "404 — Not found",
+      "subtitle": "The route you followed doesn't exist."
+    }
   }
 }

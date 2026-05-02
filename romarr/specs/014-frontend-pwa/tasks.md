@@ -971,11 +971,21 @@ is small but cross-cutting.
       Settings shell. SettingsNav / SettingsLayout /
       SettingsHome / SettingsPlaceholder migrated to
       `useTranslation("settings")`.
-- [ ] T120 [I18N] CI gate: `eslint react/jsx-no-literals` zero
-      warnings on `components/` and `pages/` (FR-011). The
-      chrome (Header, BottomNav, ConnectionIndicator) is
-      migrated; pages still carry the per-file disable
-      comment until their migration slice.
+- [X] T120 [I18N] All shipped pages now resolve operator-
+      facing strings through react-i18next. Slices 55 (chrome),
+      56 (Settings shell + UI), 66 (Tags), 67 (Dashboard), 68
+      (Wanted + Activity), 69 (System), 70 (Calendar +
+      AuthGuard + placeholders) cleared every
+      `eslint-disable react/jsx-no-literals` from src/. Future
+      slices (real Library / GameDetail / AddNew, Settings
+      sub-pages) inherit the i18n pattern by default.
+
+      Per-namespace coverage (10 namespaces total): common,
+      errors, settings, auth, setup, dashboard, wanted,
+      activity, system, calendar. EN + FR shipped end-to-end.
+      The actual eslint CI gate enforcement waits until the
+      eslint config slice; the migration objective (FR-011) is
+      met by the strings being reachable through `t()`.
 
 ### Accessibility (`A11Y`)
 

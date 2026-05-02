@@ -1,0 +1,21 @@
+{
+  "title": "Calendar",
+  "subtitle": "Preservation events for ROM hacks, homebrew, and fan translations.",
+  "nav": {
+    "previous": "Previous month",
+    "today": "Today",
+    "next": "Next month"
+  },
+  "kind": {
+    "rom-hack": "ROM hack",
+    "homebrew": "Homebrew",
+    "translation": "Translation",
+    "reissue": "Reissue"
+  },
+  "monitoredAria": "Monitored",
+  "loadError": "Couldn't load calendar",
+  "empty": {
+    "title": "Nothing scheduled",
+    "body": "No preservation events for this range. The Calendar surfaces upcoming homebrew, ROM hacks, and fan translations once a data source is configured."
+  }
+}

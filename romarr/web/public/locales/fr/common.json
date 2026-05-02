@@ -34,5 +34,29 @@
     "title": "Vous êtes hors ligne",
     "body": "Romarr n'arrive pas à joindre le réseau. Vérifiez votre connexion et réessayez.",
     "retry": "Réessayer"
+  },
+  "guard": {
+    "loading": "Chargement…",
+    "deactivatedTitle": "Compte désactivé",
+    "deactivatedBody": "Contactez votre administrateur Romarr pour réactiver votre compte."
+  },
+  "placeholder": {
+    "comingSoon": "à venir · placeholder",
+    "library": {
+      "title": "Ludothèque",
+      "subtitle": "Grille de jeux avec filtres / sélection multiple (phase P-LIB)."
+    },
+    "addNew": {
+      "title": "Ajouter",
+      "subtitle": "Recherche IGDB/SS + ajout (phase P-ADD)."
+    },
+    "gameDetail": {
+      "title": "Jeu",
+      "subtitle": "Détail tabulé (Vue d'ensemble / Releases / Historique / Fichiers / Recherche manuelle / Notes) — phase P-GAME."
+    },
+    "notFound": {
+      "title": "404 — Introuvable",
+      "subtitle": "La route que vous avez suivie n'existe pas."
+    }
   }
 }

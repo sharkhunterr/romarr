@@ -1,0 +1,21 @@
+{
+  "title": "Calendrier",
+  "subtitle": "Événements de préservation pour ROM hacks, homebrew et traductions de fans.",
+  "nav": {
+    "previous": "Mois précédent",
+    "today": "Aujourd'hui",
+    "next": "Mois suivant"
+  },
+  "kind": {
+    "rom-hack": "ROM hack",
+    "homebrew": "Homebrew",
+    "translation": "Traduction",
+    "reissue": "Réédition"
+  },
+  "monitoredAria": "Suivi",
+  "loadError": "Impossible de charger le calendrier",
+  "empty": {
+    "title": "Rien de prévu",
+    "body": "Aucun événement de préservation pour cette plage. Le Calendrier surfacera les homebrew, ROM hacks et traductions de fans à venir dès qu'une source sera configurée."
+  }
+}

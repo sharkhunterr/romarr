@@ -17,38 +17,39 @@
  * The full FR-022 chain (api-key / cookie / bearer) lives in
  * the backend; the frontend just probes /auth/me with cookie
  * credentials and trusts the answer.
+ *
+ * Strings resolve through `common:guard.*` (slice 70).
  */
 
 import { type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { useCurrentPrincipal } from "@/lib/api/queries/auth";
 
-/* eslint-disable react/jsx-no-literals -- replaced by i18n in
-   the I18N phase. */
-
 function LoadingSurface(): ReactElement {
+  const { t } = useTranslation("common");
   return (
     <div
       className="flex min-h-screen items-center justify-center bg-zinc-950 text-zinc-400"
       role="status"
       aria-live="polite"
     >
-      Loading…
+      {t("guard.loading")}
     </div>
   );
 }
 
 function DeactivatedSurface(): ReactElement {
+  const { t } = useTranslation("common");
   return (
     <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-4 text-zinc-50">
       <div className="w-full max-w-sm space-y-3 rounded-lg border border-amber-700/40 bg-amber-900/20 p-6 text-center">
         <h1 className="text-base font-semibold text-amber-200">
-          Account deactivated
+          {t("guard.deactivatedTitle")}
         </h1>
         <p className="text-sm text-amber-100/80">
-          Contact your Romarr administrator to re-enable your
-          account.
+          {t("guard.deactivatedBody")}
         </p>
       </div>
     </main>
