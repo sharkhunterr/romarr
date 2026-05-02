@@ -100,6 +100,14 @@ class Settings(BaseSettings):
         "Host through unchanged.",
     )
 
+    # Logs (spec 013)
+    log_dir: str = Field(
+        default="./data/logs",
+        description="Directory where Romarr writes rotating log "
+        "files. Read by the /api/v3/system/log/file endpoint to "
+        "enumerate and stream log files for the operator UI.",
+    )
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

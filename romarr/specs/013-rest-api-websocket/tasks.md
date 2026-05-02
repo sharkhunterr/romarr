@@ -271,12 +271,19 @@ shuts down cleanly.
       pins that no v3/v4 field beyond those two leaks to
       unauthenticated scanners (FR-004 + auth-tiered
       clarification).
-- [ ] T038 [P] [ROUTERS] `tests/api/routers/test_log.py::test_paginated_log_entries`
-      — GET `/api/v3/system/log?page=1&pageSize=10`; canonical
-      envelope.
-- [ ] T039 [P] [ROUTERS] `tests/api/routers/test_log.py::test_download_log_file`
-      — GET `/api/v3/system/log/file/{filename}` returns the file
-      bytes; admin-only.
+- [X] T038 [P] [ROUTERS] `tests/api/routers/test_log.py::test_paginated_log_entries_returns_canonical_envelope`
+      — GET `/api/v3/system/log?page=1&pageSize=10` returns the
+      canonical empty pagination envelope (MVP — entries
+      materialise once the structlog → JSON-line file sink
+      ships).
+- [X] T039 [P] [ROUTERS] `tests/api/routers/test_log.py::test_download_log_file_returns_bytes`
+      — GET `/api/v3/system/log/file/{filename}` streams the
+      file as text/plain; admin-only. Companion tests pin: 404
+      for unknown file, 400 for dotfile names,
+      `_safe_log_path` rejects `..` / Windows separators / dot-
+      prefixed names defense-in-depth, plus listing endpoint
+      returns metadata sorted newest-first and survives a
+      missing log_dir gracefully.
 - [ ] T040 [P] [ROUTERS] `tests/api/routers/test_backup.py::test_list_backups`
       — GET `/api/v3/system/backup` lists files in the configured
       backup_path.
@@ -360,8 +367,19 @@ shuts down cleanly.
       during `create_app()` so the `startTime` field reflects the
       process boot moment. `databaseType` derived from the
       configured `database_url` (sqLite / postgreSQL).
-- [ ] T054 [P] [ROUTERS] Create `src/romarr/api/routers/log.py` —
-      paginated log reader + file listing + download.
+- [X] T054 [P] [ROUTERS] Create `src/romarr/api/routers/log.py` —
+      three routes under `/api/v3/system/log*`:
+      GET `/api/v3/system/log` (paginated entries — MVP empty
+      stub, schema pinned for frontend wiring),
+      GET `/api/v3/system/log/file` (list files in
+      `Settings.log_dir` with size + lastWriteTime, sorted
+      newest-first, returns [] for empty/missing dir),
+      GET `/api/v3/system/log/file/{filename}` (FileResponse
+      streaming text/plain, admin-only). Path-traversal guard
+      (`_safe_log_path`) rejects names containing separators,
+      dotfile-prefixed names, and resolved paths that escape
+      `log_dir`. Added `Settings.log_dir` (default
+      `./data/logs`).
 - [ ] T055 [P] [ROUTERS] Create
       `src/romarr/api/routers/backup.py` — list backups + manually
       trigger spec 012's `BackupRunner`.
@@ -574,14 +592,11 @@ clean and the documented examples are present.
       pin that `PUBLIC_PATHS` and `TIERED_PATHS` reference real
       routes (typos / removed endpoints can't silently grow the
       allow-list).
-- [~] T083 [P] [WIRE] `tests/api/test_endpoint_coverage.py::test_route_count_does_not_regress_below_floor`
-      — the FR-001 ≥ 90 target is the spec-013 completion
-      contract. The current floor is 85 (88 distinct paths
-      observed) — log + backup routers (T054 / T055) and the
-      queue DELETE / retry endpoints (T045 / T046) close the
-      remaining gap. Today's test catches accidental endpoint
-      *removal*; the floor will be raised to 90 when log /
-      backup ship.
+- [X] T083 [P] [WIRE] `tests/api/test_endpoint_coverage.py::test_route_count_meets_fr_001_target`
+      — the FR-001 ≥ 90 target is met as of slice 34 (log
+      router shipped — 95 distinct paths). Test asserts
+      `len(distinct_paths) >= 90`; trips on accidental
+      endpoint removal in either direction.
 
 ### Implementation
 

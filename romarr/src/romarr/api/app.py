@@ -29,6 +29,7 @@ from romarr.api.openapi import customize_openapi
 from romarr.api.routers.auth import router as auth_router
 from romarr.api.routers.calendar import router as calendar_router
 from romarr.api.routers.history import router as history_router
+from romarr.api.routers.log import router as log_router
 from romarr.api.routers.queue import router as queue_router
 from romarr.api.routers.status import router as system_status_router
 from romarr.api.routers.tag import router as tag_router
@@ -238,6 +239,9 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     # import_history / search_history / job_run, paginated.
     # /since variant filters by minimum date for cheap polling.
     app.include_router(history_router)
+    # Spec 013 — Logs (T054): paginated entries (MVP empty), file
+    # listing, file download.
+    app.include_router(log_router)
     app.include_router(providers_router)
     app.include_router(field_priority_router)
     app.include_router(refresh_router)

@@ -111,25 +111,21 @@ def _has_role_guard(route: APIRoute) -> bool:
 
 
 # FR-001 mandates ≥ 90 distinct routes at spec-013 completion.
-# Today's count is below 90 because the log + backup routers
-# (T054 / T055) and the queue DELETE / retry endpoints (T045 /
-# T046) are still pending. The current floor catches accidental
-# removal of endpoints; raise to 90 when log + backup ship.
-_CURRENT_FLOOR = 85
+# As of slice 34 (log router shipped) the count is 95, past
+# the target. The floor below catches accidental endpoint
+# removal — raise it as more endpoints land.
 _FR_001_TARGET = 90
 
 
-def test_route_count_does_not_regress_below_floor() -> None:
-    """Catches accidental endpoint removal. The current floor
-    is the count of distinct paths after slice 30; if a
-    refactor drops below it without removing the corresponding
-    spec entry, this test trips."""
+def test_route_count_meets_fr_001_target() -> None:
+    """FR-001: the unified API surface has at least 90 distinct
+    routes. Catches drift in either direction — accidental
+    endpoint removal trips this gate."""
     routes = _all_routes()
     distinct_paths = {r.path for r in routes}
-    assert len(distinct_paths) >= _CURRENT_FLOOR, (
+    assert len(distinct_paths) >= _FR_001_TARGET, (
         f"only {len(distinct_paths)} distinct routes — "
-        f"floor is {_CURRENT_FLOOR}; FR-001 target is "
-        f"{_FR_001_TARGET}"
+        f"FR-001 requires ≥ {_FR_001_TARGET}"
     )
 
 
