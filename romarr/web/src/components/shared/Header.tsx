@@ -18,6 +18,8 @@ import { type ReactElement } from "react";
 
 import { useThemeStore, type Theme } from "@/lib/store/theme";
 
+import { ConnectionIndicator } from "./ConnectionIndicator";
+
 const THEME_LABEL: Record<Theme, string> = {
   dark: "🌙",
   light: "☀️",
@@ -61,6 +63,7 @@ export function Header(): ReactElement {
       </div>
 
       <div className="flex items-center gap-1">
+        <ConnectionIndicator />
         <button
           type="button"
           onClick={() => setTheme(NEXT_THEME[theme])}

@@ -321,26 +321,45 @@ based on auth state.
 
 ### Tests
 
-- [ ] T045 [P] [WS] `tests/unit/ws/test_reconnect_backoff.test.ts`
-      — disconnect; assert reconnection at 1 s → 2 → 4 → 8 → 30 s
-      cap.
-- [ ] T046 [P] [WS] `tests/unit/ws/test_invalidations.test.ts`
-      — `releaseImported` event triggers
-      `queryClient.invalidateQueries(['releases'])`.
-- [ ] T047 [P] [WS] `tests/unit/ws/test_offline_indicator.test.ts`
-      — disconnection > 10 s flips the offline state in the
-      Zustand UI store.
+- [~] T045 [P] [WS] `tests/unit/ws/test_reconnect_backoff.test.ts`
+      **deferred** — Vitest not yet installed. The contract
+      is implemented (`src/lib/ws/client.ts`): backoff array
+      `[1s, 2s, 4s, 8s, 16s, 30s]` with cap-at-last semantics;
+      timer cleanup on stop().
+- [~] T046 [P] [WS] `tests/unit/ws/test_invalidations.test.ts`
+      **deferred** — Vitest not yet installed. The contract
+      is implemented in `src/lib/ws/invalidations.ts` as a pure
+      function: 12 message types → query-key list. Used by the
+      bridge to invalidate TanStack Query.
+- [~] T047 [P] [WS] `tests/unit/ws/test_offline_indicator.test.ts`
+      **deferred** — Vitest not yet installed. The contract
+      is implemented (`src/lib/ws/client.ts`): a 10 s
+      offline-grace timer flips the connection store from
+      "reconnecting" to "offline". Surfaced in the header via
+      ConnectionIndicator.
 
 ### Implementation
 
-- [ ] T048 [WS] Create `src/lib/ws/client.ts` — `WebSocketClient`
+- [X] T048 [WS] `src/lib/ws/client.ts` — `WebSocketClient`
       class. Connects on app load; reconnects with exponential
-      backoff; dispatches typed events.
-- [ ] T049 [WS] Create `src/lib/ws/invalidations.ts` — pure
-      `eventToInvalidations(messageType, data) ->
-      QueryKey[]` table. Consumed by the client's event handler.
-- [ ] T050 [WS] Wire the client into `App.tsx` so it boots after
-      auth resolves.
+      backoff (1 s → 2 → 4 → 8 → 16 → 30 s cap); dispatches
+      typed envelopes via `onMessage`. 30 s keepalive ping
+      (server echoes back as systemMessage pong). Auth-rejected
+      closes (code 1008) abort reconnection — bridge restarts
+      the client when the principal query resolves again.
+- [X] T049 [WS] `src/lib/ws/invalidations.ts` — pure
+      `eventToInvalidations(messageType) -> QueryKey[]` table
+      covering all 12 documented message types. Consumed by the
+      bridge's onMessage handler to drive TanStack Query
+      invalidations.
+- [X] T050 [WS] `useWebSocketBridge` hook mounted from
+      `AppLayout` — boots the client when the principal is
+      known, tears it down on logout, wires invalidations into
+      the QueryClient and status updates into the Zustand
+      `useConnectionStore`. The header surfaces the live
+      status via `ConnectionIndicator` (idle / connecting /
+      connected / reconnecting / offline) — dot-only on mobile,
+      dot + label on md+.
 
 **Checkpoint**: WS client tests green; events trigger the right
 invalidations.
