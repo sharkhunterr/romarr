@@ -32,9 +32,11 @@ import {
   LibraryPage,
   LoginPage,
   NotFoundPage,
-  SettingsPage,
   SetupPage,
 } from "@/pages/placeholders";
+import { SettingsHome } from "@/pages/Settings/SettingsHome";
+import { SettingsLayout } from "@/pages/Settings/SettingsLayout";
+import { SettingsPlaceholder } from "@/pages/Settings/SettingsPlaceholder";
 import { TagsPage } from "@/pages/Settings/Tags";
 import { SystemPage } from "@/pages/System";
 import { WantedPage } from "@/pages/Wanted";
@@ -59,16 +61,17 @@ const router = createBrowserRouter([
           { path: "/wanted", element: <WantedPage /> },
           { path: "/activity", element: <ActivityPage /> },
           { path: "/calendar", element: <CalendarPage /> },
-          // Settings is a layout with sub-routes. The Tags
-          // sub-page is shipped (slice 51); the rest fall
-          // through to the placeholder until their phase lands.
+          // Settings is a layout with sidebar nav (slice 53).
+          // The Tags sub-page is shipped (slice 51); the rest
+          // render the placeholder under the same sidebar shell
+          // until their slice lands.
           {
             path: "/settings",
-            element: <Outlet />,
+            element: <SettingsLayout />,
             children: [
-              { index: true, element: <SettingsPage /> },
+              { index: true, element: <SettingsHome /> },
               { path: "tags", element: <TagsPage /> },
-              { path: ":sub", element: <SettingsPage /> },
+              { path: ":sub", element: <SettingsPlaceholder /> },
             ],
           },
           {

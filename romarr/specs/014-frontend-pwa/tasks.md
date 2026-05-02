@@ -692,8 +692,18 @@ manageable; each ships ≥ 1 test + an implementation.
       `src/lib/api/queries/calendar.ts` shipped:
       `useCalendar({ start, end })` typed against
       `components["schemas"]["CalendarEvent"]`.
-- [ ] T105 [P-SET] Create `src/pages/Settings/index.tsx` with the
-      sidebar nav.
+- [X] T105 [P-SET] `src/pages/Settings/SettingsLayout.tsx`
+      shipped (slice 53). Twelve-entry sidebar nav (`profiles`,
+      `media-management`, `quality-definitions`, `indexers`,
+      `download-clients`, `dat-sources`, `metadata-sources`,
+      `platforms`, `connect`, `tags`, `ui`, `general`) collapses
+      to a vertical list under 768 px. SettingsHome (the index
+      route) renders a welcome panel + "Available now" / "Coming
+      soon" sections resolved against the shared
+      `SETTINGS_NAV_ENTRIES` catalogue. SettingsPlaceholder
+      (the `:sub` route) renders an EmptyState pointing at the
+      slice that will wire each sub-page up. Tags (shipped slice
+      51) lives under the same shell.
 - [ ] T106 [P] [P-SET] Create the 11 sub-pages under
       `src/pages/Settings/` per the spec.
 - [~] T107 [P-SYS] `src/pages/System/index.tsx` shipped with

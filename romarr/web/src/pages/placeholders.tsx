@@ -80,14 +80,10 @@ export function GameDetailPage(): ReactElement {
 // not surfaced in the bottom nav — kept reachable by direct
 // URL only.
 
-export function SettingsPage(): ReactElement {
-  return (
-    <PageShell
-      title="Settings"
-      subtitle="Profiles / Indexers / Download Clients / etc. (P-SET phase)."
-    />
-  );
-}
+// SettingsPage is shipped (slice 53) at @/pages/Settings/
+// SettingsLayout + SettingsHome + SettingsPlaceholder. The
+// only real sub-page today is Tags (slice 51); the rest render
+// the placeholder under the same sidebar shell.
 
 // SystemPage is the fourth real page implementation; lives at
 // @/pages/System/index.tsx (slice 50, P-SYS).
