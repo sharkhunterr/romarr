@@ -1,11 +1,13 @@
-"""Sonarr-compat command endpoint (T063, FR-016, FR-017).
+"""Sonarr-compat command endpoint (T063, T088, FR-016, FR-017).
 
 Routes:
 
-  - POST /api/v3/command          — fire a command by name
-                                    (admin)
-  - GET  /api/v3/command/{id}     — read command status
-                                    (any auth role)
+  - POST   /api/v3/command          — fire a command by name
+                                      (admin)
+  - GET    /api/v3/command/{id}     — read command status
+                                      (any auth role)
+  - DELETE /api/v3/command/{id}     — cancel an in-flight
+                                      command (admin)
 
 The POST handler accepts Sonarr's payload shape:
 ``{"name": "<CommandName>", ...optional camelCase kwargs}``.
@@ -19,8 +21,16 @@ names match Sonarr's camelCase exactly so Notifiarr +
 Homepage poll Romarr's command queue without a translation
 layer.
 
-Admin-gated for POST per Article XII (the command endpoint
-is a privileged trigger surface — same SSRF rationale as the
+The DELETE handler is the spec-013 unified cancel surface:
+delegates to spec 012's :class:`CancellationRegistry`. Same
+two-phase semantics as the runs endpoint
+(``POST /api/v3/system/tasks/{job_id}/runs/{run_id}/cancel``):
+cooperative event signal first, force-terminate after the
+configured window. Returns 202 with the resolved ``forced``
+flag.
+
+Admin-gated for POST and DELETE per Article XII (privileged
+trigger / cancel surface — same SSRF rationale as the
 notification test endpoint). GET is reads, so any
 authenticated role suffices.
 """
@@ -53,6 +63,10 @@ router = APIRouter(prefix="/api/v3/command", tags=["Tasks"])
 
 def _scheduler(request: Request) -> Any:
     return getattr(request.app.state, "scheduler", None)
+
+
+def _cancellation_registry(request: Request) -> Any:
+    return getattr(request.app.state, "cancellation_registry", None)
 
 
 def _serialise_command_status(run: JobRun) -> dict[str, Any]:
@@ -211,6 +225,80 @@ async def get_command_status(
             },
         )
     return _serialise_command_status(run)
+
+
+@router.delete(
+    "/{command_id}",
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def cancel_command(
+    command_id: int,
+    request: Request,
+    _admin: Annotated[Principal, Depends(require_admin)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> dict[str, Any]:
+    """Cancel an in-flight command. Admin-only.
+
+    Mirrors the runs-endpoint contract: 404 if the command
+    doesn't exist; 409 if it's already in a terminal state;
+    503 if no cancellation registry is wired (scheduler off).
+    Otherwise delegates to spec 012's
+    :class:`CancellationRegistry` for the two-phase cooperative
+    cancel + force-terminate protocol and returns 202 with the
+    resolved ``forced`` flag.
+    """
+    run = await session.get(JobRun, command_id)
+    if run is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "errorMessage": "command not found",
+                "errorCode": "not_found",
+            },
+        )
+    if run.status != JobStatus.RUNNING.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "errorMessage": (
+                    f"command already in terminal state: {run.status}"
+                ),
+                "errorCode": "command_terminal",
+            },
+        )
+
+    registry = _cancellation_registry(request)
+    if registry is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "errorMessage": "cancellation registry not running",
+                "errorCode": "cancellation_unavailable",
+            },
+        )
+
+    cancelled = await registry.cancel(command_id)
+    if not cancelled:
+        # The run wasn't registered (already finished, wrong
+        # replica, race with the lifecycle helper). Surface
+        # 404 — operator UI retry is safe.
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "errorMessage": (
+                    "command is not in-flight on this replica"
+                ),
+                "errorCode": "not_found",
+            },
+        )
+
+    # Re-read so ``forced`` reflects the cancel-protocol outcome.
+    await session.refresh(run)
+    return {
+        "id": command_id,
+        "status": run.status,
+        "forced": bool(run.cancellation_forced),
+    }
 
 
 __all__ = ["router"]

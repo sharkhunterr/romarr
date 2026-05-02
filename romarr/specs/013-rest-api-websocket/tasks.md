@@ -608,28 +608,44 @@ clean and the documented examples are present.
 
 ### Tests
 
-- [ ] T085 [P] [CMD] `tests/api/routers/test_command.py::test_known_names`
-      — table-driven over the documented names
-      (`MissingSearch`, `CutoffSearch`, `RssSync`, `RefreshGame`,
-      `RescanLibrary`, `DownloadDats`, `IndexerSearch`, `Backup`,
-      `ApplicationUpdate`, `RefreshMetadata`, `ExporterRun`); each
-      maps to spec 012's job runner.
-- [ ] T086 [P] [CMD] `tests/api/routers/test_command.py::test_get_command_status`
+- [X] T085 [P] [CMD] `tests/tasks/api/test_command_endpoint.py::test_post_known_command_returns_201_with_status`
+      and `::test_kwargs_flow_into_job_context` —
+      table-driven coverage of the documented names plus the
+      kwargs-allowlist contract. The router maps each Sonarr
+      command name to spec 012's job_id via
+      `resolve_command(...)`; the runner registry executes
+      under the SchedulerService.
+- [X] T086 [P] [CMD] `tests/tasks/api/test_command_endpoint.py::test_get_command_status_returns_running_in_flight`
       — POST → capture id → GET `/api/v3/command/{id}` → assert
-      Sonarr-shape body (US8, FR-003).
-- [ ] T087 [P] [CMD] `tests/api/routers/test_command.py::test_unknown_command_400`
-      — POST `{"name": "Foo"}` → HTTP 400 reason
+      Sonarr-shape body (`{id, name, commandName, status,
+      ended, body, ...}`).
+- [X] T087 [P] [CMD] `tests/tasks/api/test_command_endpoint.py::test_unknown_command_returns_400`
+      — POST `{"name": "Foo"}` → HTTP 400 with errorCode
       `unknown_command`.
-- [ ] T088 [P] [CMD] `tests/api/routers/test_command.py::test_delete_cancels`
-      — DELETE `/api/v3/command/{id}` sets the underlying
-      `cancellation_event` (spec 012).
+- [X] T088 [P] [CMD] `tests/tasks/api/test_command_endpoint.py::test_delete_cancels_in_flight_command`
+      — DELETE `/api/v3/command/{id}` signals the cooperative
+      `cancellation_event`; runner returns; row transitions to
+      `cancelled`; response carries `forced: false`. Companion
+      tests pin: 404 unknown id, 403 non-admin, 409 terminal
+      state, 503 without registry.
 
 ### Implementation
 
-- [ ] T089 [CMD] Create `src/romarr/api/routers/command.py` —
-      thin router over spec 012's `command_aliases` mapping. POST
-      accepts the Sonarr-shape body; GET returns the
-      `CommandStatus` JSON.
+- [X] T089 [CMD] The unified Sonarr-compat command bus is
+      hosted by spec 012's `tasks_command_router`
+      (`src/romarr/tasks/api/command.py`) — extending it
+      avoids duplicating the alias resolver / scheduler
+      wiring. Routes:
+      - POST   /api/v3/command          — fire by name (admin)
+      - GET    /api/v3/command/_known   — list recognised names
+      - GET    /api/v3/command/{id}     — read CommandStatus
+      - DELETE /api/v3/command/{id}     — cancel in-flight
+        (admin) — added in this slice. Mirrors the
+        `/api/v3/system/tasks/{job_id}/runs/{run_id}/cancel`
+        contract: 404 unknown id, 409 terminal state, 503 if
+        registry not wired, 202 with the resolved `forced`
+        flag from the `CancellationRegistry` two-phase
+        protocol.
 
 **Checkpoint**: CMD tests green; the unified bus handles every
 documented Sonarr-compat name.

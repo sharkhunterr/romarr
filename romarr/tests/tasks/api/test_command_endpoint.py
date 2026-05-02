@@ -298,3 +298,142 @@ async def test_known_endpoint_lists_command_names(
     names = response.json()
     assert "MissingSearch" in names
     assert "RefreshGame" in names
+
+
+# ---------------------------------------------------------------------------
+# T088 — DELETE /api/v3/command/{id} cancels the in-flight command
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_delete_unknown_command_id_returns_404(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    await _seed_user(api_engine, username="admin", role=ROLE_ADMIN)
+    await _login(api_client, "admin")
+    response = await api_client.delete("/api/v3/command/999999")
+    assert response.status_code == 404
+    assert response.json()["errorCode"] == "not_found"
+
+
+@pytest.mark.asyncio
+async def test_delete_requires_admin(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    await _seed_user(api_engine, username="reader", role=ROLE_READONLY)
+    await _login(api_client, "reader")
+    response = await api_client.delete("/api/v3/command/1")
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_delete_terminal_command_returns_409(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """A command in a terminal status can't be cancelled — 409
+    so the operator UI knows the run completed before the cancel
+    landed."""
+    from datetime import UTC as _UTC
+    from datetime import datetime as _datetime
+
+    from romarr.tasks.models import JobRun
+
+    await _seed_user(api_engine, username="admin", role=ROLE_ADMIN)
+    await _seed_jobs(api_engine)
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        run = JobRun(
+            job_id="MissingSearch",
+            started_at=_datetime.now(_UTC),
+            finished_at=_datetime.now(_UTC),
+            status="success",
+            triggered_by="manual",
+        )
+        session.add(run)
+        await session.flush()
+        run_id = run.id
+        await session.commit()
+
+    await _login(api_client, "admin")
+    response = await api_client.delete(f"/api/v3/command/{run_id}")
+    assert response.status_code == 409
+    assert response.json()["errorCode"] == "command_terminal"
+
+
+@pytest.mark.asyncio
+async def test_delete_returns_503_without_registry(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """No CancellationRegistry on app.state ⇒ 503."""
+    from datetime import UTC as _UTC
+    from datetime import datetime as _datetime
+
+    from romarr.tasks.models import JobRun
+
+    await _seed_user(api_engine, username="admin", role=ROLE_ADMIN)
+    await _seed_jobs(api_engine)
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        run = JobRun(
+            job_id="MissingSearch",
+            started_at=_datetime.now(_UTC),
+            status="running",
+            triggered_by="manual",
+        )
+        session.add(run)
+        await session.flush()
+        run_id = run.id
+        await session.commit()
+
+    await _login(api_client, "admin")
+    response = await api_client.delete(f"/api/v3/command/{run_id}")
+    assert response.status_code == 503
+    assert response.json()["errorCode"] == "cancellation_unavailable"
+
+
+@pytest.mark.asyncio
+async def test_delete_cancels_in_flight_command(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """T088: when the registry is wired, DELETE on the command
+    id signals cancellation; the run transitions to ``cancelled``
+    and the response carries ``forced: false`` (cooperative)."""
+    import asyncio as _asyncio
+
+    from romarr.tasks.execution.cancellation import CancellationRegistry
+
+    await _seed_user(api_engine, username="admin", role=ROLE_ADMIN)
+    await _seed_jobs(api_engine)
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+
+    registry = CancellationRegistry(force_terminate_after_seconds=2.0)
+
+    async def cooperative(ctx: JobContext) -> JobResult:
+        await ctx.cancellation_event.wait()
+        return JobResult(status=JobStatus.CANCELLED)
+
+    scheduler = SchedulerService(
+        session_factory=sm,
+        runners={"MissingSearch": cooperative},
+        cancellation_registry=registry,
+    )
+
+    api_client._transport.app.state.scheduler = scheduler  # type: ignore[attr-defined]
+    api_client._transport.app.state.cancellation_registry = registry  # type: ignore[attr-defined]
+    api_client._transport.app.state.db_sessionmaker = sm  # type: ignore[attr-defined]
+
+    try:
+        await _login(api_client, "admin")
+        run_id = await scheduler.trigger("MissingSearch")
+        # Yield so the runner registers + reaches its await.
+        for _ in range(5):
+            await _asyncio.sleep(0)
+
+        response = await api_client.delete(f"/api/v3/command/{run_id}")
+        assert response.status_code == 202, response.text
+        body = response.json()
+        assert body["id"] == run_id
+        assert body["status"] == "cancelled"
+        assert body["forced"] is False
+    finally:
+        await scheduler.stop()
