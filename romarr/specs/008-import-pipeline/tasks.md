@@ -921,6 +921,18 @@ contributors, the WATCH and EXTRACT phases (Day 2-3) split cleanly.
 > is implementing `run_import` and `start_watcher` in
 > `importer/orchestrator.py`; once that lands the CL items
 > compose into it cleanly.
+>
+> **Slice 77 (2026-05-02)** — landed
+> `src/romarr/importer/_outcome.py` as a foundation for the
+> orchestrator's failure path: `map_exception_to_reason`
+> (pure mapping), `persist_failure_history` (DB write),
+> `outcome_from_failure_history` (projection), and
+> `make_failure_outcome` (composite). 12 tests (8 pure
+> mapping + 4 DB) cover every documented exception type
+> plus the unmapped-exception fallback. The orchestrator
+> can now wrap each step in `try/except` that funnels
+> through `make_failure_outcome` instead of re-implementing
+> the persist + project dance per call site.
 
 - [~] CL001 [P] [US6] Subreason-aware auto-blocklist —
       **gated on orchestrator**. The taxonomy (`RejectionReason`
