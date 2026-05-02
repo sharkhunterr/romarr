@@ -108,6 +108,15 @@ class Settings(BaseSettings):
         "enumerate and stream log files for the operator UI.",
     )
 
+    # Backups (spec 013, spec 012 BackupRunner output)
+    backup_path: str = Field(
+        default="./data/backups",
+        description="Directory where the spec 012 BackupRunner "
+        "writes archive files. Read by the "
+        "/api/v3/system/backup endpoint to enumerate and "
+        "manage backup files for the operator UI.",
+    )
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

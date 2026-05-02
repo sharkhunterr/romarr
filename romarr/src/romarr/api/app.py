@@ -27,6 +27,7 @@ from romarr.api.middleware import (
 )
 from romarr.api.openapi import customize_openapi
 from romarr.api.routers.auth import router as auth_router
+from romarr.api.routers.backup import router as backup_router
 from romarr.api.routers.calendar import router as calendar_router
 from romarr.api.routers.history import router as history_router
 from romarr.api.routers.log import router as log_router
@@ -242,6 +243,10 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     # Spec 013 — Logs (T054): paginated entries (MVP empty), file
     # listing, file download.
     app.include_router(log_router)
+    # Spec 013 — Backup management (T055): list + delete. The
+    # "trigger backup" flow is served by the command bus
+    # (POST /api/v3/command {"name": "Backup"}).
+    app.include_router(backup_router)
     app.include_router(providers_router)
     app.include_router(field_priority_router)
     app.include_router(refresh_router)

@@ -284,12 +284,21 @@ shuts down cleanly.
       prefixed names defense-in-depth, plus listing endpoint
       returns metadata sorted newest-first and survives a
       missing log_dir gracefully.
-- [ ] T040 [P] [ROUTERS] `tests/api/routers/test_backup.py::test_list_backups`
-      — GET `/api/v3/system/backup` lists files in the configured
-      backup_path.
-- [ ] T041 [P] [ROUTERS] `tests/api/routers/test_backup.py::test_create_backup_now`
-      — POST triggers spec 012's `BackupRunner` and returns the
-      command id; admin-only.
+- [X] T040 [P] [ROUTERS] `tests/api/routers/test_backup.py::test_list_backups_returns_metadata_sorted_newest_first`
+      — GET `/api/v3/system/backup` lists files under the
+      configured `backup_path` with filename / lastWriteTime /
+      size, sorted newest-first. Companion tests pin the
+      empty-dir / missing-dir / DELETE happy-path / DELETE
+      404-unknown / DELETE 403-readonly cases plus a
+      `_safe_backup_path` traversal-rejection unit test.
+- [~] T041 [P] [ROUTERS] `tests/api/routers/test_backup.py::test_create_backup_now`
+      — POST trigger is served by the unified command bus
+      (POST `/api/v3/command {"name": "Backup"}`), pinned in
+      `tests/tasks/api/test_command_endpoint.py` rather than
+      duplicated under `/api/v3/system/backup`. The
+      one-trigger-surface choice avoids two-implementations
+      drift; the BackupRunner itself is still a spec 012 stub
+      and tracked there.
 - [X] T042 [P] [ROUTERS] `tests/api/routers/test_wanted.py::test_missing_returns_only_wanted_monitored_releases`
       — GET `/api/v3/wanted/missing` returns Releases with
       `status='wanted' AND monitored=true`; canonical envelope.
@@ -380,9 +389,20 @@ shuts down cleanly.
       dotfile-prefixed names, and resolved paths that escape
       `log_dir`. Added `Settings.log_dir` (default
       `./data/logs`).
-- [ ] T055 [P] [ROUTERS] Create
-      `src/romarr/api/routers/backup.py` — list backups + manually
-      trigger spec 012's `BackupRunner`.
+- [X] T055 [P] [ROUTERS] Create
+      `src/romarr/api/routers/backup.py` — two routes under
+      `/api/v3/system/backup*`:
+      GET `/api/v3/system/backup` (list files in
+      `Settings.backup_path` with filename / lastWriteTime /
+      size, sorted newest-first; returns [] for empty/missing
+      dir; readonly auth),
+      DELETE `/api/v3/system/backup/{filename}` (admin-only
+      removal; path-traversal-guarded via `_safe_backup_path`,
+      mirrors the log router's defense-in-depth pattern).
+      Manual trigger flows through the unified command bus
+      rather than duplicating it here. Added
+      `Settings.backup_path` (default `./data/backups`,
+      `ROMARR_BACKUP_PATH` env var).
 - [~] T056 [P] [ROUTERS] Create
       `src/romarr/api/routers/wanted.py` — `/missing` and `/cutoff`
       paginated reads shipped: GET `/api/v3/wanted/missing`
