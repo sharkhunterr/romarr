@@ -1,0 +1,33 @@
+{
+  "app": {
+    "title": "Romarr"
+  },
+  "nav": {
+    "primary": "Navigation principale",
+    "library": "Ludothèque",
+    "wanted": "Souhaits",
+    "activity": "Activité",
+    "settings": "Paramètres",
+    "search": "Recherche"
+  },
+  "theme": {
+    "title": "Thème : {{mode}}",
+    "modes": {
+      "dark": "sombre",
+      "light": "clair",
+      "auto": "auto"
+    }
+  },
+  "language": {
+    "label": "Langue",
+    "english": "English",
+    "french": "Français"
+  },
+  "connection": {
+    "idle": "Déconnecté",
+    "connecting": "Connexion…",
+    "connected": "En direct",
+    "reconnecting": "Reconnexion…",
+    "offline": "Hors ligne"
+  }
+}

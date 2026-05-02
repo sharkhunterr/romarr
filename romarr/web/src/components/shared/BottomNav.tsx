@@ -1,5 +1,5 @@
 /**
- * Mobile bottom navigation (T020, FR-001).
+ * Mobile bottom navigation (T020, FR-001, T117 partial).
  *
  * Five documented entries: Library / Wanted / Activity /
  * Settings / Search. Visible on 360 px viewports; hidden on
@@ -11,26 +11,27 @@
  * (which lands with the SEARCH phase). Until then it routes
  * to /library — closest existing page that lets the operator
  * find a game.
+ *
+ * Strings are i18n-resolved (slice 55).
  */
 
-/* eslint-disable react/jsx-no-literals -- replaced by i18n in
-   the I18N phase. */
-
 import { type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
 
 interface NavEntry {
   to: string;
-  label: string;
+  /** Key under the `nav.*` namespace. */
+  i18nKey: "library" | "wanted" | "activity" | "settings" | "search";
   emoji: string;
 }
 
 const ENTRIES: readonly NavEntry[] = [
-  { to: "/library", label: "Library", emoji: "📦" },
-  { to: "/wanted", label: "Wanted", emoji: "⭐" },
-  { to: "/activity", label: "Activity", emoji: "📡" },
-  { to: "/settings", label: "Settings", emoji: "⚙️" },
-  { to: "/library", label: "Search", emoji: "🔍" },
+  { to: "/library", i18nKey: "library", emoji: "📦" },
+  { to: "/wanted", i18nKey: "wanted", emoji: "⭐" },
+  { to: "/activity", i18nKey: "activity", emoji: "📡" },
+  { to: "/settings", i18nKey: "settings", emoji: "⚙️" },
+  { to: "/library", i18nKey: "search", emoji: "🔍" },
 ];
 
 function entryClass(isActive: boolean): string {
@@ -47,9 +48,10 @@ function entryClass(isActive: boolean): string {
 }
 
 export function BottomNav(): ReactElement {
+  const { t } = useTranslation();
   return (
     <nav
-      aria-label="Primary navigation"
+      aria-label={t("nav.primary")}
       className={[
         "fixed inset-x-0 bottom-0 z-40 md:hidden",
         "h-14 border-t border-zinc-800 bg-zinc-950/95",
@@ -68,7 +70,7 @@ export function BottomNav(): ReactElement {
           <span aria-hidden="true" className="text-base leading-none">
             {entry.emoji}
           </span>
-          <span>{entry.label}</span>
+          <span>{t(`nav.${entry.i18nKey}`)}</span>
         </NavLink>
       ))}
     </nav>

@@ -1,0 +1,8 @@
+{
+  "generic": "Something went wrong.",
+  "unauthenticated": "Invalid username or password.",
+  "forbidden": "You don't have permission to do that.",
+  "notFound": "Not found.",
+  "rate_limited": "Too many requests. Try again in a moment.",
+  "server": "The server hit an error. Try again."
+}

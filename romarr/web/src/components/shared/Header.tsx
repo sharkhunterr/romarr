@@ -1,35 +1,32 @@
 /**
- * App-level header (T019).
+ * App-level header (T019, T117 partial).
  *
- * Today's slice: app title + theme toggle (dark / light /
- * auto). Language toggle, profile menu, OfflineIndicator slot,
- * and ⌘+K command-palette hint land with their owning phases
- * (I18N / P-AUTH / WS / SEARCH).
+ * Today: app title · live-connection indicator · language
+ * toggle (EN/FR) · theme toggle (dark / light / auto). Profile
+ * menu and ⌘+K command-palette hint land with the SEARCH /
+ * P-AUTH phases.
  *
  * The header sticks to the top of the viewport so the bottom
  * nav and content scroll independently — matches the documented
  * 360 px-friendly mobile layout.
+ *
+ * Strings are resolved through i18next (slice 55, FR-011) —
+ * the chrome is the first migration target; pages migrate in
+ * their own slices.
  */
 
-/* eslint-disable react/jsx-no-literals -- replaced by i18n in
-   the I18N phase. */
-
 import { type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useThemeStore, type Theme } from "@/lib/store/theme";
 
 import { ConnectionIndicator } from "./ConnectionIndicator";
+import { LanguageToggle } from "./LanguageToggle";
 
-const THEME_LABEL: Record<Theme, string> = {
+const THEME_GLYPH: Record<Theme, string> = {
   dark: "🌙",
   light: "☀️",
   auto: "💻",
-};
-
-const THEME_TITLE: Record<Theme, string> = {
-  dark: "Theme: dark",
-  light: "Theme: light",
-  auto: "Theme: auto",
 };
 
 const NEXT_THEME: Record<Theme, Theme> = {
@@ -39,8 +36,12 @@ const NEXT_THEME: Record<Theme, Theme> = {
 };
 
 export function Header(): ReactElement {
+  const { t } = useTranslation();
   const theme = useThemeStore((s) => s.theme);
   const setTheme = useThemeStore((s) => s.setTheme);
+  const themeTitle = t("theme.title", {
+    mode: t(`theme.modes.${theme}`),
+  });
 
   return (
     <header
@@ -58,12 +59,13 @@ export function Header(): ReactElement {
           className="inline-block h-2.5 w-2.5 rounded-sm bg-brand"
         />
         <span className="font-mono text-sm font-semibold tracking-tight text-zinc-100">
-          Romarr
+          {t("app.title")}
         </span>
       </div>
 
       <div className="flex items-center gap-1">
         <ConnectionIndicator />
+        <LanguageToggle />
         <button
           type="button"
           onClick={() => setTheme(NEXT_THEME[theme])}
@@ -73,10 +75,10 @@ export function Header(): ReactElement {
             "focus-visible:outline-none focus-visible:ring-2",
             "focus-visible:ring-brand",
           ].join(" ")}
-          title={THEME_TITLE[theme]}
-          aria-label={THEME_TITLE[theme]}
+          title={themeTitle}
+          aria-label={themeTitle}
         >
-          {THEME_LABEL[theme]}
+          {THEME_GLYPH[theme]}
         </button>
       </div>
     </header>

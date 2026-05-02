@@ -1,0 +1,8 @@
+{
+  "generic": "Une erreur est survenue.",
+  "unauthenticated": "Identifiant ou mot de passe invalide.",
+  "forbidden": "Vous n'avez pas la permission de faire cela.",
+  "notFound": "Introuvable.",
+  "rate_limited": "Trop de requêtes. Réessayez dans un instant.",
+  "server": "Le serveur a rencontré une erreur. Réessayez."
+}

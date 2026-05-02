@@ -1,5 +1,5 @@
 /**
- * WebSocket connection indicator (T050, FR-019).
+ * WebSocket connection indicator (T050, FR-019, T117 partial).
  *
  * Tiny status dot in the header. Mirrors the four runtime
  * states emitted by the WS client:
@@ -14,23 +14,15 @@
  * Title attribute carries the verbose label so a hover
  * surfaces it on desktop. The visible label only renders on
  * md+ — mobile keeps the dot for the 360 px target.
+ *
+ * Strings resolve via i18next (slice 55).
  */
 
-/* eslint-disable react/jsx-no-literals -- replaced by i18n in
-   the I18N phase. */
-
 import { type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 
 import { useConnectionStore } from "@/lib/store/connection";
 import type { ConnectionStatus } from "@/lib/ws/types";
-
-const STATUS_LABEL: Record<ConnectionStatus, string> = {
-  idle: "Disconnected",
-  connecting: "Connecting…",
-  connected: "Live",
-  reconnecting: "Reconnecting…",
-  offline: "Offline",
-};
 
 const STATUS_DOT: Record<ConnectionStatus, string> = {
   idle: "bg-zinc-600",
@@ -41,8 +33,9 @@ const STATUS_DOT: Record<ConnectionStatus, string> = {
 };
 
 export function ConnectionIndicator(): ReactElement {
+  const { t } = useTranslation();
   const status = useConnectionStore((s) => s.status);
-  const label = STATUS_LABEL[status];
+  const label = t(`connection.${status}`);
 
   return (
     <div

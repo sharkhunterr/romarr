@@ -786,23 +786,37 @@ is small but cross-cutting.
 
 ### i18n (`I18N`)
 
-- [ ] T114 [P] [I18N] Author `public/locales/en/common.json` with
-      ~40 base strings (nav, errors, status).
-- [ ] T115 [P] [I18N] Author `public/locales/en/library.json`,
-      `library.json`, `settings.json`, `profiles.json`,
-      `indexers.json`, `downloaders.json`, `errors.json`,
-      `validation.json`.
-- [ ] T116 [P] [I18N] Author the parallel
-      `public/locales/fr/*.json` set (≈ 200 keys per language at
-      MVP).
-- [ ] T117 [P] [I18N] Configure i18next (lib/i18n/index.ts) with
-      `i18next-http-backend` to load JSON on demand.
-- [ ] T118 [P] [I18N] Configure date-fns locale switching in
-      `lib/i18n/dates.ts`.
-- [ ] T119 [P] [I18N] Add the language switcher to
-      `pages/Settings/Ui.tsx`.
+- [~] T114 [P] [I18N] `public/locales/en/common.json` shipped
+      (slice 55) with the chrome strings (`app.title`, `nav.*`,
+      `theme.*`, `language.*`, `connection.*`). Page-specific
+      keys land with each page's i18n migration slice.
+- [ ] T115 [P] [I18N] `public/locales/en/library.json`,
+      `settings.json`, `profiles.json`, `indexers.json`,
+      `downloaders.json`, `validation.json` — land per page
+      with the migration slice. `errors.json` shipped (slice 55).
+- [~] T116 [P] [I18N] `public/locales/fr/*.json` parallel set
+      shipped for `common.json` + `errors.json` (slice 55);
+      remaining namespaces land alongside the EN ones.
+- [X] T117 [P] [I18N] `src/lib/i18n/index.ts` shipped (slice
+      55) — i18next + react-i18next + i18next-http-backend +
+      i18next-browser-languagedetector. localStorage detector
+      keyed under `romarr.lang` (the spec's documented key);
+      navigator fallback; English fallback. Suspense bridge
+      wired in `App.tsx`.
+- [ ] T118 [P] [I18N] `lib/i18n/dates.ts` — date-fns locale
+      switching. Lands when the first page using formatted
+      dates migrates.
+- [ ] T119 [P] [I18N] Canonical language switcher in
+      `pages/Settings/Ui.tsx` (T119). Slice 55 ships a
+      lightweight EN/FR pill in the header
+      (`components/shared/LanguageToggle.tsx`) so the operator
+      can flip the language now; the Settings/UI sub-page
+      replaces it once that slice lands.
 - [ ] T120 [I18N] CI gate: `eslint react/jsx-no-literals` zero
-      warnings on `components/` and `pages/` (FR-011).
+      warnings on `components/` and `pages/` (FR-011). The
+      chrome (Header, BottomNav, ConnectionIndicator) is
+      migrated; pages still carry the per-file disable
+      comment until their migration slice.
 
 ### Accessibility (`A11Y`)
 

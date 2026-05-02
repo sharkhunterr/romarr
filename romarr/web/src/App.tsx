@@ -12,7 +12,7 @@
  * their runtime deps land in their respective phases.
  */
 
-import { type ReactElement } from "react";
+import { Suspense, type ReactElement } from "react";
 import {
   createBrowserRouter,
   RouterProvider,
@@ -90,11 +90,19 @@ const router = createBrowserRouter([
   { path: "*", element: <NotFoundPage /> },
 ]);
 
+function I18nFallback(): ReactElement {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-zinc-950" />
+  );
+}
+
 export default function App(): ReactElement {
   return (
     <QueryProvider>
       <ThemeProvider>
-        <RouterProvider router={router} />
+        <Suspense fallback={<I18nFallback />}>
+          <RouterProvider router={router} />
+        </Suspense>
       </ThemeProvider>
     </QueryProvider>
   );
