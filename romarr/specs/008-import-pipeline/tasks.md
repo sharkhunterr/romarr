@@ -977,6 +977,19 @@ contributors, the WATCH and EXTRACT phases (Day 2-3) split cleanly.
 > it to a structured rejection. 4 tests: full-shape
 > round-trip, custom-formats-by-score, unknown-id raises,
 > dataclass-is-frozen.
+>
+> **Slice 81 (2026-05-02)** — landed
+> `src/romarr/importer/_idempotency.py` with
+> `find_existing_dump(session, sha1, release_id)`. The
+> orchestrator runs identification first, then asks this
+> helper "have I already imported this exact file for
+> this release?" — when yes, the pipeline short-circuits
+> to a `coalesced=True` success outcome without re-doing
+> RENDER / MOVE / DBUPDATE (FR-018, FR-006). Case-
+> insensitive SHA-1 comparison so the cascade's raw value
+> can pass through without normalising. 5 tests cover
+> match / case-insensitive / wrong release / wrong sha1 /
+> empty DB.
 
 - [~] CL001 [P] [US6] Subreason-aware auto-blocklist —
       **gated on orchestrator**. The taxonomy (`RejectionReason`
