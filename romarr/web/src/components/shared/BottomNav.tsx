@@ -3,14 +3,11 @@
  *
  * Five documented entries: Library / Wanted / Activity /
  * Settings / Search. Visible on 360 px viewports; hidden on
- * ≥ 768 px (the desktop UX uses the sidebar instead, lands
- * with the Settings sub-pages slice). Each button is a 44 ×
- * 44 px hit target per FR-002.
+ * ≥ 768 px (the desktop UX uses the sidebar instead). Each
+ * button is a 44 × 44 px hit target per FR-002.
  *
  * The Search entry opens the global ⌘+K command palette
- * (which lands with the SEARCH phase). Until then it routes
- * to /library — closest existing page that lets the operator
- * find a game.
+ * (slice 71); the rest are NavLink routes.
  *
  * Strings are i18n-resolved (slice 55).
  */
@@ -19,19 +16,29 @@ import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
 
-interface NavEntry {
+import { useSearchStore } from "@/lib/store/search";
+
+type RouteEntry = {
+  kind: "route";
   to: string;
-  /** Key under the `nav.*` namespace. */
-  i18nKey: "library" | "wanted" | "activity" | "settings" | "search";
+  i18nKey: "library" | "wanted" | "activity" | "settings";
   emoji: string;
-}
+};
+
+type ActionEntry = {
+  kind: "action";
+  i18nKey: "search";
+  emoji: string;
+};
+
+type NavEntry = RouteEntry | ActionEntry;
 
 const ENTRIES: readonly NavEntry[] = [
-  { to: "/library", i18nKey: "library", emoji: "📦" },
-  { to: "/wanted", i18nKey: "wanted", emoji: "⭐" },
-  { to: "/activity", i18nKey: "activity", emoji: "📡" },
-  { to: "/settings", i18nKey: "settings", emoji: "⚙️" },
-  { to: "/library", i18nKey: "search", emoji: "🔍" },
+  { kind: "route", to: "/library", i18nKey: "library", emoji: "📦" },
+  { kind: "route", to: "/wanted", i18nKey: "wanted", emoji: "⭐" },
+  { kind: "route", to: "/activity", i18nKey: "activity", emoji: "📡" },
+  { kind: "route", to: "/settings", i18nKey: "settings", emoji: "⚙️" },
+  { kind: "action", i18nKey: "search", emoji: "🔍" },
 ];
 
 function entryClass(isActive: boolean): string {
@@ -45,6 +52,42 @@ function entryClass(isActive: boolean): string {
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
     "focus-visible:rounded",
   ].join(" ");
+}
+
+function NavEntryNode(props: { entry: NavEntry; index: number }): ReactElement {
+  const { t } = useTranslation();
+  const openSearch = useSearchStore((s) => s.openModal);
+  const { entry } = props;
+
+  if (entry.kind === "action") {
+    return (
+      <button
+        key={`search-${props.index}`}
+        type="button"
+        onClick={openSearch}
+        className={entryClass(false)}
+      >
+        <span aria-hidden="true" className="text-base leading-none">
+          {entry.emoji}
+        </span>
+        <span>{t(`nav.${entry.i18nKey}`)}</span>
+      </button>
+    );
+  }
+
+  return (
+    <NavLink
+      key={`${entry.to}-${props.index}`}
+      to={entry.to}
+      end={entry.to === "/library"}
+      className={({ isActive }) => entryClass(isActive)}
+    >
+      <span aria-hidden="true" className="text-base leading-none">
+        {entry.emoji}
+      </span>
+      <span>{t(`nav.${entry.i18nKey}`)}</span>
+    </NavLink>
+  );
 }
 
 export function BottomNav(): ReactElement {
@@ -61,17 +104,7 @@ export function BottomNav(): ReactElement {
       ].join(" ")}
     >
       {ENTRIES.map((entry, index) => (
-        <NavLink
-          key={`${entry.to}-${index}`}
-          to={entry.to}
-          end={entry.to === "/library"}
-          className={({ isActive }) => entryClass(isActive)}
-        >
-          <span aria-hidden="true" className="text-base leading-none">
-            {entry.emoji}
-          </span>
-          <span>{t(`nav.${entry.i18nKey}`)}</span>
-        </NavLink>
+        <NavEntryNode key={index} entry={entry} index={index} />
       ))}
     </nav>
   );

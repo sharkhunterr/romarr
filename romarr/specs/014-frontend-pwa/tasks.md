@@ -913,18 +913,46 @@ flows tested.
 
 ### Tests
 
-- [ ] T110 [P] [SEARCH] `tests/unit/components/test_GlobalSearch.tsx::test_keyboard_shortcut`
-      — `Ctrl+K`; modal opens with input focused.
-- [ ] T111 [P] [SEARCH] `tests/unit/components/test_GlobalSearch.tsx::test_groups_results`
-      — Games / Releases / Settings categories.
-- [ ] T112 [P] [SEARCH] `tests/unit/components/test_GlobalSearch.tsx::test_recent_searches`
-      — last 5 in localStorage.
+- [~] T110 [P] [SEARCH] `tests/unit/components/test_GlobalSearch.tsx::test_keyboard_shortcut`
+      **deferred for tests** — Vitest not yet installed. The
+      contract is implemented (`useGlobalSearchHotkey` in
+      `components/shared/GlobalSearchModal.tsx`): `Ctrl+K` /
+      `Cmd+K` toggles the modal; opening focuses the input on
+      next animation frame.
+- [~] T111 [P] [SEARCH] `tests/unit/components/test_GlobalSearch.tsx::test_groups_results`
+      **deferred for tests** — Vitest not yet installed. The
+      modal renders three result groups: Recent searches,
+      Settings (against `SETTINGS_NAV_ENTRIES`), Games /
+      Releases (placeholder until backend ships). Settings
+      results match against `slug + i18n label` so French
+      operators searching "params" still hit the right entry.
+- [~] T112 [P] [SEARCH] `tests/unit/components/test_GlobalSearch.tsx::test_recent_searches`
+      **deferred for tests** — Vitest not yet installed. The
+      contract is implemented (`useSearchStore`): last 5
+      operator queries persist under
+      `localStorage["romarr.search.recent"]` via
+      zustand-persist. Push dedupes on case-insensitive
+      match so a repeated query bubbles to the top instead
+      of duplicating.
 
 ### Implementation
 
-- [ ] T113 [SEARCH] Create
-      `src/components/shared/GlobalSearch.tsx` — modal + keyboard
-      navigation + recent-searches store.
+- [X] T113 [SEARCH] `src/components/shared/GlobalSearchModal.tsx`
+      shipped (slice 71). Modal overlay with input + grouped
+      result list. Keyboard nav (↑↓ to cycle visible results,
+      Enter to activate, Esc to close). Hover sync — moving
+      the mouse keeps the active index in step with the
+      pointer. `useGlobalSearchHotkey` binds Ctrl/Cmd+K
+      globally from `AppLayout`. Header gets a discoverable
+      "🔍 ⌘K" pill on md+ since the BottomNav search button
+      is mobile-only. BottomNav search entry refactored to an
+      action button (no longer a no-op /library link).
+      `useSearchStore` carries `{open, recent}` with
+      zustand-persist so the recent-search list survives
+      reloads (key `romarr.search.recent`, capped at 5,
+      dedup-on-push). Result rows for Settings deep-link to
+      the relevant /settings/<slug>; Games / Releases groups
+      surface a placeholder until /api/v3/game search ships.
 
 **Checkpoint**: ⌘+K opens; navigates by keyboard.
 

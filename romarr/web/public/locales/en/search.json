@@ -1,0 +1,23 @@
+{
+  "open": "Open search",
+  "close": "Close search",
+  "shortcutHint": "⌘ K",
+  "placeholder": "Search Romarr…",
+  "ariaLabel": "Global search",
+  "groups": {
+    "recent": "Recent searches",
+    "settings": "Settings",
+    "games": "Games",
+    "releases": "Releases"
+  },
+  "deferred": {
+    "games": "Game search lands once the backend Game endpoint ships.",
+    "releases": "Release search lands once the backend Release endpoint ships."
+  },
+  "empty": {
+    "noResults": "No results for \"{{query}}\"",
+    "typeToSearch": "Type to search across Settings. Game + Release search ship with the backend endpoints."
+  },
+  "clearRecent": "Clear",
+  "navigateHint": "↑↓ navigate · ↵ open · Esc close"
+}

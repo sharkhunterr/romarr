@@ -18,6 +18,7 @@
 import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useSearchStore } from "@/lib/store/search";
 import { useThemeStore, type Theme } from "@/lib/store/theme";
 
 import { ConnectionIndicator } from "./ConnectionIndicator";
@@ -36,12 +37,14 @@ const NEXT_THEME: Record<Theme, Theme> = {
 };
 
 export function Header(): ReactElement {
-  const { t } = useTranslation();
+  const { t } = useTranslation(["common", "search"]);
   const theme = useThemeStore((s) => s.theme);
   const setTheme = useThemeStore((s) => s.setTheme);
-  const themeTitle = t("theme.title", {
-    mode: t(`theme.modes.${theme}`),
+  const openSearch = useSearchStore((s) => s.openModal);
+  const themeTitle = t("common:theme.title", {
+    mode: t(`common:theme.modes.${theme}`),
   });
+  const searchTitle = t("search:open");
 
   return (
     <header
@@ -64,6 +67,25 @@ export function Header(): ReactElement {
       </div>
 
       <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={openSearch}
+          aria-label={searchTitle}
+          title={searchTitle}
+          className={[
+            "hidden md:inline-flex h-9 items-center gap-1.5",
+            "rounded-md border border-zinc-800 bg-zinc-900/60 px-2",
+            "text-xs text-zinc-400",
+            "hover:bg-zinc-900 hover:text-zinc-200",
+            "focus-visible:outline-none focus-visible:ring-2",
+            "focus-visible:ring-brand",
+          ].join(" ")}
+        >
+          <span aria-hidden="true">🔍</span>
+          <span className="font-mono text-[0.6rem] uppercase tracking-wider text-zinc-500">
+            ⌘K
+          </span>
+        </button>
         <ConnectionIndicator />
         <LanguageToggle />
         <button

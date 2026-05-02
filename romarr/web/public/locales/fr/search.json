@@ -1,0 +1,23 @@
+{
+  "open": "Ouvrir la recherche",
+  "close": "Fermer la recherche",
+  "shortcutHint": "⌘ K",
+  "placeholder": "Rechercher dans Romarr…",
+  "ariaLabel": "Recherche globale",
+  "groups": {
+    "recent": "Recherches récentes",
+    "settings": "Paramètres",
+    "games": "Jeux",
+    "releases": "Releases"
+  },
+  "deferred": {
+    "games": "La recherche de jeux arrivera quand l'endpoint backend Game sera livré.",
+    "releases": "La recherche de releases arrivera quand l'endpoint backend Release sera livré."
+  },
+  "empty": {
+    "noResults": "Aucun résultat pour « {{query}} »",
+    "typeToSearch": "Tapez pour chercher dans les Paramètres. La recherche de jeux + releases arrivera avec les endpoints backend."
+  },
+  "clearRecent": "Effacer",
+  "navigateHint": "↑↓ naviguer · ↵ ouvrir · Esc fermer"
+}

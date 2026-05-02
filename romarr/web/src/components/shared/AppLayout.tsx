@@ -15,11 +15,16 @@ import { type ReactElement } from "react";
 import { Outlet } from "react-router-dom";
 
 import { BottomNav } from "@/components/shared/BottomNav";
+import {
+  GlobalSearchModal,
+  useGlobalSearchHotkey,
+} from "@/components/shared/GlobalSearchModal";
 import { Header } from "@/components/shared/Header";
 import { useWebSocketBridge } from "@/lib/ws/useWebSocketBridge";
 
 export function AppLayout(): ReactElement {
   useWebSocketBridge();
+  useGlobalSearchHotkey();
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950 text-zinc-50">
@@ -28,6 +33,7 @@ export function AppLayout(): ReactElement {
         <Outlet />
       </div>
       <BottomNav />
+      <GlobalSearchModal />
     </div>
   );
 }
