@@ -769,7 +769,18 @@ manageable; each ships ≥ 1 test + an implementation.
       `useLogFiles`, `useBackups`, `useTasks` — three more
       typed TanStack Query hooks against the spec 012/013
       surfaces.
-- [ ] T108 [P-AUTH] Create `src/pages/Login/index.tsx`.
+- [X] T108 [P-AUTH] `src/pages/Login/index.tsx` shipped
+      (slice 58). Username + password form against POST
+      /api/v3/auth/login (spec 011 + 013); session cookie
+      drives the SPA + WS bridge. `returnTo` decoded before
+      navigation. ApiError → i18n: dedicated messages for
+      `unauthenticated` and `rate_limited`, generic fallback
+      for everything else. Strings under the new `auth`
+      namespace (`public/locales/{en,fr}/auth.json`); a
+      "first-time install?" link points at /setup. The OIDC
+      "Sign in with SSO" button (T101) is gated on the
+      backend exposing /api/v3/auth/oidc/start + a status
+      probe — deferred there.
 - [ ] T109 [P-SETUP] Create `src/pages/Setup/index.tsx` with the
       5-step wizard.
 

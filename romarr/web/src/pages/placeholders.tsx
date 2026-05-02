@@ -13,10 +13,7 @@
 
 /* eslint-disable react/jsx-no-literals */
 
-import { type FormEvent, useState, type ReactElement } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-
-import { useLogin } from "@/lib/api/queries/auth";
+import { type ReactElement } from "react";
 
 function PageShell(props: {
   title: string;
@@ -88,127 +85,7 @@ export function GameDetailPage(): ReactElement {
 // SystemPage is the fourth real page implementation; lives at
 // @/pages/System/index.tsx (slice 50, P-SYS).
 
-export function LoginPage(): ReactElement {
-  const [params] = useSearchParams();
-  const returnTo = params.get("returnTo") ?? "/";
-  const navigate = useNavigate();
-  const login = useLogin();
-
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-
-  function onSubmit(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault();
-    login.mutate(
-      { username, password },
-      {
-        onSuccess: () => {
-          // Decode the returnTo so the redirect lands on the
-          // operator's intended page rather than a doubly-
-          // encoded URL.
-          let target = "/";
-          try {
-            target = decodeURIComponent(returnTo) || "/";
-          } catch {
-            target = "/";
-          }
-          navigate(target, { replace: true });
-        },
-      },
-    );
-  }
-
-  const errorMessage =
-    login.error?.errorCode === "unauthenticated"
-      ? "Invalid username or password."
-      : login.error?.message;
-
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-4 text-zinc-50">
-      <form
-        onSubmit={onSubmit}
-        className="w-full max-w-sm space-y-4 rounded-lg border border-zinc-800 bg-zinc-900 p-6"
-      >
-        <h1 className="font-mono text-xl font-semibold text-brand">
-          Sign in to Romarr
-        </h1>
-
-        <div className="space-y-1.5">
-          <label
-            htmlFor="login-username"
-            className="block text-xs font-medium text-zinc-400"
-          >
-            Username
-          </label>
-          <input
-            id="login-username"
-            type="text"
-            autoComplete="username"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            required
-            className={[
-              "w-full rounded-md bg-zinc-950 px-3 py-2",
-              "text-sm text-zinc-100 ring-1 ring-inset ring-zinc-700",
-              "focus-visible:outline-none focus-visible:ring-2",
-              "focus-visible:ring-brand",
-            ].join(" ")}
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <label
-            htmlFor="login-password"
-            className="block text-xs font-medium text-zinc-400"
-          >
-            Password
-          </label>
-          <input
-            id="login-password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-            className={[
-              "w-full rounded-md bg-zinc-950 px-3 py-2",
-              "text-sm text-zinc-100 ring-1 ring-inset ring-zinc-700",
-              "focus-visible:outline-none focus-visible:ring-2",
-              "focus-visible:ring-brand",
-            ].join(" ")}
-          />
-        </div>
-
-        {errorMessage && (
-          <p
-            role="alert"
-            className="text-xs text-red-400"
-          >
-            {errorMessage}
-          </p>
-        )}
-
-        <button
-          type="submit"
-          disabled={login.isPending}
-          className={[
-            "w-full rounded-md bg-brand px-3 py-2",
-            "text-sm font-medium text-zinc-900",
-            "hover:bg-brand-300 focus-visible:outline-none",
-            "focus-visible:ring-2 focus-visible:ring-brand",
-            "disabled:cursor-not-allowed disabled:opacity-60",
-          ].join(" ")}
-        >
-          {login.isPending ? "Signing in…" : "Sign in"}
-        </button>
-
-        <p className="font-mono text-[0.65rem] text-zinc-600">
-          returnTo: {returnTo}
-        </p>
-      </form>
-    </main>
-  );
-}
+// LoginPage is shipped (slice 58) at @/pages/Login/index.tsx.
 
 export function SetupPage(): ReactElement {
   return (
