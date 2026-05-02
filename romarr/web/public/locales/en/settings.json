@@ -109,6 +109,43 @@
     "disabled": "Disabled",
     "category": "Category"
   },
+  "profiles": {
+    "title": "Profiles",
+    "subtitle": "Six profile types drive every grab / upgrade / import decision. Each library carries one profile of each type; profiles are reusable across libraries.",
+    "tabs": {
+      "quality": "Quality",
+      "region": "Region",
+      "dump": "Dump",
+      "language": "Language",
+      "naming": "Naming",
+      "custom-formats": "Custom Formats"
+    },
+    "comingSoonTitle": "Coming soon",
+    "comingSoonBody": "{{tab}} profile management lands in a follow-up slice. The backend endpoint isn't shipped yet — check back once the relevant spec lands."
+  },
+  "customFormats": {
+    "title": "Custom Formats",
+    "subtitle": "Score modifiers Romarr applies to release candidates. Each format owns a score and a list of conditions evaluated against the parsed release.",
+    "empty": {
+      "title": "No custom formats",
+      "body": "Romarr ships a factory-default catalogue. If this list is empty, run the seed migration."
+    },
+    "score": "Score",
+    "conditions": "Conditions",
+    "conditionsCount_one": "{{count}} condition",
+    "conditionsCount_other": "{{count}} conditions",
+    "factory": "Factory",
+    "modified": "Modified",
+    "delete": {
+      "button": "Delete",
+      "confirmTitle": "Remove this format?",
+      "confirmBody": "Releases won't pick up the score modifier from {{name}} anymore.",
+      "confirm": "Remove",
+      "cancel": "Cancel",
+      "factoryBlocked": "Factory-default formats can't be deleted; reset them with the seed migration if needed."
+    },
+    "builderHint": "The visual condition builder (add / remove conditions, OR-grouping) lands in a follow-up slice. For now POST /api/v3/customformat to create new formats."
+  },
   "metadataSources": {
     "title": "Metadata Sources",
     "subtitle": "Per-field aggregation across the nine documented providers (IGDB, ScreenScraper, MobyGames, LaunchBox, SteamGridDB, RetroAchievements, HowLongToBeat, Hasheous, PlayMatch). Enable, prioritize, and test each one here.",

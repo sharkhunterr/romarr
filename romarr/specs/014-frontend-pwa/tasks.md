@@ -679,12 +679,29 @@ manageable; each ships ≥ 1 test + an implementation.
       the spec 013 /api/v3/calendar endpoint.
 - [ ] T095 [P] [P-SET] `tests/unit/pages/test_Settings.tsx::test_sidebar_nav`
       — every documented sub-route is reachable from the sidebar.
-- [ ] T096 [P] [P-SET] `tests/unit/pages/Settings/test_Profiles.tsx::test_six_subtabs`
-      — Quality / Region / Dump / Language / Naming / CustomFormats
-      each render; the Naming tab shows a live preview.
-- [ ] T097 [P] [P-SET] `tests/unit/pages/Settings/test_CustomFormats.tsx::test_visual_builder`
-      — operator can add an OR-grouped condition via the visual
-      builder.
+- [~] T096 [P] [P-SET] `tests/unit/pages/Settings/test_Profiles.tsx::test_six_subtabs`
+      **partial / deferred for tests** — Vitest not yet
+      installed. Contract: `pages/Settings/Profiles/index.tsx`
+      shipped (slice 64) with a six-tab bar — Quality / Region
+      / Dump / Language / Naming / Custom Formats. Each tab
+      button is rendered and switchable; only Custom Formats
+      has a real implementation today (the rest render the
+      "coming soon" EmptyState pointing at the deferral).
+      Live-preview Naming tab lands once the backend Naming
+      endpoint is shipped.
+- [~] T097 [P] [P-SET] `tests/unit/pages/Settings/test_CustomFormats.tsx::test_visual_builder`
+      **partial / deferred for builder** — Vitest not
+      installed. Read path is implemented:
+      `Profiles/CustomFormatsTab.tsx` lists every Custom
+      Format from /api/v3/customformat sorted by score
+      descending. Per-row score chip (signed/colored), factory
+      + modified pills, conditions count, expandable
+      conditions list rendering each condition object as
+      `key: value` pairs. Delete gated on `is_factory_default`
+      with double-confirm. Visual builder for adding
+      OR-grouped conditions (T097's primary goal) deferred —
+      hint surfaced on the page pointing at the deferred
+      slice.
 - [~] T098 [P] [P-SET] `tests/unit/pages/Settings/test_Indexers.tsx::test_test_button`
       **deferred** — Vitest not yet installed. Contract is
       implemented (`pages/Settings/Indexers/IndexerRow.tsx`):
@@ -774,6 +791,20 @@ manageable; each ships ≥ 1 test + an implementation.
       surfaced inline. Test surfaces client_version when
       present (e.g. "Connected — qBittorrent 4.6.5"). Add-new
       form deferred to a per-type slice.
+
+      `src/pages/Settings/Profiles/index.tsx` shipped (slice
+      64) with the six-tab bar (Quality / Region / Dump /
+      Language / Naming / Custom Formats). Custom Formats is
+      the only real tab today — `CustomFormatsTab` lists every
+      row from /api/v3/customformat with score chips, factory
+      + modified pills, expandable conditions list, and
+      double-confirm delete (gated on `is_factory_default`).
+      `useCustomFormats` + `useDeleteCustomFormat` hooks
+      shipped. The other five tabs render an i18n'd
+      "coming soon" EmptyState until their backend endpoints
+      land (Quality is next: /api/v3/qualityprofile is shipped
+      so Quality can move out of placeholder in a follow-up
+      slice).
 
       `src/pages/Settings/MetadataSources/index.tsx` shipped
       (slice 63) with `useMetadataProviders` +

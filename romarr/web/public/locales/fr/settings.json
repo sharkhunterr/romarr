@@ -109,6 +109,43 @@
     "disabled": "Désactivé",
     "category": "Catégorie"
   },
+  "profiles": {
+    "title": "Profils",
+    "subtitle": "Six types de profils pilotent toutes les décisions de grab / upgrade / import. Chaque ludothèque porte un profil de chaque type ; les profils sont réutilisables entre ludothèques.",
+    "tabs": {
+      "quality": "Qualité",
+      "region": "Région",
+      "dump": "Dump",
+      "language": "Langue",
+      "naming": "Nommage",
+      "custom-formats": "Formats personnalisés"
+    },
+    "comingSoonTitle": "Bientôt",
+    "comingSoonBody": "La gestion du profil {{tab}} arrive dans un slice à venir. L'endpoint backend n'est pas encore livré — repassez une fois la spec correspondante shippée."
+  },
+  "customFormats": {
+    "title": "Formats personnalisés",
+    "subtitle": "Modificateurs de score que Romarr applique aux candidates. Chaque format porte un score et une liste de conditions évaluées contre la release parsée.",
+    "empty": {
+      "title": "Aucun format personnalisé",
+      "body": "Romarr fournit un catalogue factory par défaut. Si cette liste est vide, lancez la migration de seed."
+    },
+    "score": "Score",
+    "conditions": "Conditions",
+    "conditionsCount_one": "{{count}} condition",
+    "conditionsCount_other": "{{count}} conditions",
+    "factory": "Factory",
+    "modified": "Modifié",
+    "delete": {
+      "button": "Supprimer",
+      "confirmTitle": "Supprimer ce format ?",
+      "confirmBody": "Les releases n'appliqueront plus le score modificateur de {{name}}.",
+      "confirm": "Supprimer",
+      "cancel": "Annuler",
+      "factoryBlocked": "Les formats factory ne peuvent pas être supprimés ; relancez la migration de seed pour les réinitialiser."
+    },
+    "builderHint": "Le builder visuel de conditions (ajout / suppression, OR-grouping) arrivera dans un slice à venir. Pour l'instant, POST /api/v3/customformat pour créer de nouveaux formats."
+  },
   "metadataSources": {
     "title": "Sources de métadonnées",
     "subtitle": "Agrégation par champ sur les neuf fournisseurs documentés (IGDB, ScreenScraper, MobyGames, LaunchBox, SteamGridDB, RetroAchievements, HowLongToBeat, Hasheous, PlayMatch). Activez, priorisez et testez chacun ici.",
