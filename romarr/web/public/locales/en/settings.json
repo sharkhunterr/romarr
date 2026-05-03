@@ -33,6 +33,11 @@
   "connect": {
     "title": "Notifications",
     "subtitle": "Outbound notification targets routed through Apprise. Each row carries event subscriptions and a redacted URL — the raw URL is encrypted at rest.",
+    "search": {
+      "label": "Search notifications",
+      "placeholder": "Search by name or URL…",
+      "noMatches": "No notifications match the active search."
+    },
     "empty": {
       "title": "No notifications configured",
       "body": "Add an Apprise URL to start routing OnGrab / OnImport / OnFail / health events outbound."
@@ -74,6 +79,11 @@
   "downloadClients": {
     "title": "Download Clients",
     "subtitle": "Torrent + Usenet clients Romarr hands grabs to. Each client carries its own protocol enables and lifecycle policy.",
+    "search": {
+      "label": "Search download clients",
+      "placeholder": "Search by name or host…",
+      "noMatches": "No download clients match the active search."
+    },
     "empty": {
       "title": "No download clients configured",
       "body": "Add a qBittorrent or SABnzbd client to start grabbing. Other clients (Transmission, Deluge, NZBGet) land in v1+."
@@ -461,6 +471,11 @@
   "indexers": {
     "title": "Indexers",
     "subtitle": "Newznab + Torznab sources Romarr searches when grabbing a release. Prowlarr-managed indexers sync automatically.",
+    "search": {
+      "label": "Search indexers",
+      "placeholder": "Search by name or URL…",
+      "noMatches": "No indexers match the active search."
+    },
     "applications": {
       "section": "Prowlarr applications",
       "adminOnly": "admin",

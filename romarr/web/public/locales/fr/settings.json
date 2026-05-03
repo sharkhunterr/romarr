@@ -33,6 +33,11 @@
   "connect": {
     "title": "Notifications",
     "subtitle": "Cibles de notification sortantes routées via Apprise. Chaque ligne porte ses abonnements aux événements et une URL caviardée — l'URL brute est chiffrée au repos.",
+    "search": {
+      "label": "Chercher une notification",
+      "placeholder": "Chercher par nom ou URL…",
+      "noMatches": "Aucune notification ne correspond à la recherche."
+    },
     "empty": {
       "title": "Aucune notification configurée",
       "body": "Ajoutez une URL Apprise pour commencer à router les événements OnGrab / OnImport / OnFail / santé."
@@ -74,6 +79,11 @@
   "downloadClients": {
     "title": "Clients de téléchargement",
     "subtitle": "Clients Torrent + Usenet auxquels Romarr délègue les téléchargements. Chaque client porte ses propres protocoles activés et sa politique de cycle de vie.",
+    "search": {
+      "label": "Chercher un client",
+      "placeholder": "Chercher par nom ou hôte…",
+      "noMatches": "Aucun client ne correspond à la recherche."
+    },
     "empty": {
       "title": "Aucun client de téléchargement configuré",
       "body": "Ajoutez un client qBittorrent ou SABnzbd pour commencer à télécharger. Les autres clients (Transmission, Deluge, NZBGet) arriveront en v1+."
@@ -461,6 +471,11 @@
   "indexers": {
     "title": "Indexeurs",
     "subtitle": "Sources Newznab + Torznab que Romarr interroge pour récupérer une release. Les indexeurs gérés par Prowlarr se synchronisent automatiquement.",
+    "search": {
+      "label": "Chercher un indexeur",
+      "placeholder": "Chercher par nom ou URL…",
+      "noMatches": "Aucun indexeur ne correspond à la recherche."
+    },
     "applications": {
       "section": "Applications Prowlarr",
       "adminOnly": "admin",

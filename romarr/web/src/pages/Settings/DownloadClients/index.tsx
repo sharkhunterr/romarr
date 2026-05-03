@@ -14,8 +14,9 @@
  * worth a dedicated slice.
  */
 
-import { type ReactElement } from "react";
+import { useMemo, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
@@ -26,6 +27,31 @@ import { DownloadClientRow } from "./DownloadClientRow";
 export function DownloadClientsPage(): ReactElement {
   const { t } = useTranslation("settings");
   const clients = useDownloadClients();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawQuery = searchParams.get("q") ?? "";
+  const queryNormalized = rawQuery.trim().toLowerCase();
+
+  const setQuery = (next: string): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next.trim() === "") params.delete("q");
+        else params.set("q", next);
+        return params;
+      },
+      { replace: true },
+    );
+  };
+
+  const filtered = useMemo(() => {
+    if (!clients.data) return [];
+    if (queryNormalized.length === 0) return clients.data;
+    return clients.data.filter(
+      (client) =>
+        client.name.toLowerCase().includes(queryNormalized) ||
+        client.host.toLowerCase().includes(queryNormalized),
+    );
+  }, [clients.data, queryNormalized]);
 
   return (
     <div className="space-y-4">
@@ -52,11 +78,34 @@ export function DownloadClientsPage(): ReactElement {
         />
       )}
       {clients.isSuccess && clients.data.length > 0 && (
-        <ul className="space-y-2">
-          {clients.data.map((client) => (
-            <DownloadClientRow key={client.id} client={client} />
-          ))}
-        </ul>
+        <>
+          <label className="block">
+            <span className="sr-only">{t("downloadClients.search.label")}</span>
+            <input
+              type="search"
+              value={rawQuery}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("downloadClients.search.placeholder")}
+              aria-label={t("downloadClients.search.label")}
+              className={[
+                "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
+                "ring-1 ring-inset ring-zinc-700",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+              ].join(" ")}
+            />
+          </label>
+          {filtered.length === 0 ? (
+            <p className="rounded-md border border-dashed border-zinc-800 bg-zinc-900/20 p-3 text-[0.7rem] text-zinc-500">
+              {t("downloadClients.search.noMatches")}
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {filtered.map((client) => (
+                <DownloadClientRow key={client.id} client={client} />
+              ))}
+            </ul>
+          )}
+        </>
       )}
     </div>
   );
