@@ -561,14 +561,62 @@ EVAL and NAME split cleanly.
 
 ## Phase: Clarification Tasks (Session 2026-04-29)
 
-- [ ] CL001 [P] [US4] Implement Custom Format adversarial-input regex validator in `src/romarr/profiles/validators/regex_safety.py` — at save time, compile + run against 256-byte adversarial input on a worker thread bounded by 50 ms; reject Custom Format with HTTP 400 + offending condition's index. Mirrors spec 003 FR-005a (FR-023a)
-- [ ] CL002 Migration `0006_profiles.py` adds two columns to **every** profile table (`quality_profile`, `region_profile`, `dump_profile`, `language_profile`, `naming_profile`, `custom_format`): `seed_key VARCHAR NULL` and `is_user_modified BOOLEAN NOT NULL DEFAULT false`, plus a partial unique index on `seed_key WHERE seed_key IS NOT NULL` (FR-003a)
-- [ ] CL003 [P] Update profile seeders in `src/romarr/profiles/seeds/` to populate `seed_key` on every default row (e.g., `seed_key = "default-preservation"` for the seeded "Preservation" Quality profile)
-- [ ] CL004 [P] Implement `is_user_modified` flip-on-write in `src/romarr/profiles/repository.py` — every UPDATE that mutates a non-FK column flips the flag in the same transaction
-- [ ] CL005 [P] Update seeder logic to upsert by `seed_key` ONLY when `is_user_modified = false`; rows where the operator made any change are left alone (FR-003)
-- [ ] CL006 [US2] Implement Region scoring formula `score = len(priorities) − index` (0-based) in `src/romarr/profiles/evaluators/region_evaluator.py`; fallback releases score 0; excluded regions reject outright (FR-013, FR-015)
-- [ ] CL007 [P] [Admin] Wire admin-role gate on every mutating profile endpoint AND on the naming-preview endpoint in `src/romarr/profiles/api.py` (FR-032a)
-- [ ] CL008 [P] Add tests in `tests/profiles/test_seed_key_invariant.py` covering: fresh DB seed → all defaults present with `seed_key` set; UPDATE one default → flag flips; subsequent seed run → modified row preserved, missing row re-created
-- [ ] CL009 [P] Add tests in `tests/profiles/test_region_scoring.py` covering: priority-0 → score = len; priority-last → score = 1; outside-priorities + fallback enabled → score 0; excluded → reject
-- [ ] CL010 [P] Add tests in `tests/profiles/test_custom_format_regex_safety.py` covering catastrophic-backtracking pattern rejected at save time
-- [ ] CL011 **Note**: this spec does NOT add Library FK columns or the `library_id` FK on `library_custom_format`. Spec 009's migration owns those. The `library_custom_format` table here is created with `custom_format_id` FK only; the unique constraint `(library_id, custom_format_id)` ships in `0009_library.py` after `library_id` is added (FR-004 rewritten)
+- [X] CL001 [P] [US4] Custom Format regex safety shipped at
+      ``profiles/schemas.py`` (slice 183) —
+      ``CustomFormatCondition._check`` now runs both
+      ``re.compile`` AND a static-pattern danger heuristic
+      (``_NESTED_QUANTIFIER_RE``) at save time. Detection
+      strategy mirrors spec 003 CL001: Python's ``re`` doesn't
+      release the GIL during a match so a wall-clock thread
+      can't interrupt; the static heuristic catches nested
+      quantified groups (``(a+)+``, ``(.+)+``, etc.) that
+      account for the bulk of ReDoS reports. Failure surfaces
+      as ``RegexCompileError`` (already mapped to HTTP 400 by
+      the API layer). Path differs from the spec's
+      ``profiles/validators/regex_safety.py`` — the heuristic
+      lives where the ``matches_regex`` operator already runs.
+- [X] CL002 Migration ``0006_profiles.py`` ships ``seed_key``
+      VARCHAR(128) NULL + ``is_user_modified`` BOOLEAN NOT
+      NULL DEFAULT false on every profile table, plus a
+      partial unique index on
+      ``seed_key WHERE seed_key IS NOT NULL`` (SQLite +
+      PostgreSQL compatible).
+- [X] CL003 [P] Profile seeders populate ``seed_key`` on every
+      default row at ``profiles/seeders/runner.py``. Path
+      differs from the spec's ``profiles/seeds/`` —
+      ``seeders/`` matches the rest of the codebase's seeder
+      convention.
+- [X] CL004 [P] ``is_user_modified`` flip-on-write at
+      ``profiles/api/_shared.py`` — every PATCH/PUT mutation of
+      a non-FK column flips the flag in the same transaction.
+      Path differs from the spec's
+      ``profiles/repository.py`` (no separate repository
+      layer; the API handler talks to the model directly).
+- [X] CL005 [P] Seeder upsert-by-seed_key honours
+      ``is_user_modified`` at ``profiles/seeders/runner.py``:
+      operator-edited rows are left alone on subsequent seed
+      runs. Test: ``tests/profiles/test_seeders.py``.
+- [X] CL006 [US2] Region scoring formula
+      ``score = len(priorities) - index`` shipped at
+      ``profiles/evaluator.py`` (~line 150-159). Fallback
+      score 0; exclude rejects outright. Test:
+      ``tests/profiles/test_evaluator_region.py``.
+- [X] CL007 [P] [Admin] Admin gate via
+      ``Depends(require_admin)`` on every mutating endpoint in
+      ``profiles/api/_shared.py`` (the shared CRUD scaffold)
+      and ``profiles/api/naming.py`` (preview).
+- [X] CL008 [P] Seed-key invariant tests shipped at
+      ``tests/profiles/test_seeders.py``.
+- [X] CL009 [P] Region-scoring tests shipped at
+      ``tests/profiles/test_evaluator_region.py``.
+- [X] CL010 [P] Custom-Format regex-safety tests shipped at
+      ``tests/profiles/test_models.py`` (slice 183) —
+      ``test_redos_pattern_rejected_at_save_time`` plus
+      ``test_anchored_simple_regex_passes_safety_check``
+      (no-false-positive guard).
+- [X] CL011 **Note** preserved as documentation: spec 006 does
+      NOT add Library FK columns; spec 009's
+      ``0009_library.py`` migration owns the
+      ``library_custom_format(library_id, custom_format_id)``
+      unique constraint. Confirmed by inspection of
+      ``0006_profiles.py`` (no ``library_id`` column).

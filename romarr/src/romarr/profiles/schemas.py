@@ -25,6 +25,26 @@ from pydantic import (
 
 from romarr.profiles.errors import RegexCompileError
 
+# CL001 / FR-023a — Custom Format ``matches_regex`` patterns are
+# user-supplied and run against every search result, so a single
+# pathological regex can wedge the search loop. We share the same
+# detection strategy as spec 003: Python's ``re`` does NOT release
+# the GIL during a match (so a wall-clock thread can never
+# interrupt a doomed regex), and a static-pattern danger heuristic
+# catches the nested-quantifier shapes that account for nearly all
+# ReDoS reports.
+_NESTED_QUANTIFIER_RE = re.compile(
+    r"""
+    \(                  # opening group
+    (?:[^()]|\([^)]*\))*  # group body, allowing one level of nested ( )
+    [*+?]               # inner quantifier on the body
+    [^)]*               # remainder of the group
+    \)                  # closing group
+    [*+?]               # outer quantifier on the whole group
+    """,
+    re.VERBOSE,
+)
+
 
 class _Base(BaseModel):
     model_config = ConfigDict(
@@ -316,6 +336,13 @@ class CustomFormatCondition(_Base):
                 raise RegexCompileError(
                     f"invalid regex {self.values!r}: {exc}"
                 ) from exc
+            if _NESTED_QUANTIFIER_RE.search(self.values):
+                raise RegexCompileError(
+                    f"regex {self.values!r} contains a nested-quantifier "
+                    "shape known to cause catastrophic backtracking (ReDoS); "
+                    "rewrite without nested quantifiers (e.g. (?:a+) instead "
+                    "of (a+)+)."
+                )
         return self
 
 

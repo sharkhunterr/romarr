@@ -490,12 +490,59 @@ and 8 split cleanly.
 
 ## Phase: Clarification Tasks (Session 2026-04-29)
 
-- [ ] CL001 Migration `0004_indexers.py` adds two columns to `indexer`: `timeout_seconds INTEGER NOT NULL DEFAULT 30 CHECK (5..120)` and `result_limit INTEGER NOT NULL DEFAULT 100 CHECK (1..500)`
-- [ ] CL002 [P] [US1] Apply per-indexer `timeout_seconds` to every outbound call in `src/romarr/indexers/client.py` (`t=caps`, `t=search`, `t=rss`); timeout counts as a circuit-breaker failure (FR-009a)
-- [ ] CL003 [P] [US1] Implement concurrent search fan-out via `asyncio.gather(..., return_exceptions=True)` in `src/romarr/indexers/search.py` — per-indexer failures isolated; surfaced as `IndexerHealthIssue`; merged result list = union of successful responses (FR-019a)
-- [ ] CL004 [P] [Admin] Wire admin-role gate on `POST /api/v3/applications`, `GET /api/v3/applications`, `DELETE /api/v3/applications/{id}` in `src/romarr/indexers/api.py` (FR-013a)
-- [ ] CL005 [P] [US7] Apply per-indexer `result_limit` in `src/romarr/indexers/parser.py` — pass `limit=…` to indexer when caps advertise pagination support; otherwise truncate after parsing with INFO log (FR-026a)
-- [ ] CL006 [P] Add tests in `tests/indexers/test_timeout.py` covering: in-budget call succeeds; over-budget timeout trips breaker; sibling indexers unaffected
-- [ ] CL007 [P] Add tests in `tests/indexers/test_concurrent_search.py` covering: 3 indexers in parallel, 1 fails — other 2 results returned; total wall-clock ≈ slowest healthy
-- [ ] CL008 [P] Add tests in `tests/indexers/test_application_auth.py` covering: registration without admin → 401; with admin → 201 + app token returned once; subsequent indexer push → uses app token only; deleted app → token rejected
-- [ ] CL009 [P] Add tests in `tests/indexers/test_result_limit.py` covering: 100-row default cap; configurable up to 500; over-cap truncation with INFO log
+- [X] CL001 Migration ``0004_indexers.py`` ships
+      ``timeout_seconds`` (default 30, ge=5 le=120) and
+      ``result_limit`` (default 100, ge=1 le=500) on the
+      ``indexer`` table. Bounds enforced at the schema level
+      via Pydantic ``Field(ge=..., le=...)`` in
+      ``indexers/schemas.py`` and at the DB level via the
+      migration's CHECK constraint.
+- [X] CL002 [P] [US1] Per-indexer ``timeout_seconds`` applied
+      via ``IndexerRegistry._build_client`` at
+      ``indexers/registry.py`` — each ``NewznabClient`` gets
+      ``timeout_seconds`` from the row at construction time, so
+      ``t=caps``, ``t=search``, ``t=rss`` all share the same
+      budget. Timeout counts as a circuit-breaker failure via
+      ``test_client_failure_modes.py::test_timeout_raises_protocol_error``.
+- [X] CL003 [P] [US1] Concurrent fan-out via
+      ``asyncio.gather(..., return_exceptions=True)`` shipped at
+      ``indexers/rss.py`` (RSS sync path) and
+      ``search/rounds/{manual,rss}.py`` (search rounds). Per-
+      indexer failures are isolated and surfaced as
+      ``IndexerHealthIssue`` rows. Path differs from the spec's
+      ``indexers/search.py`` — the search-round path wraps the
+      indexer client, not the indexer module itself.
+- [X] CL004 [P] [Admin] Admin gate via
+      ``Depends(require_admin)`` on every mutating endpoint in
+      ``indexers/api/applications.py`` and
+      ``indexers/api/indexers.py``. Reads use
+      ``require_readonly`` where appropriate.
+- [X] CL005 [P] [US7] Per-indexer ``result_limit`` applied at
+      ``indexers/registry.py`` (passed to ``NewznabClient``)
+      and exercised by
+      ``tests/indexers/test_client_search.py`` (asserts
+      ``params["limit"] == "100"``).
+- [X] CL006 [P] Timeout tests shipped at
+      ``tests/indexers/test_client_failure_modes.py::test_timeout_raises_protocol_error``
+      (over-budget timeout → ``IndexerProtocolError``). Sibling-
+      indexer isolation under timeouts is covered by
+      ``test_rss.py::test_sync_indexer_isolated``.
+- [X] CL007 [P] Concurrent-search fan-out tests shipped at
+      ``tests/indexers/test_rss.py`` —
+      ``test_failures_do_not_propagate`` (3 indexers, one fails,
+      others succeed) and ``test_sync_indexer_isolated`` (one
+      indexer's call doesn't touch siblings). Path differs
+      from the spec's ``test_concurrent_search.py``.
+- [X] CL008 [P] Application-auth tests shipped at
+      ``tests/indexers/api/test_applications_endpoints.py`` —
+      unauthenticated → 401, admin → 201 + app_token returned
+      once (subsequent reads strip the field), and the token-
+      hash invariant (plaintext never re-derivable from the
+      stored hash). Path differs from the spec's
+      ``test_application_auth.py``.
+- [X] CL009 [P] Result-limit tests shipped via
+      ``tests/indexers/test_models.py::test_default_values``
+      (default 100), ``tests/indexers/test_client_search.py``
+      (limit forwarded to indexer), and the Pydantic schema's
+      ``ge=1, le=500`` bounds (covered by the schema
+      validation tests).

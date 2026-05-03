@@ -250,6 +250,27 @@ def test_valid_regex_accepted() -> None:
     assert cond.values == r"\[!\]"
 
 
+def test_redos_pattern_rejected_at_save_time() -> None:
+    """CL010 / FR-023a — a catastrophic-backtracking pattern is
+    rejected when the Custom Format is created. Pattern shapes
+    like ``(a+)+`` and ``(.+)+`` are the classic ReDoS exemplars."""
+    with pytest.raises(RegexCompileError, match="catastrophic backtracking"):
+        CustomFormatCondition(
+            field="tags", operator="matches_regex", values=r"(a+)+$"
+        )
+
+
+def test_anchored_simple_regex_passes_safety_check() -> None:
+    """A simple non-nested pattern stays accepted — the safety
+    check is conservative but not paranoid."""
+    cond = CustomFormatCondition(
+        field="tags",
+        operator="matches_regex",
+        values=r"^\[(USA|EUR|JPN)\]$",
+    )
+    assert cond.values == r"^\[(USA|EUR|JPN)\]$"
+
+
 def test_greater_than_requires_release_size() -> None:
     with pytest.raises(ValidationError, match="release_size"):
         CustomFormatCondition(field="tags", operator="greater_than", values=100)

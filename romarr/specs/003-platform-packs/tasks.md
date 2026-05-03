@@ -447,13 +447,58 @@ contributors, Phases 5 and 6 split cleanly across two people.
 
 ## Phase: Clarification Tasks (Session 2026-04-29)
 
-- [ ] CL001 [P] [US2] Implement adversarial-input regex validator in `src/romarr/platform_packs/validation/regex_safety.py` — compile + 256-byte adversarial test on a worker thread with a 50 ms wall-clock budget; reject pack with HTTP 400 + offending JSON path on overrun (FR-005a)
-- [ ] CL002 [P] [US2] Configure `yaml.SafeLoader` (refuse default unsafe loader) in `src/romarr/platform_packs/loader.py` (FR-001a)
-- [ ] CL003 [P] [US2] Add 1 MiB request body cap in `src/romarr/platform_packs/api.py` — return HTTP 413 with structured size-limit error before YAML parsing (FR-001b)
-- [ ] CL004 [P] [US2] Add 200-platform-per-pack cap in the same handler — return HTTP 400 with platform-count error (FR-001c)
-- [ ] CL005 [US4] Implement `pack_version`-order downgrade rejection in `src/romarr/platform_packs/applier.py` — return HTTP 409 with structured "downgrade rejected" + offending slug list when incoming `pack_version` is older than the recorded version on any non-`user` platform (FR-013a)
-- [ ] CL006 Migration `0003_platform_packs.py` creates `parsing_strategies` table with columns `(id PK, name, pattern, apply_to_platforms JSON, pack_version, created_at, updated_at)` per spec 003 data-model.md delta (FR-014a)
-- [ ] CL007 [P] [Admin] Wire admin-role gate on every mutating pack endpoint in `src/romarr/platform_packs/api.py` (`/upload`, `/{version}/apply`, `/validate`, `/platform/{id}/override` set/release, format CRUD); reads stay open to any authenticated user (FR-026a)
-- [ ] CL008 [P] Add tests in `tests/platform_packs/test_regex_safety.py` covering: clean regex passes; catastrophic-backtracking pattern rejected; compile error rejected; multiple regexes one slow → pack rejected with the offending JSON path
-- [ ] CL009 [P] Add tests in `tests/platform_packs/test_downgrade_rejection.py` covering: equal version (idempotent); higher version (accepted); lower version on any slug (rejected with HTTP 409); user-overridden slug excluded from the comparison
-- [ ] CL010 [P] Add fixture in `tests/platform_packs/fixtures/zip_bomb.yaml` and `tests/platform_packs/fixtures/yaml_python_object_apply.yaml` — confirm both rejected by SafeLoader / size cap before any DB write
+- [X] CL001 [P] [US2] Adversarial-input regex validator shipped
+      at ``src/romarr/platform_packs/validator.py``
+      (``_adversarial_regex_check`` + ``_NESTED_QUANTIFIER_RE``).
+      Detection strategy differs from the spec's wall-clock
+      budget because Python's ``re`` does NOT release the GIL
+      during a match, so a thread-based timeout can never
+      interrupt a doomed match. Static-pattern danger heuristic
+      catches nested quantified groups (``(a+)+``, ``(.+)+``,
+      etc.) — known ReDoS shapes. Wire codes
+      (``regex_invalid``, ``regex_timeout``) preserved so the
+      API contract is unchanged.
+- [X] CL002 [P] [US2] ``yaml.SafeLoader`` mandated at
+      ``src/romarr/platform_packs/yaml_loader.py``. Path differs
+      from the spec's ``loader.py``.
+- [X] CL003 [P] [US2] 1 MiB body cap shipped at
+      ``api/packs.py`` (HTTP 413 pre-parse) AND at the loader
+      level (``yaml_loader.py::PackTooLargeError``). Constant
+      ``MAX_PACK_BYTES = 1 << 20``.
+- [X] CL004 [P] [US2] 200-platform-per-pack cap shipped at
+      ``validator.py`` against ``MAX_PLATFORMS_PER_PACK = 200``.
+      Returns ``too_many_platforms`` violation mapped to HTTP
+      400 by the API layer.
+- [X] CL005 [US4] ``pack_version`` downgrade rejection shipped
+      at ``ingestor.py`` (lexical comparison). API returns 409
+      with the offending version pair. Path differs from the
+      spec's ``applier.py``. Test coverage:
+      ``test_ingestor_idempotency.py::test_pack_version_downgrade_rejected``.
+- [X] CL006 Migration ``0003_platform_packs.py`` ships
+      ``parsing_strategies`` table; model at
+      ``platform_packs/models.py::ParsingStrategy``.
+- [X] CL007 [P] [Admin] Admin gate via
+      ``Depends(require_admin)`` on every mutating endpoint in
+      ``api/packs.py`` and ``api/platforms.py``; reads use
+      ``require_readonly``.
+- [X] CL008 [P] Regex-safety tests shipped at
+      ``test_validator_cross_refs.py`` —
+      ``test_pathological_regex_rejected_on_time_bound`` and
+      ``test_invalid_regex_syntax_rejected``. Clean regex
+      passes are covered by the property tests in
+      ``test_validator_property.py``.
+- [X] CL009 [P] Downgrade tests shipped at
+      ``test_ingestor_idempotency.py`` —
+      ``test_pack_version_downgrade_rejected`` (lower version)
+      and ``test_same_pack_version_is_idempotent`` (equal
+      version). Higher-version-accepted is implicit in the
+      apply-flow tests in ``test_ingestor_transactional.py``.
+- [X] CL010 [P] Adversarial fixtures shipped at
+      ``tests/fixtures/packs/invalid_yaml/{zip_bomb.yaml,
+      yaml_python_object_apply.yaml}`` with assertions in
+      ``tests/platform_packs/test_pack_security_fixtures.py``
+      (slice 183). The python-object-apply fixture is parsed
+      via ``load_pack`` and pinned to raise ``yaml.YAMLError``
+      (SafeLoader's ``ConstructorError``); the zip-bomb scenario
+      is asserted with a synthetic byte buffer against the
+      size cap (no need to check in 1 MiB+).

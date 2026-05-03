@@ -1,0 +1,13 @@
+pack_version: '2026.05.001'
+schema_version: 1
+# CL010 / FR-001a — SafeLoader MUST reject Python-object tags so a
+# malicious pack can't trigger arbitrary code execution at parse time.
+# A successful parse of this file is a security regression.
+description: !!python/object/apply:os.system ['id']
+platforms:
+  - slug: nes
+    name: NES
+    manufacturer: Nintendo
+    formats:
+      - extension: '.nes'
+        format_type: cartridge
