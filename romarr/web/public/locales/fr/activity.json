@@ -48,6 +48,14 @@
     "previous": "← Précédent",
     "next": "Suivant →",
     "pagination": "page {{page}} / {{total}} · {{count}} événements",
-    "paginationAria": "Pagination historique"
+    "paginationAria": "Pagination historique",
+    "filter": {
+      "ariaLabel": "Filtre de type d'événement",
+      "all": "Tous",
+      "import": "Import",
+      "search": "Recherche",
+      "job_run": "Tâche",
+      "noMatches": "Aucune entrée ne correspond au filtre actif sur cette page."
+    }
   }
 }

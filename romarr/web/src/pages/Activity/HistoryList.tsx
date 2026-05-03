@@ -5,21 +5,42 @@
  * with a larger page size and pagination controls so the
  * operator can scroll back through the full audit trail.
  *
- * The filter chips (eventType / successful) land in a
- * follow-up slice when the canonical filter URL state is
- * designed.
+ * Slice 116 adds client-side filter chips (All / Import /
+ * Search / Job) that persist via the
+ * `?historyFilter=import|search|job_run` query param —
+ * mirrors the GameDetail history pattern from slice 115.
  *
  * Strings resolve through `activity:history.*` (slice 68).
  */
 
-import { useState, type ReactElement } from "react";
+import { useMemo, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useHistory } from "@/lib/api/queries/system";
 
 const PAGE_SIZE = 50;
+
+type HistoryFilter = "all" | "import" | "search" | "job_run";
+
+const FILTER_VALUES: readonly HistoryFilter[] = [
+  "all",
+  "import",
+  "search",
+  "job_run",
+];
+
+const FILTER_SET: ReadonlySet<HistoryFilter> = new Set<HistoryFilter>(
+  FILTER_VALUES,
+);
+
+function parseFilterParam(raw: string | null): HistoryFilter {
+  return raw !== null && FILTER_SET.has(raw as HistoryFilter)
+    ? (raw as HistoryFilter)
+    : "all";
+}
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -29,13 +50,35 @@ function formatDate(dateStr: string): string {
 
 export function HistoryList(): ReactElement {
   const { t } = useTranslation("activity");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filter = parseFilterParam(searchParams.get("historyFilter"));
   const [page, setPage] = useState(1);
+
+  const setFilter = (next: HistoryFilter): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === "all") params.delete("historyFilter");
+        else params.set("historyFilter", next);
+        return params;
+      },
+      { replace: false },
+    );
+    setPage(1);
+  };
+
   const { data, isPending, isError, error } = useHistory({
     page,
     pageSize: PAGE_SIZE,
     sortKey: "date",
     sortDirection: "desc",
   });
+
+  const filteredRecords = useMemo(() => {
+    if (!data) return [];
+    if (filter === "all") return data.records;
+    return data.records.filter((e) => e.eventType === filter);
+  }, [data, filter]);
 
   if (isPending) return <ListSkeleton rows={8} />;
   if (isError) {
@@ -62,8 +105,39 @@ export function HistoryList(): ReactElement {
 
   return (
     <div className="space-y-3">
+      <div
+        role="tablist"
+        aria-label={t("history.filter.ariaLabel")}
+        className="flex flex-wrap gap-1"
+      >
+        {FILTER_VALUES.map((value) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setFilter(value)}
+            aria-pressed={filter === value}
+            className={[
+              "rounded-md px-3 py-1 text-xs font-medium ring-1 ring-inset",
+              "transition-colors",
+              filter === value
+                ? "bg-brand/20 text-brand ring-brand/40"
+                : "bg-zinc-900/40 text-zinc-400 ring-zinc-700 hover:bg-zinc-800",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+            ].join(" ")}
+          >
+            {t(`history.filter.${value}`)}
+          </button>
+        ))}
+      </div>
+
+      {filteredRecords.length === 0 && (
+        <p className="rounded-md border border-dashed border-zinc-800 bg-zinc-900/20 p-3 text-[0.7rem] text-zinc-500">
+          {t("history.filter.noMatches")}
+        </p>
+      )}
+
       <ul className="space-y-2">
-        {data.records.map((event) => (
+        {filteredRecords.map((event) => (
           <li
             key={`${event.eventType}-${event.id}`}
             className={[
