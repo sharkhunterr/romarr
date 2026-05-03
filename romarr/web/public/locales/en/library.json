@@ -68,6 +68,24 @@
       "label": "Unmonitor",
       "pending": "Updating…",
       "successTitle": "Games unmonitored"
+    },
+    "delete": {
+      "label": "Delete",
+      "modalTitle_one": "Delete {{count}} game?",
+      "modalTitle_other": "Delete {{count}} games?",
+      "subhead": "This removes the database row only — ROM files on disk are kept.",
+      "body": "The selected games (and their releases) will be removed from the Romarr database. The metadata is gone for good; you can re-add them via Add New if needed.",
+      "overflow_one": "+{{count}} more",
+      "overflow_other": "+{{count}} more",
+      "diskHint": "ROM files on disk are NOT deleted. Per-library lifecycle policies handle on-disk cleanup.",
+      "cancel": "Cancel",
+      "arming": "Hold…",
+      "deleting": "Deleting…",
+      "confirm_one": "Delete {{count}} game",
+      "confirm_other": "Delete {{count}} games",
+      "successTitle": "Games deleted",
+      "successBody": "{{deleted}} games removed · {{missing}} missing",
+      "errorTitle": "Couldn't delete the selection"
     }
   }
 }

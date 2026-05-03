@@ -440,6 +440,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/game/bulk-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Delete a batch of Games — and their Releases / Dumps via cascade — without touching ROM files on disk (admin only). Capped at 500 ids per call. Per the constitution, on-disk cleanup is the per-library lifecycle policy's job, not this endpoint's. */
+        post: operations["bulk_delete_api_v3_game_bulk_delete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/game/bulk-monitor": {
         parameters: {
             query?: never;
@@ -2204,6 +2221,34 @@ export interface components {
              * @description The YAML pack body
              */
             file: string;
+        };
+        /**
+         * BulkDeleteRequest
+         * @description POST /api/v3/game/bulk-delete — destroy a batch of Games.
+         *
+         *     Per the constitution Romarr never auto-deletes ROM files on
+         *     disk; this surface only removes the database row (and its
+         *     Releases / Dumps via cascade). Operators choose whether on-
+         *     disk cleanup happens via the per-library lifecycle policy.
+         *
+         *     Capped at 500 ids per call so an accidental "select all"
+         *     can't run away. The UI shards larger selections client-side
+         *     and gates the confirm button with a 1-second delay per
+         *     the spec's destructive-action discipline.
+         */
+        BulkDeleteRequest: {
+            /** Gameids */
+            gameIds: number[];
+        };
+        /**
+         * BulkDeleteResponse
+         * @description Response envelope for the bulk-delete endpoint.
+         */
+        BulkDeleteResponse: {
+            /** Deleted */
+            deleted: number;
+            /** Missing */
+            missing: number[];
         };
         /**
          * BulkMonitorRequest
@@ -5994,6 +6039,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GameRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_delete_api_v3_game_bulk_delete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkDeleteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkDeleteResponse"];
                 };
             };
             /** @description Validation Error */

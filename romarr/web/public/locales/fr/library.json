@@ -68,6 +68,24 @@
       "label": "Ne plus suivre",
       "pending": "Mise à jour…",
       "successTitle": "Jeux désuivis"
+    },
+    "delete": {
+      "label": "Supprimer",
+      "modalTitle_one": "Supprimer {{count}} jeu ?",
+      "modalTitle_other": "Supprimer {{count}} jeux ?",
+      "subhead": "Cela supprime uniquement la ligne en base — les fichiers ROM sur disque sont conservés.",
+      "body": "Les jeux sélectionnés (et leurs releases) seront retirés de la base Romarr. Les métadonnées seront perdues ; vous pourrez les rajouter via Ajouter si nécessaire.",
+      "overflow_one": "+{{count}} de plus",
+      "overflow_other": "+{{count}} de plus",
+      "diskHint": "Les fichiers ROM sur disque ne sont PAS supprimés. Le nettoyage disque est géré par les politiques de cycle de vie par bibliothèque.",
+      "cancel": "Annuler",
+      "arming": "Patientez…",
+      "deleting": "Suppression…",
+      "confirm_one": "Supprimer {{count}} jeu",
+      "confirm_other": "Supprimer {{count}} jeux",
+      "successTitle": "Jeux supprimés",
+      "successBody": "{{deleted}} jeux supprimés · {{missing}} introuvables",
+      "errorTitle": "Impossible de supprimer la sélection"
     }
   }
 }

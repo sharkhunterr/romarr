@@ -1,5 +1,5 @@
 """Game + Release read + lock + per-field edit + notes + bulk
-endpoints (slices 86, 146, 147, 149, 151).
+endpoints (slices 86, 146, 147, 149, 151, 153).
 
 Foundation already ships the :class:`Game` + :class:`Release`
 ORM models; this router is the operator-facing read surface
@@ -129,6 +129,37 @@ class BulkMonitorResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     updated: int
+    missing: list[int]
+
+
+class BulkDeleteRequest(BaseModel):
+    """POST /api/v3/game/bulk-delete — destroy a batch of Games.
+
+    Per the constitution Romarr never auto-deletes ROM files on
+    disk; this surface only removes the database row (and its
+    Releases / Dumps via cascade). Operators choose whether on-
+    disk cleanup happens via the per-library lifecycle policy.
+
+    Capped at 500 ids per call so an accidental "select all"
+    can't run away. The UI shards larger selections client-side
+    and gates the confirm button with a 1-second delay per
+    the spec's destructive-action discipline.
+    """
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    game_ids: Annotated[
+        list[int],
+        Field(alias="gameIds", min_length=1, max_length=500),
+    ]
+
+
+class BulkDeleteResponse(BaseModel):
+    """Response envelope for the bulk-delete endpoint."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    deleted: int
     missing: list[int]
 
 
@@ -270,6 +301,42 @@ async def bulk_monitor(
         row.monitored = body.monitored
     await db.commit()
     return BulkMonitorResponse(updated=len(rows), missing=missing)
+
+
+@router.post(
+    "/bulk-delete",
+    response_model=BulkDeleteResponse,
+    summary=(
+        "Delete a batch of Games — and their Releases / Dumps "
+        "via cascade — without touching ROM files on disk "
+        "(admin only). Capped at 500 ids per call. Per the "
+        "constitution, on-disk cleanup is the per-library "
+        "lifecycle policy's job, not this endpoint's."
+    ),
+)
+async def bulk_delete(
+    body: Annotated[BulkDeleteRequest, Body()],
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> BulkDeleteResponse:
+    rows = (
+        (
+            await db.execute(
+                select(Game).where(Game.id.in_(body.game_ids))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    found = {row.id for row in rows}
+    missing = sorted(set(body.game_ids) - found)
+    for row in rows:
+        # Cascading delete-orphan on Game.releases handles the
+        # downstream Release + Dump rows; the FK onDelete on
+        # Dump is also CASCADE so this stays atomic.
+        await db.delete(row)
+    await db.commit()
+    return BulkDeleteResponse(deleted=len(rows), missing=missing)
 
 
 @router.get(

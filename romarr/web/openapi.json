@@ -370,6 +370,49 @@
         "title": "Body_validate_only_api_v3_rom_platform_pack_validate_post",
         "type": "object"
       },
+      "BulkDeleteRequest": {
+        "additionalProperties": false,
+        "description": "POST /api/v3/game/bulk-delete \u2014 destroy a batch of Games.\n\nPer the constitution Romarr never auto-deletes ROM files on\ndisk; this surface only removes the database row (and its\nReleases / Dumps via cascade). Operators choose whether on-\ndisk cleanup happens via the per-library lifecycle policy.\n\nCapped at 500 ids per call so an accidental \"select all\"\ncan't run away. The UI shards larger selections client-side\nand gates the confirm button with a 1-second delay per\nthe spec's destructive-action discipline.",
+        "properties": {
+          "gameIds": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Gameids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "gameIds"
+        ],
+        "title": "BulkDeleteRequest",
+        "type": "object"
+      },
+      "BulkDeleteResponse": {
+        "additionalProperties": false,
+        "description": "Response envelope for the bulk-delete endpoint.",
+        "properties": {
+          "deleted": {
+            "title": "Deleted",
+            "type": "integer"
+          },
+          "missing": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Missing",
+            "type": "array"
+          }
+        },
+        "required": [
+          "deleted",
+          "missing"
+        ],
+        "title": "BulkDeleteResponse",
+        "type": "object"
+      },
       "BulkMonitorRequest": {
         "additionalProperties": false,
         "description": "POST /api/v3/game/bulk-monitor \u2014 flip the monitored flag\non a batch of Games.\n\nPowers the Library page's bulk-select action bar (slice\n152). Capped at 500 ids per request so an accidental\n\"select everything\" doesn't lock up the DB; the UI shards\nlarger selections client-side.",
@@ -9166,6 +9209,47 @@
           }
         },
         "summary": "List games (any authenticated user). Supports title-substring + platform filters.",
+        "tags": [
+          "Game"
+        ]
+      }
+    },
+    "/api/v3/game/bulk-delete": {
+      "post": {
+        "operationId": "bulk_delete_api_v3_game_bulk_delete_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkDeleteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkDeleteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete a batch of Games \u2014 and their Releases / Dumps via cascade \u2014 without touching ROM files on disk (admin only). Capped at 500 ids per call. Per the constitution, on-disk cleanup is the per-library lifecycle policy's job, not this endpoint's.",
         "tags": [
           "Game"
         ]

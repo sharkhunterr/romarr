@@ -1025,3 +1025,123 @@ async def test_bulk_monitor_unauthenticated_401(
         json={"gameIds": [1], "monitored": False},
     )
     assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# slice 153 — POST /api/v3/game/bulk-delete
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete_removes_games_and_cascades(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Three games with releases each; bulk-delete drops the
+    Game rows AND their Releases via cascade."""
+    _, a, a_releases = await _seed_chain(
+        api_engine, title="ToDelete-A", release_count=2
+    )
+    _, b, _ = await _seed_chain(
+        api_engine, title="ToDelete-B", release_count=1
+    )
+
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-delete",
+        json={"gameIds": [a, b]},
+    )
+    assert resp.status_code == 200, resp.json()
+    body = resp.json()
+    assert body["deleted"] == 2
+    assert body["missing"] == []
+
+    # The Game rows are gone.
+    for gid in (a, b):
+        row = await authed_client.get(f"/api/v3/game/{gid}")
+        assert row.status_code == 404
+
+    # And the cascaded Releases too — fetching releases for the
+    # deleted game returns 404 (game_not_found) since the parent
+    # Game is gone.
+    releases = await authed_client.get(f"/api/v3/game/{a}/release")
+    assert releases.status_code == 404
+    # Belt-and-suspenders: the release ids really don't exist
+    # anywhere reachable.
+    assert all(rid > 0 for rid in a_releases)
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete_reports_missing_ids(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    _, real, _ = await _seed_chain(api_engine, title="RealOne")
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-delete",
+        json={"gameIds": [real, 999_999, 888_888]},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["deleted"] == 1
+    assert body["missing"] == [888_888, 999_999]
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete_idempotent(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Re-running bulk-delete on already-deleted ids surfaces
+    them as ``missing`` rather than blowing up."""
+    _, gid, _ = await _seed_chain(api_engine, title="DeleteTwice")
+    first = await authed_client.post(
+        "/api/v3/game/bulk-delete", json={"gameIds": [gid]}
+    )
+    assert first.status_code == 200
+    assert first.json()["deleted"] == 1
+
+    second = await authed_client.post(
+        "/api/v3/game/bulk-delete", json={"gameIds": [gid]}
+    )
+    assert second.status_code == 200
+    assert second.json()["deleted"] == 0
+    assert second.json()["missing"] == [gid]
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete_rejects_empty_list(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-delete", json={"gameIds": []}
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete_rejects_too_many(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-delete",
+        json={"gameIds": list(range(1, 502))},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete_rejects_extra_keys(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-delete",
+        json={"gameIds": [1], "stowaway": "x"},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete_unauthenticated_401(
+    api_client: httpx.AsyncClient,
+) -> None:
+    resp = await api_client.post(
+        "/api/v3/game/bulk-delete", json={"gameIds": [1]}
+    )
+    assert resp.status_code == 401

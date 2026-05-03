@@ -1,14 +1,12 @@
 /**
- * Wanted page (P-WANT, T072 partial).
+ * Wanted page (P-WANT, slices 68, 152).
  *
  * Two tabs: Missing | Cutoff. Each pulls the canonical
  * pagination envelope from spec 013's wanted router and
- * renders one ReleaseRow per record.
- *
- * Bulk select / bulk actions / per-platform filters are
- * deferred — they need the bulk-search trigger (T043 in spec
- * 013, depends on spec 007 run_manual_search) and the
- * shadcn/ui Checkbox primitive (slice TBD).
+ * renders one ReleaseRow per record. The page hosts both
+ * the global "search all" command buttons (spec 007's
+ * MissingSearch / CutoffSearch task triggers) and slice 152's
+ * per-row bulk-select toolbar with monitor / unmonitor.
  *
  * Strings resolve through the `wanted` namespace (slice 68).
  */

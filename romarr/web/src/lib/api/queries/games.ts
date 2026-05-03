@@ -331,6 +331,38 @@ export function useBulkMonitorGames(): UseMutationResult<
   });
 }
 
+export type BulkDeleteResponse =
+  components["schemas"]["BulkDeleteResponse"];
+
+export interface BulkDeleteVariables {
+  gameIds: number[];
+}
+
+/**
+ * POST /api/v3/game/bulk-delete — destroy a batch of Games
+ * (slice 153). Cascades through Releases / Dumps via FK
+ * cascade; on-disk ROM files are NOT touched (constitutional
+ * rule: only per-library lifecycle policies remove files).
+ */
+export function useBulkDeleteGames(): UseMutationResult<
+  BulkDeleteResponse,
+  ApiError,
+  BulkDeleteVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<BulkDeleteResponse, ApiError, BulkDeleteVariables>({
+    mutationFn: ({ gameIds }) =>
+      apiFetch<BulkDeleteResponse>("/api/v3/game/bulk-delete", {
+        method: "POST",
+        json: { gameIds },
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["games"] });
+      void qc.invalidateQueries({ queryKey: ["wanted"] });
+    },
+  });
+}
+
 export interface SetGameNotesVariables {
   gameId: number;
   notes: string | null;
