@@ -25,6 +25,10 @@
     "library": {
       "label": "Filtrer par bibliothèque",
       "all": "Toutes les bibliothèques"
+    },
+    "reset": {
+      "label": "✕ Effacer les filtres",
+      "aria": "Effacer tous les filtres actifs (recherche, plateforme, bibliothèque, étiquette)"
     }
   },
   "sort": {

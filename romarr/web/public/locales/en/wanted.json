@@ -25,6 +25,10 @@
     "library": {
       "label": "Filter by library",
       "all": "All libraries"
+    },
+    "reset": {
+      "label": "✕ Clear filters",
+      "aria": "Clear every active filter (search, platform, library, tag)"
     }
   },
   "sort": {

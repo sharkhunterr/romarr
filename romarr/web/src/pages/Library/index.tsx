@@ -221,6 +221,26 @@ export function LibraryPage(): ReactElement {
     libraryFilter !== ALL_LIBRARIES ||
     monitoredOnly;
 
+  const resetFilters = (): void => {
+    // Clear the local query input so the debounced URL writer
+    // doesn't immediately re-set ``q`` from the stale state
+    // value. Sort + direction are preserved — they're not
+    // "filters" in the operator's mental model.
+    setQuery("");
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        params.delete("q");
+        params.delete("platform");
+        params.delete("tag");
+        params.delete("library");
+        params.delete("monitoredOnly");
+        return params;
+      },
+      { replace: false },
+    );
+  };
+
   // -- Bulk select state (slices 151, 153) ----------------------------------
   const pushToast = useToastStore((s) => s.push);
   const bulkMonitor = useBulkMonitorGames();
@@ -458,6 +478,18 @@ export function LibraryPage(): ReactElement {
               ? t("filters.monitoredOnly.on")
               : t("filters.monitoredOnly.off")}
           </button>
+
+          {filtersActive && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              aria-label={t("filters.reset.aria")}
+              title={t("filters.reset.aria")}
+              className="shrink-0 rounded-md border border-zinc-700 px-3 py-2 text-xs font-medium text-zinc-400 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              {t("filters.reset.label")}
+            </button>
+          )}
 
           <button
             type="button"

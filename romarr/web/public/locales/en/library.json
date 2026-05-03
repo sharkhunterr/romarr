@@ -21,6 +21,10 @@
     "monitoredOnly": {
       "off": "Monitored only",
       "on": "✓ Monitored only"
+    },
+    "reset": {
+      "label": "✕ Clear filters",
+      "aria": "Clear every active filter (search, platform, library, tag, monitored)"
     }
   },
   "sort": {

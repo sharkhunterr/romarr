@@ -385,6 +385,26 @@ export function WantedPage(): ReactElement {
   const libraryId =
     libraryFilter === ALL_LIBRARIES ? undefined : libraryFilter;
 
+  const filtersActive =
+    trimmedQuery.length > 0 ||
+    platformFilter !== ALL_PLATFORMS ||
+    tagFilter !== ALL_TAGS ||
+    libraryFilter !== ALL_LIBRARIES;
+
+  const resetFilters = (): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        params.delete("q");
+        params.delete("platform");
+        params.delete("tag");
+        params.delete("library");
+        return params;
+      },
+      { replace: false },
+    );
+  };
+
   // -- Bulk select state (slice 152) ----------------------------------------
   const pushToast = useToastStore((s) => s.push);
   const bulkMonitor = useBulkMonitorReleases();
@@ -644,6 +664,18 @@ export function WantedPage(): ReactElement {
             pendingLabel={t("bulk.cutoffSearch.pending")}
             successLabel={t("bulk.cutoffSearch.success")}
           />
+        )}
+
+        {filtersActive && (
+          <button
+            type="button"
+            onClick={resetFilters}
+            aria-label={t("filters.reset.aria")}
+            title={t("filters.reset.aria")}
+            className="shrink-0 rounded-md border border-zinc-700 px-3 py-2 text-xs font-medium text-zinc-400 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            {t("filters.reset.label")}
+          </button>
         )}
 
         <button

@@ -21,6 +21,10 @@
     "monitoredOnly": {
       "off": "Suivis uniquement",
       "on": "✓ Suivis uniquement"
+    },
+    "reset": {
+      "label": "✕ Effacer les filtres",
+      "aria": "Effacer tous les filtres actifs (recherche, plateforme, bibliothèque, étiquette, suivi)"
     }
   },
   "sort": {
