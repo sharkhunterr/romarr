@@ -130,10 +130,23 @@ shuts down cleanly.
 - [X] T013 [P] [ENVELOPES] `tests/api/test_pagination.py::test_invalid_sortKey_400`
       — `?sortKey=NotARealField` returns HTTP 400 with the canonical
       error envelope (FR-008).
-- [ ] T014 [P] [ENVELOPES] `tests/api/test_pagination.py::test_5_endpoints_uniform`
-      — table-driven over Game, Release, History, Indexer,
-      Notification; assert each accepts the canonical params and
-      returns the canonical envelope (SC-003).
+- [X] T014 [P] [ENVELOPES] Cross-endpoint canonical-envelope
+      conformance shipped at
+      ``tests/api/test_pagination_uniform.py`` (slice 198).
+      Parametrised over five paginated endpoints: history,
+      history/since, queue, wanted/missing, wanted/cutoff.
+      Each call hits the real FastAPI app over an authed
+      cookie, asserts 200 + the six canonical keys
+      (``page``, ``pageSize``, ``sortKey``, ``sortDirection``,
+      ``totalRecords``, ``records``) regardless of whether
+      the underlying table is empty. Path differs from the
+      spec's ``test_pagination.py::test_5_endpoints_uniform``
+      — the cross-endpoint test got its own file to keep
+      ``test_pagination.py`` focused on the helper unit
+      tests. Endpoint set differs from the spec text
+      (Game/Release/Indexer/Notification listed but those
+      currently use list-not-paginate shapes; queue/wanted/
+      history are the actual PaginationEnvelope consumers).
 - [X] T015 [P] [ENVELOPES] `tests/api/test_envelopes.py` —
       exercises canonical envelope shapes and the existing global
       `HTTPException` handler that produces
