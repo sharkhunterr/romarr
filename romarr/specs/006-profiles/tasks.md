@@ -303,14 +303,14 @@ operator edits.
       diff, and non-edited rows whose values drift from the JSON are
       refreshed in place rather than left alone — closes the
       "release evolves the default" gap.)*
-- [ ] T055 [SEED] Wire `seed_defaults(session)` into the application
-      bootstrap so first-boot is automatic. The wiring lives in
-      `src/romarr/app/lifespan.py` (a placeholder for now; the API spec
-      formalises it).
-      *(Lifespan wiring deferred — the API factory landing in slice 5
-      is the right place to attach the seeder. Tests call
-      `seed_defaults(session)` directly today, and the runner is
-      idempotent so manual invocation is safe in any environment.)*
+- [X] T055 [SEED] ``seed_defaults`` wired into the FastAPI
+      lifespan (slice 173). Opt-in via
+      ``app.state._enable_bootstrap = True`` so the test
+      suite default stays unaffected. Idempotent — restarts
+      are no-ops thanks to the ``seed_key`` dedup in
+      ``profiles/seeders/runner.py``. The platform-pack
+      ingestion (T038) runs after profiles so packs can
+      reference the catalogue at apply time.
 
 **Checkpoint**: seeders tests green; an empty database has the catalog
 ready after a single startup; restarting touches nothing.

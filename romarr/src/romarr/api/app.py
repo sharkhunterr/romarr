@@ -124,6 +124,16 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     a :class:`SchedulerService` with the production runner
     registry plus a :class:`CancellationRegistry`. On shutdown
     the graceful-shutdown protocol runs (FR-021, US6).
+
+    Slice 173 wires the spec-006 ``seed_defaults`` (default
+    profiles catalogue) and the spec-003 ``apply_builtin_pack``
+    (Platform Pack ingestion) — both called once on startup so
+    a fresh database boots into a usable state. Both are
+    idempotent so re-runs are no-ops, and both are guarded by
+    ``app.state._enable_bootstrap`` (default OFF) so the test
+    suite that builds the app many times per session doesn't
+    pay the seeding cost.
+
     Tests that don't want a live scheduler (most of them) opt
     out by setting ``app.state._skip_scheduler = True`` before
     the lifespan starts.
@@ -132,6 +142,51 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     engine = create_engine(database_url) if database_url else create_engine()
     app.state.db_engine = engine
     app.state.db_sessionmaker = create_sessionmaker(engine)
+
+    # Slice 173 — bootstrap seeders. Default OFF; production
+    # opts in via ``app.state._enable_bootstrap = True`` (or
+    # the eventual ``ROMARR_BOOTSTRAP_ENABLED`` settings flag).
+    enable_bootstrap = getattr(app.state, "_enable_bootstrap", False)
+    if enable_bootstrap:
+        from logging import getLogger
+
+        from romarr.platform_packs.builtin import apply_builtin_pack
+        from romarr.profiles.seeders.runner import seed_defaults
+
+        bootstrap_log = getLogger(__name__)
+        sm = app.state.db_sessionmaker
+        # Default profiles first (T055): the platform pack uses
+        # them by reference, so they must exist before the pack
+        # ingestion runs.
+        try:
+            async with sm() as session:
+                changed = await seed_defaults(session)
+                await session.commit()
+            bootstrap_log.info(
+                "lifespan.seed_defaults", extra={"counts": changed}
+            )
+        except Exception as exc:
+            # Don't paralyse the API if the seed catalogue is
+            # malformed; the operator can re-run via the
+            # eventual /api/v3/system/seed-defaults endpoint.
+            bootstrap_log.warning(
+                "lifespan.seed_defaults_failed",
+                exc_info=True,
+                extra={"error": str(exc)},
+            )
+        # Built-in Platform Pack (T038).
+        try:
+            async with sm() as session:
+                result = await apply_builtin_pack(session, sessionmaker=sm)
+            bootstrap_log.info(
+                "lifespan.apply_builtin_pack",
+                extra={"applied": result is not None},
+            )
+        except Exception as exc:
+            bootstrap_log.warning(
+                "lifespan.apply_builtin_pack_failed",
+                extra={"error": str(exc)},
+            )
 
     # Spec 012 — start the Tasks subsystem when explicitly
     # enabled. Default OFF so the test suite (which builds

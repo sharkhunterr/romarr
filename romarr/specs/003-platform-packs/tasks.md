@@ -241,11 +241,15 @@ idempotency and the transactional-rollback gates from the spec.
       `/opt/romarr/builtin-packs/`); `apply_builtin_pack(session,
       sessionmaker)` calls into `ingestor.ingest_pack` with
       `IngestSource(pack_source='builtin', applied_by='system')`.
-- [ ] T038 [BUILTIN] Wire `apply_builtin_pack` into the FastAPI
-      lifespan startup. **Deferred to the API slice** — the lifespan
-      currently only stamps the engine + sessionmaker; the wiring
-      lands alongside the pack-upload router so the bootstrap
-      semantics ship together.
+- [X] T038 [BUILTIN] ``apply_builtin_pack`` wired into the
+      FastAPI lifespan (slice 173). Opt-in via
+      ``app.state._enable_bootstrap = True`` so the test
+      suite default stays unaffected; production sets the
+      flag and the built-in pack is ingested on first boot.
+      Failures log with ``exc_info`` and do NOT crash the app
+      — the operator can re-run via the pack-upload router.
+      Idempotent at the ``ingest_pack`` level so restarts
+      are no-ops.
 
 **Checkpoint**: first-boot tests green; the YAML lints clean against the
 JSON Schema (a tiny CI smoke-test runs `validate_pack_structure` on the
