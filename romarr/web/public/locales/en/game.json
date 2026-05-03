@@ -46,6 +46,10 @@
     "empty": {
       "title": "No releases yet",
       "body": "Releases land here after a successful import or a manual match."
+    },
+    "monitor": {
+      "on": "Monitored",
+      "off": "Paused"
     }
   },
   "history": {

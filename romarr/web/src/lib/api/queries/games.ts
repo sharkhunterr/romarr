@@ -137,6 +137,37 @@ export function useRefreshGameMetadata(): UseMutationResult<
   });
 }
 
+export interface ToggleReleaseMonitorVariables {
+  releaseId: number;
+  /** The owning game — used to invalidate just that game's release cache. */
+  gameId: number;
+  monitored: boolean;
+}
+
+/**
+ * PATCH /api/v3/rom/release/{id} — toggle a release's `monitored`
+ * flag. On success the per-game releases cache is invalidated.
+ */
+export function useToggleReleaseMonitor(): UseMutationResult<
+  Release,
+  ApiError,
+  ToggleReleaseMonitorVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<Release, ApiError, ToggleReleaseMonitorVariables>({
+    mutationFn: ({ releaseId, monitored }) =>
+      apiFetch<Release>(`/api/v3/rom/release/${releaseId}`, {
+        method: "PATCH",
+        json: { monitored },
+      }),
+    onSuccess: (_release, variables) => {
+      void qc.invalidateQueries({
+        queryKey: ["games", "releases", variables.gameId],
+      });
+    },
+  });
+}
+
 /**
  * PATCH /api/v3/game/{id} — toggle a game's `monitored` flag.
  *

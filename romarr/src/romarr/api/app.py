@@ -35,6 +35,7 @@ from romarr.api.routers.game import router as game_router
 from romarr.api.routers.history import router as history_router
 from romarr.api.routers.log import router as log_router
 from romarr.api.routers.queue import router as queue_router
+from romarr.api.routers.release import router as release_router
 from romarr.api.routers.status import router as system_status_router
 from romarr.api.routers.tag import router as tag_router
 from romarr.api.routers.users import router as users_router
@@ -266,6 +267,11 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     # POST /unidentified/{id}/match needs a way to pick the
     # target Game + Release).
     app.include_router(game_router)
+    # Spec 014 (slice 98) — Release operator-toggle surface
+    # (PATCH /api/v3/rom/release/{id} for the monitor flag).
+    # Manual grab lives at the same prefix in spec 007's
+    # search router; both routers share the prefix.
+    app.include_router(release_router)
     # Spec 013 — Unified history (T058): UNION across
     # import_history / search_history / job_run, paginated.
     # /since variant filters by minimum date for cheap polling.

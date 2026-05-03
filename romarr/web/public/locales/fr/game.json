@@ -46,6 +46,10 @@
     "empty": {
       "title": "Aucune release",
       "body": "Les releases apparaîtront ici après un import réussi ou une association manuelle."
+    },
+    "monitor": {
+      "on": "Suivie",
+      "off": "Pause"
     }
   },
   "history": {

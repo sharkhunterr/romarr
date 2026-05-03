@@ -1397,6 +1397,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/rom/release/{release_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Toggle a Release's ``monitored`` flag (admin only). All other fields are owned by the import pipeline. */
+        patch: operations["patch_release_api_v3_rom_release__release_id__patch"];
+        trace?: never;
+    };
     "/api/v3/rom/search/history": {
         parameters: {
             query?: never;
@@ -4053,6 +4070,19 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * ReleaseToggleRequest
+         * @description PATCH /api/v3/rom/release/{id} — operator-toggle subset.
+         *
+         *     ``extra=forbid`` keeps this surface narrow: free-form
+         *     Release edits (region, naming, dump_status, etc.) belong
+         *     to the import pipeline / DAT identification flows, not
+         *     to a hand-rolled PATCH.
+         */
+        ReleaseToggleRequest: {
+            /** Monitored */
+            monitored: boolean;
         };
         /** ResetTokenResponse */
         ResetTokenResponse: {
@@ -7908,6 +7938,41 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_release_api_v3_rom_release__release_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                release_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseToggleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReleaseRead"];
                 };
             };
             /** @description Validation Error */

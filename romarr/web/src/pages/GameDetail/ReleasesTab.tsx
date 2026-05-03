@@ -23,6 +23,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import {
   useReleasesForGame,
+  useToggleReleaseMonitor,
   type Release,
 } from "@/lib/api/queries/games";
 
@@ -64,10 +65,55 @@ function asDumpStatus(raw: string): DumpStatus {
 
 interface ReleaseRowProps {
   release: Release;
+  gameId: number;
+}
+
+function MonitorPill(props: ReleaseRowProps): ReactElement {
+  const { t } = useTranslation("game");
+  const { release, gameId } = props;
+  const toggle = useToggleReleaseMonitor();
+  const onClick = (): void => {
+    toggle.mutate({
+      releaseId: release.id,
+      gameId,
+      monitored: !release.monitored,
+    });
+  };
+  const tone = release.monitored
+    ? "bg-emerald-700/30 text-emerald-200 ring-emerald-500/40"
+    : "bg-zinc-800 text-zinc-400 ring-zinc-700";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={toggle.isPending}
+      aria-pressed={release.monitored}
+      className={[
+        "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5",
+        "text-[0.6rem] uppercase tracking-wider ring-1 ring-inset",
+        "transition-colors hover:brightness-110",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+        "disabled:cursor-not-allowed disabled:opacity-60",
+        tone,
+      ].join(" ")}
+      title={
+        toggle.isError && toggle.error?.message
+          ? toggle.error.message
+          : undefined
+      }
+    >
+      <span aria-hidden="true">{release.monitored ? "👁️" : "💤"}</span>
+      <span>
+        {release.monitored
+          ? t("releases.monitor.on")
+          : t("releases.monitor.off")}
+      </span>
+    </button>
+  );
 }
 
 function ReleaseRow(props: ReleaseRowProps): ReactElement {
-  const { release } = props;
+  const { release, gameId } = props;
   const regions = release.regions ?? [];
   const languages = release.languages ?? [];
   return (
@@ -81,9 +127,12 @@ function ReleaseRow(props: ReleaseRowProps): ReactElement {
         <p className="truncate text-sm font-medium text-zinc-100">
           {release.name}
         </p>
-        <span className="shrink-0 rounded-full bg-zinc-800 px-2 py-0.5 text-[0.6rem] uppercase tracking-wider text-zinc-400">
-          {release.status}
-        </span>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[0.6rem] uppercase tracking-wider text-zinc-400">
+            {release.status}
+          </span>
+          <MonitorPill release={release} gameId={gameId} />
+        </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {regions.map((code) => (
@@ -132,7 +181,11 @@ export function ReleasesTab(props: ReleasesTabProps): ReactElement {
   return (
     <ul className="space-y-2">
       {releases.data?.map((release) => (
-        <ReleaseRow key={release.id} release={release} />
+        <ReleaseRow
+          key={release.id}
+          release={release}
+          gameId={props.gameId}
+        />
       ))}
     </ul>
   );

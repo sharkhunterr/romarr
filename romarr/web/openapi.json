@@ -5946,6 +5946,21 @@
         "title": "ReleaseRead",
         "type": "object"
       },
+      "ReleaseToggleRequest": {
+        "additionalProperties": false,
+        "description": "PATCH /api/v3/rom/release/{id} \u2014 operator-toggle subset.\n\n``extra=forbid`` keeps this surface narrow: free-form\nRelease edits (region, naming, dump_status, etc.) belong\nto the import pipeline / DAT identification flows, not\nto a hand-rolled PATCH.",
+        "properties": {
+          "monitored": {
+            "title": "Monitored",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "monitored"
+        ],
+        "title": "ReleaseToggleRequest",
+        "type": "object"
+      },
       "ResetTokenResponse": {
         "additionalProperties": false,
         "properties": {
@@ -11954,6 +11969,58 @@
         "summary": "Manual grab of one indexer result (admin only). ``?force=true`` overrides the blocklist gate.",
         "tags": [
           "Search"
+        ]
+      }
+    },
+    "/api/v3/rom/release/{release_id}": {
+      "patch": {
+        "operationId": "patch_release_api_v3_rom_release__release_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "release_id",
+            "required": true,
+            "schema": {
+              "title": "Release Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReleaseToggleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Toggle a Release's ``monitored`` flag (admin only). All other fields are owned by the import pipeline.",
+        "tags": [
+          "Release"
         ]
       }
     },
