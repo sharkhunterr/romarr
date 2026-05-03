@@ -97,6 +97,34 @@ export function QuickActions(): ReactElement {
         }
       />
       <ActionButton
+        label={t("dashboard:quickActions.refreshMetadata.label")}
+        hint={t("dashboard:quickActions.refreshMetadata.hint")}
+        busyLabel={busyLabel}
+        onClick={() => fire("RefreshGameMetadata")}
+        busy={
+          trigger.isPending &&
+          trigger.variables?.name === "RefreshGameMetadata"
+        }
+      />
+      <ActionButton
+        label={t("dashboard:quickActions.healthCheck.label")}
+        hint={t("dashboard:quickActions.healthCheck.hint")}
+        busyLabel={busyLabel}
+        onClick={() => fire("HealthCheck")}
+        busy={
+          trigger.isPending && trigger.variables?.name === "HealthCheck"
+        }
+      />
+      <ActionButton
+        label={t("dashboard:quickActions.downloadDats.label")}
+        hint={t("dashboard:quickActions.downloadDats.hint")}
+        busyLabel={busyLabel}
+        onClick={() => fire("DownloadDats")}
+        busy={
+          trigger.isPending && trigger.variables?.name === "DownloadDats"
+        }
+      />
+      <ActionButton
         label={t("dashboard:quickActions.backup.label")}
         hint={t("dashboard:quickActions.backup.hint")}
         busyLabel={busyLabel}

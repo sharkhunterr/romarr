@@ -69,6 +69,18 @@
       "label": "Recherche manquants",
       "hint": "Rechercher chaque release souhaitée."
     },
+    "refreshMetadata": {
+      "label": "Rafraîchir métadonnées",
+      "hint": "Ré-agréger depuis chaque fournisseur activé."
+    },
+    "healthCheck": {
+      "label": "Vérifier la santé",
+      "hint": "Relancer chaque sonde de santé."
+    },
+    "downloadDats": {
+      "label": "Mettre à jour les DAT",
+      "hint": "Rafraîchir le catalogue DAT (No-Intro / Redump / TOSEC)."
+    },
     "backup": {
       "label": "Sauvegarder",
       "hint": "Déclencher une sauvegarde immédiate."

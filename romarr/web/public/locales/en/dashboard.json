@@ -69,6 +69,18 @@
       "label": "Missing search",
       "hint": "Search every wanted release."
     },
+    "refreshMetadata": {
+      "label": "Refresh metadata",
+      "hint": "Re-aggregate from every enabled provider."
+    },
+    "healthCheck": {
+      "label": "Health check",
+      "hint": "Re-run every health probe."
+    },
+    "downloadDats": {
+      "label": "Update DATs",
+      "hint": "Refresh the DAT catalogue (No-Intro / Redump / TOSEC)."
+    },
     "backup": {
       "label": "Backup now",
       "hint": "Trigger an immediate backup."
