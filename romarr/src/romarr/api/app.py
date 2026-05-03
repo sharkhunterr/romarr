@@ -253,10 +253,36 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         from romarr.tasks.runner_protocol import build_default_registry
         from romarr.tasks.scheduler import SchedulerService
 
+        # Slice 190 / spec 011 T057 — build the HealthEngine
+        # so the scheduler's HealthCheck cron probes the live
+        # configuration (libraries, indexers, download
+        # clients, metadata providers) rather than a stub.
+        # Engine construction itself is best-effort so a
+        # malformed row can't take down the scheduler.
+        health_engine = None
+        if enable_bootstrap:
+            try:
+                from romarr.notifications.health.builder import (
+                    build_health_engine,
+                )
+
+                health_engine = await build_health_engine(
+                    app.state.db_sessionmaker
+                )
+                app.state.health_engine = health_engine
+                bootstrap_log.info("lifespan.health_engine_built")
+            except Exception as exc:
+                bootstrap_log.warning(
+                    "lifespan.health_engine_build_failed",
+                    exc_info=True,
+                    extra={"error": str(exc)},
+                )
+                health_engine = None
+
         cancellation_registry = CancellationRegistry()
         scheduler = SchedulerService(
             session_factory=app.state.db_sessionmaker,
-            runners=build_default_registry(),
+            runners=build_default_registry(health_engine=health_engine),
             cancellation_registry=cancellation_registry,
         )
         try:

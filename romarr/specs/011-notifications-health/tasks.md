@@ -402,11 +402,31 @@ work; double-event for upgrades works.
       transaction, then fires `OnHealthIssue` events via an
       injected `emit` callable. The engine is stateless across
       cycles (state lives in `health_check`).
-- [ ] T057 [HEALTH] Wire a periodic `HealthEngine.refresh()` cron
-      stub *(deferred — the actual schedule lives in spec 012's
-      Tasks scheduler. The engine's `refresh()` is callable
-      directly from the API endpoint POST /api/v3/health/refresh
-      until then)*
+- [X] T057 [HEALTH] Periodic ``HealthEngine.refresh()`` cron
+      shipped (slice 190). New module at
+      ``src/romarr/notifications/health/builder.py`` exposes
+      ``build_health_engine(sessionmaker)`` which assembles a
+      production engine with: DB ``SELECT 1`` check, metadata
+      cache size check, one library-path + disk-space check
+      per Library row, one DAT-freshness check per
+      ``(source, platform_id)`` pair, one indexer check per
+      Indexer, one download-client check per DownloadClient,
+      one metadata-provider check per enabled provider.
+      Construction is best-effort — a row that fails to build
+      its check (decryption failed, bad path, etc.) is logged
+      and skipped, and an empty config still yields a working
+      engine with the always-on infra checks.
+      ``runner_protocol.build_default_registry`` now accepts
+      an optional ``health_engine`` and threads it into
+      ``HealthCheckAdapter``; the lifespan calls
+      ``build_health_engine`` when both ``bootstrap_enabled``
+      and ``scheduler_enabled`` are True, stashes the result
+      on ``app.state.health_engine``, and passes it to the
+      registry. Tests at
+      ``tests/notifications/health/test_builder.py`` cover
+      empty config, library wiring, indexer wiring, and a
+      live ``refresh()`` round-trip against an in-memory
+      engine.
 
 **Checkpoint**: HEALTH tests green; debouncing prevents the spam
 edge case from US5; the snapshot endpoint reports the right

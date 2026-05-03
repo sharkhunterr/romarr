@@ -21,7 +21,7 @@ stubbed registry instead.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable
@@ -46,7 +46,10 @@ class JobRunner(Protocol):
     ) -> Awaitable[JobResult]: ...
 
 
-def build_default_registry() -> dict[str, JobRunner]:
+def build_default_registry(
+    *,
+    health_engine: Any | None = None,
+) -> dict[str, JobRunner]:
     """Assemble the production runner registry from the per-job
     adapters. Imported lazily so the runtime registry isn't
     constructed at module-import time (the adapters reach into
@@ -54,6 +57,13 @@ def build_default_registry() -> dict[str, JobRunner]:
     double the startup cost).
 
     The dict is keyed by ``job.id`` matching the SEED catalogue.
+
+    ``health_engine`` is the optional :class:`HealthEngine`
+    instance the application's lifespan builds via
+    :func:`romarr.notifications.health.builder.build_health_engine`.
+    When provided, the ``HealthCheck`` cron periodically calls
+    ``engine.refresh()`` (spec 011 T057). When ``None``, the
+    HealthCheckAdapter falls back to its stub-success behaviour.
     """
     from romarr.tasks.runners.adapters import (
         AutoCheckAddedAdapter,
@@ -74,7 +84,7 @@ def build_default_registry() -> dict[str, JobRunner]:
         "RefreshGameMetadata": RefreshGameMetadataAdapter(),
         "DatUpdate": DatUpdateAdapter(),
         "Backup": BackupAdapter(),
-        "HealthCheck": HealthCheckAdapter(),
+        "HealthCheck": HealthCheckAdapter(engine=health_engine),
         "LibraryScan": LibraryScanAdapter(),
         "AutoCheckAdded": AutoCheckAddedAdapter(),
     }
