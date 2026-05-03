@@ -1486,6 +1486,142 @@
         "title": "DumpProfileRead",
         "type": "object"
       },
+      "DumpRead": {
+        "additionalProperties": false,
+        "properties": {
+          "crc32": {
+            "title": "Crc32",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "dat_entry_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dat Entry Id"
+          },
+          "dat_source": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dat Source"
+          },
+          "dat_verified": {
+            "default": false,
+            "title": "Dat Verified",
+            "type": "boolean"
+          },
+          "format": {
+            "maxLength": 16,
+            "title": "Format",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "imported_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imported At"
+          },
+          "imported_by": {
+            "default": "system",
+            "maxLength": 32,
+            "title": "Imported By",
+            "type": "string"
+          },
+          "imported_via": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imported Via"
+          },
+          "md5": {
+            "title": "Md5",
+            "type": "string"
+          },
+          "original_filename": {
+            "title": "Original Filename",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "release_id": {
+            "title": "Release Id",
+            "type": "integer"
+          },
+          "sha1": {
+            "title": "Sha1",
+            "type": "string"
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "release_id",
+          "path",
+          "original_filename",
+          "size_bytes",
+          "format",
+          "crc32",
+          "md5",
+          "sha1",
+          "id",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DumpRead",
+        "type": "object"
+      },
       "DumpStatus": {
         "description": "Authoritative dump-quality classification.\n\nOrder is preference-relevant: ``verified`` is best, ``baddump`` /\n``overdump`` are worst.",
         "enum": [
@@ -8444,6 +8580,52 @@
           }
         },
         "summary": "Read one game (any authenticated user).",
+        "tags": [
+          "Game"
+        ]
+      }
+    },
+    "/api/v3/game/{game_id}/dump": {
+      "get": {
+        "operationId": "list_dumps_for_game_api_v3_game__game_id__dump_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "title": "Game Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DumpRead"
+                  },
+                  "title": "Response List Dumps For Game Api V3 Game  Game Id  Dump Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List every Dump that belongs to a game (joined through the game's Releases). Drives GameDetail > Files.",
         "tags": [
           "Game"
         ]

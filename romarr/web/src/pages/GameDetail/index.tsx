@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { DetailSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useGame } from "@/lib/api/queries/games";
 
+import { FilesTab } from "./FilesTab";
 import { HistoryTab } from "./HistoryTab";
 import { OverviewTab } from "./OverviewTab";
 import { ReleasesTab } from "./ReleasesTab";
@@ -96,12 +97,7 @@ export function GameDetailPage(): ReactElement {
           {tab === "overview" && <OverviewTab game={game.data} />}
           {tab === "releases" && <ReleasesTab gameId={gameId} />}
           {tab === "history" && <HistoryTab gameId={gameId} />}
-          {tab === "files" && (
-            <EmptyState
-              title={t("tabs.files")}
-              description={t("deferred.files")}
-            />
-          )}
+          {tab === "files" && <FilesTab gameId={gameId} />}
         </>
       )}
     </div>

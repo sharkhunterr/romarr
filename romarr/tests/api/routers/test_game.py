@@ -6,7 +6,7 @@ import httpx
 import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
-from romarr.domain.models import Game, Platform, Release
+from romarr.domain.models import Dump, Game, Platform, Release
 from tests.api.test_auth_endpoints import _seed_admin_user
 
 
@@ -178,3 +178,91 @@ async def test_list_games_unauthenticated_401(
 ) -> None:
     response = await api_client.get("/api/v3/game")
     assert response.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# slice 95 — GET /api/v3/game/{id}/dump
+# ---------------------------------------------------------------------------
+
+
+async def _seed_dump_for_release(
+    api_engine: AsyncEngine,
+    *,
+    release_id: int,
+    path: str,
+    sha1: str,
+) -> int:
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        dump = Dump(
+            release_id=release_id,
+            path=path,
+            original_filename=path.rsplit("/", 1)[-1],
+            size_bytes=1024,
+            format="zip",
+            crc32="00000000",
+            md5="0" * 32,
+            sha1=sha1,
+        )
+        session.add(dump)
+        await session.commit()
+        return dump.id
+
+
+@pytest.mark.asyncio
+async def test_list_dumps_for_game_joins_through_releases(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Two releases with one dump each → both surface in the
+    per-game dump list."""
+    _, game_id, release_ids = await _seed_chain(
+        api_engine, title="Sonic Mania", release_count=2
+    )
+    d1 = await _seed_dump_for_release(
+        api_engine,
+        release_id=release_ids[0],
+        path="/lib/mania-usa.zip",
+        sha1="a" * 40,
+    )
+    d2 = await _seed_dump_for_release(
+        api_engine,
+        release_id=release_ids[1],
+        path="/lib/mania-eur.zip",
+        sha1="b" * 40,
+    )
+
+    resp = await authed_client.get(f"/api/v3/game/{game_id}/dump")
+    assert resp.status_code == 200
+    body = resp.json()
+    returned_ids = sorted(d["id"] for d in body)
+    assert returned_ids == sorted([d1, d2])
+    paths = {d["path"] for d in body}
+    assert paths == {"/lib/mania-usa.zip", "/lib/mania-eur.zip"}
+
+
+@pytest.mark.asyncio
+async def test_list_dumps_empty_when_no_dumps_imported(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """A wanted-but-not-yet-imported game has zero dumps."""
+    _, game_id, _ = await _seed_chain(api_engine, title="Wantedish")
+    resp = await authed_client.get(f"/api/v3/game/{game_id}/dump")
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_list_dumps_404_when_game_missing(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.get("/api/v3/game/9999999/dump")
+    assert resp.status_code == 404
+    assert resp.json()["errorCode"] == "game_not_found"
+
+
+@pytest.mark.asyncio
+async def test_list_dumps_unauthenticated_401(
+    api_client: httpx.AsyncClient,
+) -> None:
+    resp = await api_client.get("/api/v3/game/1/dump")
+    assert resp.status_code == 401

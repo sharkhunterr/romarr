@@ -56,7 +56,12 @@
     "statusFailed": "FAIL",
     "showingMost": "Showing the most recent {{count}}."
   },
-  "deferred": {
-    "files": "Per-dump file detail (hashes, DAT verify, size) lands once the dump-detail endpoint surfaces."
+  "files": {
+    "loadError": "Couldn't load file detail",
+    "empty": {
+      "title": "No files imported yet",
+      "body": "Once a Release is imported, the on-disk dump (hashes, DAT verify, size, format) appears here."
+    },
+    "importedAt": "imported {{when}} via {{via}}"
   }
 }

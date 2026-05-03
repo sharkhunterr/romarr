@@ -32,8 +32,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from romarr.api.dependencies import get_db, require_readonly
 from romarr.auth import Principal
-from romarr.domain.models import Game, Release
-from romarr.domain.schemas import GameRead, ReleaseRead
+from romarr.domain.models import Dump, Game, Release
+from romarr.domain.schemas import DumpRead, GameRead, ReleaseRead
 
 router = APIRouter(prefix="/api/v3/game", tags=["Game"])
 
@@ -141,6 +141,44 @@ async def list_releases_for_game(
     ).scalars().all()
     return [
         ReleaseRead.model_validate(row, from_attributes=True) for row in rows
+    ]
+
+
+@router.get(
+    "/{game_id}/dump",
+    response_model=list[DumpRead],
+    summary=(
+        "List every Dump that belongs to a game (joined through "
+        "the game's Releases). Drives GameDetail > Files."
+    ),
+)
+async def list_dumps_for_game(
+    game_id: int,
+    _user: Annotated[Principal, Depends(require_readonly)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[DumpRead]:
+    game = (
+        await db.execute(select(Game).where(Game.id == game_id))
+    ).scalar_one_or_none()
+    if game is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "errorMessage": f"game_id={game_id} not found",
+                "errorCode": "game_not_found",
+            },
+        )
+
+    rows = (
+        await db.execute(
+            select(Dump)
+            .join(Release, Dump.release_id == Release.id)
+            .where(Release.game_id == game_id)
+            .order_by(Release.disc_number.asc(), Dump.imported_at.desc())
+        )
+    ).scalars().all()
+    return [
+        DumpRead.model_validate(row, from_attributes=True) for row in rows
     ]
 
 

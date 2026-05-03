@@ -56,7 +56,12 @@
     "statusFailed": "ÉCHEC",
     "showingMost": "Affichage des {{count}} entrées les plus récentes."
   },
-  "deferred": {
-    "files": "Le détail par dump (hashes, vérif DAT, taille) arrivera quand l'endpoint dump-detail sera shipé."
+  "files": {
+    "loadError": "Impossible de charger le détail des fichiers",
+    "empty": {
+      "title": "Aucun fichier importé",
+      "body": "Dès qu'une release est importée, le dump sur disque (hashes, vérif DAT, taille, format) apparaît ici."
+    },
+    "importedAt": "importé le {{when}} via {{via}}"
   }
 }

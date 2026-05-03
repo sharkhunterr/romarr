@@ -22,6 +22,7 @@ import type { components } from "@/types/api/schema";
 
 export type Game = components["schemas"]["GameRead"];
 export type Release = components["schemas"]["ReleaseRead"];
+export type Dump = components["schemas"]["DumpRead"];
 
 export interface ListGamesParams {
   q?: string;
@@ -69,6 +70,17 @@ export function useReleasesForGame(
   return useQuery<Release[], ApiError>({
     queryKey: ["games", "releases", gameId],
     queryFn: () => apiFetch<Release[]>(`/api/v3/game/${gameId}/release`),
+    enabled: gameId !== null,
+    staleTime: 30_000,
+  });
+}
+
+export function useDumpsForGame(
+  gameId: number | null,
+): UseQueryResult<Dump[], ApiError> {
+  return useQuery<Dump[], ApiError>({
+    queryKey: ["games", "dumps", gameId],
+    queryFn: () => apiFetch<Dump[]>(`/api/v3/game/${gameId}/dump`),
     enabled: gameId !== null,
     staleTime: 30_000,
   });

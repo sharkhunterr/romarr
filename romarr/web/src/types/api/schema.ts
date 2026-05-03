@@ -457,6 +457,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/game/{game_id}/dump": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List every Dump that belongs to a game (joined through the game's Releases). Drives GameDetail > Files. */
+        get: operations["list_dumps_for_game_api_v3_game__game_id__dump_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/game/{game_id}/refresh-metadata": {
         parameters: {
             query?: never;
@@ -2430,6 +2447,57 @@ export interface components {
             prefer_revision: string;
             /** Seed Key */
             seed_key: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** DumpRead */
+        DumpRead: {
+            /** Crc32 */
+            crc32: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Dat Entry Id */
+            dat_entry_id?: number | null;
+            /** Dat Source */
+            dat_source?: string | null;
+            /**
+             * Dat Verified
+             * @default false
+             */
+            dat_verified: boolean;
+            /** Format */
+            format: string;
+            /** Id */
+            id: number;
+            /** Imported At */
+            imported_at?: string | null;
+            /**
+             * Imported By
+             * @default system
+             */
+            imported_by: string;
+            /** Imported Via */
+            imported_via?: string | null;
+            /** Md5 */
+            md5: string;
+            /** Original Filename */
+            original_filename: string;
+            /** Path */
+            path: string;
+            /** Release Id */
+            release_id: number;
+            /** Sha1 */
+            sha1: string;
+            /** Sha256 */
+            sha256?: string | null;
+            /** Size Bytes */
+            size_bytes: number;
             /**
              * Updated At
              * Format: date-time
@@ -5465,6 +5533,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GameRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_dumps_for_game_api_v3_game__game_id__dump_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DumpRead"][];
                 };
             };
             /** @description Validation Error */
