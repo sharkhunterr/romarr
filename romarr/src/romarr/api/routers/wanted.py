@@ -176,6 +176,18 @@ async def list_missing(
             ),
         ),
     ] = None,
+    library_id: Annotated[
+        int | None,
+        Query(
+            alias="libraryId",
+            ge=1,
+            description=(
+                "Restrict to releases bound to a specific Library "
+                "(matches Release.library_id). Releases with no "
+                "library are excluded by this filter."
+            ),
+        ),
+    ] = None,
     q: Annotated[
         str | None,
         Query(
@@ -199,6 +211,8 @@ async def list_missing(
         base = base.where(Game.platform_id == platform_id)
     if tag_id is not None:
         base = _apply_tag_filter(base, tag_id)
+    if library_id is not None:
+        base = base.where(Release.library_id == library_id)
     if q is not None and q.strip():
         needle = f"%{q.strip().lower()}%"
         base = base.where(func.lower(Release.name).like(needle))
@@ -249,6 +263,17 @@ async def list_cutoff(
             ),
         ),
     ] = None,
+    library_id: Annotated[
+        int | None,
+        Query(
+            alias="libraryId",
+            ge=1,
+            description=(
+                "Restrict to releases bound to a specific Library "
+                "(matches Release.library_id)."
+            ),
+        ),
+    ] = None,
     q: Annotated[
         str | None,
         Query(
@@ -273,6 +298,8 @@ async def list_cutoff(
         base = base.where(Game.platform_id == platform_id)
     if tag_id is not None:
         base = _apply_tag_filter(base, tag_id)
+    if library_id is not None:
+        base = base.where(Release.library_id == library_id)
     if q is not None and q.strip():
         needle = f"%{q.strip().lower()}%"
         base = base.where(func.lower(Release.name).like(needle))

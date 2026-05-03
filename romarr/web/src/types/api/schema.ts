@@ -9981,6 +9981,8 @@ export interface operations {
                 platformId?: number | null;
                 /** @description Restrict to releases whose joined Game carries this tag id (matched against Game.tags JSON list). */
                 tagId?: number | null;
+                /** @description Restrict to releases bound to a specific Library (matches Release.library_id). */
+                libraryId?: number | null;
                 /** @description Case-insensitive substring filter on Release.name. Trimmed; empty/whitespace-only ignored. */
                 q?: string | null;
                 page?: number;
@@ -10021,6 +10023,8 @@ export interface operations {
                 platformId?: number | null;
                 /** @description Restrict to releases whose joined Game carries this tag id (matched against Game.tags JSON list). */
                 tagId?: number | null;
+                /** @description Restrict to releases bound to a specific Library (matches Release.library_id). Releases with no library are excluded by this filter. */
+                libraryId?: number | null;
                 /** @description Case-insensitive substring filter on Release.name. Trimmed; empty/whitespace-only ignored. */
                 q?: string | null;
                 page?: number;

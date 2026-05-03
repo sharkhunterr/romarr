@@ -14982,6 +14982,25 @@
             }
           },
           {
+            "description": "Restrict to releases bound to a specific Library (matches Release.library_id).",
+            "in": "query",
+            "name": "libraryId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to releases bound to a specific Library (matches Release.library_id).",
+              "title": "Libraryid"
+            }
+          },
+          {
             "description": "Case-insensitive substring filter on Release.name. Trimmed; empty/whitespace-only ignored.",
             "in": "query",
             "name": "q",
@@ -15122,6 +15141,25 @@
               ],
               "description": "Restrict to releases whose joined Game carries this tag id (matched against Game.tags JSON list).",
               "title": "Tagid"
+            }
+          },
+          {
+            "description": "Restrict to releases bound to a specific Library (matches Release.library_id). Releases with no library are excluded by this filter.",
+            "in": "query",
+            "name": "libraryId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to releases bound to a specific Library (matches Release.library_id). Releases with no library are excluded by this filter.",
+              "title": "Libraryid"
             }
           },
           {

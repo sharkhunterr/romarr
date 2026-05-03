@@ -39,6 +39,11 @@ export interface UseWantedParams {
    * (slice 157, matched against Game.tags JSON list).
    */
   tagId?: number;
+  /**
+   * Restrict to releases bound to a specific Library
+   * (slice 161, matches Release.library_id).
+   */
+  libraryId?: number;
   /** Case-insensitive substring filter on Release.name. */
   q?: string;
 }
@@ -55,6 +60,8 @@ function buildQueryString(params: UseWantedParams): string {
     search.set("platformId", String(params.platformId));
   if (params.tagId !== undefined)
     search.set("tagId", String(params.tagId));
+  if (params.libraryId !== undefined)
+    search.set("libraryId", String(params.libraryId));
   if (params.q !== undefined && params.q.trim() !== "")
     search.set("q", params.q.trim());
   const qs = search.toString();

@@ -21,6 +21,10 @@
     "tag": {
       "label": "Filter by tag",
       "all": "All tags"
+    },
+    "library": {
+      "label": "Filter by library",
+      "all": "All libraries"
     }
   },
   "sort": {

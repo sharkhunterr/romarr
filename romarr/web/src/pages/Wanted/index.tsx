@@ -18,6 +18,7 @@ import { useSearchParams } from "react-router-dom";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useBulkMonitorReleases } from "@/lib/api/queries/games";
+import { useLibraries } from "@/lib/api/queries/libraries";
 import { usePlatforms } from "@/lib/api/queries/platforms";
 import { useTags } from "@/lib/api/queries/tags";
 import { useTriggerCommand } from "@/lib/api/queries/system";
@@ -33,8 +34,10 @@ import { ReleaseRow } from "./ReleaseRow";
 
 const ALL_PLATFORMS = "all" as const;
 const ALL_TAGS = "all" as const;
+const ALL_LIBRARIES = "all" as const;
 type PlatformFilter = number | typeof ALL_PLATFORMS;
 type TagFilter = number | typeof ALL_TAGS;
+type LibraryFilter = number | typeof ALL_LIBRARIES;
 
 type WantedSortKey = "name" | "created_at" | "updated_at" | "status";
 const SORT_KEYS: readonly WantedSortKey[] = [
@@ -59,6 +62,12 @@ function parseTagParam(raw: string | null): TagFilter {
   if (raw === null || raw === "") return ALL_TAGS;
   const parsed = Number.parseInt(raw, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : ALL_TAGS;
+}
+
+function parseLibraryParam(raw: string | null): LibraryFilter {
+  if (raw === null || raw === "") return ALL_LIBRARIES;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : ALL_LIBRARIES;
 }
 
 function parseTabParam(raw: string | null): Tab {
@@ -154,6 +163,7 @@ function TabButton(props: TabButtonProps): ReactElement {
 interface TabBodyProps {
   platformId: number | undefined;
   tagId: number | undefined;
+  libraryId: number | undefined;
   sortKey: WantedSortKey;
   sortDirection: SortDirection;
   q: string | undefined;
@@ -172,6 +182,7 @@ function MissingTab(props: TabBodyProps): ReactElement {
     sortDirection: props.sortDirection,
     platformId: props.platformId,
     tagId: props.tagId,
+    libraryId: props.libraryId,
     q: props.q,
   });
 
@@ -225,6 +236,7 @@ function CutoffTab(props: TabBodyProps): ReactElement {
     sortDirection: props.sortDirection,
     platformId: props.platformId,
     tagId: props.tagId,
+    libraryId: props.libraryId,
     q: props.q,
   });
 
@@ -273,12 +285,14 @@ export function WantedPage(): ReactElement {
   const tab = parseTabParam(searchParams.get("tab"));
   const platformFilter = parsePlatformParam(searchParams.get("platform"));
   const tagFilter = parseTagParam(searchParams.get("tag"));
+  const libraryFilter = parseLibraryParam(searchParams.get("library"));
   const sortKey = parseSortParam(searchParams.get("sort"));
   const sortDirection = parseDirectionParam(searchParams.get("direction"));
   const rawQuery = searchParams.get("q") ?? "";
   const trimmedQuery = rawQuery.trim();
   const platforms = usePlatforms();
   const tags = useTags();
+  const libraries = useLibraries();
 
   const setTab = (next: Tab): void => {
     setSearchParams(
@@ -310,6 +324,18 @@ export function WantedPage(): ReactElement {
         const params = new URLSearchParams(prev);
         if (next === ALL_TAGS) params.delete("tag");
         else params.set("tag", String(next));
+        return params;
+      },
+      { replace: false },
+    );
+  };
+
+  const setLibraryFilter = (next: LibraryFilter): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === ALL_LIBRARIES) params.delete("library");
+        else params.set("library", String(next));
         return params;
       },
       { replace: false },
@@ -356,6 +382,8 @@ export function WantedPage(): ReactElement {
   const platformId =
     platformFilter === ALL_PLATFORMS ? undefined : platformFilter;
   const tagId = tagFilter === ALL_TAGS ? undefined : tagFilter;
+  const libraryId =
+    libraryFilter === ALL_LIBRARIES ? undefined : libraryFilter;
 
   // -- Bulk select state (slice 152) ----------------------------------------
   const pushToast = useToastStore((s) => s.push);
@@ -531,6 +559,34 @@ export function WantedPage(): ReactElement {
           </select>
         </label>
 
+        <label className="block md:w-44">
+          <span className="sr-only">{t("filters.library.label")}</span>
+          <select
+            value={libraryFilter === ALL_LIBRARIES ? "" : String(libraryFilter)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setLibraryFilter(
+                v === "" ? ALL_LIBRARIES : Number.parseInt(v, 10),
+              );
+            }}
+            aria-label={t("filters.library.label")}
+            disabled={!libraries.isSuccess}
+            className={[
+              "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
+              "ring-1 ring-inset ring-zinc-700",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+              "disabled:cursor-not-allowed disabled:opacity-60",
+            ].join(" ")}
+          >
+            <option value="">{t("filters.library.all")}</option>
+            {libraries.data?.map((lib) => (
+              <option key={lib.id} value={lib.id}>
+                {lib.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <div className="flex items-stretch gap-1">
           <label className="block md:w-44">
             <span className="sr-only">{t("sort.label")}</span>
@@ -673,6 +729,7 @@ export function WantedPage(): ReactElement {
         <MissingTab
           platformId={platformId}
           tagId={tagId}
+          libraryId={libraryId}
           sortKey={sortKey}
           sortDirection={sortDirection}
           q={trimmedQuery === "" ? undefined : trimmedQuery}
@@ -686,6 +743,7 @@ export function WantedPage(): ReactElement {
         <CutoffTab
           platformId={platformId}
           tagId={tagId}
+          libraryId={libraryId}
           sortKey={sortKey}
           sortDirection={sortDirection}
           q={trimmedQuery === "" ? undefined : trimmedQuery}

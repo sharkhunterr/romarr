@@ -516,3 +516,128 @@ async def test_missing_tag_id_filter_stacks_with_platform_and_q(
     body = resp.json()
     assert body["totalRecords"] == 1
     assert body["records"][0]["name"] == "Combo USA"
+
+
+# ---------------------------------------------------------------------------
+# slice 161 — libraryId filter on Wanted
+# ---------------------------------------------------------------------------
+
+
+async def _set_release_library(
+    engine: AsyncEngine, *, release_id: int, library_id: int | None
+) -> None:
+    """Point ``Release.library_id`` at an arbitrary id without
+    having to seed the full Library + 5-profiles graph the FK
+    target would normally require. We toggle ``PRAGMA
+    foreign_keys`` for the connection — this test exercises the
+    list filter, not FK semantics.
+    """
+    from sqlalchemy import text
+
+    sm = async_sessionmaker(engine, expire_on_commit=False)
+    async with sm() as session:
+        await session.execute(text("PRAGMA foreign_keys = OFF"))
+        await session.execute(
+            text(
+                "UPDATE release SET library_id = :lid WHERE id = :rid"
+            ),
+            {"lid": library_id, "rid": release_id},
+        )
+        await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_missing_library_id_filter_keeps_only_matching(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """libraryId narrows the missing list to releases bound to
+    the chosen library; releases pinned to other libraries (or
+    none) are excluded."""
+    game_id = await _seed_platform_and_game(api_engine)
+    a = await _seed_release(api_engine, game_id=game_id, name="A USA")
+    b = await _seed_release(api_engine, game_id=game_id, name="B EUR")
+    c = await _seed_release(api_engine, game_id=game_id, name="C JPN")
+    await _set_release_library(api_engine, release_id=a, library_id=42)
+    await _set_release_library(api_engine, release_id=b, library_id=42)
+    await _set_release_library(api_engine, release_id=c, library_id=99)
+
+    resp = await authed_client.get("/api/v3/wanted/missing?libraryId=42")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["totalRecords"] == 2
+    names = {row["name"] for row in body["records"]}
+    assert names == {"A USA", "B EUR"}
+
+
+@pytest.mark.asyncio
+async def test_missing_library_id_filter_excludes_null_library(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """A specific libraryId filter excludes rows with null
+    library_id — that's the SQL ``= 42`` semantic."""
+    game_id = await _seed_platform_and_game(api_engine)
+    a = await _seed_release(api_engine, game_id=game_id, name="Bound")
+    _ = await _seed_release(api_engine, game_id=game_id, name="Unbound")
+    await _set_release_library(api_engine, release_id=a, library_id=7)
+
+    resp = await authed_client.get("/api/v3/wanted/missing?libraryId=7")
+    assert resp.status_code == 200
+    names = [row["name"] for row in resp.json()["records"]]
+    assert names == ["Bound"]
+
+
+@pytest.mark.asyncio
+async def test_cutoff_library_id_filter_keeps_only_matching(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    game_id = await _seed_platform_and_game(api_engine)
+    a = await _seed_release(
+        api_engine,
+        game_id=game_id,
+        name="Lib-A",
+        status="imported",
+        cutoff_met=False,
+    )
+    b = await _seed_release(
+        api_engine,
+        game_id=game_id,
+        name="Lib-B",
+        status="imported",
+        cutoff_met=False,
+    )
+    await _set_release_library(api_engine, release_id=a, library_id=10)
+    await _set_release_library(api_engine, release_id=b, library_id=20)
+
+    resp = await authed_client.get("/api/v3/wanted/cutoff?libraryId=10")
+    assert resp.status_code == 200
+    names = [row["name"] for row in resp.json()["records"]]
+    assert names == ["Lib-A"]
+
+
+@pytest.mark.asyncio
+async def test_missing_library_id_stacks_with_platform_and_tag(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """libraryId stacks with platformId + tagId — every filter
+    AND'd together."""
+    a = await _seed_game_with_tags(api_engine, title="Stack-Match", tags=[5])
+    b = await _seed_game_with_tags(api_engine, title="Stack-Other", tags=[5])
+    matching = await _seed_release(
+        api_engine, game_id=a, name="Match"
+    )
+    not_matching = await _seed_release(
+        api_engine, game_id=b, name="Other"
+    )
+    await _set_release_library(
+        api_engine, release_id=matching, library_id=3
+    )
+    await _set_release_library(
+        api_engine, release_id=not_matching, library_id=4
+    )
+
+    resp = await authed_client.get(
+        "/api/v3/wanted/missing?tagId=5&libraryId=3"
+    )
+    assert resp.status_code == 200
+    names = [row["name"] for row in resp.json()["records"]]
+    assert names == ["Match"]
