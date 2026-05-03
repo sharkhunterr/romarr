@@ -7198,7 +7198,7 @@
         "type": "object"
       },
       "WantedReleaseRead": {
-        "description": "Sonarr-shape camelCase JSON for a wanted release.\n\nMirrors only the fields the Wanted page UI reads \u2014 the full\nRelease detail is on the Game tabbed view, not here. Keeps\npayload small for typical 50-row pages.",
+        "description": "Sonarr-shape camelCase JSON for a wanted release.\n\nMirrors only the fields the Wanted page UI reads \u2014 the full\nRelease detail is on the Game tabbed view, not here. Keeps\npayload small for typical 50-row pages.\n\n`platformId` (slice 134) is denormalised from the owning Game\nso the row can render a platform pill without a follow-up\nfetch.",
         "properties": {
           "createdAt": {
             "title": "Createdat"
@@ -7268,6 +7268,10 @@
             ],
             "title": "Parentreleaseid"
           },
+          "platformId": {
+            "title": "Platformid",
+            "type": "integer"
+          },
           "regions": {
             "items": {
               "type": "string"
@@ -7297,6 +7301,7 @@
         "required": [
           "id",
           "gameId",
+          "platformId",
           "name",
           "regions",
           "languages",

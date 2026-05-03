@@ -43,7 +43,12 @@ class WantedReleaseRead(BaseModel):
 
     Mirrors only the fields the Wanted page UI reads — the full
     Release detail is on the Game tabbed view, not here. Keeps
-    payload small for typical 50-row pages."""
+    payload small for typical 50-row pages.
+
+    `platformId` (slice 134) is denormalised from the owning Game
+    so the row can render a platform pill without a follow-up
+    fetch.
+    """
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -52,6 +57,7 @@ class WantedReleaseRead(BaseModel):
 
     id: int
     game_id: int = Field(alias="gameId")
+    platform_id: int = Field(alias="platformId")
     name: str
     regions: list[str]
     languages: list[str]
@@ -71,8 +77,30 @@ class WantedReleaseRead(BaseModel):
     updated_at: Any = Field(alias="updatedAt")
 
 
-def _adapt(row: Release) -> WantedReleaseRead:
-    return WantedReleaseRead.model_validate(row)
+def _adapt(row: Any) -> WantedReleaseRead:
+    """Adapt a (Release, platform_id) row tuple from the joined
+    base query into the response envelope."""
+    release = row.Release
+    return WantedReleaseRead(
+        id=release.id,
+        gameId=release.game_id,
+        platformId=row.platform_id,
+        name=release.name,
+        regions=release.regions,
+        languages=release.languages,
+        revision=release.revision,
+        dumpStatus=release.dump_status,
+        namingConvention=release.naming_convention,
+        status=release.status,
+        monitored=release.monitored,
+        cutoffMet=release.cutoff_met,
+        libraryId=release.library_id,
+        discNumber=release.disc_number,
+        discTotal=release.disc_total,
+        parentReleaseId=release.parent_release_id,
+        createdAt=release.created_at,
+        updatedAt=release.updated_at,
+    )
 
 
 # Both endpoints share the sortable whitelist. ``id`` is first
@@ -113,20 +141,23 @@ async def list_missing(
         ),
     ] = None,
 ) -> PaginationEnvelope[WantedReleaseRead]:
-    base = select(Release).where(
-        Release.status == "wanted",
-        Release.monitored.is_(True),
+    base = (
+        select(Release, Game.platform_id)
+        .join(Game, Release.game_id == Game.id)
+        .where(
+            Release.status == "wanted",
+            Release.monitored.is_(True),
+        )
     )
     if platform_id is not None:
-        base = base.join(Game, Release.game_id == Game.id).where(
-            Game.platform_id == platform_id
-        )
+        base = base.where(Game.platform_id == platform_id)
     return await paginate(
         session=db,
         base_query=base,
         page_request=page_req,
         sortable_keys=_SORTABLE_KEYS,
         record_adapter=_adapt,
+        scalars=False,
     )
 
 
@@ -157,21 +188,24 @@ async def list_cutoff(
         ),
     ] = None,
 ) -> PaginationEnvelope[WantedReleaseRead]:
-    base = select(Release).where(
-        Release.status == "imported",
-        Release.cutoff_met.is_(False),
-        Release.monitored.is_(True),
+    base = (
+        select(Release, Game.platform_id)
+        .join(Game, Release.game_id == Game.id)
+        .where(
+            Release.status == "imported",
+            Release.cutoff_met.is_(False),
+            Release.monitored.is_(True),
+        )
     )
     if platform_id is not None:
-        base = base.join(Game, Release.game_id == Game.id).where(
-            Game.platform_id == platform_id
-        )
+        base = base.where(Game.platform_id == platform_id)
     return await paginate(
         session=db,
         base_query=base,
         page_request=page_req,
         sortable_keys=_SORTABLE_KEYS,
         record_adapter=_adapt,
+        scalars=False,
     )
 
 

@@ -18,6 +18,7 @@ import {
   type DumpStatus,
   type NamingConvention,
 } from "@/components/rom";
+import { usePlatformsById } from "@/lib/api/queries/platforms";
 import type { WantedRelease } from "@/lib/api/queries/wanted";
 
 export interface ReleaseRowProps {
@@ -62,6 +63,12 @@ function asDumpStatus(raw: string): DumpStatus {
 
 export function ReleaseRow(props: ReleaseRowProps): ReactElement {
   const { release } = props;
+  const platformsById = usePlatformsById();
+  const platform = platformsById.get(release.platformId);
+  const platformLabel =
+    platform?.short_name?.trim() ||
+    platform?.name ||
+    null;
   return (
     <Link
       to={`/game/${release.gameId}`}
@@ -74,9 +81,19 @@ export function ReleaseRow(props: ReleaseRowProps): ReactElement {
         "transition-colors",
       ].join(" ")}
     >
-      <p className="truncate text-sm font-medium text-zinc-100">
-        {release.name}
-      </p>
+      <div className="flex items-start justify-between gap-2">
+        <p className="truncate text-sm font-medium text-zinc-100">
+          {release.name}
+        </p>
+        {platformLabel && (
+          <span
+            className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[0.6rem] uppercase tracking-wider text-zinc-300"
+            title={platform?.name ?? undefined}
+          >
+            {platformLabel}
+          </span>
+        )}
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         {release.regions.map((code) => (
           <RegionBadge key={`${release.id}-${code}`} code={code} />

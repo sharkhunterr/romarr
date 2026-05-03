@@ -4597,6 +4597,10 @@ export interface components {
          *     Mirrors only the fields the Wanted page UI reads — the full
          *     Release detail is on the Game tabbed view, not here. Keeps
          *     payload small for typical 50-row pages.
+         *
+         *     `platformId` (slice 134) is denormalised from the owning Game
+         *     so the row can render a platform pill without a follow-up
+         *     fetch.
          */
         WantedReleaseRead: {
             /** Createdat */
@@ -4625,6 +4629,8 @@ export interface components {
             namingConvention: string;
             /** Parentreleaseid */
             parentReleaseId?: number | null;
+            /** Platformid */
+            platformId: number;
             /** Regions */
             regions: string[];
             /** Revision */

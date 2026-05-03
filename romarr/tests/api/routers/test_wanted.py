@@ -305,6 +305,8 @@ async def test_missing_platform_id_filter_keeps_only_one_platform(
     body = resp.json()
     assert body["totalRecords"] == 1
     assert body["records"][0]["name"] == "Sonic (USA, MD)"
+    # slice 134 — `platformId` is denormalised onto every row.
+    assert body["records"][0]["platformId"] == md_id
 
 
 @pytest.mark.asyncio
