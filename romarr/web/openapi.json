@@ -509,6 +509,68 @@
         "title": "BulkReleaseMonitorResponse",
         "type": "object"
       },
+      "BulkTagRequest": {
+        "additionalProperties": false,
+        "description": "POST /api/v3/game/bulk-tag \u2014 slice 154.\n\nApply or strip a set of tags across a batch of Games. The\n``Game.tags`` JSON column stores tag ids; this surface\ncanonicalises the per-row list (sorted, deduped) on every\nwrite so the JSON shape stays stable.\n\n``action=\"add\"`` unions the supplied tag ids into each\nGame's existing list. ``action=\"remove\"`` strips them.\nCapped at 500 ids per call; the operator can run a second\npass for larger selections.",
+        "properties": {
+          "action": {
+            "enum": [
+              "add",
+              "remove"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "gameIds": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Gameids",
+            "type": "array"
+          },
+          "tagIds": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Tagids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "gameIds",
+          "tagIds",
+          "action"
+        ],
+        "title": "BulkTagRequest",
+        "type": "object"
+      },
+      "BulkTagResponse": {
+        "additionalProperties": false,
+        "description": "Response envelope for the bulk-tag endpoint.",
+        "properties": {
+          "missing": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "updated": {
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated",
+          "missing"
+        ],
+        "title": "BulkTagResponse",
+        "type": "object"
+      },
       "CalendarEvent": {
         "description": "One preservation event on the calendar.\n\nModeled on Sonarr's `/calendar` shape but adapted for ROM\npreservation: each event is a community-curated upcoming\nrelease (ROM hack, homebrew, fan translation). The\n``platformId`` is nullable \u2014 multi-platform events (e.g. a\ncross-platform homebrew port) carry ``null`` here.",
         "properties": {
@@ -9291,6 +9353,47 @@
           }
         },
         "summary": "Flip the monitored flag on a batch of games (admin only). Capped at 500 ids per call. Returns the number of rows updated and the ids that didn't resolve.",
+        "tags": [
+          "Game"
+        ]
+      }
+    },
+    "/api/v3/game/bulk-tag": {
+      "post": {
+        "operationId": "bulk_tag_api_v3_game_bulk_tag_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkTagRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkTagResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add or remove a set of tags across a batch of Games (admin only). Capped at 500 game ids and 50 tag ids per call. The per-row tag list is canonicalised (sorted, deduped) on every write.",
         "tags": [
           "Game"
         ]

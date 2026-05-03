@@ -30,6 +30,7 @@ import { usePlatforms } from "@/lib/api/queries/platforms";
 import { useToastStore } from "@/lib/store/toast";
 
 import { BulkDeleteModal } from "./BulkDeleteModal";
+import { BulkTagModal } from "./BulkTagModal";
 import { GameCard } from "./GameCard";
 
 const ALL_PLATFORMS = "all" as const;
@@ -170,6 +171,7 @@ export function LibraryPage(): ReactElement {
     () => new Set<number>(),
   );
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [tagOpen, setTagOpen] = useState(false);
 
   const exitSelection = (): void => {
     setSelectionActive(false);
@@ -397,6 +399,14 @@ export function LibraryPage(): ReactElement {
               </button>
               <button
                 type="button"
+                onClick={() => setTagOpen(true)}
+                disabled={selectedIds.size === 0 || bulkMonitor.isPending}
+                className="rounded-md bg-brand/30 px-2 py-1 text-[0.65rem] font-medium text-brand hover:bg-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {t("bulk.tag.label")}
+              </button>
+              <button
+                type="button"
                 onClick={() => setDeleteOpen(true)}
                 disabled={selectedIds.size === 0 || bulkMonitor.isPending}
                 className="rounded-md bg-red-600 px-2 py-1 text-[0.65rem] font-medium text-zinc-50 hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-not-allowed disabled:opacity-60"
@@ -463,6 +473,14 @@ export function LibraryPage(): ReactElement {
         <BulkDeleteModal
           games={games.data.filter((g) => selectedIds.has(g.id))}
           onClose={() => setDeleteOpen(false)}
+          onSuccess={exitSelection}
+        />
+      )}
+
+      {tagOpen && games.data && (
+        <BulkTagModal
+          games={games.data.filter((g) => selectedIds.has(g.id))}
+          onClose={() => setTagOpen(false)}
           onSuccess={exitSelection}
         />
       )}

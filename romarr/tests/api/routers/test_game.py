@@ -1145,3 +1145,177 @@ async def test_bulk_delete_unauthenticated_401(
         "/api/v3/game/bulk-delete", json={"gameIds": [1]}
     )
     assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# slice 154 — POST /api/v3/game/bulk-tag
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_bulk_tag_add_unions_into_existing(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Two games, one already carrying tag 1; bulk-add tags 2,3
+    leaves tag 1 in place and unions 2,3 in (sorted, deduped)."""
+    _, a, _ = await _seed_chain(api_engine, title="TagA")
+    _, b, _ = await _seed_chain(api_engine, title="TagB")
+
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        row = await session.get(Game, a)
+        assert row is not None
+        row.tags = [1]
+        await session.commit()
+
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-tag",
+        json={"gameIds": [a, b], "tagIds": [2, 3], "action": "add"},
+    )
+    assert resp.status_code == 200, resp.json()
+    body = resp.json()
+    assert body["updated"] == 2
+    assert body["missing"] == []
+
+    # Verify the union shape via per-row reads.
+    a_row = await authed_client.get(f"/api/v3/game/{a}")
+    b_row = await authed_client.get(f"/api/v3/game/{b}")
+    assert a_row.json()["tags"] == [1, 2, 3]
+    assert b_row.json()["tags"] == [2, 3]
+
+
+@pytest.mark.asyncio
+async def test_bulk_tag_add_dedupes(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Re-adding tags already on the row is a no-op."""
+    _, a, _ = await _seed_chain(api_engine, title="DedupeTag")
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        row = await session.get(Game, a)
+        assert row is not None
+        row.tags = [1, 2]
+        await session.commit()
+
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-tag",
+        json={"gameIds": [a], "tagIds": [1, 2, 3], "action": "add"},
+    )
+    assert resp.status_code == 200
+    a_row = await authed_client.get(f"/api/v3/game/{a}")
+    assert a_row.json()["tags"] == [1, 2, 3]
+
+
+@pytest.mark.asyncio
+async def test_bulk_tag_remove_strips(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    _, a, _ = await _seed_chain(api_engine, title="StripTag")
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        row = await session.get(Game, a)
+        assert row is not None
+        row.tags = [1, 2, 3, 4]
+        await session.commit()
+
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-tag",
+        json={"gameIds": [a], "tagIds": [2, 3], "action": "remove"},
+    )
+    assert resp.status_code == 200
+    a_row = await authed_client.get(f"/api/v3/game/{a}")
+    assert a_row.json()["tags"] == [1, 4]
+
+
+@pytest.mark.asyncio
+async def test_bulk_tag_remove_missing_tag_is_noop(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Removing a tag the row doesn't carry doesn't blow up."""
+    _, a, _ = await _seed_chain(api_engine, title="NoOpRemove")
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        row = await session.get(Game, a)
+        assert row is not None
+        row.tags = [5]
+        await session.commit()
+
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-tag",
+        json={"gameIds": [a], "tagIds": [99, 100], "action": "remove"},
+    )
+    assert resp.status_code == 200
+    a_row = await authed_client.get(f"/api/v3/game/{a}")
+    assert a_row.json()["tags"] == [5]
+
+
+@pytest.mark.asyncio
+async def test_bulk_tag_reports_missing(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    _, real, _ = await _seed_chain(api_engine, title="RealTagged")
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-tag",
+        json={
+            "gameIds": [real, 999_999],
+            "tagIds": [1],
+            "action": "add",
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["updated"] == 1
+    assert body["missing"] == [999_999]
+
+
+@pytest.mark.asyncio
+async def test_bulk_tag_rejects_unknown_action(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-tag",
+        json={"gameIds": [1], "tagIds": [1], "action": "replace"},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_bulk_tag_rejects_empty_lists(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    """Both gameIds and tagIds must be non-empty — an empty
+    request can't have a meaningful intent."""
+    for payload in (
+        {"gameIds": [], "tagIds": [1], "action": "add"},
+        {"gameIds": [1], "tagIds": [], "action": "add"},
+    ):
+        resp = await authed_client.post(
+            "/api/v3/game/bulk-tag", json=payload
+        )
+        assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_bulk_tag_rejects_too_many(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-tag",
+        json={
+            "gameIds": list(range(1, 502)),
+            "tagIds": [1],
+            "action": "add",
+        },
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_bulk_tag_unauthenticated_401(
+    api_client: httpx.AsyncClient,
+) -> None:
+    resp = await api_client.post(
+        "/api/v3/game/bulk-tag",
+        json={"gameIds": [1], "tagIds": [1], "action": "add"},
+    )
+    assert resp.status_code == 401

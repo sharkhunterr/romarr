@@ -474,6 +474,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/game/bulk-tag": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add or remove a set of tags across a batch of Games (admin only). Capped at 500 game ids and 50 tag ids per call. The per-row tag list is canonicalised (sorted, deduped) on every write. */
+        post: operations["bulk_tag_api_v3_game_bulk_tag_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/game/lookup": {
         parameters: {
             query?: never;
@@ -2301,6 +2318,41 @@ export interface components {
          * @description Response envelope for the release bulk-monitor endpoint.
          */
         BulkReleaseMonitorResponse: {
+            /** Missing */
+            missing: number[];
+            /** Updated */
+            updated: number;
+        };
+        /**
+         * BulkTagRequest
+         * @description POST /api/v3/game/bulk-tag — slice 154.
+         *
+         *     Apply or strip a set of tags across a batch of Games. The
+         *     ``Game.tags`` JSON column stores tag ids; this surface
+         *     canonicalises the per-row list (sorted, deduped) on every
+         *     write so the JSON shape stays stable.
+         *
+         *     ``action="add"`` unions the supplied tag ids into each
+         *     Game's existing list. ``action="remove"`` strips them.
+         *     Capped at 500 ids per call; the operator can run a second
+         *     pass for larger selections.
+         */
+        BulkTagRequest: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "add" | "remove";
+            /** Gameids */
+            gameIds: number[];
+            /** Tagids */
+            tagIds: number[];
+        };
+        /**
+         * BulkTagResponse
+         * @description Response envelope for the bulk-tag endpoint.
+         */
+        BulkTagResponse: {
             /** Missing */
             missing: number[];
             /** Updated */
@@ -6105,6 +6157,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BulkMonitorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_tag_api_v3_game_bulk_tag_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkTagRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkTagResponse"];
                 };
             };
             /** @description Validation Error */

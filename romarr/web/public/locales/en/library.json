@@ -86,6 +86,28 @@
       "successTitle": "Games deleted",
       "successBody": "{{deleted}} games removed · {{missing}} missing",
       "errorTitle": "Couldn't delete the selection"
+    },
+    "tag": {
+      "label": "Tag",
+      "modalTitle_one": "Tag {{count}} game",
+      "modalTitle_other": "Tag {{count}} games",
+      "subhead": "Add or strip tags across the selection. Pick existing tags below — create new ones under Settings > Tags.",
+      "actionLabel": "Action",
+      "addAction": "Add",
+      "removeAction": "Remove",
+      "tagsLabel": "Tags",
+      "loadingTags": "Loading tags…",
+      "noTags": "No tags defined yet. Create one under Settings > Tags first.",
+      "cancel": "Cancel",
+      "submitting": "Updating…",
+      "addSubmit_one": "Add {{count}} tag",
+      "addSubmit_other": "Add {{count}} tags",
+      "removeSubmit_one": "Remove {{count}} tag",
+      "removeSubmit_other": "Remove {{count}} tags",
+      "addSuccessTitle": "Tags added",
+      "removeSuccessTitle": "Tags removed",
+      "successBody": "{{updated}} games updated · {{missing}} missing",
+      "errorTitle": "Couldn't update tags"
     }
   }
 }

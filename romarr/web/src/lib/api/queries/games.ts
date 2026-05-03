@@ -338,6 +338,39 @@ export interface BulkDeleteVariables {
   gameIds: number[];
 }
 
+export type BulkTagResponse =
+  components["schemas"]["BulkTagResponse"];
+
+export interface BulkTagVariables {
+  gameIds: number[];
+  tagIds: number[];
+  action: "add" | "remove";
+}
+
+/**
+ * POST /api/v3/game/bulk-tag — apply or strip a set of tags
+ * across a batch of Games (slice 154). The Library bulk
+ * toolbar drives this; the per-row tag list is kept sorted
+ * and deduped server-side.
+ */
+export function useBulkTagGames(): UseMutationResult<
+  BulkTagResponse,
+  ApiError,
+  BulkTagVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<BulkTagResponse, ApiError, BulkTagVariables>({
+    mutationFn: ({ gameIds, tagIds, action }) =>
+      apiFetch<BulkTagResponse>("/api/v3/game/bulk-tag", {
+        method: "POST",
+        json: { gameIds, tagIds, action },
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["games"] });
+    },
+  });
+}
+
 /**
  * POST /api/v3/game/bulk-delete — destroy a batch of Games
  * (slice 153). Cascades through Releases / Dumps via FK

@@ -1,5 +1,5 @@
 """Game + Release read + lock + per-field edit + notes + bulk
-endpoints (slices 86, 146, 147, 149, 151, 153).
+endpoints (slices 86, 146, 147, 149, 151, 153, 154).
 
 Foundation already ships the :class:`Game` + :class:`Release`
 ORM models; this router is the operator-facing read surface
@@ -160,6 +160,42 @@ class BulkDeleteResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     deleted: int
+    missing: list[int]
+
+
+class BulkTagRequest(BaseModel):
+    """POST /api/v3/game/bulk-tag — slice 154.
+
+    Apply or strip a set of tags across a batch of Games. The
+    ``Game.tags`` JSON column stores tag ids; this surface
+    canonicalises the per-row list (sorted, deduped) on every
+    write so the JSON shape stays stable.
+
+    ``action="add"`` unions the supplied tag ids into each
+    Game's existing list. ``action="remove"`` strips them.
+    Capped at 500 ids per call; the operator can run a second
+    pass for larger selections.
+    """
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    game_ids: Annotated[
+        list[int],
+        Field(alias="gameIds", min_length=1, max_length=500),
+    ]
+    tag_ids: Annotated[
+        list[int],
+        Field(alias="tagIds", min_length=1, max_length=50),
+    ]
+    action: Literal["add", "remove"]
+
+
+class BulkTagResponse(BaseModel):
+    """Response envelope for the bulk-tag endpoint."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    updated: int
     missing: list[int]
 
 
@@ -337,6 +373,47 @@ async def bulk_delete(
         await db.delete(row)
     await db.commit()
     return BulkDeleteResponse(deleted=len(rows), missing=missing)
+
+
+@router.post(
+    "/bulk-tag",
+    response_model=BulkTagResponse,
+    summary=(
+        "Add or remove a set of tags across a batch of Games "
+        "(admin only). Capped at 500 game ids and 50 tag ids "
+        "per call. The per-row tag list is canonicalised "
+        "(sorted, deduped) on every write."
+    ),
+)
+async def bulk_tag(
+    body: Annotated[BulkTagRequest, Body()],
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> BulkTagResponse:
+    rows = (
+        (
+            await db.execute(
+                select(Game).where(Game.id.in_(body.game_ids))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    found = {row.id for row in rows}
+    missing = sorted(set(body.game_ids) - found)
+    tag_set = set(body.tag_ids)
+    for row in rows:
+        current = set(row.tags or [])
+        if body.action == "add":
+            current |= tag_set
+        else:  # "remove"
+            current -= tag_set
+        # JSON columns need a fresh list assignment for SQLAlchemy
+        # to detect the mutation; sorted output keeps the JSON
+        # shape stable across runs.
+        row.tags = sorted(current)
+    await db.commit()
+    return BulkTagResponse(updated=len(rows), missing=missing)
 
 
 @router.get(

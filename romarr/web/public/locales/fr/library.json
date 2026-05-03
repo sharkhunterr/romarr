@@ -86,6 +86,28 @@
       "successTitle": "Jeux supprimés",
       "successBody": "{{deleted}} jeux supprimés · {{missing}} introuvables",
       "errorTitle": "Impossible de supprimer la sélection"
+    },
+    "tag": {
+      "label": "Étiqueter",
+      "modalTitle_one": "Étiqueter {{count}} jeu",
+      "modalTitle_other": "Étiqueter {{count}} jeux",
+      "subhead": "Ajouter ou retirer des étiquettes sur la sélection. Choisissez parmi les étiquettes existantes — créez-en de nouvelles depuis Paramètres > Étiquettes.",
+      "actionLabel": "Action",
+      "addAction": "Ajouter",
+      "removeAction": "Retirer",
+      "tagsLabel": "Étiquettes",
+      "loadingTags": "Chargement des étiquettes…",
+      "noTags": "Aucune étiquette définie. Créez-en une depuis Paramètres > Étiquettes.",
+      "cancel": "Annuler",
+      "submitting": "Mise à jour…",
+      "addSubmit_one": "Ajouter {{count}} étiquette",
+      "addSubmit_other": "Ajouter {{count}} étiquettes",
+      "removeSubmit_one": "Retirer {{count}} étiquette",
+      "removeSubmit_other": "Retirer {{count}} étiquettes",
+      "addSuccessTitle": "Étiquettes ajoutées",
+      "removeSuccessTitle": "Étiquettes retirées",
+      "successBody": "{{updated}} jeux mis à jour · {{missing}} introuvables",
+      "errorTitle": "Impossible de mettre à jour les étiquettes"
     }
   }
 }
