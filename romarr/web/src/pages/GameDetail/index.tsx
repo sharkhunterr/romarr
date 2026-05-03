@@ -7,9 +7,9 @@
  * backend endpoints surface.
  */
 
-import { useState, type ReactElement } from "react";
+import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { DetailSkeleton } from "@/components/shared/LoadingSkeleton";
@@ -24,6 +24,12 @@ import { ReleasesTab } from "./ReleasesTab";
 type Tab = "overview" | "releases" | "history" | "files";
 
 const TABS: readonly Tab[] = ["overview", "releases", "history", "files"];
+
+const TAB_SET: ReadonlySet<Tab> = new Set(TABS);
+
+function parseTabParam(raw: string | null): Tab {
+  return raw !== null && TAB_SET.has(raw as Tab) ? (raw as Tab) : "overview";
+}
 
 interface TabButtonProps {
   tab: Tab;
@@ -57,7 +63,20 @@ export function GameDetailPage(): ReactElement {
   const { gameId: gameIdRaw } = useParams<{ gameId: string }>();
   const gameId = gameIdRaw ? Number(gameIdRaw) : null;
   const game = useGame(gameId);
-  const [tab, setTab] = useState<Tab>("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = parseTabParam(searchParams.get("tab"));
+
+  const setTab = (next: Tab): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === "overview") params.delete("tab");
+        else params.set("tab", next);
+        return params;
+      },
+      { replace: false },
+    );
+  };
 
   if (gameId === null || Number.isNaN(gameId)) {
     return (

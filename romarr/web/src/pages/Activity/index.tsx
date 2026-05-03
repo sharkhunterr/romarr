@@ -12,13 +12,18 @@
  * Strings resolve through the `activity` namespace (slice 68).
  */
 
-import { useState, type ReactElement } from "react";
+import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 import { HistoryList } from "./HistoryList";
 import { QueueList } from "./QueueList";
 
 type Tab = "queue" | "history";
+
+function parseTabParam(raw: string | null): Tab {
+  return raw === "history" ? "history" : "queue";
+}
 
 interface TabButtonProps {
   tab: Tab;
@@ -51,7 +56,20 @@ function TabButton(props: TabButtonProps): ReactElement {
 
 export function ActivityPage(): ReactElement {
   const { t } = useTranslation("activity");
-  const [tab, setTab] = useState<Tab>("queue");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = parseTabParam(searchParams.get("tab"));
+
+  const setTab = (next: Tab): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === "queue") params.delete("tab");
+        else params.set("tab", next);
+        return params;
+      },
+      { replace: false },
+    );
+  };
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-6 md:py-8">
