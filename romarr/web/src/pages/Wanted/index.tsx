@@ -13,18 +13,20 @@
  * Strings resolve through the `wanted` namespace (slice 68).
  */
 
-import { type ReactElement } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
+import { useBulkMonitorReleases } from "@/lib/api/queries/games";
 import { usePlatforms } from "@/lib/api/queries/platforms";
 import { useTriggerCommand } from "@/lib/api/queries/system";
 import {
   useWantedCutoff,
   useWantedMissing,
 } from "@/lib/api/queries/wanted";
+import { useToastStore } from "@/lib/store/toast";
 
 import { ReleaseRow } from "./ReleaseRow";
 
@@ -145,6 +147,10 @@ interface TabBodyProps {
   sortKey: WantedSortKey;
   sortDirection: SortDirection;
   q: string | undefined;
+  selectionActive: boolean;
+  selectedIds: ReadonlySet<number>;
+  onToggleSelect: (releaseId: number) => void;
+  onAllVisible: (ids: number[]) => void;
 }
 
 function MissingTab(props: TabBodyProps): ReactElement {
@@ -156,6 +162,13 @@ function MissingTab(props: TabBodyProps): ReactElement {
     platformId: props.platformId,
     q: props.q,
   });
+
+  // Hand the visible ids upstream so the bulk-toolbar's
+  // "select all visible" action knows which rows to flip.
+  useEffect(() => {
+    if (data) props.onAllVisible(data.records.map((r) => r.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
 
   if (isPending) return <ListSkeleton rows={6} />;
   if (isError) {
@@ -178,7 +191,12 @@ function MissingTab(props: TabBodyProps): ReactElement {
     <ul className="space-y-2">
       {data.records.map((release) => (
         <li key={release.id}>
-          <ReleaseRow release={release} />
+          <ReleaseRow
+            release={release}
+            selectionActive={props.selectionActive}
+            selected={props.selectedIds.has(release.id)}
+            onToggleSelect={props.onToggleSelect}
+          />
         </li>
       ))}
     </ul>
@@ -194,6 +212,11 @@ function CutoffTab(props: TabBodyProps): ReactElement {
     platformId: props.platformId,
     q: props.q,
   });
+
+  useEffect(() => {
+    if (data) props.onAllVisible(data.records.map((r) => r.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
 
   if (isPending) return <ListSkeleton rows={6} />;
   if (isError) {
@@ -216,7 +239,12 @@ function CutoffTab(props: TabBodyProps): ReactElement {
     <ul className="space-y-2">
       {data.records.map((release) => (
         <li key={release.id}>
-          <ReleaseRow release={release} />
+          <ReleaseRow
+            release={release}
+            selectionActive={props.selectionActive}
+            selected={props.selectedIds.has(release.id)}
+            onToggleSelect={props.onToggleSelect}
+          />
         </li>
       ))}
     </ul>
@@ -297,6 +325,71 @@ export function WantedPage(): ReactElement {
 
   const platformId =
     platformFilter === ALL_PLATFORMS ? undefined : platformFilter;
+
+  // -- Bulk select state (slice 152) ----------------------------------------
+  const pushToast = useToastStore((s) => s.push);
+  const bulkMonitor = useBulkMonitorReleases();
+  const [selectionActive, setSelectionActive] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<number>>(
+    () => new Set<number>(),
+  );
+  const [visibleIds, setVisibleIds] = useState<readonly number[]>([]);
+
+  const toggleSelect = (releaseId: number): void => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(releaseId)) next.delete(releaseId);
+      else next.add(releaseId);
+      return next;
+    });
+  };
+
+  const selectAllVisible = (): void => {
+    setSelectedIds(new Set(visibleIds));
+  };
+
+  const exitSelection = (): void => {
+    setSelectionActive(false);
+    setSelectedIds(new Set());
+  };
+
+  // Resetting selection when the active tab flips avoids
+  // stale ids carrying across — Missing and Cutoff have
+  // disjoint id sets in practice, so a leftover selection
+  // would silently skip rows the operator just selected.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [tab]);
+
+  const runBulkMonitor = (monitored: boolean): void => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    bulkMonitor.mutate(
+      { releaseIds: ids, monitored },
+      {
+        onSuccess: (resp) => {
+          pushToast({
+            kind: "success",
+            title: monitored
+              ? t("bulk.monitor.successTitle")
+              : t("bulk.unmonitor.successTitle"),
+            description: t("bulk.monitor.successBody", {
+              updated: resp.updated,
+              missing: resp.missing.length,
+            }),
+          });
+          exitSelection();
+        },
+        onError: (err) => {
+          pushToast({
+            kind: "error",
+            title: t("bulk.errorTitle"),
+            description: err.message,
+          });
+        },
+      },
+    );
+  };
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-6 md:py-8">
@@ -429,7 +522,77 @@ export function WantedPage(): ReactElement {
             successLabel={t("bulk.cutoffSearch.success")}
           />
         )}
+
+        <button
+          type="button"
+          onClick={() =>
+            selectionActive ? exitSelection() : setSelectionActive(true)
+          }
+          aria-pressed={selectionActive}
+          className={[
+            "shrink-0 rounded-md px-3 py-2 text-xs font-medium ring-1 ring-inset",
+            "transition-colors",
+            selectionActive
+              ? "bg-brand/20 text-brand ring-brand/40 hover:bg-brand/30"
+              : "bg-zinc-950 text-zinc-400 ring-zinc-700 hover:bg-zinc-900",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+          ].join(" ")}
+        >
+          {selectionActive
+            ? t("bulk.exitSelection")
+            : t("bulk.enterSelection")}
+        </button>
       </div>
+
+      {selectionActive && (
+        <div
+          role="region"
+          aria-label={t("bulk.toolbarAria")}
+          className="mb-4 flex flex-wrap items-center gap-2 rounded-md border border-brand/40 bg-brand/10 px-3 py-2"
+        >
+          <p className="text-xs text-zinc-100">
+            {t("bulk.selectedCount", { count: selectedIds.size })}
+          </p>
+          <div className="ml-auto flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={selectAllVisible}
+              disabled={visibleIds.length === 0}
+              className="rounded-md border border-zinc-700 px-2 py-1 text-[0.65rem] font-medium text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {t("bulk.selectAll")}
+            </button>
+            <button
+              type="button"
+              onClick={() => runBulkMonitor(true)}
+              disabled={selectedIds.size === 0 || bulkMonitor.isPending}
+              className="rounded-md bg-emerald-600 px-2 py-1 text-[0.65rem] font-medium text-zinc-950 hover:bg-emerald-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {bulkMonitor.isPending
+                ? t("bulk.monitor.pending")
+                : t("bulk.monitor.label")}
+            </button>
+            <button
+              type="button"
+              onClick={() => runBulkMonitor(false)}
+              disabled={selectedIds.size === 0 || bulkMonitor.isPending}
+              className="rounded-md bg-zinc-700 px-2 py-1 text-[0.65rem] font-medium text-zinc-100 hover:bg-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {bulkMonitor.isPending
+                ? t("bulk.unmonitor.pending")
+                : t("bulk.unmonitor.label")}
+            </button>
+            <button
+              type="button"
+              onClick={exitSelection}
+              disabled={bulkMonitor.isPending}
+              className="rounded-md border border-zinc-700 px-2 py-1 text-[0.65rem] font-medium text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {t("bulk.cancel")}
+            </button>
+          </div>
+        </div>
+      )}
 
       {tab === "missing" ? (
         <MissingTab
@@ -437,6 +600,10 @@ export function WantedPage(): ReactElement {
           sortKey={sortKey}
           sortDirection={sortDirection}
           q={trimmedQuery === "" ? undefined : trimmedQuery}
+          selectionActive={selectionActive}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
+          onAllVisible={setVisibleIds}
         />
       ) : (
         <CutoffTab
@@ -444,6 +611,10 @@ export function WantedPage(): ReactElement {
           sortKey={sortKey}
           sortDirection={sortDirection}
           q={trimmedQuery === "" ? undefined : trimmedQuery}
+          selectionActive={selectionActive}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
+          onAllVisible={setVisibleIds}
         />
       )}
     </div>

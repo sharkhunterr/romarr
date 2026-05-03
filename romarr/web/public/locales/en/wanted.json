@@ -42,6 +42,28 @@
       "idle": "Search all cutoff",
       "pending": "Queuing…",
       "success": "Queued"
+    },
+    "enterSelection": "Select",
+    "exitSelection": "✓ Selecting",
+    "toolbarAria": "Bulk selection actions",
+    "selectedCount_zero": "No releases selected",
+    "selectedCount_one": "{{count}} release selected",
+    "selectedCount_other": "{{count}} releases selected",
+    "selectAll": "Select all visible",
+    "cancel": "Cancel",
+    "errorTitle": "Bulk action failed",
+    "selectAria": "Select {{name}}",
+    "deselectAria": "Deselect {{name}}",
+    "monitor": {
+      "label": "Monitor",
+      "pending": "Updating…",
+      "successTitle": "Releases monitored",
+      "successBody": "{{updated}} releases updated · {{missing}} missing"
+    },
+    "unmonitor": {
+      "label": "Unmonitor",
+      "pending": "Updating…",
+      "successTitle": "Releases unmonitored"
     }
   },
   "missing": {

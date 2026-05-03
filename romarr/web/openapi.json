@@ -418,6 +418,54 @@
         "title": "BulkMonitorResponse",
         "type": "object"
       },
+      "BulkReleaseMonitorRequest": {
+        "additionalProperties": false,
+        "description": "POST /api/v3/rom/release/bulk-monitor \u2014 slice 152.\n\nMirrors the slice-151 Game bulk-monitor surface but on\nReleases. Capped at 500 ids per call; the UI shards larger\nselections client-side.",
+        "properties": {
+          "monitored": {
+            "title": "Monitored",
+            "type": "boolean"
+          },
+          "releaseIds": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Releaseids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "releaseIds",
+          "monitored"
+        ],
+        "title": "BulkReleaseMonitorRequest",
+        "type": "object"
+      },
+      "BulkReleaseMonitorResponse": {
+        "additionalProperties": false,
+        "description": "Response envelope for the release bulk-monitor endpoint.",
+        "properties": {
+          "missing": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "updated": {
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated",
+          "missing"
+        ],
+        "title": "BulkReleaseMonitorResponse",
+        "type": "object"
+      },
       "CalendarEvent": {
         "description": "One preservation event on the calendar.\n\nModeled on Sonarr's `/calendar` shape but adapted for ROM\npreservation: each event is a community-curated upcoming\nrelease (ROM hack, homebrew, fan translation). The\n``platformId`` is nullable \u2014 multi-platform events (e.g. a\ncross-platform homebrew port) carry ``null`` here.",
         "properties": {
@@ -12931,6 +12979,47 @@
         "summary": "Update a regionprofile (admin only). Flips is_user_modified=true.",
         "tags": [
           "RegionProfiles"
+        ]
+      }
+    },
+    "/api/v3/rom/release/bulk-monitor": {
+      "post": {
+        "operationId": "bulk_monitor_releases_api_v3_rom_release_bulk_monitor_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkReleaseMonitorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkReleaseMonitorResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Flip the monitored flag on a batch of Releases (admin only). Capped at 500 ids per call. Returns the number of rows updated and the ids that didn't resolve.",
+        "tags": [
+          "Release"
         ]
       }
     },

@@ -42,6 +42,28 @@
       "idle": "Rechercher tous les cutoff",
       "pending": "Mise en file…",
       "success": "En file"
+    },
+    "enterSelection": "Sélectionner",
+    "exitSelection": "✓ En sélection",
+    "toolbarAria": "Actions de sélection multiple",
+    "selectedCount_zero": "Aucune release sélectionnée",
+    "selectedCount_one": "{{count}} release sélectionnée",
+    "selectedCount_other": "{{count}} releases sélectionnées",
+    "selectAll": "Tout sélectionner",
+    "cancel": "Annuler",
+    "errorTitle": "L'action groupée a échoué",
+    "selectAria": "Sélectionner {{name}}",
+    "deselectAria": "Désélectionner {{name}}",
+    "monitor": {
+      "label": "Suivre",
+      "pending": "Mise à jour…",
+      "successTitle": "Releases suivies",
+      "successBody": "{{updated}} releases mises à jour · {{missing}} introuvables"
+    },
+    "unmonitor": {
+      "label": "Ne plus suivre",
+      "pending": "Mise à jour…",
+      "successTitle": "Releases désuivies"
     }
   },
   "missing": {

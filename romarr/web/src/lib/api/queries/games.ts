@@ -189,6 +189,47 @@ export function useToggleReleaseMonitor(): UseMutationResult<
   });
 }
 
+export type BulkReleaseMonitorResponse =
+  components["schemas"]["BulkReleaseMonitorResponse"];
+
+export interface BulkReleaseMonitorVariables {
+  releaseIds: number[];
+  monitored: boolean;
+}
+
+/**
+ * POST /api/v3/rom/release/bulk-monitor — flip the monitored
+ * flag on a batch of Releases (slice 152). Capped at 500 ids
+ * per call. Powers the Wanted page bulk-select toolbar.
+ */
+export function useBulkMonitorReleases(): UseMutationResult<
+  BulkReleaseMonitorResponse,
+  ApiError,
+  BulkReleaseMonitorVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<
+    BulkReleaseMonitorResponse,
+    ApiError,
+    BulkReleaseMonitorVariables
+  >({
+    mutationFn: ({ releaseIds, monitored }) =>
+      apiFetch<BulkReleaseMonitorResponse>(
+        "/api/v3/rom/release/bulk-monitor",
+        {
+          method: "POST",
+          json: { releaseIds, monitored },
+        },
+      ),
+    onSuccess: () => {
+      // Wanted is the consumer; invalidate any release-scoped
+      // game caches so per-game Releases tabs repaint too.
+      void qc.invalidateQueries({ queryKey: ["wanted"] });
+      void qc.invalidateQueries({ queryKey: ["games", "releases"] });
+    },
+  });
+}
+
 /**
  * PATCH /api/v3/game/{id} — toggle a game's `monitored` flag.
  *

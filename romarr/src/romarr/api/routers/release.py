@@ -1,13 +1,16 @@
-"""Release write endpoints (slice 98).
+"""Release write endpoints (slices 98, 152).
 
 The spec 014 GameDetail > Releases tab calls for per-release
 operator actions: monitor toggle, manual search, manual grab,
 delete. Manual grab already exists at
 ``POST /api/v3/rom/release/grab`` (spec 007). This router
-adds the operator-toggle surface:
+ships the operator-toggle surface:
 
   * ``PATCH /api/v3/rom/release/{release_id}`` — toggle the
     Release's ``monitored`` flag (admin only).
+  * ``POST  /api/v3/rom/release/bulk-monitor`` — flip the flag
+    on a batch of releases (admin only). Powers the Wanted
+    page's bulk-select action bar.
 
 Delete is intentionally deferred; cascading a Release delete
 through its Dumps + history rows is destructive and needs a
@@ -20,7 +23,7 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -44,7 +47,64 @@ class ReleaseToggleRequest(BaseModel):
     monitored: bool
 
 
+class BulkReleaseMonitorRequest(BaseModel):
+    """POST /api/v3/rom/release/bulk-monitor — slice 152.
+
+    Mirrors the slice-151 Game bulk-monitor surface but on
+    Releases. Capped at 500 ids per call; the UI shards larger
+    selections client-side.
+    """
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    release_ids: Annotated[
+        list[int],
+        Field(alias="releaseIds", min_length=1, max_length=500),
+    ]
+    monitored: bool
+
+
+class BulkReleaseMonitorResponse(BaseModel):
+    """Response envelope for the release bulk-monitor endpoint."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    updated: int
+    missing: list[int]
+
+
 router = APIRouter(prefix="/api/v3/rom/release", tags=["Release"])
+
+
+@router.post(
+    "/bulk-monitor",
+    response_model=BulkReleaseMonitorResponse,
+    summary=(
+        "Flip the monitored flag on a batch of Releases (admin "
+        "only). Capped at 500 ids per call. Returns the number "
+        "of rows updated and the ids that didn't resolve."
+    ),
+)
+async def bulk_monitor_releases(
+    body: Annotated[BulkReleaseMonitorRequest, Body()],
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> BulkReleaseMonitorResponse:
+    rows = (
+        (
+            await db.execute(
+                select(Release).where(Release.id.in_(body.release_ids))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    found = {row.id for row in rows}
+    missing = sorted(set(body.release_ids) - found)
+    for row in rows:
+        row.monitored = body.monitored
+    await db.commit()
+    return BulkReleaseMonitorResponse(updated=len(rows), missing=missing)
 
 
 @router.patch(

@@ -115,3 +115,91 @@ async def test_patch_release_unauthenticated_401(
         "/api/v3/rom/release/1", json={"monitored": False}
     )
     assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# slice 152 — POST /api/v3/rom/release/bulk-monitor
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_bulk_monitor_releases_flips_to_false(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    a = await _seed_release(api_engine)
+    b = await _seed_release(api_engine)
+    c = await _seed_release(api_engine)
+
+    resp = await authed_client.post(
+        "/api/v3/rom/release/bulk-monitor",
+        json={"releaseIds": [a, b, c], "monitored": False},
+    )
+    assert resp.status_code == 200, resp.json()
+    body = resp.json()
+    assert body["updated"] == 3
+    assert body["missing"] == []
+
+
+@pytest.mark.asyncio
+async def test_bulk_monitor_releases_reports_missing(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    a = await _seed_release(api_engine)
+    resp = await authed_client.post(
+        "/api/v3/rom/release/bulk-monitor",
+        json={"releaseIds": [a, 999_999], "monitored": True},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["updated"] == 1
+    assert body["missing"] == [999_999]
+
+
+@pytest.mark.asyncio
+async def test_bulk_monitor_releases_idempotent(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    a = await _seed_release(api_engine)
+    for _ in range(3):
+        resp = await authed_client.post(
+            "/api/v3/rom/release/bulk-monitor",
+            json={"releaseIds": [a], "monitored": True},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["updated"] == 1
+
+
+@pytest.mark.asyncio
+async def test_bulk_monitor_releases_rejects_empty_list(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.post(
+        "/api/v3/rom/release/bulk-monitor",
+        json={"releaseIds": [], "monitored": False},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_bulk_monitor_releases_rejects_too_many(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.post(
+        "/api/v3/rom/release/bulk-monitor",
+        json={
+            "releaseIds": list(range(1, 502)),
+            "monitored": False,
+        },
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_bulk_monitor_releases_unauthenticated_401(
+    api_client: httpx.AsyncClient,
+) -> None:
+    resp = await api_client.post(
+        "/api/v3/rom/release/bulk-monitor",
+        json={"releaseIds": [1], "monitored": False},
+    )
+    assert resp.status_code == 401

@@ -1504,6 +1504,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/rom/release/bulk-monitor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Flip the monitored flag on a batch of Releases (admin only). Capped at 500 ids per call. Returns the number of rows updated and the ids that didn't resolve. */
+        post: operations["bulk_monitor_releases_api_v3_rom_release_bulk_monitor_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/rom/release/grab": {
         parameters: {
             query?: never;
@@ -2215,6 +2232,30 @@ export interface components {
          *     any ids the operator passed that didn't resolve to a Game.
          */
         BulkMonitorResponse: {
+            /** Missing */
+            missing: number[];
+            /** Updated */
+            updated: number;
+        };
+        /**
+         * BulkReleaseMonitorRequest
+         * @description POST /api/v3/rom/release/bulk-monitor — slice 152.
+         *
+         *     Mirrors the slice-151 Game bulk-monitor surface but on
+         *     Releases. Capped at 500 ids per call; the UI shards larger
+         *     selections client-side.
+         */
+        BulkReleaseMonitorRequest: {
+            /** Monitored */
+            monitored: boolean;
+            /** Releaseids */
+            releaseIds: number[];
+        };
+        /**
+         * BulkReleaseMonitorResponse
+         * @description Response envelope for the release bulk-monitor endpoint.
+         */
+        BulkReleaseMonitorResponse: {
             /** Missing */
             missing: number[];
             /** Updated */
@@ -8546,6 +8587,39 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_monitor_releases_api_v3_rom_release_bulk_monitor_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkReleaseMonitorRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkReleaseMonitorResponse"];
+                };
             };
             /** @description Validation Error */
             422: {
