@@ -1703,3 +1703,131 @@ async def test_list_games_tag_filter_combines_with_platform_and_q(
     assert resp.status_code == 200
     ids = [row["id"] for row in resp.json()]
     assert ids == [a]
+
+
+# ---------------------------------------------------------------------------
+# slice 166 — GET /api/v3/game?library_id= filter
+# ---------------------------------------------------------------------------
+
+
+async def _bind_release_to_library(
+    api_engine: AsyncEngine, *, release_id: int, library_id: int
+) -> None:
+    """Set Release.library_id directly via raw SQL with FK
+    enforcement off — same trick as the Wanted libraryId tests
+    in slice 161 (seeding the full Library + 5 profiles graph
+    is overkill for a filter-behavior test)."""
+    from sqlalchemy import text
+
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        await session.execute(text("PRAGMA foreign_keys = OFF"))
+        await session.execute(
+            text(
+                "UPDATE release SET library_id = :lid WHERE id = :rid"
+            ),
+            {"lid": library_id, "rid": release_id},
+        )
+        await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_list_games_library_id_filter_via_release_join(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """A game lands in the result only if it has at least one
+    Release bound to the requested library."""
+    _, in_lib, in_lib_releases = await _seed_chain(
+        api_engine, title="InLibrary", release_count=1
+    )
+    _, other_lib, other_lib_releases = await _seed_chain(
+        api_engine, title="OtherLibrary", release_count=1
+    )
+    _, no_release, _ = await _seed_chain(
+        api_engine, title="NoReleaseHere", release_count=0
+    )
+
+    await _bind_release_to_library(
+        api_engine, release_id=in_lib_releases[0], library_id=42
+    )
+    await _bind_release_to_library(
+        api_engine, release_id=other_lib_releases[0], library_id=99
+    )
+
+    resp = await authed_client.get("/api/v3/game?library_id=42")
+    assert resp.status_code == 200
+    ids = {row["id"] for row in resp.json()}
+    assert in_lib in ids
+    assert other_lib not in ids
+    assert no_release not in ids
+
+
+@pytest.mark.asyncio
+async def test_list_games_library_id_filter_dedupes_multi_release(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """A game with multiple Releases in the same library appears
+    exactly once — the EXISTS subquery doesn't multiply rows."""
+    _, gid, release_ids = await _seed_chain(
+        api_engine, title="MultiInLib", release_count=3
+    )
+    for rid in release_ids:
+        await _bind_release_to_library(
+            api_engine, release_id=rid, library_id=7
+        )
+
+    resp = await authed_client.get("/api/v3/game?library_id=7")
+    assert resp.status_code == 200
+    matches = [row for row in resp.json() if row["id"] == gid]
+    assert len(matches) == 1
+
+
+@pytest.mark.asyncio
+async def test_list_games_library_id_filter_excludes_no_release(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """A game whose only Release is bound to a different library
+    is excluded — the filter is "has Release in THIS library",
+    not "has any Release"."""
+    _, gid, releases = await _seed_chain(
+        api_engine, title="WrongLib", release_count=1
+    )
+    await _bind_release_to_library(
+        api_engine, release_id=releases[0], library_id=99
+    )
+
+    resp = await authed_client.get("/api/v3/game?library_id=42")
+    assert resp.status_code == 200
+    ids = {row["id"] for row in resp.json()}
+    assert gid not in ids
+
+
+@pytest.mark.asyncio
+async def test_list_games_library_id_filter_combines_with_q(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    _, match, match_releases = await _seed_chain(
+        api_engine, title="Sonic Library", release_count=1
+    )
+    _, other, other_releases = await _seed_chain(
+        api_engine, title="Sonic NoLib", release_count=1
+    )
+    _, lib_only, lib_only_releases = await _seed_chain(
+        api_engine, title="Mario Library", release_count=1
+    )
+    await _bind_release_to_library(
+        api_engine, release_id=match_releases[0], library_id=3
+    )
+    await _bind_release_to_library(
+        api_engine, release_id=other_releases[0], library_id=99
+    )
+    await _bind_release_to_library(
+        api_engine, release_id=lib_only_releases[0], library_id=3
+    )
+
+    resp = await authed_client.get(
+        "/api/v3/game?library_id=3&q=sonic"
+    )
+    assert resp.status_code == 200
+    ids = [row["id"] for row in resp.json()]
+    assert ids == [match]

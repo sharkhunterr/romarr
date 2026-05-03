@@ -269,6 +269,16 @@ async def list_games(
             ),
         ),
     ] = None,
+    library_id: Annotated[
+        int | None,
+        Query(
+            ge=1,
+            description=(
+                "Restrict to games with at least one Release "
+                "bound to this Library id (slice 166)."
+            ),
+        ),
+    ] = None,
     monitored: Annotated[
         bool | None,
         Query(
@@ -302,6 +312,22 @@ async def list_games(
     stmt = select(Game).order_by(column.is_(None).asc(), order, Game.id.asc())
     if platform_id is not None:
         stmt = stmt.where(Game.platform_id == platform_id)
+    if library_id is not None:
+        # Slice 166: an EXISTS correlated subquery is the
+        # portable way to do "Game has at least one Release in
+        # the chosen library" without dragging duplicates from
+        # a JOIN. SQLAlchemy emits a clean ``EXISTS (SELECT 1
+        # FROM release WHERE release.game_id = game.id AND
+        # release.library_id = ?)`` on both SQLite and Postgres.
+        release_in_lib = (
+            select(Release.id)
+            .where(
+                Release.game_id == Game.id,
+                Release.library_id == library_id,
+            )
+            .exists()
+        )
+        stmt = stmt.where(release_in_lib)
     if tag_id is not None:
         # Game.tags is a JSON list of int. To match "list contains
         # tag_id" portably across SQLite + Postgres we cast the

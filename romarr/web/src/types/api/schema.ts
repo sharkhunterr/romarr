@@ -6249,6 +6249,8 @@ export interface operations {
                 platform_id?: number | null;
                 /** @description Restrict to games carrying a specific tag id. Matched against the Game.tags JSON list. */
                 tag_id?: number | null;
+                /** @description Restrict to games with at least one Release bound to this Library id (slice 166). */
+                library_id?: number | null;
                 /** @description Filter on the `monitored` flag. `true` is the most common operator workflow ("show me what I'm tracking"). */
                 monitored?: boolean | null;
                 /** @description Sort key — `title` (default), `added_at` (Game.created_at), `release_date`, or `rating`. */

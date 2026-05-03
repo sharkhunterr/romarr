@@ -14,6 +14,10 @@
       "label": "Filtrer par étiquette",
       "all": "Toutes les étiquettes"
     },
+    "library": {
+      "label": "Filtrer par bibliothèque",
+      "all": "Toutes les bibliothèques"
+    },
     "monitoredOnly": {
       "off": "Suivis uniquement",
       "on": "✓ Suivis uniquement"

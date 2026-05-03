@@ -36,6 +36,11 @@ export interface ListGamesParams {
   q?: string;
   platformId?: number;
   tagId?: number;
+  /**
+   * Restrict to games that have at least one Release bound to
+   * this Library id (slice 166).
+   */
+  libraryId?: number;
   /** Filter on the `monitored` flag. */
   monitored?: boolean;
   sort?: GameSortKey;
@@ -55,6 +60,9 @@ export function useGames(
   }
   if (params.tagId !== undefined) {
     search.set("tag_id", String(params.tagId));
+  }
+  if (params.libraryId !== undefined) {
+    search.set("library_id", String(params.libraryId));
   }
   if (params.monitored !== undefined)
     search.set("monitored", String(params.monitored));

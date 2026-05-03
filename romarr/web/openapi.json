@@ -9379,6 +9379,25 @@
             }
           },
           {
+            "description": "Restrict to games with at least one Release bound to this Library id (slice 166).",
+            "in": "query",
+            "name": "library_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to games with at least one Release bound to this Library id (slice 166).",
+              "title": "Library Id"
+            }
+          },
+          {
             "description": "Filter on the `monitored` flag. `true` is the most common operator workflow (\"show me what I'm tracking\").",
             "in": "query",
             "name": "monitored",
