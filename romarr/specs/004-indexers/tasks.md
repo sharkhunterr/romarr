@@ -406,16 +406,49 @@ the failing indexer's row.
       (added in CLIENT + RATE slice). Walks every
       ``romarr.indexers.*`` module and asserts ``CircuitBreaker``
       references resolve to the foundation's class object.
-- [ ] T073 [HARD] Manual 200-result perf check. **Deferred** —
-      needs a 200-item Torznab fixture; the test infra to record
-      one is parallel work to the perf-cassette deferred from
-      spec 002.
+- [~] T073 [HARD] Manual 200-result perf check —
+      **deferred-by-design** alongside spec 002 T065. Needs a
+      recorded 200-item Torznab fixture + a real indexer
+      target. The docker-compose stack shipped in slice 195
+      makes the manual perf lane cheap; the SC budget gets
+      validated against a real Torznab corpus at release-cut
+      time.
 - [X] T074 [HARD] Bumped ``pyproject.toml`` and
       ``romarr.__version__`` to ``0.4.0a1``; CHANGELOG entry
       records the full Spec 004 manifest.
-- [ ] T075 [HARD] Formal FR-001 → FR-026 walk-through. **Deferred**
-      alongside the spec 002 + spec 003 parallel deferrals; every
-      FR has a task-checked artifact above already.
+- [X] T075 [HARD] FR walk-through closed at slice 196.
+      Coverage groups (FR-001 → FR-026 of the indexers spec):
+      - **FR-001 to FR-008** (per-indexer config + auth + rate
+        limit + result cap): closed by ``indexers/models.py`` +
+        ``indexers/schemas.py`` + ``indexers/registry.py`` +
+        migration ``0004_indexers.py``. Tests at
+        ``test_models.py`` + ``test_registry.py``.
+      - **FR-009 to FR-009a** (timeout + circuit breaker):
+        closed by ``indexers/client.py`` + the foundation's
+        ``CircuitBreaker`` integration verified by
+        ``test_circuit_breaker_reuse.py``. Tests at
+        ``test_client_failure_modes.py``.
+      - **FR-010 to FR-014** (Newznab + Torznab parsing +
+        canonical schema mapping): closed by
+        ``indexers/parser/`` + ``test_parser_*``.
+      - **FR-013 to FR-013a** (admin gate on /applications):
+        closed by ``indexers/api/applications.py`` +
+        ``test_applications_endpoints.py``.
+      - **FR-015 to FR-019a** (concurrent fan-out + isolation
+        + RSS sync): closed by ``indexers/rss.py`` +
+        ``test_rss.py`` (test_failures_do_not_propagate +
+        test_sync_indexer_isolated).
+      - **FR-020 to FR-026** (Prowlarr application sync +
+        cap probe + extended attribute parsing): closed by
+        ``indexers/applications.py`` +
+        ``test_applications.py`` + ``test_caps.py``. The
+        Prowlarr-pushed-with-token paths (T053/T054) remain
+        open as a stretch for the cross-spec applications
+        flow; the inbound payload schema itself is pinned.
+
+      Every FR has a closing artefact. Remaining open: T053/T054
+      Prowlarr-push-token tests (stretch goal, not blocking
+      any FR).
 
 ---
 

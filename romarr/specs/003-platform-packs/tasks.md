@@ -376,12 +376,42 @@ the spec; happy-path response shapes match the Pydantic models in
 - [X] T061 [HARD] Updated `pyproject.toml` and ``romarr.__version__``
       to ``0.3.0a1``; added a CHANGELOG entry for spec 003 under that
       version with the full feature manifest.
-- [ ] T062 [HARD] Formal FR-001 → FR-026 walk-through against a task
-      ID. **Deferred** — every FR has a task-checked artifact above
-      and the spec.md document records each clarification's resolution.
-      A formal walk-through document is documentation polish; a
-      follow-up slice can produce it alongside the perf-cassette and
-      the spec 002 deferred FR walk-through.
+- [X] T062 [HARD] FR walk-through closed at slice 196.
+      Coverage groups (FR-001 → FR-026 of the platform-packs
+      spec):
+      - **FR-001 to FR-001c** (YAML SafeLoader + size cap +
+        platform cap): closed by ``platform_packs/yaml_loader.py``
+        + ``platform_packs/api/packs.py`` + tests at
+        ``test_yaml_loader.py`` + ``test_pack_security_fixtures.py``
+        (CL010).
+      - **FR-002 to FR-005a** (validator structural + xref +
+        regex safety): closed by ``platform_packs/validator.py``
+        + ``test_validator_*``.
+      - **FR-006 to FR-009** (ingestor transactional + idempotent):
+        closed by ``platform_packs/ingestor.py`` +
+        ``test_ingestor_transactional.py`` +
+        ``test_ingestor_idempotency.py``.
+      - **FR-010 to FR-013a** (override system + downgrade reject):
+        closed by ``platform_packs/override.py`` +
+        ``test_override.py``.
+      - **FR-014 to FR-014a** (parsing strategies table +
+        per-platform attachment): closed by
+        ``test_ingestor_parsing_strategies.py``.
+      - **FR-015 to FR-019** (per-platform format CRUD,
+        platform CRUD): closed by ``platform_packs/api/platforms.py``
+        + ``test_override_endpoints.py``.
+      - **FR-020 to FR-026** (built-in pack apply + audit +
+        admin gates): closed by
+        ``platform_packs/builtin.py`` +
+        ``test_builtin_first_boot.py`` + slice 173's
+        lifespan wiring + the per-router admin-gate audit
+        (CL007). The full FR-026a admin-gate sweep is pinned
+        by slice 189's no-leak test
+        (``test_canonical_401_envelope.py``).
+
+      Every FR has a closing artefact. The remaining open
+      item is T029 (ingestor diff test, deferred to a
+      follow-up slice).
 
 ---
 

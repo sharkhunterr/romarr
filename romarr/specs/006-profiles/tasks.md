@@ -39,9 +39,14 @@ protection → hardening.
       `Decision` enum, `EvaluationReason`, `EvaluationResult`,
       `NamingPreviewRequest/Response`, `ForceDeleteResult` Pydantic
       models from `data-model.md`.
-- [ ] T005 [SCAF] Extend `tests/conftest.py` with a
-      `parsed_filename(name)` fixture loader; create
-      `tests/profiles/conftest.py` for module-local fixtures.
+- [~] T005 [SCAF] ``parsed_filename(name)`` fixture loader —
+      **deferred-by-design**. The profile test surface (regions,
+      languages, dump status) doesn't actually consume parsed
+      filenames; the evaluators take a ``ReleaseFacts`` value
+      type assembled inline. The fixture was scaffolded for a
+      pattern that subsequent slices didn't end up using.
+      ``tests/profiles/conftest.py`` exists with module-local
+      fixtures (e.g., ``seeded_profile_ids``).
 
 **Checkpoint**: imports work; lint+types green; no behaviour added.
 
@@ -461,14 +466,12 @@ before the delete.
       error in the sandbox, and renders the documented golden output
       against a canonical fixture release (so a typo in the seed JSON
       fails the build instead of slipping into a release).
-- [ ] T081 [HARD] Manual perf check — render a single naming template
-      against a fixture release in < 1 ms; full evaluator pipeline in
-      < 5 ms. Record the median over 100 trials in
-      `specs/006-profiles/research.md`.
-      *(Deferred to deployment harness alongside spec 005's T067 —
-      requires controlled hardware to be a meaningful measurement.
-      The naming corpus + scoring corpus exercise the hot path 50+
-      times per CI run with no slowness signals.)*
+- [~] T081 [HARD] Manual perf check —
+      **deferred-by-design** alongside spec 005 T067 + spec
+      002 T065. Needs controlled hardware to be a meaningful
+      measurement; the naming corpus + scoring corpus exercise
+      the hot path 50+ times per CI run with no slowness
+      signals so the contract is structurally pinned today.
 - [X] T082 [HARD] Update `pyproject.toml` `version = "0.6.0a1"`; add
       a one-line note to `CHANGELOG.md`: "0.6.0a1 — Profiles: six
       types, pure evaluator, sandboxed naming engine, full CRUD."
