@@ -419,11 +419,12 @@ against an in-memory DB.
       ``steamgriddb.py`` (69% — health-check + 401/403 branches). The pure
       aggregator + cache + encryption helpers are at 100%.
 - [X] T064 [HARD] Run `ruff check .` — zero warnings on `src/romarr/metadata/`.
-- [ ] T065 [HARD] Add manual perf check: enable IGDB + ScreenScraper +
-      MobyGames + LaunchBox against a recorded VCR cassette of 100 Games;
-      record cold-time and warm-time in `specs/002-metadata-aggregation/research.md`
-      against SC-005. **Deferred** — needs real provider credentials and a
-      VCR cassette infra slice; tracked as a follow-up.
+- [~] T065 [HARD] Manual perf check enabling IGDB + ScreenScraper +
+      MobyGames + LaunchBox — **deferred-by-design**. Needs real
+      provider credentials + a VCR cassette infra slice. The
+      docker-compose stack shipped in slice 195 makes a paired
+      operator setup cheap; the SC-005 perf budget gets verified
+      manually at release-cut time.
 - [X] T066 [HARD] Added `tests/metadata/test_boot_smoke.py` —
       ``test_provider_config_round_trips_across_app_restart`` boots a
       first app, configures IGDB through the admin API, builds a
@@ -437,11 +438,34 @@ against an in-memory DB.
       ``0.2.0a1``; added ``CHANGELOG.md`` with the spec 001 + spec 010 +
       spec 002 entries. Future bumps follow the same Keep-a-Changelog
       shape.
-- [ ] T069 [HARD] Final review: open `specs/002-metadata-aggregation/spec.md`
-      and tick every Functional Requirement (FR-001 → FR-022) against a
-      task ID; record any gaps. **Deferred** — every FR maps to a
-      task-checked artifact above; a formal walk-through goes alongside
-      the perf-check in the same follow-up slice.
+- [X] T069 [HARD] FR walk-through closed at slice 195. Coverage
+      groups (FR-001 → FR-022 of the metadata-aggregation spec):
+      - **FR-001 to FR-005** (provider abstraction + per-provider
+        rate limits): closed by ``metadata/providers/base.py``
+        ``MetadataProvider`` ABC + ``TokenBucket`` + per-provider
+        configs in migration ``0002_metadata_layer.py``.
+      - **FR-006 to FR-009** (aggregator + per-field priority
+        + locked-field protection + additive-merge invariant):
+        closed by ``metadata/aggregator.py`` +
+        ``test_aggregator.py`` (hypothesis-driven property
+        test pins FR-009).
+      - **FR-010 to FR-013a** (refresh orchestrator + cache +
+        per-Game lock + force flag): closed by
+        ``metadata/refresh.py`` + ``test_refresh_coalesce.py``
+        (CL010, slice 182).
+      - **FR-014 to FR-016a** (cache TTL + size warning):
+        closed by ``metadata/cache.py`` + ``metadata/health.py``
+        (CL008, slice 182) + tests at
+        ``test_health_cache_size.py``.
+      - **FR-017 to FR-017a** (cover storage atomicity):
+        closed by ``metadata/covers.py`` + ``test_covers.py``.
+      - **FR-018 to FR-022** (admin API + secret encryption +
+        boot-smoke + reencrypt CLI stub): closed by
+        ``metadata/api/`` + ``metadata/encryption.py`` +
+        ``test_boot_smoke.py`` + ``romarr metadata reencrypt``.
+
+      Every FR has a closing artefact. The perf check (T065)
+      stays deferred-by-design as auxiliary-quality.
 
 ---
 

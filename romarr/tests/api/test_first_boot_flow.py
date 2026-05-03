@@ -163,6 +163,41 @@ async def test_first_boot_setup_login_create_library(
 
 
 @pytest.mark.asyncio
+async def test_health_endpoint_anonymous_returns_status_only(
+    api_client: httpx.AsyncClient,
+) -> None:
+    """The constitutional uptime probe: ``GET /api/v3/health``
+    must work without auth (FR-024a — Uptime-Kuma compat) and
+    return only ``{status: ...}`` for anonymous callers (no
+    internal-detail leakage). Catches the regression where the
+    auth chain accidentally gates this endpoint, AND the
+    regression where a fresh DB with no health rows produces a
+    500 (it should be ok). The slice 187 docker-boot smoke
+    found this 500 originally; this test pins the fix."""
+    response = await api_client.get("/api/v3/health")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert set(body.keys()) == {"status"}, (
+        f"anonymous health body must be {{status}} only, got {body}"
+    )
+    assert body["status"] in ("ok", "warning", "error")
+
+
+@pytest.mark.asyncio
+async def test_system_status_anonymous_returns_minimal_shape(
+    api_client: httpx.AsyncClient,
+) -> None:
+    """Spec 013 CL008: anonymous ``GET /api/v3/system/status``
+    returns ``{version, isProduction}`` only — no Sonarr v3+v4
+    internals. Catches the regression where a refactor leaks
+    the full body to unauthenticated callers."""
+    response = await api_client.get("/api/v3/system/status")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert set(body.keys()) == {"version", "isProduction"}
+
+
+@pytest.mark.asyncio
 async def test_setup_with_wrong_token_returns_401(
     api_client: httpx.AsyncClient,
     api_engine: AsyncEngine,

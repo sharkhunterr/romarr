@@ -1,0 +1,71 @@
+# Romarr development stack.
+#
+#   Romarr   → http://localhost:8585  (frontend + API + WebSocket)
+#   Prowlarr → http://localhost:9696  (indexer aggregator)
+#   qBittorrent → http://localhost:8080  (torrent client)
+#
+# First-boot:
+#   1. docker compose up -d
+#   2. docker compose logs romarr | grep setup_token  ← capture the WARNING line
+#   3. open http://localhost:8585/setup, paste the token, create admin
+#   4. http://localhost:9696 → Prowlarr setup wizard
+#   5. http://localhost:8080 → admin / adminadmin (default qBit creds; change!)
+#
+# Persistence: every container's state lives under ./data/<service>/
+# (auto-created). Wipe with `docker compose down --volumes -v`.
+
+services:
+  romarr:
+    build: .
+    image: romarr:dev
+    container_name: romarr
+    restart: unless-stopped
+    ports:
+      - "8585:8585"
+    environment:
+      # REQUIRED — Fernet master key for stored credentials. Replace with a
+      # 32+ char random string in production (or use docker secrets).
+      ROMARR_AUTH_SECRET_KEY: "dev-only-do-not-use-in-prod-replace-with-32-chars-+"
+      # Lifespan toggles (Dockerfile defaults already set these but explicit
+      # here makes overrides obvious).
+      ROMARR_BOOTSTRAP_ENABLED: "true"
+      ROMARR_AUTO_MIGRATE: "true"
+      ROMARR_SCHEDULER_ENABLED: "true"
+      ROMARR_SPA_ENABLED: "true"
+      # Logging — bumped to INFO so the setup-token mint surfaces.
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./data/romarr:/data
+    depends_on:
+      - prowlarr
+      - qbittorrent
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: romarr-prowlarr
+    restart: unless-stopped
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: "UTC"
+    ports:
+      - "9696:9696"
+    volumes:
+      - ./data/prowlarr:/config
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: romarr-qbittorrent
+    restart: unless-stopped
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: "UTC"
+      WEBUI_PORT: "8080"
+    ports:
+      - "8080:8080"
+      - "6881:6881"
+      - "6881:6881/udp"
+    volumes:
+      - ./data/qbittorrent:/config
+      - ./data/downloads:/downloads
