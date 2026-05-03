@@ -354,3 +354,67 @@ async def test_bulk_delete_releases_sweeps_tag_assignment(
     pairs = {(row.tag_id, row.entity_id) for row in rows}
     # Only B's assignment survives.
     assert pairs == {(1, b)}
+
+
+# ---------------------------------------------------------------------------
+# slice 169 — DELETE /api/v3/rom/release/{id}
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_delete_release_drops_row_and_sweeps_tag_assignment(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    a = await _seed_release(api_engine)
+
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        session.add(
+            Tag(
+                id=42,
+                name="single-rel-tag",
+                label="Tag 42",
+                color=DEFAULT_TAG_COLOR,
+            )
+        )
+        await session.flush()
+        session.add(
+            TagAssignment(tag_id=42, entity_type="release", entity_id=a)
+        )
+        await session.commit()
+
+    resp = await authed_client.delete(f"/api/v3/rom/release/{a}")
+    assert resp.status_code == 204
+
+    # PATCH on the now-missing id surfaces the canonical 404.
+    follow = await authed_client.patch(
+        f"/api/v3/rom/release/{a}", json={"monitored": False}
+    )
+    assert follow.status_code == 404
+
+    async with sm() as session:
+        rows = (
+            await session.execute(
+                TagAssignment.__table__.select().where(
+                    TagAssignment.entity_type == "release",
+                )
+            )
+        ).all()
+    assert rows == []
+
+
+@pytest.mark.asyncio
+async def test_delete_release_404_when_missing(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.delete("/api/v3/rom/release/9999999")
+    assert resp.status_code == 404
+    assert resp.json()["errorCode"] == "release_not_found"
+
+
+@pytest.mark.asyncio
+async def test_delete_release_unauthenticated_401(
+    api_client: httpx.AsyncClient,
+) -> None:
+    resp = await api_client.delete("/api/v3/rom/release/1")
+    assert resp.status_code == 401

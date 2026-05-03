@@ -1,16 +1,19 @@
-"""Release write endpoints (slices 98, 152, 155, 165).
+"""Release write endpoints (slices 98, 152, 155, 165, 169).
 
 The spec 014 GameDetail > Releases tab calls for per-release
 operator actions: monitor toggle, manual search, manual grab,
 delete. Manual grab already exists at
 ``POST /api/v3/rom/release/grab`` (spec 007). This router
-ships the operator-toggle / bulk surface:
+ships the operator-toggle / bulk / single-DELETE surface:
 
-  * ``PATCH /api/v3/rom/release/{release_id}`` — toggle the
+  * ``PATCH  /api/v3/rom/release/{release_id}`` — toggle the
     Release's ``monitored`` flag (admin only).
-  * ``POST  /api/v3/rom/release/bulk-monitor`` — flip the flag
+  * ``DELETE /api/v3/rom/release/{release_id}`` — delete one
+    Release (slice 169). Sweeps ``tag_assignment`` for the
+    deleted row.
+  * ``POST   /api/v3/rom/release/bulk-monitor`` — flip the flag
     on a batch of releases (admin only).
-  * ``POST  /api/v3/rom/release/bulk-delete`` — delete a batch
+  * ``POST   /api/v3/rom/release/bulk-delete`` — delete a batch
     of releases (admin only). Per the constitution this never
     touches files on disk — only the database row + cascaded
     Dump rows go away. Per-library lifecycle policies own the
@@ -133,6 +136,31 @@ async def bulk_monitor_releases(
     return BulkReleaseMonitorResponse(updated=len(rows), missing=missing)
 
 
+async def _delete_releases_and_sweep(
+    db: AsyncSession, *, release_rows: list[Release]
+) -> None:
+    """Delete the given Releases + sweep their
+    ``tag_assignment`` rows. Shared by bulk + single-item
+    endpoints (slice 169) so the polymorphic-table cleanup
+    discipline (slice 165) holds for both.
+
+    The caller must commit the session.
+    """
+    if not release_rows:
+        return
+    found = {row.id for row in release_rows}
+    await db.execute(
+        delete(TagAssignment).where(
+            and_(
+                TagAssignment.entity_type == "release",
+                TagAssignment.entity_id.in_(found),
+            )
+        )
+    )
+    for row in release_rows:
+        await db.delete(row)
+
+
 @router.post(
     "/bulk-delete",
     response_model=BulkReleaseDeleteResponse,
@@ -158,20 +186,7 @@ async def bulk_delete_releases(
     )
     found = {row.id for row in rows}
     missing = sorted(set(body.release_ids) - found)
-    if found:
-        # Slice 165: sweep ``tag_assignment`` rows for the
-        # deleted releases. The polymorphic table has no FK on
-        # ``entity_id`` so we clean up explicitly.
-        await db.execute(
-            delete(TagAssignment).where(
-                and_(
-                    TagAssignment.entity_type == "release",
-                    TagAssignment.entity_id.in_(found),
-                )
-            )
-        )
-    for row in rows:
-        await db.delete(row)
+    await _delete_releases_and_sweep(db, release_rows=list(rows))
     await db.commit()
     return BulkReleaseDeleteResponse(deleted=len(rows), missing=missing)
 
@@ -205,6 +220,37 @@ async def patch_release(
     await db.commit()
     await db.refresh(row)
     return ReleaseRead.model_validate(row, from_attributes=True)
+
+
+@router.delete(
+    "/{release_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary=(
+        "Delete a single Release — and its Dump rows via "
+        "cascade — without touching ROM files on disk (admin "
+        "only). Sweeps the polymorphic ``tag_assignment`` rows "
+        "for the deleted release. The bulk endpoint at "
+        "/api/v3/rom/release/bulk-delete handles batches."
+    ),
+)
+async def delete_release(
+    release_id: int,
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> None:
+    row = (
+        await db.execute(select(Release).where(Release.id == release_id))
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "errorMessage": f"release_id={release_id} not found",
+                "errorCode": "release_not_found",
+            },
+        )
+    await _delete_releases_and_sweep(db, release_rows=[row])
+    await db.commit()
 
 
 __all__ = ["router"]

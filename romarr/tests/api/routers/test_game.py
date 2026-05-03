@@ -1222,6 +1222,69 @@ async def test_bulk_delete_sweeps_tag_assignment_for_games(
     assert pairs == {(1, b), (2, b)}
 
 
+# ---------------------------------------------------------------------------
+# slice 169 — DELETE /api/v3/game/{id}
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_delete_game_drops_row_and_sweeps_tag_assignments(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Single-item DELETE behaves like a one-id bulk-delete:
+    Game row gone, cascaded Releases gone, ``tag_assignment``
+    rows for both swept."""
+    await _seed_tags(api_engine, ids=[1])
+    _, gid, release_ids = await _seed_chain(
+        api_engine, title="SingleDel", release_count=2
+    )
+
+    # Tag the game (writes tag_assignment via slice 154).
+    await authed_client.post(
+        "/api/v3/game/bulk-tag",
+        json={"gameIds": [gid], "tagIds": [1], "action": "add"},
+    )
+    # Hand-tag the releases.
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        for rid in release_ids:
+            session.add(
+                TagAssignment(tag_id=1, entity_type="release", entity_id=rid)
+            )
+        await session.commit()
+
+    resp = await authed_client.delete(f"/api/v3/game/{gid}")
+    assert resp.status_code == 204
+    # Game gone.
+    follow = await authed_client.get(f"/api/v3/game/{gid}")
+    assert follow.status_code == 404
+
+    async with sm() as session:
+        rows = (
+            await session.execute(
+                TagAssignment.__table__.select()
+            )
+        ).all()
+    assert rows == []
+
+
+@pytest.mark.asyncio
+async def test_delete_game_404_when_missing(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.delete("/api/v3/game/9999999")
+    assert resp.status_code == 404
+    assert resp.json()["errorCode"] == "game_not_found"
+
+
+@pytest.mark.asyncio
+async def test_delete_game_unauthenticated_401(
+    api_client: httpx.AsyncClient,
+) -> None:
+    resp = await api_client.delete("/api/v3/game/1")
+    assert resp.status_code == 401
+
+
 @pytest.mark.asyncio
 async def test_bulk_delete_sweeps_tag_assignment_for_cascaded_releases(
     authed_client: httpx.AsyncClient, api_engine: AsyncEngine

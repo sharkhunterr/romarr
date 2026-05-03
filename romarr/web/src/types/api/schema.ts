@@ -555,7 +555,8 @@ export interface paths {
         get: operations["read_game_api_v3_game__game_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete a single Game — and its Releases / Dumps via cascade — without touching ROM files on disk (admin only). Sweeps the polymorphic ``tag_assignment`` rows for the game and any cascaded releases. The bulk endpoint at /api/v3/game/bulk-delete handles batches. */
+        delete: operations["delete_game_api_v3_game__game_id__delete"];
         options?: never;
         head?: never;
         /** Toggle a Game's ``monitored`` flag (admin only). All other fields are owned by the metadata aggregator. */
@@ -1618,7 +1619,8 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete a single Release — and its Dump rows via cascade — without touching ROM files on disk (admin only). Sweeps the polymorphic ``tag_assignment`` rows for the deleted release. The bulk endpoint at /api/v3/rom/release/bulk-delete handles batches. */
+        delete: operations["delete_release_api_v3_rom_release__release_id__delete"];
         options?: never;
         head?: never;
         /** Toggle a Release's ``monitored`` flag (admin only). All other fields are owned by the import pipeline. */
@@ -6484,6 +6486,35 @@ export interface operations {
             };
         };
     };
+    delete_game_api_v3_game__game_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     patch_game_api_v3_game__game_id__patch: {
         parameters: {
             query?: never;
@@ -9036,6 +9067,35 @@ export interface operations {
                         [key: string]: unknown;
                     };
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_release_api_v3_rom_release__release_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                release_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

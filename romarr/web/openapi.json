@@ -9751,6 +9751,39 @@
       }
     },
     "/api/v3/game/{game_id}": {
+      "delete": {
+        "operationId": "delete_game_api_v3_game__game_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "title": "Game Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete a single Game \u2014 and its Releases / Dumps via cascade \u2014 without touching ROM files on disk (admin only). Sweeps the polymorphic ``tag_assignment`` rows for the game and any cascaded releases. The bulk endpoint at /api/v3/game/bulk-delete handles batches.",
+        "tags": [
+          "Game"
+        ]
+      },
       "get": {
         "operationId": "read_game_api_v3_game__game_id__get",
         "parameters": [
@@ -13538,6 +13571,39 @@
       }
     },
     "/api/v3/rom/release/{release_id}": {
+      "delete": {
+        "operationId": "delete_release_api_v3_rom_release__release_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "release_id",
+            "required": true,
+            "schema": {
+              "title": "Release Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete a single Release \u2014 and its Dump rows via cascade \u2014 without touching ROM files on disk (admin only). Sweeps the polymorphic ``tag_assignment`` rows for the deleted release. The bulk endpoint at /api/v3/rom/release/bulk-delete handles batches.",
+        "tags": [
+          "Release"
+        ]
+      },
       "patch": {
         "operationId": "patch_release_api_v3_rom_release__release_id__patch",
         "parameters": [
