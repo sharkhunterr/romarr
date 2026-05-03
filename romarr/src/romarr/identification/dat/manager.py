@@ -48,6 +48,13 @@ _AUTHORITY_RANK: dict[str, int] = {
     src: idx for idx, src in enumerate(DAT_AUTHORITY_ORDER)
 }
 
+# Spec 001 T044 — bulk-insert batch size. SQLite's default
+# ``SQLITE_MAX_VARIABLE_NUMBER`` (999) divides cleanly across
+# the 10 columns we INSERT, but we also benefit from keeping
+# the in-memory INSERT statement bounded for full No-Intro
+# DATs that ship 30 k+ entries.
+_INGEST_BATCH_SIZE = 1000
+
 
 # ---------------------------------------------------------------------------
 # Public results
@@ -164,15 +171,21 @@ class DatManager:
                 }
             )
 
-        # Insert with ON CONFLICT DO NOTHING on the
-        # ``(platform_id, source, sha1)`` unique constraint so a
-        # partial historical re-run is also safe.
-        if rows:
-            stmt = sqlite_insert(DatEntry).values(rows)
+        # Insert in batches of ``_INGEST_BATCH_SIZE`` rows per
+        # spec 001 T044. The ON CONFLICT DO NOTHING on the
+        # ``(platform_id, source, sha1)`` unique constraint
+        # keeps a partial historical re-run safe. Batching
+        # avoids SQLite's parameter limit (~999 default) and
+        # keeps the in-memory INSERT statement bounded for
+        # full No-Intro DATs (tens of thousands of rows).
+        for offset in range(0, len(rows), _INGEST_BATCH_SIZE):
+            batch = rows[offset : offset + _INGEST_BATCH_SIZE]
+            stmt = sqlite_insert(DatEntry).values(batch)
             stmt = stmt.on_conflict_do_nothing(
                 index_elements=["platform_id", "source", "sha1"]
             )
             await self._session.execute(stmt)
+        if rows:
             await self._session.commit()
 
         return IngestStats(

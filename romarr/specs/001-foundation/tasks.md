@@ -197,9 +197,14 @@ hash/name lookups.
 - [X] T043 [DAT] Create `src/romarr/identification/dat/manager.py` — `DatManager`
       class with `ingest(path, source, platform_slug)` (computes a `contents_hash`
       via `Hasher` and short-circuits when seen before), and the four lookups.
-- [ ] T044 [DAT] Wire DAT-related commits into bulk insert via SQLAlchemy
-      `session.execute(insert(DatEntry), rows)` in batches of 1 000 to keep memory
-      flat for full No-Intro DATs.
+- [X] T044 [DAT] DAT ingestion now batches inserts in
+      chunks of ``_INGEST_BATCH_SIZE`` (1 000) rows per
+      slice 177. The previous single-statement ``.values(rows)``
+      could hit SQLite's ``SQLITE_MAX_VARIABLE_NUMBER`` limit
+      and held the whole INSERT in memory; batching keeps
+      memory bounded for full No-Intro DATs (30 k+ entries).
+      Covered by ``test_dat_manager_batches_large_ingest``
+      which exercises 2 500 rows across multiple batches.
 
 **Checkpoint**: `tests/identification/dat/` green; idempotent re-ingest verified.
 

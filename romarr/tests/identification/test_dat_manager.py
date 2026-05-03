@@ -217,3 +217,45 @@ async def test_dat_manager_best_match_no_intro_wins_over_tosec(
 
 def test_resolve_authority_handles_empty() -> None:
     assert _resolve_authority([]) is None
+
+
+async def test_dat_manager_batches_large_ingest(
+    async_session: AsyncSession,
+) -> None:
+    """Spec 001 T044 — for DATs larger than the batch size,
+    the manager INSERTs in chunks rather than one giant
+    statement (avoids SQLite's parameter limit + keeps memory
+    bounded for full No-Intro DATs)."""
+    p = await _seed_platform(async_session)
+    mgr = DatManager(async_session)
+
+    # Synthesise a DAT with 2 500 ROMs — well past the 1 000-row
+    # batch size so we exercise multiple INSERTs. Each entry
+    # gets a unique SHA-1 so the unique constraint doesn't
+    # collapse them.
+    rom_blocks = []
+    for i in range(2_500):
+        sha1 = f"{i:040x}"
+        rom_blocks.append(
+            f'<game name="Game {i}"><rom name="g{i}.rom" size="1024" '
+            f'crc="{i:08x}" sha1="{sha1}"/></game>'
+        )
+    big_dat = (
+        '<?xml version="1.0"?><datafile><header>'
+        "<name>Big</name><version>1</version></header>"
+        + "".join(rom_blocks)
+        + "</datafile>"
+    ).encode()
+
+    stats = await mgr.ingest(
+        platform_id=p.id, source="no-intro", dat_bytes=big_dat
+    )
+    assert stats.inserted == 2_500
+    assert stats.skipped_idempotent is False
+
+    # Spot-check a row from the middle of the third batch.
+    matches = await mgr.lookup_by_sha1(
+        platform_id=p.id, sha1=f"{2_400:040x}"
+    )
+    assert len(matches) == 1
+    assert matches[0].name == "Game 2400"
