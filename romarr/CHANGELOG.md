@@ -309,6 +309,41 @@ All notable changes to Romarr land here. The format follows
   the engine's `refresh()` is callable via
   `POST /api/v3/health/refresh` until then (T057).
 
+## [0.10.0a1] — 2026-05-03
+
+### Added
+
+- **Spec 010 — Auth & Multi-User**: forms login + OIDC SSO +
+  per-user API keys + trusted-proxy headers + role-based
+  access control. Roles: admin / user / readonly with
+  inheritance (`role_implies`); API key scopes: read / write
+  / admin with the same inheritance rule. Sliding 30-day
+  session TTL with per-request `last_used_at` refresh
+  (FR-012a). Sliding-window login rate limit (10
+  attempts / minute / IP, HTTP 429 + `Retry-After`,
+  bcrypt skipped when limit exceeded — FR-010a). One-shot
+  setup-token bootstrap on first boot (lifespan logs the
+  plaintext at WARNING; the operator captures it from
+  container logs and completes `/auth/setup`). Auth chain:
+  `X-Api-Key` header → `apikey` query → session cookie →
+  trusted-proxy header. NO bearer-JWT step (Romarr never
+  mints JWTs; OIDC tokens are validated against the configured
+  IdP). Canonical 401 envelope across every protected
+  endpoint — no method-specific text leaks (FR-023, T089).
+
+  Per-module test coverage all ≥ 81%, most ≥ 96%
+  (`pytest --cov=romarr.auth`). Ruff clean. No
+  `dev_only_admin` placeholders left in `src/`. Sonarr-
+  compatible 401 envelope (`{"errorMessage":
+  "unauthenticated", "errorCode": "unauthenticated"}`)
+  diverges from the spec's documented `{"detail":
+  "unauthenticated"}` shape so existing Notifiarr / Recyclarr
+  / Homepage tooling consumes the body without special-casing.
+
+  Deferred: text → INTEGER FK conversion of the four `*_by`
+  audit columns (CL008) — system sentinel row in place but
+  the columns remain `String(64)`, audit-only impact.
+
 ## [0.9.0a1] — 2026-05-01
 
 ### Added

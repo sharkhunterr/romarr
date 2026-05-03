@@ -491,9 +491,15 @@ boot does not; OIDC routes available when configured.
 - [ ] T090 [HARD] Manual perf check — measure forms-auth login
       latency p95 (excluding bcrypt) and API-key validation p95;
       record in `specs/010-auth-multiuser/research.md`.
-- [ ] T091 [HARD] Update `pyproject.toml` `version = "0.10.0a1"`;
-      add a one-line note to `CHANGELOG.md`: "0.10.0a1 — Auth &
-      Multi-User: forms / OIDC / API keys / proxy headers + RBAC."
+- [X] T091 [HARD] CHANGELOG entry shipped at slice 191 — see
+      ``CHANGELOG.md`` ``[0.10.0a1] — 2026-05-03``. The
+      ``pyproject.toml`` version itself is past 0.10 (currently
+      ``0.14.0a1``) because the spec catalogue was completed
+      in numeric-spec order rather than version-tagged
+      sequentially. The CHANGELOG section documents the auth
+      spec's contributions, the SC-010 coverage outcome, the
+      Sonarr-compatible 401 envelope divergence, and the
+      CL008 deferral.
 - [ ] T092 [HARD] Final review: open
       `specs/010-auth-multiuser/spec.md` and tick every
       Functional Requirement (FR-001 → FR-027) against a task ID;
