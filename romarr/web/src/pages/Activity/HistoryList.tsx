@@ -55,6 +55,7 @@ export function HistoryList(): ReactElement {
   const { t } = useTranslation("activity");
   const [searchParams, setSearchParams] = useSearchParams();
   const filter = parseFilterParam(searchParams.get("historyFilter"));
+  const failuresOnly = searchParams.get("failuresOnly") === "true";
   const [page, setPage] = useState(1);
 
   const setFilter = (next: HistoryFilter): void => {
@@ -63,6 +64,19 @@ export function HistoryList(): ReactElement {
         const params = new URLSearchParams(prev);
         if (next === "all") params.delete("historyFilter");
         else params.set("historyFilter", next);
+        return params;
+      },
+      { replace: false },
+    );
+    setPage(1);
+  };
+
+  const setFailuresOnly = (next: boolean): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next) params.set("failuresOnly", "true");
+        else params.delete("failuresOnly");
         return params;
       },
       { replace: false },
@@ -79,7 +93,10 @@ export function HistoryList(): ReactElement {
     sortKey: "date",
     sortDirection: "desc",
     eventType,
+    successful: failuresOnly ? false : undefined,
   });
+
+  const filtersActive = filter !== "all" || failuresOnly;
 
   if (isPending) return <ListSkeleton rows={8} />;
   if (isError) {
@@ -90,11 +107,11 @@ export function HistoryList(): ReactElement {
       />
     );
   }
-  if (data.records.length === 0 && page === 1 && filter === "all") {
+  if (data.records.length === 0 && page === 1 && !filtersActive) {
     // Only short-circuit to the EmptyState when there's truly
-    // nothing — when a chip is active and the server returned
-    // zero rows we want to keep the chip strip visible so the
-    // operator can switch back to All without leaving the page.
+    // nothing — when a filter is active and the server returned
+    // zero rows we want to keep the controls visible so the
+    // operator can clear them without leaving the page.
     return (
       <EmptyState
         title={t("history.empty.title")}
@@ -110,32 +127,51 @@ export function HistoryList(): ReactElement {
 
   return (
     <div className="space-y-3">
-      <div
-        role="tablist"
-        aria-label={t("history.filter.ariaLabel")}
-        className="flex flex-wrap gap-1"
-      >
-        {FILTER_VALUES.map((value) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setFilter(value)}
-            aria-pressed={filter === value}
-            className={[
-              "rounded-md px-3 py-1 text-xs font-medium ring-1 ring-inset",
-              "transition-colors",
-              filter === value
-                ? "bg-brand/20 text-brand ring-brand/40"
-                : "bg-zinc-900/40 text-zinc-400 ring-zinc-700 hover:bg-zinc-800",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-            ].join(" ")}
-          >
-            {t(`history.filter.${value}`)}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-2">
+        <div
+          role="tablist"
+          aria-label={t("history.filter.ariaLabel")}
+          className="flex flex-wrap gap-1"
+        >
+          {FILTER_VALUES.map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setFilter(value)}
+              aria-pressed={filter === value}
+              className={[
+                "rounded-md px-3 py-1 text-xs font-medium ring-1 ring-inset",
+                "transition-colors",
+                filter === value
+                  ? "bg-brand/20 text-brand ring-brand/40"
+                  : "bg-zinc-900/40 text-zinc-400 ring-zinc-700 hover:bg-zinc-800",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+              ].join(" ")}
+            >
+              {t(`history.filter.${value}`)}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => setFailuresOnly(!failuresOnly)}
+          aria-pressed={failuresOnly}
+          className={[
+            "rounded-md px-3 py-1 text-xs font-medium ring-1 ring-inset",
+            "transition-colors",
+            failuresOnly
+              ? "bg-red-700/30 text-red-200 ring-red-500/40"
+              : "bg-zinc-900/40 text-zinc-400 ring-zinc-700 hover:bg-zinc-800",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500",
+          ].join(" ")}
+        >
+          {failuresOnly
+            ? t("history.failuresOnly.on")
+            : t("history.failuresOnly.off")}
+        </button>
       </div>
 
-      {data.records.length === 0 && filter !== "all" && (
+      {data.records.length === 0 && filtersActive && (
         <p className="rounded-md border border-dashed border-zinc-800 bg-zinc-900/20 p-3 text-[0.7rem] text-zinc-500">
           {t("history.filter.noMatches")}
         </p>

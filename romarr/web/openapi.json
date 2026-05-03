@@ -9162,6 +9162,24 @@
             }
           },
           {
+            "description": "Filter on the derived ``successful`` flag \u2014 `true` for successes, `false` for the failure subset. The failure-only view is the most common operator workflow.",
+            "in": "query",
+            "name": "successful",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter on the derived ``successful`` flag \u2014 `true` for successes, `false` for the failure subset. The failure-only view is the most common operator workflow.",
+              "title": "Successful"
+            }
+          },
+          {
             "in": "query",
             "name": "page",
             "required": false,

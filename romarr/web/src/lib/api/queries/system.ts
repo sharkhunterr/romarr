@@ -129,6 +129,11 @@ export interface UseHistoryParams {
   gameId?: number;
   /** Filter to one of the three documented event types. */
   eventType?: HistoryEventType;
+  /**
+   * Filter on the derived `successful` flag. `false` is the most
+   * common operator workflow ("show me failures").
+   */
+  successful?: boolean;
 }
 
 export function useHistory(
@@ -144,6 +149,8 @@ export function useHistory(
   if (params.gameId !== undefined) search.set("gameId", String(params.gameId));
   if (params.eventType !== undefined)
     search.set("eventType", params.eventType);
+  if (params.successful !== undefined)
+    search.set("successful", String(params.successful));
   const qs = search.toString();
 
   return useQuery<HistoryEnvelope, ApiError>({

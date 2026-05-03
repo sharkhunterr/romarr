@@ -56,6 +56,10 @@
       "search": "Search",
       "job_run": "Job",
       "noMatches": "No history rows match the active filter."
+    },
+    "failuresOnly": {
+      "off": "Failures only",
+      "on": "✓ Failures only"
     }
   }
 }

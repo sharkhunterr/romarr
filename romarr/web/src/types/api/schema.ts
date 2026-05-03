@@ -5909,6 +5909,8 @@ export interface operations {
                 gameId?: number | null;
                 /** @description Filter to one of the three documented event types. Drives the Activity > History filter chips. */
                 eventType?: ("import" | "search" | "job_run") | null;
+                /** @description Filter on the derived ``successful`` flag — `true` for successes, `false` for the failure subset. The failure-only view is the most common operator workflow. */
+                successful?: boolean | null;
                 page?: number;
                 pageSize?: number;
                 sortKey?: string | null;

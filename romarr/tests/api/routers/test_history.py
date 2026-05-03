@@ -415,3 +415,112 @@ async def test_event_type_filter_unknown_value_rejected(
         "/api/v3/history?eventType=NotAnEventKind"
     )
     assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# slice 118 — successful filter
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_successful_filter_keeps_only_failures(
+    authed_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+) -> None:
+    """Two import rows, one success / one failure. `?successful=false`
+    keeps just the failure."""
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        session.add(
+            ImportHistory(
+                source_path="/in/ok.zip",
+                imported_via="manual",
+                success=True,
+                correlation_id=str(uuid4()),
+                started_at=datetime.now(UTC),
+            )
+        )
+        session.add(
+            ImportHistory(
+                source_path="/in/broken.zip",
+                imported_via="manual",
+                success=False,
+                error_msg="fixture failure",
+                correlation_id=str(uuid4()),
+                started_at=datetime.now(UTC),
+            )
+        )
+        await session.commit()
+
+    resp = await authed_client.get("/api/v3/history?successful=false")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["totalRecords"] == 1
+    assert body["records"][0]["successful"] is False
+
+
+@pytest.mark.asyncio
+async def test_successful_filter_keeps_only_successes(
+    authed_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+) -> None:
+    await _seed_three_event_kinds(api_engine)
+    resp = await authed_client.get("/api/v3/history?successful=true")
+    assert resp.status_code == 200
+    body = resp.json()
+    # All three seeded rows are successful in the helper fixture.
+    assert body["totalRecords"] == 3
+    for record in body["records"]:
+        assert record["successful"] is True
+
+
+@pytest.mark.asyncio
+async def test_successful_filter_composes_with_event_type(
+    authed_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+) -> None:
+    """Composing the two filters via AND. Two failed imports +
+    one successful import + one successful search; query for
+    `?eventType=import&successful=false` returns only the two
+    failed imports."""
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        for path in ("/in/fail-1.zip", "/in/fail-2.zip"):
+            session.add(
+                ImportHistory(
+                    source_path=path,
+                    imported_via="manual",
+                    success=False,
+                    error_msg="x",
+                    correlation_id=str(uuid4()),
+                    started_at=datetime.now(UTC),
+                )
+            )
+        session.add(
+            ImportHistory(
+                source_path="/in/ok.zip",
+                imported_via="manual",
+                success=True,
+                correlation_id=str(uuid4()),
+                started_at=datetime.now(UTC),
+            )
+        )
+        session.add(
+            SearchHistory(
+                search_type="manual",
+                results_count=5,
+                started_at=datetime.now(UTC),
+                correlation_id=str(uuid4()),
+            )
+        )
+        await session.commit()
+
+    resp = await authed_client.get(
+        "/api/v3/history?eventType=import&successful=false"
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["totalRecords"] == 2
+    for record in body["records"]:
+        assert record["eventType"] == "import"
+        assert record["successful"] is False

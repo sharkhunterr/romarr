@@ -56,6 +56,10 @@
       "search": "Recherche",
       "job_run": "Tâche",
       "noMatches": "Aucune entrée ne correspond au filtre actif."
+    },
+    "failuresOnly": {
+      "off": "Échecs uniquement",
+      "on": "✓ Échecs uniquement"
     }
   }
 }

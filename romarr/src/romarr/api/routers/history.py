@@ -178,6 +178,16 @@ async def list_history(
             ),
         ),
     ] = None,
+    successful: Annotated[
+        bool | None,
+        Query(
+            description=(
+                "Filter on the derived ``successful`` flag — `true` for "
+                "successes, `false` for the failure subset. The "
+                "failure-only view is the most common operator workflow."
+            ),
+        ),
+    ] = None,
 ) -> PaginationEnvelope[HistoryEvent]:
     sq = _build_union_subquery()
     base_query = select(sq)
@@ -185,6 +195,8 @@ async def list_history(
         base_query = base_query.where(sq.c.game_id == game_id)
     if event_type is not None:
         base_query = base_query.where(sq.c.event_type == event_type)
+    if successful is not None:
+        base_query = base_query.where(sq.c.successful.is_(successful))
     sortable_keys = {
         "date": sq.c.date,
         "event_type": sq.c.event_type,
