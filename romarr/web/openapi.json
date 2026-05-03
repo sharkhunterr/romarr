@@ -3407,6 +3407,32 @@
         "title": "LoginRequest",
         "type": "object"
       },
+      "ManualMatchRequest": {
+        "additionalProperties": false,
+        "description": "Match an existing ``unidentified_dump`` row to a Game (and\noptionally a Release) \u2014 POST\n``/api/v3/rom/unidentified/{id}/match``.",
+        "properties": {
+          "game_id": {
+            "title": "Game Id",
+            "type": "integer"
+          },
+          "release_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Id"
+          }
+        },
+        "required": [
+          "game_id"
+        ],
+        "title": "ManualMatchRequest",
+        "type": "object"
+      },
       "ManualSearchRequest": {
         "additionalProperties": false,
         "description": "POST /api/v3/rom/search/manual.",
@@ -6627,7 +6653,7 @@
   "info": {
     "description": "Self-hosted ROM acquisition manager",
     "title": "Romarr",
-    "version": "0.13.0a1"
+    "version": "0.14.0a1"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -11276,6 +11302,58 @@
           }
         },
         "summary": "Delete an unidentified-dump row (admin only). The source file on disk is NOT removed (FR-038).",
+        "tags": [
+          "Importer"
+        ]
+      }
+    },
+    "/api/v3/rom/unidentified/{entry_id}/match": {
+      "post": {
+        "operationId": "match_unidentified_api_v3_rom_unidentified__entry_id__match_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualMatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportHistoryRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Match an unidentified dump to a Game + Release and import it (admin only). Mirrors the manual-flow `import_known` orchestrator surface (slice 83): hash + coalesce-check + persist Dump + record import_history.",
         "tags": [
           "Importer"
         ]

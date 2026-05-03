@@ -1396,6 +1396,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/rom/unidentified/{entry_id}/match": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Match an unidentified dump to a Game + Release and import it (admin only). Mirrors the manual-flow `import_known` orchestrator surface (slice 83): hash + coalesce-check + persist Dump + record import_history. */
+        post: operations["match_unidentified_api_v3_rom_unidentified__entry_id__match_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/system/backup": {
         parameters: {
             query?: never;
@@ -3031,6 +3048,18 @@ export interface components {
             password: string;
             /** Username */
             username: string;
+        };
+        /**
+         * ManualMatchRequest
+         * @description Match an existing ``unidentified_dump`` row to a Game (and
+         *     optionally a Release) — POST
+         *     ``/api/v3/rom/unidentified/{id}/match``.
+         */
+        ManualMatchRequest: {
+            /** Game Id */
+            game_id: number;
+            /** Release Id */
+            release_id?: number | null;
         };
         /**
          * ManualSearchRequest
@@ -7557,6 +7586,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    match_unidentified_api_v3_rom_unidentified__entry_id__match_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualMatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportHistoryRead"];
+                };
             };
             /** @description Validation Error */
             422: {
