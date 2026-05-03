@@ -591,7 +591,11 @@
       "saving": "…",
       "deleting": "…",
       "inUseHint": "Cette étiquette est assignée à une ou plusieurs entités. Cliquez sur « Forcer la suppression » pour supprimer aussi les assignations.",
-      "forcePrompt": "L'étiquette « {{label}} » est actuellement assignée à une ou plusieurs entités. Forcer la suppression des assignations ?"
+      "forcePrompt": "L'étiquette « {{label}} » est actuellement assignée à une ou plusieurs entités. Forcer la suppression des assignations ?",
+      "usageCount_one": "{{count}} usage",
+      "usageCount_other": "{{count}} usages",
+      "usageTooltip_one": "Cette étiquette est utilisée par {{count}} entité",
+      "usageTooltip_other": "Cette étiquette est utilisée par {{count}} entités"
     }
   },
   "ui": {

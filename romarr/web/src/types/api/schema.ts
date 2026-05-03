@@ -4378,7 +4378,16 @@ export interface components {
             /** Releaseids */
             releaseIds: number[];
         };
-        /** TagRead */
+        /**
+         * TagRead
+         * @description Sonarr-shape tag read.
+         *
+         *     `usage_count` (slice 135) is denormalised — total count of
+         *     entity assignments (games + indexers + notifications +
+         *     releases) currently pointing at this tag. 0 means the tag
+         *     is unused; the Tags page surfaces this so operators can
+         *     spot stale tags at a glance.
+         */
         TagRead: {
             /** Color */
             color: string;
@@ -4388,6 +4397,11 @@ export interface components {
             label: string;
             /** Name */
             name: string;
+            /**
+             * Usagecount
+             * @default 0
+             */
+            usageCount: number;
         };
         /**
          * TestNotificationResponse

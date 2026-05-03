@@ -6646,6 +6646,7 @@
       },
       "TagRead": {
         "additionalProperties": false,
+        "description": "Sonarr-shape tag read.\n\n`usage_count` (slice 135) is denormalised \u2014 total count of\nentity assignments (games + indexers + notifications +\nreleases) currently pointing at this tag. 0 means the tag\nis unused; the Tags page surfaces this so operators can\nspot stale tags at a glance.",
         "properties": {
           "color": {
             "title": "Color",
@@ -6662,6 +6663,11 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "usageCount": {
+            "default": 0,
+            "title": "Usagecount",
+            "type": "integer"
           }
         },
         "required": [

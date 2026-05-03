@@ -262,3 +262,50 @@ async def test_create_with_invalid_name_returns_422(
         json={"name": "Has Space", "label": "X"},
     )
     assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# slice 135 — usage_count on the list
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_list_tags_carries_usage_count(
+    authed_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+) -> None:
+    """Two tags: one with three assignments across multiple
+    entity types, one with zero. The list response surfaces the
+    aggregate counts."""
+    used_resp = await authed_client.post(
+        "/api/v3/tag", json={"name": "used", "label": "Used"}
+    )
+    unused_resp = await authed_client.post(
+        "/api/v3/tag", json={"name": "unused", "label": "Unused"}
+    )
+    used_id = used_resp.json()["id"]
+
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        session.add_all(
+            [
+                TagAssignment(
+                    tag_id=used_id, entity_type="game", entity_id=1
+                ),
+                TagAssignment(
+                    tag_id=used_id, entity_type="game", entity_id=2
+                ),
+                TagAssignment(
+                    tag_id=used_id,
+                    entity_type="indexer",
+                    entity_id=7,
+                ),
+            ]
+        )
+        await session.commit()
+
+    resp = await authed_client.get("/api/v3/tag")
+    assert resp.status_code == 200
+    by_id = {row["id"]: row for row in resp.json()}
+    assert by_id[used_id]["usageCount"] == 3
+    assert by_id[unused_resp.json()["id"]]["usageCount"] == 0

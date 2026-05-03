@@ -32,7 +32,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -79,10 +79,25 @@ class UpdateTagRequest(_Base):
 
 
 class TagRead(_Base):
+    """Sonarr-shape tag read.
+
+    `usage_count` (slice 135) is denormalised — total count of
+    entity assignments (games + indexers + notifications +
+    releases) currently pointing at this tag. 0 means the tag
+    is unused; the Tags page surfaces this so operators can
+    spot stale tags at a glance.
+    """
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True,
+    )
+
     id: int
     name: str
     label: str
     color: str
+    usage_count: int = Field(alias="usageCount", default=0)
 
 
 class TagDetail(_Base):
@@ -109,9 +124,13 @@ class TagDetail(_Base):
     release_ids: list[int] = Field(alias="releaseIds")
 
 
-def _to_read(tag: Tag) -> TagRead:
+def _to_read(tag: Tag, *, usage_count: int = 0) -> TagRead:
     return TagRead(
-        id=tag.id, name=tag.name, label=tag.label, color=tag.color
+        id=tag.id,
+        name=tag.name,
+        label=tag.label,
+        color=tag.color,
+        usageCount=usage_count,
     )
 
 
@@ -129,10 +148,27 @@ async def list_tags(
     _principal: Annotated[Principal, Depends(require_readonly)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[TagRead]:
+    # Count assignments per tag in a single GROUP BY rather than
+    # firing one COUNT per tag — slice 135 surfaces this on the
+    # Tags page, so it's a hot path for the operator who lands
+    # there to clean up unused tags.
+    counts = dict(
+        (
+            await db.execute(
+                select(
+                    TagAssignment.tag_id,
+                    func.count(TagAssignment.id),
+                ).group_by(TagAssignment.tag_id)
+            )
+        ).all()
+    )
     rows = (
         await db.execute(select(Tag).order_by(Tag.name))
     ).scalars().all()
-    return [_to_read(row) for row in rows]
+    return [
+        _to_read(row, usage_count=int(counts.get(row.id, 0)))
+        for row in rows
+    ]
 
 
 @router.post(

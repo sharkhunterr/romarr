@@ -103,9 +103,23 @@ export function TagRow(props: TagRowProps): ReactElement {
             </div>
           ) : (
             <>
-              <p className="truncate text-sm font-medium text-zinc-100">
-                {tag.label}
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="truncate text-sm font-medium text-zinc-100">
+                  {tag.label}
+                </p>
+                <span
+                  className={[
+                    "rounded-full px-1.5 py-0.5 font-mono text-[0.6rem]",
+                    "uppercase tracking-wider ring-1 ring-inset",
+                    tag.usageCount > 0
+                      ? "bg-brand/20 text-brand ring-brand/40"
+                      : "bg-zinc-800 text-zinc-500 ring-zinc-700",
+                  ].join(" ")}
+                  title={t("tags.row.usageTooltip", { count: tag.usageCount })}
+                >
+                  {t("tags.row.usageCount", { count: tag.usageCount })}
+                </span>
+              </div>
               <p className="font-mono text-[0.7rem] text-zinc-500">
                 {tag.name} · {tag.color}
               </p>

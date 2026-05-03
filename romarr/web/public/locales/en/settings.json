@@ -591,7 +591,11 @@
       "saving": "…",
       "deleting": "…",
       "inUseHint": "Tag is assigned to one or more entities. Click \"Force delete\" to cascade-remove the assignments.",
-      "forcePrompt": "Tag \"{{label}}\" is currently assigned to one or more entities. Force-delete the assignments?"
+      "forcePrompt": "Tag \"{{label}}\" is currently assigned to one or more entities. Force-delete the assignments?",
+      "usageCount_one": "{{count}} use",
+      "usageCount_other": "{{count}} uses",
+      "usageTooltip_one": "Tag is currently used by {{count}} entity",
+      "usageTooltip_other": "Tag is currently used by {{count}} entities"
     }
   },
   "ui": {
