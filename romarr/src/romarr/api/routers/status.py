@@ -38,7 +38,7 @@ from romarr.api.dependencies import (
 )
 from romarr.auth import Principal
 from romarr.config import get_settings
-from romarr.domain.models import Dump, Game, Release
+from romarr.domain.models import Dump, Game, Platform, Release
 from romarr.importer.models import ImportHistory
 
 router = APIRouter(prefix="/api/v3/system", tags=["System"])
@@ -107,6 +107,24 @@ async def get_status(
     }
 
 
+class PlatformStats(BaseModel):
+    """Per-platform breakdown row (slice 105).
+
+    Drives the Dashboard's "disk per platform" panel. ``total_size_bytes``
+    sums :attr:`Dump.size_bytes` across every Dump bound to the
+    platform's Releases — null when the platform has no Dumps.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    platform_id: int = Field(alias="platformId")
+    platform_name: str = Field(alias="platformName")
+    total_games: int = Field(alias="totalGames")
+    total_releases: int = Field(alias="totalReleases")
+    total_dumps: int = Field(alias="totalDumps")
+    total_size_bytes: int = Field(alias="totalSizeBytes")
+
+
 class SystemStats(BaseModel):
     """Aggregate counts surfaced on the Dashboard (slice 104).
 
@@ -114,7 +132,8 @@ class SystemStats(BaseModel):
     can poll it as often as it likes. The ``imports24h`` /
     ``importsSuccess24h`` pair lets the UI render a one-line
     "n imported today (m successful)" stat without a separate
-    history scan.
+    history scan. ``by_platform`` (slice 105) adds the
+    per-platform breakdown for the disk-usage panel.
     """
 
     model_config = ConfigDict(populate_by_name=True)
@@ -126,6 +145,9 @@ class SystemStats(BaseModel):
     wanted_releases: int = Field(alias="wantedReleases")
     imports_24h: int = Field(alias="imports24h")
     imports_success_24h: int = Field(alias="importsSuccess24h")
+    by_platform: list[PlatformStats] = Field(
+        alias="byPlatform", default_factory=list
+    )
 
 
 @router.get(
@@ -178,6 +200,43 @@ async def get_stats(
         )
     )
 
+    # Per-platform breakdown (slice 105). One row per Platform
+    # joined through Game / Release / Dump. ``total_size_bytes``
+    # is COALESCE'd to 0 so platforms with zero dumps still
+    # surface in the response (instead of being elided by the
+    # implicit INNER JOIN on Dump).
+    rows = (
+        await db.execute(
+            select(
+                Platform.id,
+                Platform.name,
+                func.count(Game.id.distinct()).label("games"),
+                func.count(Release.id.distinct()).label("releases"),
+                func.count(Dump.id.distinct()).label("dumps"),
+                func.coalesce(
+                    func.sum(Dump.size_bytes), 0
+                ).label("size_bytes"),
+            )
+            .select_from(Platform)
+            .outerjoin(Game, Game.platform_id == Platform.id)
+            .outerjoin(Release, Release.game_id == Game.id)
+            .outerjoin(Dump, Dump.release_id == Release.id)
+            .group_by(Platform.id, Platform.name)
+            .order_by(Platform.name.asc())
+        )
+    ).all()
+    by_platform = [
+        PlatformStats(
+            platformId=row.id,
+            platformName=row.name,
+            totalGames=int(row.games or 0),
+            totalReleases=int(row.releases or 0),
+            totalDumps=int(row.dumps or 0),
+            totalSizeBytes=int(row.size_bytes or 0),
+        )
+        for row in rows
+    ]
+
     return SystemStats(
         totalGames=total_games,
         totalReleases=total_releases,
@@ -186,6 +245,7 @@ async def get_stats(
         wantedReleases=wanted_releases,
         imports24h=imports_24h,
         importsSuccess24h=imports_success_24h,
+        byPlatform=by_platform,
     )
 
 

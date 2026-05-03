@@ -3910,6 +3910,28 @@ export interface components {
              */
             updated_at: string;
         };
+        /**
+         * PlatformStats
+         * @description Per-platform breakdown row (slice 105).
+         *
+         *     Drives the Dashboard's "disk per platform" panel. ``total_size_bytes``
+         *     sums :attr:`Dump.size_bytes` across every Dump bound to the
+         *     platform's Releases — null when the platform has no Dumps.
+         */
+        PlatformStats: {
+            /** Platformid */
+            platformId: number;
+            /** Platformname */
+            platformName: string;
+            /** Totaldumps */
+            totalDumps: number;
+            /** Totalgames */
+            totalGames: number;
+            /** Totalreleases */
+            totalReleases: number;
+            /** Totalsizebytes */
+            totalSizeBytes: number;
+        };
         /** ProviderConfigRead */
         ProviderConfigRead: {
             /** Cache Ttl Seconds */
@@ -4309,9 +4331,12 @@ export interface components {
          *     can poll it as often as it likes. The ``imports24h`` /
          *     ``importsSuccess24h`` pair lets the UI render a one-line
          *     "n imported today (m successful)" stat without a separate
-         *     history scan.
+         *     history scan. ``by_platform`` (slice 105) adds the
+         *     per-platform breakdown for the disk-usage panel.
          */
         SystemStats: {
+            /** Byplatform */
+            byPlatform?: components["schemas"]["PlatformStats"][];
             /** Imports24H */
             imports24h: number;
             /** Importssuccess24H */

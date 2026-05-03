@@ -278,3 +278,87 @@ async def test_stats_unauthenticated_401(
 ) -> None:
     resp = await api_client.get("/api/v3/system/stats")
     assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# slice 105 — byPlatform breakdown
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_stats_by_platform_empty_returns_no_rows(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """No platforms → empty `byPlatform` array (not null)."""
+    await _login(api_client, api_engine)
+    resp = await api_client.get("/api/v3/system/stats")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["byPlatform"] == []
+
+
+@pytest.mark.asyncio
+async def test_stats_by_platform_groups_and_sums(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Two platforms; MD has 2 dumps totalling 3000 bytes, GBA has
+    a wanted-only Release with no dump (still surfaces in the
+    breakdown thanks to the LEFT-OUTER JOIN)."""
+    await _login(api_client, api_engine)
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        md = Platform(slug="md", name="Mega Drive")
+        gba = Platform(slug="gba", name="Game Boy Advance")
+        session.add_all([md, gba])
+        await session.flush()
+        g_md = Game(platform_id=md.id, slug="g-md", title="G MD")
+        g_gba = Game(platform_id=gba.id, slug="g-gba", title="G GBA")
+        session.add_all([g_md, g_gba])
+        await session.flush()
+        r_md = Release(game_id=g_md.id, name="r-md")
+        r_gba = Release(
+            game_id=g_gba.id, name="r-gba", status="wanted"
+        )
+        session.add_all([r_md, r_gba])
+        await session.flush()
+        session.add_all(
+            [
+                Dump(
+                    release_id=r_md.id,
+                    path="/lib/md-1.zip",
+                    original_filename="md-1.zip",
+                    size_bytes=1000,
+                    format="zip",
+                    crc32="00000010",
+                    md5="0" * 32,
+                    sha1="a" * 40,
+                ),
+                Dump(
+                    release_id=r_md.id,
+                    path="/lib/md-2.zip",
+                    original_filename="md-2.zip",
+                    size_bytes=2000,
+                    format="zip",
+                    crc32="00000011",
+                    md5="1" * 32,
+                    sha1="b" * 40,
+                ),
+            ]
+        )
+        await session.commit()
+
+    resp = await api_client.get("/api/v3/system/stats")
+    assert resp.status_code == 200
+    body = resp.json()
+    by_pl = {row["platformName"]: row for row in body["byPlatform"]}
+    assert "Mega Drive" in by_pl and "Game Boy Advance" in by_pl
+    md_row = by_pl["Mega Drive"]
+    assert md_row["totalGames"] == 1
+    assert md_row["totalReleases"] == 1
+    assert md_row["totalDumps"] == 2
+    assert md_row["totalSizeBytes"] == 3000
+    gba_row = by_pl["Game Boy Advance"]
+    assert gba_row["totalGames"] == 1
+    assert gba_row["totalReleases"] == 1
+    assert gba_row["totalDumps"] == 0
+    assert gba_row["totalSizeBytes"] == 0

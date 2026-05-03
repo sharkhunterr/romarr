@@ -15,8 +15,16 @@
   },
   "sections": {
     "library": "Library",
+    "platformBreakdown": "Per-platform",
     "quickActions": "Quick actions",
     "recentActivity": "Recent activity"
+  },
+  "platforms": {
+    "platform": "Platform",
+    "games": "Games",
+    "releases": "Releases",
+    "dumps": "Dumps",
+    "disk": "Disk"
   },
   "library": {
     "totalGames": "Total games",

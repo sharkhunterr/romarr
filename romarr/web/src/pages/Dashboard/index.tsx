@@ -24,6 +24,7 @@ import {
 
 import { ActivityFeed } from "./ActivityFeed";
 import { HealthPanel } from "./HealthPanel";
+import { PlatformBreakdown } from "./PlatformBreakdown";
 import { QuickActions } from "./QuickActions";
 import { StatCard } from "./StatCard";
 
@@ -141,6 +142,13 @@ export function DashboardPage(): ReactElement {
             }
           />
         </div>
+      </section>
+
+      <section className="mt-6">
+        <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-zinc-500">
+          {t("sections.platformBreakdown")}
+        </h2>
+        <PlatformBreakdown />
       </section>
 
       <section className="mt-8">

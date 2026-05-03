@@ -5461,6 +5461,45 @@
         "title": "PlatformRead",
         "type": "object"
       },
+      "PlatformStats": {
+        "description": "Per-platform breakdown row (slice 105).\n\nDrives the Dashboard's \"disk per platform\" panel. ``total_size_bytes``\nsums :attr:`Dump.size_bytes` across every Dump bound to the\nplatform's Releases \u2014 null when the platform has no Dumps.",
+        "properties": {
+          "platformId": {
+            "title": "Platformid",
+            "type": "integer"
+          },
+          "platformName": {
+            "title": "Platformname",
+            "type": "string"
+          },
+          "totalDumps": {
+            "title": "Totaldumps",
+            "type": "integer"
+          },
+          "totalGames": {
+            "title": "Totalgames",
+            "type": "integer"
+          },
+          "totalReleases": {
+            "title": "Totalreleases",
+            "type": "integer"
+          },
+          "totalSizeBytes": {
+            "title": "Totalsizebytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "platformId",
+          "platformName",
+          "totalGames",
+          "totalReleases",
+          "totalDumps",
+          "totalSizeBytes"
+        ],
+        "title": "PlatformStats",
+        "type": "object"
+      },
       "ProviderConfigRead": {
         "additionalProperties": false,
         "properties": {
@@ -6503,8 +6542,15 @@
         "type": "object"
       },
       "SystemStats": {
-        "description": "Aggregate counts surfaced on the Dashboard (slice 104).\n\nCheap to compute (one COUNT per metric) so the Dashboard\ncan poll it as often as it likes. The ``imports24h`` /\n``importsSuccess24h`` pair lets the UI render a one-line\n\"n imported today (m successful)\" stat without a separate\nhistory scan.",
+        "description": "Aggregate counts surfaced on the Dashboard (slice 104).\n\nCheap to compute (one COUNT per metric) so the Dashboard\ncan poll it as often as it likes. The ``imports24h`` /\n``importsSuccess24h`` pair lets the UI render a one-line\n\"n imported today (m successful)\" stat without a separate\nhistory scan. ``by_platform`` (slice 105) adds the\nper-platform breakdown for the disk-usage panel.",
         "properties": {
+          "byPlatform": {
+            "items": {
+              "$ref": "#/components/schemas/PlatformStats"
+            },
+            "title": "Byplatform",
+            "type": "array"
+          },
           "imports24h": {
             "title": "Imports24H",
             "type": "integer"
