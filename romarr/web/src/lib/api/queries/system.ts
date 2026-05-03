@@ -134,6 +134,8 @@ export interface UseHistoryParams {
    * common operator workflow ("show me failures").
    */
   successful?: boolean;
+  /** ISO-8601 datetime; only entries with `date >= since`. */
+  since?: string;
 }
 
 export function useHistory(
@@ -151,6 +153,7 @@ export function useHistory(
     search.set("eventType", params.eventType);
   if (params.successful !== undefined)
     search.set("successful", String(params.successful));
+  if (params.since !== undefined) search.set("since", params.since);
   const qs = search.toString();
 
   return useQuery<HistoryEnvelope, ApiError>({

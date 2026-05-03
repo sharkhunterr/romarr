@@ -188,6 +188,16 @@ async def list_history(
             ),
         ),
     ] = None,
+    since: Annotated[
+        datetime | None,
+        Query(
+            description=(
+                "ISO-8601 datetime — only entries whose ``date`` is at "
+                "or after this value are returned. Drives the Activity "
+                "> History time-range chips."
+            ),
+        ),
+    ] = None,
 ) -> PaginationEnvelope[HistoryEvent]:
     sq = _build_union_subquery()
     base_query = select(sq)
@@ -197,6 +207,8 @@ async def list_history(
         base_query = base_query.where(sq.c.event_type == event_type)
     if successful is not None:
         base_query = base_query.where(sq.c.successful.is_(successful))
+    if since is not None:
+        base_query = base_query.where(sq.c.date >= since)
     sortable_keys = {
         "date": sq.c.date,
         "event_type": sq.c.event_type,

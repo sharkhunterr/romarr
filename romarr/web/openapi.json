@@ -9232,6 +9232,25 @@
             }
           },
           {
+            "description": "ISO-8601 datetime \u2014 only entries whose ``date`` is at or after this value are returned. Drives the Activity > History time-range chips.",
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ISO-8601 datetime \u2014 only entries whose ``date`` is at or after this value are returned. Drives the Activity > History time-range chips.",
+              "title": "Since"
+            }
+          },
+          {
             "in": "query",
             "name": "page",
             "required": false,

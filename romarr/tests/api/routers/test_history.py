@@ -475,6 +475,40 @@ async def test_successful_filter_keeps_only_successes(
 
 
 @pytest.mark.asyncio
+async def test_since_filter_keeps_only_recent_rows(
+    authed_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+) -> None:
+    """The three-event-kind helper seeds rows at 12:00 / 12:10 /
+    12:20 on 2026-04-30. Querying with `since=2026-04-30T12:15`
+    keeps only the 12:20 row (job_run)."""
+    await _seed_three_event_kinds(api_engine)
+    resp = await authed_client.get(
+        "/api/v3/history?since=2026-04-30T12:15:00Z"
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["totalRecords"] == 1
+    assert body["records"][0]["eventType"] == "job_run"
+
+
+@pytest.mark.asyncio
+async def test_since_filter_composes_with_event_type(
+    authed_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+) -> None:
+    """Composing `since` + `eventType=import` against the same
+    fixture: import row is at 12:00, since=12:05 drops it."""
+    await _seed_three_event_kinds(api_engine)
+    resp = await authed_client.get(
+        "/api/v3/history?since=2026-04-30T12:05:00Z&eventType=import"
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["totalRecords"] == 0
+
+
+@pytest.mark.asyncio
 async def test_successful_filter_composes_with_event_type(
     authed_client: httpx.AsyncClient,
     api_engine: AsyncEngine,

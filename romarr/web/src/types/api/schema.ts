@@ -5919,6 +5919,8 @@ export interface operations {
                 eventType?: ("import" | "search" | "job_run") | null;
                 /** @description Filter on the derived ``successful`` flag — `true` for successes, `false` for the failure subset. The failure-only view is the most common operator workflow. */
                 successful?: boolean | null;
+                /** @description ISO-8601 datetime — only entries whose ``date`` is at or after this value are returned. Drives the Activity > History time-range chips. */
+                since?: string | null;
                 page?: number;
                 pageSize?: number;
                 sortKey?: string | null;

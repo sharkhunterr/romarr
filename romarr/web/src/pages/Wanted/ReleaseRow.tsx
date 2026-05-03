@@ -91,6 +91,16 @@ export function ReleaseRow(props: ReleaseRowProps): ReactElement {
         {release.languages.length > 0 && (
           <LanguagePills codes={release.languages} max={3} />
         )}
+        {release.discTotal > 1 && (
+          <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-zinc-400">
+            Disc {release.discNumber}/{release.discTotal}
+          </span>
+        )}
+        {release.revision && (
+          <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-zinc-400">
+            rev {release.revision}
+          </span>
+        )}
       </div>
     </Link>
   );
