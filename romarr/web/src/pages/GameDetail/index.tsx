@@ -95,7 +95,12 @@ export function GameDetailPage(): ReactElement {
           </div>
 
           {tab === "overview" && <OverviewTab game={game.data} />}
-          {tab === "releases" && <ReleasesTab gameId={gameId} />}
+          {tab === "releases" && (
+            <ReleasesTab
+              gameId={gameId}
+              platformId={game.data.platform_id}
+            />
+          )}
           {tab === "history" && <HistoryTab gameId={gameId} />}
           {tab === "files" && <FilesTab gameId={gameId} />}
         </>

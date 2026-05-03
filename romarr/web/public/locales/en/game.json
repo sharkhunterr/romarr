@@ -76,5 +76,40 @@
       "body": "Once a Release is imported, the on-disk dump (hashes, DAT verify, size, format) appears here."
     },
     "importedAt": "imported {{when}} via {{via}}"
+  },
+  "search": {
+    "button": "Search",
+    "title": "Manual search",
+    "close": "Close",
+    "empty": "No candidates returned. Try a different query or check that indexers are enabled.",
+    "query": {
+      "label": "Search query",
+      "placeholder": "Search query…"
+    },
+    "force": {
+      "label": "Bypass blocklist (force)"
+    },
+    "run": {
+      "button": "Run search",
+      "pending": "Searching…"
+    },
+    "grab": {
+      "button": "Grab",
+      "pending": "Grabbing…",
+      "dispatched": "Sent"
+    },
+    "seeders_one": "{{count}} seeder",
+    "seeders_other": "{{count}} seeders",
+    "rejection": {
+      "blocklisted": "Already blocklisted",
+      "below_quality_floor": "Below quality floor",
+      "size_out_of_range": "Size out of allowed range",
+      "below_score_floor": "Below score floor",
+      "language_mismatch": "Language profile mismatch",
+      "region_excluded": "Region excluded by profile",
+      "dump_status_excluded": "Dump status excluded by profile",
+      "convention_excluded": "Naming convention excluded",
+      "duplicate": "Duplicate of an already-imported release"
+    }
   }
 }

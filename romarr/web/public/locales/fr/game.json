@@ -76,5 +76,40 @@
       "body": "Dès qu'une release est importée, le dump sur disque (hashes, vérif DAT, taille, format) apparaît ici."
     },
     "importedAt": "importé le {{when}} via {{via}}"
+  },
+  "search": {
+    "button": "Rechercher",
+    "title": "Recherche manuelle",
+    "close": "Fermer",
+    "empty": "Aucun candidat. Essayez une autre requête ou vérifiez que des indexers sont activés.",
+    "query": {
+      "label": "Requête de recherche",
+      "placeholder": "Requête de recherche…"
+    },
+    "force": {
+      "label": "Ignorer la blocklist (force)"
+    },
+    "run": {
+      "button": "Lancer la recherche",
+      "pending": "Recherche…"
+    },
+    "grab": {
+      "button": "Grab",
+      "pending": "Envoi…",
+      "dispatched": "Envoyé"
+    },
+    "seeders_one": "{{count}} seeder",
+    "seeders_other": "{{count}} seeders",
+    "rejection": {
+      "blocklisted": "Déjà sur la blocklist",
+      "below_quality_floor": "Sous le seuil qualité",
+      "size_out_of_range": "Taille hors plage autorisée",
+      "below_score_floor": "Sous le seuil de score",
+      "language_mismatch": "Langue ne correspond pas au profil",
+      "region_excluded": "Région exclue par le profil",
+      "dump_status_excluded": "Statut de dump exclu par le profil",
+      "convention_excluded": "Convention de nommage exclue",
+      "duplicate": "Doublon d'une release déjà importée"
+    }
   }
 }

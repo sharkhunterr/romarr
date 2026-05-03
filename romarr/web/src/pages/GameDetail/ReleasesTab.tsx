@@ -8,7 +8,7 @@
  * vocabulary as the Wanted page.
  */
 
-import { type ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -26,6 +26,8 @@ import {
   useToggleReleaseMonitor,
   type Release,
 } from "@/lib/api/queries/games";
+
+import { ReleaseSearchModal } from "./ReleaseSearchModal";
 
 const KNOWN_CONVENTIONS: ReadonlySet<NamingConvention> = new Set([
   "no-intro",
@@ -66,9 +68,15 @@ function asDumpStatus(raw: string): DumpStatus {
 interface ReleaseRowProps {
   release: Release;
   gameId: number;
+  platformId: number;
 }
 
-function MonitorPill(props: ReleaseRowProps): ReactElement {
+interface MonitorPillProps {
+  release: Release;
+  gameId: number;
+}
+
+function MonitorPill(props: MonitorPillProps): ReactElement {
   const { t } = useTranslation("game");
   const { release, gameId } = props;
   const toggle = useToggleReleaseMonitor();
@@ -113,7 +121,9 @@ function MonitorPill(props: ReleaseRowProps): ReactElement {
 }
 
 function ReleaseRow(props: ReleaseRowProps): ReactElement {
-  const { release, gameId } = props;
+  const { t } = useTranslation("game");
+  const { release, gameId, platformId } = props;
+  const [searchOpen, setSearchOpen] = useState(false);
   const regions = release.regions ?? [];
   const languages = release.languages ?? [];
   return (
@@ -149,12 +159,34 @@ function ReleaseRow(props: ReleaseRowProps): ReactElement {
           </span>
         )}
       </div>
+      <div className="flex items-center justify-end">
+        <button
+          type="button"
+          onClick={() => setSearchOpen(true)}
+          className={[
+            "rounded-md px-2.5 py-1 text-[0.65rem] font-medium",
+            "bg-zinc-800 text-zinc-200 ring-1 ring-inset ring-zinc-700",
+            "hover:bg-zinc-700",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+          ].join(" ")}
+        >
+          🔎 {t("search.button")}
+        </button>
+      </div>
+      <ReleaseSearchModal
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        initialQuery={release.name}
+        platformId={platformId}
+        releaseId={release.id}
+      />
     </li>
   );
 }
 
 interface ReleasesTabProps {
   gameId: number;
+  platformId: number;
 }
 
 export function ReleasesTab(props: ReleasesTabProps): ReactElement {
@@ -185,6 +217,7 @@ export function ReleasesTab(props: ReleasesTabProps): ReactElement {
           key={release.id}
           release={release}
           gameId={props.gameId}
+          platformId={props.platformId}
         />
       ))}
     </ul>
