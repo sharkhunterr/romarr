@@ -607,3 +607,187 @@ async def test_patch_locked_fields_persists_across_read(
     resp = await authed_client.get(f"/api/v3/game/{game_id}")
     assert resp.status_code == 200
     assert resp.json()["locked_fields"] == ["cover"]
+
+
+# ---------------------------------------------------------------------------
+# slice 147 — PATCH /api/v3/game/{id}/field (operator text edits)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_patch_field_edits_text_field_and_auto_locks(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Editing ``developer`` writes the value AND auto-locks the
+    field — the constitutional default so the aggregator stops
+    overwriting it."""
+    _, game_id, _ = await _seed_chain(api_engine, title="EditMe")
+
+    resp = await authed_client.patch(
+        f"/api/v3/game/{game_id}/field",
+        json={"field": "developer", "value": "Sonic Team"},
+    )
+    assert resp.status_code == 200, resp.json()
+    body = resp.json()
+    assert body["developer"] == "Sonic Team"
+    assert body["locked_fields"] == ["developer"]
+
+
+@pytest.mark.asyncio
+async def test_patch_field_strips_whitespace(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """A trailing newline / surrounding spaces from the inline
+    editor get stripped so the persisted value is canonical."""
+    _, game_id, _ = await _seed_chain(api_engine, title="Whitespace")
+
+    resp = await authed_client.patch(
+        f"/api/v3/game/{game_id}/field",
+        json={"field": "publisher", "value": "  Sega  \n"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["publisher"] == "Sega"
+
+
+@pytest.mark.asyncio
+async def test_patch_field_clears_with_null(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """``value=null`` (or empty after strip) clears the field —
+    operators sometimes want to wipe a wrong-aggregator value."""
+    _, game_id, _ = await _seed_chain(api_engine, title="ClearMe")
+    # First set something.
+    await authed_client.patch(
+        f"/api/v3/game/{game_id}/field",
+        json={"field": "developer", "value": "Wrong"},
+    )
+    # Then clear it.
+    resp = await authed_client.patch(
+        f"/api/v3/game/{game_id}/field",
+        json={"field": "developer", "value": None},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["developer"] is None
+    # But the auto-lock stays on because the operator's intent
+    # is still "don't let the aggregator put anything here".
+    assert "developer" in resp.json()["locked_fields"]
+
+
+@pytest.mark.asyncio
+async def test_patch_field_can_skip_auto_lock(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """``auto_lock=false`` is the escape hatch for the rare case
+    the operator wants to seed a value without freezing it."""
+    _, game_id, _ = await _seed_chain(api_engine, title="OptOut")
+    resp = await authed_client.patch(
+        f"/api/v3/game/{game_id}/field",
+        json={
+            "field": "developer",
+            "value": "Sonic Team",
+            "auto_lock": False,
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["developer"] == "Sonic Team"
+    assert resp.json()["locked_fields"] == []
+
+
+@pytest.mark.asyncio
+async def test_patch_field_rejects_non_text_field(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Numeric / list fields are not text-editable on this
+    surface — they need their own typed payloads."""
+    _, game_id, _ = await _seed_chain(api_engine, title="NumField")
+    resp = await authed_client.patch(
+        f"/api/v3/game/{game_id}/field",
+        json={"field": "rating", "value": "9.5"},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["errorCode"] == "field_not_editable"
+
+
+@pytest.mark.asyncio
+async def test_patch_field_rejects_too_long(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """developer.max_length=128 — 200-char input is rejected
+    cleanly rather than letting SQLAlchemy raise."""
+    _, game_id, _ = await _seed_chain(api_engine, title="TooLong")
+    resp = await authed_client.patch(
+        f"/api/v3/game/{game_id}/field",
+        json={"field": "developer", "value": "x" * 200},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["errorCode"] == "value_too_long"
+
+
+@pytest.mark.asyncio
+async def test_patch_field_rejects_title_clear(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """title is NOT NULL at the schema level — clearing would
+    500 in the DB. Reject upfront."""
+    _, game_id, _ = await _seed_chain(api_engine, title="KeepTitle")
+    resp = await authed_client.patch(
+        f"/api/v3/game/{game_id}/field",
+        json={"field": "title", "value": None},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["errorCode"] == "title_required"
+
+
+@pytest.mark.asyncio
+async def test_patch_field_rejects_unknown_field(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Random strings hit Pydantic's ProviderField validator
+    and 422 — same as the lock endpoint."""
+    _, game_id, _ = await _seed_chain(api_engine, title="UnknownEdit")
+    resp = await authed_client.patch(
+        f"/api/v3/game/{game_id}/field",
+        json={"field": "not_a_real_field", "value": "x"},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_patch_field_404_when_missing(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.patch(
+        "/api/v3/game/9999999/field",
+        json={"field": "developer", "value": "x"},
+    )
+    assert resp.status_code == 404
+    assert resp.json()["errorCode"] == "game_not_found"
+
+
+@pytest.mark.asyncio
+async def test_patch_field_unauthenticated_401(
+    api_client: httpx.AsyncClient,
+) -> None:
+    resp = await api_client.patch(
+        "/api/v3/game/1/field",
+        json={"field": "developer", "value": "x"},
+    )
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_patch_field_persists_across_read(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """End-to-end: edit + lock survive a fresh GET so we know
+    the commit really landed."""
+    _, game_id, _ = await _seed_chain(api_engine, title="RoundTrip")
+    await authed_client.patch(
+        f"/api/v3/game/{game_id}/field",
+        json={"field": "summary", "value": "A blue hedgehog runs fast."},
+    )
+    resp = await authed_client.get(f"/api/v3/game/{game_id}")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["summary"] == "A blue hedgehog runs fast."
+    assert body["locked_fields"] == ["summary"]

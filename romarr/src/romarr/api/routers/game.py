@@ -1,4 +1,5 @@
-"""Game + Release read + lock endpoints (slices 86, 146).
+"""Game + Release read + lock + per-field edit endpoints
+(slices 86, 146, 147).
 
 Foundation already ships the :class:`Game` + :class:`Release`
 ORM models; this router is the operator-facing read surface
@@ -81,6 +82,40 @@ class FieldLockRequest(BaseModel):
 
     field: ProviderField
     locked: bool
+
+
+# Mapping of editable text fields → (Game ORM attribute,
+# DB max length). Slice 147 only ships text-shaped edits;
+# numeric and list fields can join later via dedicated payloads
+# without disturbing this surface.
+_EDITABLE_TEXT_FIELDS: dict[ProviderField, tuple[str, int | None]] = {
+    ProviderField.TITLE: ("title", 255),
+    ProviderField.SUMMARY: ("summary", None),
+    ProviderField.DEVELOPER: ("developer", 128),
+    ProviderField.PUBLISHER: ("publisher", 128),
+    ProviderField.AGE_RATING: ("age_rating", 16),
+}
+
+
+class FieldEditRequest(BaseModel):
+    """PATCH /api/v3/game/{id}/field — manual operator edit.
+
+    The slice-147 edit-in-place half of the anti-RomM-#1770
+    surface. Only text fields (title, summary, developer,
+    publisher, age_rating) are editable here — numeric / list
+    fields will join via their own dedicated payloads.
+
+    ``value`` may be ``null`` to clear the field. ``auto_lock``
+    defaults to True because operator edits are sticky by
+    definition: an edit the aggregator silently overwrote next
+    refresh is exactly the bug the constitution forbids.
+    """
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    field: ProviderField
+    value: str | None = None
+    auto_lock: bool = True
 
 
 router = APIRouter(prefix="/api/v3/game", tags=["Game"])
@@ -291,6 +326,93 @@ async def patch_locked_fields(
     else:
         current.discard(field_value)
     row.locked_fields = sorted(current)
+
+    await db.commit()
+    await db.refresh(row)
+    return GameRead.model_validate(row, from_attributes=True)
+
+
+@router.patch(
+    "/{game_id}/field",
+    response_model=GameRead,
+    summary=(
+        "Manually edit one text metadata field on a Game (admin "
+        "only). Title, summary, developer, publisher, age_rating "
+        "are supported today; auto-locks the field by default so "
+        "the aggregator stops overwriting it."
+    ),
+)
+async def patch_field(
+    game_id: int,
+    body: Annotated[FieldEditRequest, Body()],
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> GameRead:
+    spec = _EDITABLE_TEXT_FIELDS.get(body.field)
+    if spec is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "errorMessage": (
+                    f"field={body.field.value!r} is not a text-editable "
+                    "field — only title, summary, developer, "
+                    "publisher, age_rating are accepted here."
+                ),
+                "errorCode": "field_not_editable",
+            },
+        )
+    column_name, max_length = spec
+
+    # Empty string → null (clear). Trim incidental whitespace
+    # so a trailing newline from the operator's input doesn't
+    # get persisted.
+    cleaned: str | None = body.value
+    if cleaned is not None:
+        cleaned = cleaned.strip() or None
+    if cleaned is not None and max_length is not None and len(cleaned) > max_length:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "errorMessage": (
+                    f"value exceeds max_length={max_length} for "
+                    f"field={body.field.value}"
+                ),
+                "errorCode": "value_too_long",
+            },
+        )
+    # Title is required at the schema level (NOT NULL) — clearing
+    # it would 500 in the DB. Reject upfront with a useful
+    # message.
+    if body.field is ProviderField.TITLE and cleaned is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "errorMessage": "title cannot be cleared",
+                "errorCode": "title_required",
+            },
+        )
+
+    row = (
+        await db.execute(select(Game).where(Game.id == game_id))
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "errorMessage": f"game_id={game_id} not found",
+                "errorCode": "game_not_found",
+            },
+        )
+
+    setattr(row, column_name, cleaned)
+
+    if body.auto_lock:
+        # Auto-lock so the next refresh respects the operator's
+        # edit. The locked-fields list stays sorted+deduped just
+        # like in the slice-146 surface.
+        current = set(row.locked_fields or [])
+        current.add(body.field.value)
+        row.locked_fields = sorted(current)
 
     await db.commit()
     await db.refresh(row)

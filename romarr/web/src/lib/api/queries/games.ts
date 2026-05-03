@@ -249,3 +249,49 @@ export function useToggleFieldLock(): UseMutationResult<
     },
   });
 }
+
+/** Text fields the operator can edit inline on Overview. */
+export type EditableTextField =
+  | "title"
+  | "summary"
+  | "developer"
+  | "publisher"
+  | "age_rating";
+
+export interface EditFieldVariables {
+  gameId: number;
+  field: EditableTextField;
+  value: string | null;
+  autoLock?: boolean;
+}
+
+/**
+ * PATCH /api/v3/game/{id}/field — manually edit one text
+ * metadata field (slice 147 — edit-in-place complement to the
+ * slice-146 lock surface).
+ *
+ * Auto-locks the field by default so the next aggregator
+ * refresh respects the operator's edit.
+ */
+export function useEditGameField(): UseMutationResult<
+  Game,
+  ApiError,
+  EditFieldVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<Game, ApiError, EditFieldVariables>({
+    mutationFn: ({ gameId, field, value, autoLock }) =>
+      apiFetch<Game>(`/api/v3/game/${gameId}/field`, {
+        method: "PATCH",
+        json: {
+          field,
+          value,
+          auto_lock: autoLock ?? true,
+        },
+      }),
+    onSuccess: (game) => {
+      void qc.invalidateQueries({ queryKey: ["games", "detail", game.id] });
+      void qc.invalidateQueries({ queryKey: ["games", "list"] });
+    },
+  });
+}

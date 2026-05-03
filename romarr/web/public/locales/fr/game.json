@@ -44,6 +44,13 @@
       "lockAria": "Verrouiller {{field}} pour que l'agrégateur de métadonnées cesse de l'écraser",
       "unlockAria": "Déverrouiller {{field}} pour que l'agrégateur de métadonnées puisse le mettre à jour"
     },
+    "edit": {
+      "openAria": "Modifier {{field}}",
+      "inputAria": "Nouvelle valeur pour {{field}}",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "errorTitle": "Impossible d'enregistrer la modification"
+    },
     "tags": {
       "label": "Étiquettes"
     }

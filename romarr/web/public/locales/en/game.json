@@ -44,6 +44,13 @@
       "lockAria": "Lock {{field}} so the metadata aggregator stops overwriting it",
       "unlockAria": "Unlock {{field}} so the metadata aggregator can update it again"
     },
+    "edit": {
+      "openAria": "Edit {{field}}",
+      "inputAria": "New value for {{field}}",
+      "save": "Save",
+      "cancel": "Cancel",
+      "errorTitle": "Couldn't save the edit"
+    },
     "tags": {
       "label": "Tags"
     }

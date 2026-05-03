@@ -1,26 +1,32 @@
 /**
- * GameDetail > Overview tab (slices 89, 146).
+ * GameDetail > Overview tab (slices 89, 146, 147).
  *
- * Read-only metadata view: cover (CoverImage with gradient
- * fallback), title, summary, key facts. Each FactRow with a
- * known :data:`ProviderField` carries a lock toggle — locking
- * a field tells the aggregator to skip it on every refresh,
- * the constitutional anti-RomM-#1770 mechanism.
+ * Metadata view: cover (CoverImage with gradient fallback),
+ * title, summary, key facts. Each FactRow with a known
+ * :data:`ProviderField` carries a lock toggle — locking a
+ * field tells the aggregator to skip it on every refresh.
+ * Text-shaped FactRows (developer / publisher / age_rating)
+ * are also click-to-edit; saving auto-locks the field so the
+ * operator's edit survives the next refresh. Together these
+ * are the constitutional anti-RomM-#1770 mechanism.
  */
 
-import { type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
 import { CoverImage } from "@/components/rom";
 import {
+  useEditGameField,
   useRefreshGameMetadata,
   useToggleFieldLock,
   useToggleGameMonitor,
+  type EditableTextField,
   type Game,
   type ProviderField,
 } from "@/lib/api/queries/games";
 import { usePlatformsById } from "@/lib/api/queries/platforms";
 import { useTagsById } from "@/lib/api/queries/tags";
+import { useToastStore } from "@/lib/store/toast";
 
 interface OverviewTabProps {
   game: Game;
@@ -89,6 +95,125 @@ function FactRow(props: FactRowProps): ReactElement {
         )}
       </dt>
       <dd className="text-xs text-zinc-200">{props.value ?? "—"}</dd>
+    </div>
+  );
+}
+
+interface EditableFactRowProps {
+  label: string;
+  field: EditableTextField;
+  rawValue: string | null;
+  lockedFields: readonly string[];
+  gameId: number;
+}
+
+function EditableFactRow(props: EditableFactRowProps): ReactElement {
+  const { t } = useTranslation("game");
+  const pushToast = useToastStore((s) => s.push);
+  const edit = useEditGameField();
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(props.rawValue ?? "");
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const locked = props.lockedFields.includes(props.field);
+
+  useEffect(() => {
+    if (isEditing) {
+      setDraft(props.rawValue ?? "");
+      // Defer focus until after the input mounts.
+      window.setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  }, [isEditing, props.rawValue]);
+
+  function commit(): void {
+    const trimmed = draft.trim();
+    const next = trimmed.length === 0 ? null : trimmed;
+    if (next === (props.rawValue ?? null)) {
+      setIsEditing(false);
+      return;
+    }
+    edit.mutate(
+      {
+        gameId: props.gameId,
+        field: props.field,
+        value: next,
+      },
+      {
+        onSuccess: () => setIsEditing(false),
+        onError: (err) => {
+          pushToast({
+            kind: "error",
+            title: t("overview.edit.errorTitle"),
+            description: err.message,
+          });
+        },
+      },
+    );
+  }
+
+  function cancel(): void {
+    setIsEditing(false);
+    setDraft(props.rawValue ?? "");
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-3 border-b border-zinc-800 py-2 last:border-b-0">
+      <dt className="flex items-center gap-1.5 text-[0.65rem] uppercase tracking-wider text-zinc-500">
+        <span>{props.label}</span>
+        <FieldLockButton
+          field={props.field}
+          locked={locked}
+          gameId={props.gameId}
+        />
+      </dt>
+      {isEditing ? (
+        <dd className="flex items-center gap-1.5">
+          <input
+            ref={inputRef}
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commit();
+              if (e.key === "Escape") cancel();
+            }}
+            disabled={edit.isPending}
+            aria-label={t("overview.edit.inputAria", { field: props.label })}
+            className="min-w-0 flex-1 rounded-md bg-zinc-950 px-2 py-1 text-xs text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          />
+          <button
+            type="button"
+            onClick={commit}
+            disabled={edit.isPending}
+            aria-label={t("overview.edit.save")}
+            className="rounded p-1 text-emerald-400 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
+          >
+            <span aria-hidden="true">✓</span>
+          </button>
+          <button
+            type="button"
+            onClick={cancel}
+            disabled={edit.isPending}
+            aria-label={t("overview.edit.cancel")}
+            className="rounded p-1 text-zinc-400 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
+          >
+            <span aria-hidden="true">✕</span>
+          </button>
+        </dd>
+      ) : (
+        <dd className="group flex items-center gap-1.5 text-xs text-zinc-200">
+          <span className="min-w-0 flex-1 truncate">
+            {props.rawValue ?? "—"}
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsEditing(true)}
+            aria-label={t("overview.edit.openAria", { field: props.label })}
+            className="rounded p-0.5 text-zinc-600 opacity-0 transition-opacity hover:text-zinc-300 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            <span aria-hidden="true">✎</span>
+          </button>
+        </dd>
+      )}
     </div>
   );
 }
@@ -240,17 +365,17 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
         </div>
 
         <dl className="rounded-md border border-zinc-800 bg-zinc-900/40 px-4">
-          <FactRow
+          <EditableFactRow
             label={t("overview.fields.developer")}
-            value={game.developer ?? null}
             field="developer"
+            rawValue={game.developer ?? null}
             lockedFields={game.locked_fields ?? []}
             gameId={game.id}
           />
-          <FactRow
+          <EditableFactRow
             label={t("overview.fields.publisher")}
-            value={game.publisher ?? null}
             field="publisher"
+            rawValue={game.publisher ?? null}
             lockedFields={game.locked_fields ?? []}
             gameId={game.id}
           />
@@ -278,10 +403,10 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
             lockedFields={game.locked_fields ?? []}
             gameId={game.id}
           />
-          <FactRow
+          <EditableFactRow
             label={t("overview.fields.ageRating")}
-            value={game.age_rating ?? null}
             field="age_rating"
+            rawValue={game.age_rating ?? null}
             lockedFields={game.locked_fields ?? []}
             gameId={game.id}
           />

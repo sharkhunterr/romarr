@@ -1641,6 +1641,36 @@
         "title": "DumpStatus",
         "type": "string"
       },
+      "FieldEditRequest": {
+        "additionalProperties": false,
+        "description": "PATCH /api/v3/game/{id}/field \u2014 manual operator edit.\n\nThe slice-147 edit-in-place half of the anti-RomM-#1770\nsurface. Only text fields (title, summary, developer,\npublisher, age_rating) are editable here \u2014 numeric / list\nfields will join via their own dedicated payloads.\n\n``value`` may be ``null`` to clear the field. ``auto_lock``\ndefaults to True because operator edits are sticky by\ndefinition: an edit the aggregator silently overwrote next\nrefresh is exactly the bug the constitution forbids.",
+        "properties": {
+          "auto_lock": {
+            "default": true,
+            "title": "Auto Lock",
+            "type": "boolean"
+          },
+          "field": {
+            "$ref": "#/components/schemas/ProviderField"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "field"
+        ],
+        "title": "FieldEditRequest",
+        "type": "object"
+      },
       "FieldLockRequest": {
         "additionalProperties": false,
         "description": "PATCH /api/v3/game/{id}/locked-fields \u2014 toggle one field.\n\nThe slice-146 anti-RomM-#1770 surface. ``field`` is\nconstrained to :class:`ProviderField` so the only fields\nthe operator can lock are the ones the aggregator could\noverwrite \u2014 locking an unrecognised field would be a no-op\nthat silently drifts.",
@@ -9267,6 +9297,58 @@
           }
         },
         "summary": "List every Dump that belongs to a game (joined through the game's Releases). Drives GameDetail > Files.",
+        "tags": [
+          "Game"
+        ]
+      }
+    },
+    "/api/v3/game/{game_id}/field": {
+      "patch": {
+        "operationId": "patch_field_api_v3_game__game_id__field_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "title": "Game Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FieldEditRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Manually edit one text metadata field on a Game (admin only). Title, summary, developer, publisher, age_rating are supported today; auto-locks the field by default so the aggregator stops overwriting it.",
         "tags": [
           "Game"
         ]

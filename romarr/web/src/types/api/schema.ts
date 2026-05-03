@@ -509,6 +509,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/game/{game_id}/field": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Manually edit one text metadata field on a Game (admin only). Title, summary, developer, publisher, age_rating are supported today; auto-locks the field by default so the aggregator stops overwriting it. */
+        patch: operations["patch_field_api_v3_game__game_id__field_patch"];
+        trace?: never;
+    };
     "/api/v3/game/{game_id}/locked-fields": {
         parameters: {
             query?: never;
@@ -2621,6 +2638,30 @@ export interface components {
          * @enum {string}
          */
         DumpStatus: "verified" | "good" | "proto" | "beta" | "demo" | "sample" | "hack" | "trainer" | "translation" | "baddump" | "overdump" | "unknown";
+        /**
+         * FieldEditRequest
+         * @description PATCH /api/v3/game/{id}/field — manual operator edit.
+         *
+         *     The slice-147 edit-in-place half of the anti-RomM-#1770
+         *     surface. Only text fields (title, summary, developer,
+         *     publisher, age_rating) are editable here — numeric / list
+         *     fields will join via their own dedicated payloads.
+         *
+         *     ``value`` may be ``null`` to clear the field. ``auto_lock``
+         *     defaults to True because operator edits are sticky by
+         *     definition: an edit the aggregator silently overwrote next
+         *     refresh is exactly the bug the constitution forbids.
+         */
+        FieldEditRequest: {
+            /**
+             * Auto Lock
+             * @default true
+             */
+            auto_lock: boolean;
+            field: components["schemas"]["ProviderField"];
+            /** Value */
+            value?: string | null;
+        };
         /**
          * FieldLockRequest
          * @description PATCH /api/v3/game/{id}/locked-fields — toggle one field.
@@ -5996,6 +6037,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DumpRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_field_api_v3_game__game_id__field_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldEditRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameRead"];
                 };
             };
             /** @description Validation Error */
