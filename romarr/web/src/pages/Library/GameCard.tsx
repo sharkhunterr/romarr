@@ -14,6 +14,7 @@ import { Link } from "react-router-dom";
 import { CoverImage } from "@/components/rom";
 import type { Game } from "@/lib/api/queries/games";
 import { usePlatformsById } from "@/lib/api/queries/platforms";
+import { useTagsById } from "@/lib/api/queries/tags";
 
 interface GameCardProps {
   game: Game;
@@ -24,6 +25,17 @@ export function GameCard(props: GameCardProps): ReactElement {
   const { game } = props;
   const byId = usePlatformsById();
   const platform = byId.get(game.platform_id);
+  const tagsById = useTagsById();
+  const tagIds = game.tags ?? [];
+  // Resolve up to MAX_DOTS distinct tag colours. Anything beyond
+  // becomes a "+N" pill so the card stays compact at the 360-px
+  // mobile-first viewport.
+  const MAX_DOTS = 4;
+  const dots = tagIds
+    .map((id) => tagsById.get(id))
+    .filter((tag): tag is NonNullable<typeof tag> => tag !== undefined)
+    .slice(0, MAX_DOTS);
+  const overflowCount = tagIds.length - dots.length;
   // Prefer the short name when present (e.g. "MD" over
   // "Mega Drive") since the card is space-constrained on mobile.
   const platformLabel =
@@ -65,6 +77,34 @@ export function GameCard(props: GameCardProps): ReactElement {
           >
             💤
           </span>
+        )}
+        {(dots.length > 0 || overflowCount > 0) && (
+          <div
+            className={[
+              "absolute bottom-1 left-1 flex items-center gap-0.5",
+              "rounded-full bg-zinc-950/80 px-1 py-0.5 ring-1 ring-inset ring-zinc-700",
+              "backdrop-blur-sm",
+            ].join(" ")}
+            aria-label={t("card.tagsAria", { count: tagIds.length })}
+          >
+            {dots.map((tag) => (
+              <span
+                key={tag.id}
+                aria-hidden="true"
+                title={tag.label}
+                className="block h-2 w-2 rounded-full ring-1 ring-zinc-950/40"
+                style={{ backgroundColor: tag.color }}
+              />
+            ))}
+            {overflowCount > 0 && (
+              <span
+                className="font-mono text-[0.55rem] text-zinc-300"
+                aria-hidden="true"
+              >
+                +{overflowCount}
+              </span>
+            )}
+          </div>
         )}
       </div>
       <div className="min-w-0 space-y-1">

@@ -7,6 +7,7 @@
  * polymorphic association table.
  */
 
+import { useMemo } from "react";
 import {
   useMutation,
   useQuery,
@@ -31,6 +32,23 @@ export function useTags(): UseQueryResult<Tag[], ApiError> {
     queryFn: () => apiFetch<Tag[]>("/api/v3/tag"),
     staleTime: 60_000,
   });
+}
+
+/**
+ * Lookup helper — id → Tag. Returns an empty Map until the
+ * underlying query resolves. Memoised so consumers don't
+ * rebuild the index every render. Drives the per-row tag-dot
+ * rendering on Library cards (slice 137).
+ */
+export function useTagsById(): Map<number, Tag> {
+  const tags = useTags();
+  return useMemo(() => {
+    const out = new Map<number, Tag>();
+    for (const tag of tags.data ?? []) {
+      out.set(tag.id, tag);
+    }
+    return out;
+  }, [tags.data]);
 }
 
 export function useTagDetail(

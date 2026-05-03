@@ -42,6 +42,8 @@
   "count_other": "{{count}} games",
   "card": {
     "unmonitoredTooltip": "Not monitored — Romarr won't search for upgrades",
-    "unmonitoredAria": "{{title}} (not monitored)"
+    "unmonitoredAria": "{{title}} (not monitored)",
+    "tagsAria_one": "{{count}} tag",
+    "tagsAria_other": "{{count}} tags"
   }
 }

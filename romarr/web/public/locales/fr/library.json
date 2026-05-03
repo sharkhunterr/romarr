@@ -42,6 +42,8 @@
   "count_other": "{{count}} jeux",
   "card": {
     "unmonitoredTooltip": "Non suivi — Romarr ne cherchera pas d'upgrade",
-    "unmonitoredAria": "{{title}} (non suivi)"
+    "unmonitoredAria": "{{title}} (non suivi)",
+    "tagsAria_one": "{{count}} étiquette",
+    "tagsAria_other": "{{count}} étiquettes"
   }
 }
