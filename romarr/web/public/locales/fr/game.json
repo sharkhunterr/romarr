@@ -9,6 +9,9 @@
     "notes": "Notes",
     "ariaLabel": "Onglets Jeu"
   },
+  "delete": {
+    "button": "Supprimer le jeu"
+  },
   "notes": {
     "heading": "Notes",
     "subhead": "Texte libre, géré uniquement par l'opérateur. L'agrégateur de métadonnées ne touche jamais à ce champ — vos notes survivent à chaque rafraîchissement.",

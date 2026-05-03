@@ -1,18 +1,24 @@
 /**
- * Game detail page (P-GAME, slices 89, 149).
+ * Game detail page (P-GAME, slices 89, 149, 167).
  *
  * Tabbed view: Overview / Releases / History / Files / Notes.
  * Manual Search remains deferred until the indexer search UI
  * lands.
+ *
+ * Slice 167 adds a destructive "Delete game" action in the
+ * page header that reuses ``BulkDeleteModal`` with the single
+ * game pre-selected. On success it navigates back to /library
+ * since the row no longer exists.
  */
 
-import { type ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { DetailSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useGame } from "@/lib/api/queries/games";
+import { BulkDeleteModal } from "@/pages/Library/BulkDeleteModal";
 
 import { FilesTab } from "./FilesTab";
 import { HistoryTab } from "./HistoryTab";
@@ -66,11 +72,13 @@ function TabButton(props: TabButtonProps): ReactElement {
 
 export function GameDetailPage(): ReactElement {
   const { t } = useTranslation("game");
+  const navigate = useNavigate();
   const { gameId: gameIdRaw } = useParams<{ gameId: string }>();
   const gameId = gameIdRaw ? Number(gameIdRaw) : null;
   const game = useGame(gameId);
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = parseTabParam(searchParams.get("tab"));
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const setTab = (next: Tab): void => {
     setSearchParams(
@@ -105,6 +113,16 @@ export function GameDetailPage(): ReactElement {
       {game.isSuccess && (
         <>
           <PendingDownloads gameId={gameId} />
+          <div className="mb-3 flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => setDeleteOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-md border border-red-700/60 px-2 py-1 text-[0.65rem] font-medium text-red-300 hover:bg-red-900/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+            >
+              <span aria-hidden="true">🗑️</span>
+              {t("delete.button")}
+            </button>
+          </div>
           <div
             role="tablist"
             aria-label={t("tabs.ariaLabel")}
@@ -131,6 +149,14 @@ export function GameDetailPage(): ReactElement {
           {tab === "history" && <HistoryTab gameId={gameId} />}
           {tab === "files" && <FilesTab gameId={gameId} />}
           {tab === "notes" && <NotesTab game={game.data} />}
+
+          {deleteOpen && (
+            <BulkDeleteModal
+              games={[game.data]}
+              onClose={() => setDeleteOpen(false)}
+              onSuccess={() => navigate("/library")}
+            />
+          )}
         </>
       )}
     </div>

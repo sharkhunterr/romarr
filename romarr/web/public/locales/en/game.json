@@ -9,6 +9,9 @@
     "notes": "Notes",
     "ariaLabel": "Game tabs"
   },
+  "delete": {
+    "button": "Delete game"
+  },
   "notes": {
     "heading": "Notes",
     "subhead": "Operator-owned free text. The metadata aggregator never touches this — your notes survive every refresh.",
