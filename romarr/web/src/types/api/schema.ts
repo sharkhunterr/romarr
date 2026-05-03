@@ -8949,6 +8949,8 @@ export interface operations {
     list_cutoff_api_v3_wanted_cutoff_get: {
         parameters: {
             query?: {
+                /** @description Restrict to one platform (joined via Game). */
+                platformId?: number | null;
                 page?: number;
                 pageSize?: number;
                 sortKey?: string | null;
@@ -8983,6 +8985,8 @@ export interface operations {
     list_missing_api_v3_wanted_missing_get: {
         parameters: {
             query?: {
+                /** @description Restrict to one platform (joined via Game). */
+                platformId?: number | null;
                 page?: number;
                 pageSize?: number;
                 sortKey?: string | null;

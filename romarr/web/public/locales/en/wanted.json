@@ -9,6 +9,12 @@
     "missing": "Releases marked monitored but not yet acquired.",
     "cutoff": "Imported releases below the upgrade cutoff."
   },
+  "filters": {
+    "platform": {
+      "label": "Filter by platform",
+      "all": "All platforms"
+    }
+  },
   "missing": {
     "loadError": "Couldn't load missing releases",
     "empty": {

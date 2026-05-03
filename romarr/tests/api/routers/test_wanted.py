@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import httpx
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
 from romarr.domain.models import Game, Platform, Release
@@ -245,3 +246,97 @@ async def test_missing_invalid_sort_key_returns_400(
     )
     assert resp.status_code == 400
     assert resp.json()["errorCode"] == "invalid_sort_key"
+
+
+# ---------------------------------------------------------------------------
+# slice 101 — platformId filter
+# ---------------------------------------------------------------------------
+
+
+async def _seed_two_platforms_with_wanted_releases(
+    engine: AsyncEngine,
+) -> tuple[int, int]:
+    """Two platforms (MD + GBA), one wanted Release on each.
+    Returns (platform_md_id, platform_gba_id)."""
+    sm = async_sessionmaker(engine, expire_on_commit=False)
+    async with sm() as session:
+        md = Platform(slug="md", name="Mega Drive", short_name="MD")
+        gba = Platform(slug="gba", name="Game Boy Advance", short_name="GBA")
+        session.add_all([md, gba])
+        await session.flush()
+        sonic_md = Game(
+            platform_id=md.id, slug="sonic-md", title="Sonic (MD)"
+        )
+        sonic_gba = Game(
+            platform_id=gba.id, slug="sonic-gba", title="Sonic (GBA)"
+        )
+        session.add_all([sonic_md, sonic_gba])
+        await session.flush()
+        session.add_all(
+            [
+                Release(
+                    game_id=sonic_md.id,
+                    name="Sonic (USA, MD)",
+                    status="wanted",
+                    monitored=True,
+                ),
+                Release(
+                    game_id=sonic_gba.id,
+                    name="Sonic (USA, GBA)",
+                    status="wanted",
+                    monitored=True,
+                ),
+            ]
+        )
+        await session.commit()
+        return md.id, gba.id
+
+
+@pytest.mark.asyncio
+async def test_missing_platform_id_filter_keeps_only_one_platform(
+    authed_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+) -> None:
+    md_id, _ = await _seed_two_platforms_with_wanted_releases(api_engine)
+    resp = await authed_client.get(
+        f"/api/v3/wanted/missing?platformId={md_id}"
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["totalRecords"] == 1
+    assert body["records"][0]["name"] == "Sonic (USA, MD)"
+
+
+@pytest.mark.asyncio
+async def test_cutoff_platform_id_filter_keeps_only_one_platform(
+    authed_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+) -> None:
+    """Same fixture but flip both releases to imported + cutoff_met=False
+    so they show up on /cutoff."""
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    md_id, _ = await _seed_two_platforms_with_wanted_releases(api_engine)
+    async with sm() as session:
+        rows = (
+            (await session.execute(select(Release))).scalars().all()
+        )
+        for r in rows:
+            r.status = "imported"
+            r.cutoff_met = False
+        await session.commit()
+
+    resp = await authed_client.get(
+        f"/api/v3/wanted/cutoff?platformId={md_id}"
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["totalRecords"] == 1
+    assert body["records"][0]["name"] == "Sonic (USA, MD)"
+
+
+@pytest.mark.asyncio
+async def test_missing_platform_id_zero_rejected(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.get("/api/v3/wanted/missing?platformId=0")
+    assert resp.status_code == 422

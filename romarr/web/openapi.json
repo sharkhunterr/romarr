@@ -13570,6 +13570,25 @@
         "operationId": "list_cutoff_api_v3_wanted_cutoff_get",
         "parameters": [
           {
+            "description": "Restrict to one platform (joined via Game).",
+            "in": "query",
+            "name": "platformId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to one platform (joined via Game).",
+              "title": "Platformid"
+            }
+          },
+          {
             "in": "query",
             "name": "page",
             "required": false,
@@ -13655,6 +13674,25 @@
       "get": {
         "operationId": "list_missing_api_v3_wanted_missing_get",
         "parameters": [
+          {
+            "description": "Restrict to one platform (joined via Game).",
+            "in": "query",
+            "name": "platformId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to one platform (joined via Game).",
+              "title": "Platformid"
+            }
+          },
           {
             "in": "query",
             "name": "page",

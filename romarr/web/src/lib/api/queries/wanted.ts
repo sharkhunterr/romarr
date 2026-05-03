@@ -32,6 +32,8 @@ export interface UseWantedParams {
   pageSize?: number;
   sortKey?: string;
   sortDirection?: "asc" | "desc";
+  /** Restrict to a single platform (joined via Game). */
+  platformId?: number;
 }
 
 function buildQueryString(params: UseWantedParams): string {
@@ -42,6 +44,8 @@ function buildQueryString(params: UseWantedParams): string {
   if (params.sortKey !== undefined) search.set("sortKey", params.sortKey);
   if (params.sortDirection !== undefined)
     search.set("sortDirection", params.sortDirection);
+  if (params.platformId !== undefined)
+    search.set("platformId", String(params.platformId));
   const qs = search.toString();
   return qs ? `?${qs}` : "";
 }

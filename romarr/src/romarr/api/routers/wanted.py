@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,7 +28,7 @@ from romarr.api.dependencies import get_db, require_readonly
 from romarr.api.envelopes import PaginationEnvelope
 from romarr.api.pagination import PageRequest, page_request, paginate
 from romarr.auth import Principal
-from romarr.domain.models import Release
+from romarr.domain.models import Game, Release
 
 router = APIRouter(prefix="/api/v3/wanted", tags=["Wanted"])
 
@@ -104,11 +104,23 @@ async def list_missing(
     _principal: Annotated[Principal, Depends(require_readonly)],
     db: Annotated[AsyncSession, Depends(get_db)],
     page_req: Annotated[PageRequest, Depends(page_request)],
+    platform_id: Annotated[
+        int | None,
+        Query(
+            alias="platformId",
+            ge=1,
+            description="Restrict to one platform (joined via Game).",
+        ),
+    ] = None,
 ) -> PaginationEnvelope[WantedReleaseRead]:
     base = select(Release).where(
         Release.status == "wanted",
         Release.monitored.is_(True),
     )
+    if platform_id is not None:
+        base = base.join(Game, Release.game_id == Game.id).where(
+            Game.platform_id == platform_id
+        )
     return await paginate(
         session=db,
         base_query=base,
@@ -136,12 +148,24 @@ async def list_cutoff(
     _principal: Annotated[Principal, Depends(require_readonly)],
     db: Annotated[AsyncSession, Depends(get_db)],
     page_req: Annotated[PageRequest, Depends(page_request)],
+    platform_id: Annotated[
+        int | None,
+        Query(
+            alias="platformId",
+            ge=1,
+            description="Restrict to one platform (joined via Game).",
+        ),
+    ] = None,
 ) -> PaginationEnvelope[WantedReleaseRead]:
     base = select(Release).where(
         Release.status == "imported",
         Release.cutoff_met.is_(False),
         Release.monitored.is_(True),
     )
+    if platform_id is not None:
+        base = base.join(Game, Release.game_id == Game.id).where(
+            Game.platform_id == platform_id
+        )
     return await paginate(
         session=db,
         base_query=base,

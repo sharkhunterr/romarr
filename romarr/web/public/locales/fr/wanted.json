@@ -9,6 +9,12 @@
     "missing": "Releases monitorées mais pas encore acquises.",
     "cutoff": "Releases importées sous le seuil d'upgrade."
   },
+  "filters": {
+    "platform": {
+      "label": "Filtrer par plateforme",
+      "all": "Toutes les plateformes"
+    }
+  },
   "missing": {
     "loadError": "Impossible de charger les releases manquantes",
     "empty": {

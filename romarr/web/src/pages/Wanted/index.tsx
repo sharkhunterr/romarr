@@ -18,12 +18,16 @@ import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
+import { usePlatforms } from "@/lib/api/queries/platforms";
 import {
   useWantedCutoff,
   useWantedMissing,
 } from "@/lib/api/queries/wanted";
 
 import { ReleaseRow } from "./ReleaseRow";
+
+const ALL_PLATFORMS = "all" as const;
+type PlatformFilter = number | typeof ALL_PLATFORMS;
 
 type Tab = "missing" | "cutoff";
 
@@ -56,12 +60,17 @@ function TabButton(props: TabButtonProps): ReactElement {
   );
 }
 
-function MissingTab(): ReactElement {
+interface TabBodyProps {
+  platformId: number | undefined;
+}
+
+function MissingTab(props: TabBodyProps): ReactElement {
   const { t } = useTranslation("wanted");
   const { data, isPending, isError, error } = useWantedMissing({
     pageSize: 50,
     sortKey: "name",
     sortDirection: "asc",
+    platformId: props.platformId,
   });
 
   if (isPending) return <ListSkeleton rows={6} />;
@@ -92,12 +101,13 @@ function MissingTab(): ReactElement {
   );
 }
 
-function CutoffTab(): ReactElement {
+function CutoffTab(props: TabBodyProps): ReactElement {
   const { t } = useTranslation("wanted");
   const { data, isPending, isError, error } = useWantedCutoff({
     pageSize: 50,
     sortKey: "name",
     sortDirection: "asc",
+    platformId: props.platformId,
   });
 
   if (isPending) return <ListSkeleton rows={6} />;
@@ -131,6 +141,12 @@ function CutoffTab(): ReactElement {
 export function WantedPage(): ReactElement {
   const { t } = useTranslation("wanted");
   const [tab, setTab] = useState<Tab>("missing");
+  const [platformFilter, setPlatformFilter] =
+    useState<PlatformFilter>(ALL_PLATFORMS);
+  const platforms = usePlatforms();
+
+  const platformId =
+    platformFilter === ALL_PLATFORMS ? undefined : platformFilter;
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-6 md:py-8">
@@ -160,7 +176,39 @@ export function WantedPage(): ReactElement {
         />
       </div>
 
-      {tab === "missing" ? <MissingTab /> : <CutoffTab />}
+      <label className="mb-4 block md:max-w-xs">
+        <span className="sr-only">{t("filters.platform.label")}</span>
+        <select
+          value={platformFilter === ALL_PLATFORMS ? "" : String(platformFilter)}
+          onChange={(e) => {
+            const v = e.target.value;
+            setPlatformFilter(
+              v === "" ? ALL_PLATFORMS : Number.parseInt(v, 10),
+            );
+          }}
+          aria-label={t("filters.platform.label")}
+          disabled={!platforms.isSuccess}
+          className={[
+            "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
+            "ring-1 ring-inset ring-zinc-700",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+            "disabled:cursor-not-allowed disabled:opacity-60",
+          ].join(" ")}
+        >
+          <option value="">{t("filters.platform.all")}</option>
+          {platforms.data?.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {tab === "missing" ? (
+        <MissingTab platformId={platformId} />
+      ) : (
+        <CutoffTab platformId={platformId} />
+      )}
     </div>
   );
 }
