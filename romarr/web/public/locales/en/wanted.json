@@ -64,6 +64,24 @@
       "label": "Unmonitor",
       "pending": "Updating…",
       "successTitle": "Releases unmonitored"
+    },
+    "delete": {
+      "label": "Delete",
+      "modalTitle_one": "Delete {{count}} release?",
+      "modalTitle_other": "Delete {{count}} releases?",
+      "subhead": "This removes the database row only — ROM files on disk are kept.",
+      "body": "The selected releases (and their dumps) will be removed from the Romarr database. The Game rows stay; only the chosen Release variants go away.",
+      "overflow_one": "+{{count}} more",
+      "overflow_other": "+{{count}} more",
+      "diskHint": "ROM files on disk are NOT deleted. Per-library lifecycle policies handle on-disk cleanup.",
+      "cancel": "Cancel",
+      "arming": "Hold…",
+      "deleting": "Deleting…",
+      "confirm_one": "Delete {{count}} release",
+      "confirm_other": "Delete {{count}} releases",
+      "successTitle": "Releases deleted",
+      "successBody": "{{deleted}} releases removed · {{missing}} missing",
+      "errorTitle": "Couldn't delete the selection"
     }
   },
   "missing": {

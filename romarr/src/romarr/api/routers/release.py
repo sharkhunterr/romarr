@@ -1,21 +1,20 @@
-"""Release write endpoints (slices 98, 152).
+"""Release write endpoints (slices 98, 152, 155).
 
 The spec 014 GameDetail > Releases tab calls for per-release
 operator actions: monitor toggle, manual search, manual grab,
 delete. Manual grab already exists at
 ``POST /api/v3/rom/release/grab`` (spec 007). This router
-ships the operator-toggle surface:
+ships the operator-toggle / bulk surface:
 
   * ``PATCH /api/v3/rom/release/{release_id}`` — toggle the
     Release's ``monitored`` flag (admin only).
   * ``POST  /api/v3/rom/release/bulk-monitor`` — flip the flag
-    on a batch of releases (admin only). Powers the Wanted
-    page's bulk-select action bar.
-
-Delete is intentionally deferred; cascading a Release delete
-through its Dumps + history rows is destructive and needs a
-double-confirm + force-detach pattern matching the Library
-delete (spec 009).
+    on a batch of releases (admin only).
+  * ``POST  /api/v3/rom/release/bulk-delete`` — delete a batch
+    of releases (admin only). Per the constitution this never
+    touches files on disk — only the database row + cascaded
+    Dump rows go away. Per-library lifecycle policies own the
+    on-disk side.
 """
 
 from __future__ import annotations
@@ -73,6 +72,31 @@ class BulkReleaseMonitorResponse(BaseModel):
     missing: list[int]
 
 
+class BulkReleaseDeleteRequest(BaseModel):
+    """POST /api/v3/rom/release/bulk-delete — slice 155.
+
+    Same shape contract as the Game bulk-delete endpoint but
+    on Release ids. Cascades to the Release's Dump rows; never
+    touches files on disk.
+    """
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    release_ids: Annotated[
+        list[int],
+        Field(alias="releaseIds", min_length=1, max_length=500),
+    ]
+
+
+class BulkReleaseDeleteResponse(BaseModel):
+    """Response envelope for the release bulk-delete endpoint."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    deleted: int
+    missing: list[int]
+
+
 router = APIRouter(prefix="/api/v3/rom/release", tags=["Release"])
 
 
@@ -105,6 +129,37 @@ async def bulk_monitor_releases(
         row.monitored = body.monitored
     await db.commit()
     return BulkReleaseMonitorResponse(updated=len(rows), missing=missing)
+
+
+@router.post(
+    "/bulk-delete",
+    response_model=BulkReleaseDeleteResponse,
+    summary=(
+        "Delete a batch of Releases — and their Dumps via "
+        "cascade — without touching ROM files on disk (admin "
+        "only). Capped at 500 ids per call."
+    ),
+)
+async def bulk_delete_releases(
+    body: Annotated[BulkReleaseDeleteRequest, Body()],
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> BulkReleaseDeleteResponse:
+    rows = (
+        (
+            await db.execute(
+                select(Release).where(Release.id.in_(body.release_ids))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    found = {row.id for row in rows}
+    missing = sorted(set(body.release_ids) - found)
+    for row in rows:
+        await db.delete(row)
+    await db.commit()
+    return BulkReleaseDeleteResponse(deleted=len(rows), missing=missing)
 
 
 @router.patch(

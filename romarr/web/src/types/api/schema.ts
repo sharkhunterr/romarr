@@ -1538,6 +1538,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/rom/release/bulk-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Delete a batch of Releases — and their Dumps via cascade — without touching ROM files on disk (admin only). Capped at 500 ids per call. */
+        post: operations["bulk_delete_releases_api_v3_rom_release_bulk_delete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/rom/release/bulk-monitor": {
         parameters: {
             query?: never;
@@ -2298,6 +2315,28 @@ export interface components {
             missing: number[];
             /** Updated */
             updated: number;
+        };
+        /**
+         * BulkReleaseDeleteRequest
+         * @description POST /api/v3/rom/release/bulk-delete — slice 155.
+         *
+         *     Same shape contract as the Game bulk-delete endpoint but
+         *     on Release ids. Cascades to the Release's Dump rows; never
+         *     touches files on disk.
+         */
+        BulkReleaseDeleteRequest: {
+            /** Releaseids */
+            releaseIds: number[];
+        };
+        /**
+         * BulkReleaseDeleteResponse
+         * @description Response envelope for the release bulk-delete endpoint.
+         */
+        BulkReleaseDeleteResponse: {
+            /** Deleted */
+            deleted: number;
+            /** Missing */
+            missing: number[];
         };
         /**
          * BulkReleaseMonitorRequest
@@ -8750,6 +8789,39 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_delete_releases_api_v3_rom_release_bulk_delete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkReleaseDeleteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkReleaseDeleteResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

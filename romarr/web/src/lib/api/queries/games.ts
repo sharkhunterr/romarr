@@ -230,6 +230,45 @@ export function useBulkMonitorReleases(): UseMutationResult<
   });
 }
 
+export type BulkReleaseDeleteResponse =
+  components["schemas"]["BulkReleaseDeleteResponse"];
+
+export interface BulkReleaseDeleteVariables {
+  releaseIds: number[];
+}
+
+/**
+ * POST /api/v3/rom/release/bulk-delete — destroy a batch of
+ * Releases (slice 155). Cascades to Dump rows; never touches
+ * ROM files on disk.
+ */
+export function useBulkDeleteReleases(): UseMutationResult<
+  BulkReleaseDeleteResponse,
+  ApiError,
+  BulkReleaseDeleteVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<
+    BulkReleaseDeleteResponse,
+    ApiError,
+    BulkReleaseDeleteVariables
+  >({
+    mutationFn: ({ releaseIds }) =>
+      apiFetch<BulkReleaseDeleteResponse>(
+        "/api/v3/rom/release/bulk-delete",
+        {
+          method: "POST",
+          json: { releaseIds },
+        },
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["wanted"] });
+      void qc.invalidateQueries({ queryKey: ["games", "releases"] });
+      void qc.invalidateQueries({ queryKey: ["games"] });
+    },
+  });
+}
+
 /**
  * PATCH /api/v3/game/{id} — toggle a game's `monitored` flag.
  *

@@ -461,6 +461,49 @@
         "title": "BulkMonitorResponse",
         "type": "object"
       },
+      "BulkReleaseDeleteRequest": {
+        "additionalProperties": false,
+        "description": "POST /api/v3/rom/release/bulk-delete \u2014 slice 155.\n\nSame shape contract as the Game bulk-delete endpoint but\non Release ids. Cascades to the Release's Dump rows; never\ntouches files on disk.",
+        "properties": {
+          "releaseIds": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Releaseids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "releaseIds"
+        ],
+        "title": "BulkReleaseDeleteRequest",
+        "type": "object"
+      },
+      "BulkReleaseDeleteResponse": {
+        "additionalProperties": false,
+        "description": "Response envelope for the release bulk-delete endpoint.",
+        "properties": {
+          "deleted": {
+            "title": "Deleted",
+            "type": "integer"
+          },
+          "missing": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Missing",
+            "type": "array"
+          }
+        },
+        "required": [
+          "deleted",
+          "missing"
+        ],
+        "title": "BulkReleaseDeleteResponse",
+        "type": "object"
+      },
       "BulkReleaseMonitorRequest": {
         "additionalProperties": false,
         "description": "POST /api/v3/rom/release/bulk-monitor \u2014 slice 152.\n\nMirrors the slice-151 Game bulk-monitor surface but on\nReleases. Capped at 500 ids per call; the UI shards larger\nselections client-side.",
@@ -13166,6 +13209,47 @@
         "summary": "Update a regionprofile (admin only). Flips is_user_modified=true.",
         "tags": [
           "RegionProfiles"
+        ]
+      }
+    },
+    "/api/v3/rom/release/bulk-delete": {
+      "post": {
+        "operationId": "bulk_delete_releases_api_v3_rom_release_bulk_delete_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkReleaseDeleteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkReleaseDeleteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete a batch of Releases \u2014 and their Dumps via cascade \u2014 without touching ROM files on disk (admin only). Capped at 500 ids per call.",
+        "tags": [
+          "Release"
         ]
       }
     },

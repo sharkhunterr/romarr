@@ -203,3 +203,99 @@ async def test_bulk_monitor_releases_unauthenticated_401(
         json={"releaseIds": [1], "monitored": False},
     )
     assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# slice 155 — POST /api/v3/rom/release/bulk-delete
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete_releases_drops_rows(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    a = await _seed_release(api_engine)
+    b = await _seed_release(api_engine)
+    c = await _seed_release(api_engine)
+
+    resp = await authed_client.post(
+        "/api/v3/rom/release/bulk-delete",
+        json={"releaseIds": [a, b, c]},
+    )
+    assert resp.status_code == 200, resp.json()
+    body = resp.json()
+    assert body["deleted"] == 3
+    assert body["missing"] == []
+
+    # The PATCH endpoint surfaces the canonical 404 on each id.
+    for rid in (a, b, c):
+        row = await authed_client.patch(
+            f"/api/v3/rom/release/{rid}", json={"monitored": False}
+        )
+        assert row.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete_releases_reports_missing(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    a = await _seed_release(api_engine)
+    resp = await authed_client.post(
+        "/api/v3/rom/release/bulk-delete",
+        json={"releaseIds": [a, 999_999, 888_888]},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["deleted"] == 1
+    assert body["missing"] == [888_888, 999_999]
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete_releases_idempotent(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    a = await _seed_release(api_engine)
+    first = await authed_client.post(
+        "/api/v3/rom/release/bulk-delete", json={"releaseIds": [a]}
+    )
+    assert first.status_code == 200
+    assert first.json()["deleted"] == 1
+
+    second = await authed_client.post(
+        "/api/v3/rom/release/bulk-delete", json={"releaseIds": [a]}
+    )
+    assert second.status_code == 200
+    assert second.json()["deleted"] == 0
+    assert second.json()["missing"] == [a]
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete_releases_rejects_empty_list(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.post(
+        "/api/v3/rom/release/bulk-delete", json={"releaseIds": []}
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete_releases_rejects_too_many(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.post(
+        "/api/v3/rom/release/bulk-delete",
+        json={"releaseIds": list(range(1, 502))},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete_releases_unauthenticated_401(
+    api_client: httpx.AsyncClient,
+) -> None:
+    resp = await api_client.post(
+        "/api/v3/rom/release/bulk-delete",
+        json={"releaseIds": [1]},
+    )
+    assert resp.status_code == 401

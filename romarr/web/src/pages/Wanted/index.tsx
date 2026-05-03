@@ -23,9 +23,11 @@ import { useTriggerCommand } from "@/lib/api/queries/system";
 import {
   useWantedCutoff,
   useWantedMissing,
+  type WantedRelease,
 } from "@/lib/api/queries/wanted";
 import { useToastStore } from "@/lib/store/toast";
 
+import { BulkDeleteReleasesModal } from "./BulkDeleteReleasesModal";
 import { ReleaseRow } from "./ReleaseRow";
 
 const ALL_PLATFORMS = "all" as const;
@@ -148,7 +150,7 @@ interface TabBodyProps {
   selectionActive: boolean;
   selectedIds: ReadonlySet<number>;
   onToggleSelect: (releaseId: number) => void;
-  onAllVisible: (ids: number[]) => void;
+  onAllVisible: (records: readonly WantedRelease[]) => void;
 }
 
 function MissingTab(props: TabBodyProps): ReactElement {
@@ -161,10 +163,11 @@ function MissingTab(props: TabBodyProps): ReactElement {
     q: props.q,
   });
 
-  // Hand the visible ids upstream so the bulk-toolbar's
-  // "select all visible" action knows which rows to flip.
+  // Hand the visible records upstream so the bulk toolbar's
+  // "select all visible" action knows which rows to flip and
+  // the delete modal can preview titles.
   useEffect(() => {
-    if (data) props.onAllVisible(data.records.map((r) => r.id));
+    if (data) props.onAllVisible(data.records);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
@@ -212,7 +215,7 @@ function CutoffTab(props: TabBodyProps): ReactElement {
   });
 
   useEffect(() => {
-    if (data) props.onAllVisible(data.records.map((r) => r.id));
+    if (data) props.onAllVisible(data.records);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
@@ -331,7 +334,10 @@ export function WantedPage(): ReactElement {
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<number>>(
     () => new Set<number>(),
   );
-  const [visibleIds, setVisibleIds] = useState<readonly number[]>([]);
+  const [visibleRecords, setVisibleRecords] = useState<
+    readonly WantedRelease[]
+  >([]);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const toggleSelect = (releaseId: number): void => {
     setSelectedIds((prev) => {
@@ -343,7 +349,7 @@ export function WantedPage(): ReactElement {
   };
 
   const selectAllVisible = (): void => {
-    setSelectedIds(new Set(visibleIds));
+    setSelectedIds(new Set(visibleRecords.map((r) => r.id)));
   };
 
   const exitSelection = (): void => {
@@ -555,7 +561,7 @@ export function WantedPage(): ReactElement {
             <button
               type="button"
               onClick={selectAllVisible}
-              disabled={visibleIds.length === 0}
+              disabled={visibleRecords.length === 0}
               className="rounded-md border border-zinc-700 px-2 py-1 text-[0.65rem] font-medium text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
             >
               {t("bulk.selectAll")}
@@ -582,6 +588,14 @@ export function WantedPage(): ReactElement {
             </button>
             <button
               type="button"
+              onClick={() => setDeleteOpen(true)}
+              disabled={selectedIds.size === 0 || bulkMonitor.isPending}
+              className="rounded-md bg-red-600 px-2 py-1 text-[0.65rem] font-medium text-zinc-50 hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {t("bulk.delete.label")}
+            </button>
+            <button
+              type="button"
               onClick={exitSelection}
               disabled={bulkMonitor.isPending}
               className="rounded-md border border-zinc-700 px-2 py-1 text-[0.65rem] font-medium text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
@@ -601,7 +615,7 @@ export function WantedPage(): ReactElement {
           selectionActive={selectionActive}
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
-          onAllVisible={setVisibleIds}
+          onAllVisible={setVisibleRecords}
         />
       ) : (
         <CutoffTab
@@ -612,7 +626,15 @@ export function WantedPage(): ReactElement {
           selectionActive={selectionActive}
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
-          onAllVisible={setVisibleIds}
+          onAllVisible={setVisibleRecords}
+        />
+      )}
+
+      {deleteOpen && (
+        <BulkDeleteReleasesModal
+          releases={visibleRecords.filter((r) => selectedIds.has(r.id))}
+          onClose={() => setDeleteOpen(false)}
+          onSuccess={exitSelection}
         />
       )}
     </div>
