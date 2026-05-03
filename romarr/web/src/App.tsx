@@ -39,6 +39,7 @@ import { DownloadClientsPage } from "@/pages/Settings/DownloadClients";
 import { IndexersPage } from "@/pages/Settings/Indexers";
 import { MediaManagementPage } from "@/pages/Settings/MediaManagement";
 import { MetadataSourcesPage } from "@/pages/Settings/MetadataSources";
+import { PlatformsPage } from "@/pages/Settings/Platforms";
 import { ProfilesPage } from "@/pages/Settings/Profiles";
 import { SettingsHome } from "@/pages/Settings/SettingsHome";
 import { SettingsLayout } from "@/pages/Settings/SettingsLayout";
@@ -95,6 +96,7 @@ const router = createBrowserRouter([
                 path: "media-management",
                 element: <MediaManagementPage />,
               },
+              { path: "platforms", element: <PlatformsPage /> },
               { path: "unidentified", element: <UnidentifiedPage /> },
               { path: ":sub", element: <SettingsPlaceholder /> },
             ],

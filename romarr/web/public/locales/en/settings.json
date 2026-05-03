@@ -305,6 +305,36 @@
     },
     "editorHint": "Library create + edit forms (paths, lifecycle policy, profile bindings, exporter wiring) land in a follow-up slice."
   },
+  "platforms": {
+    "title": "Platform Packs",
+    "subtitle": "Bulk platform definitions are shipped as YAML packs (built-in or community). This page audits every pack that has been applied. Upload + re-apply land in a follow-up slice.",
+    "empty": {
+      "title": "No packs applied yet",
+      "body": "The built-in pack should ship with Romarr. If this list is empty, restart the server to seed it."
+    },
+    "source": {
+      "builtin": "Built-in",
+      "community": "Community",
+      "user": "User"
+    },
+    "appliedBy": "applied by {{user}}",
+    "author": "by {{author}}",
+    "sourceUrl": "Source",
+    "action": {
+      "applied": "applied",
+      "reapplied": "re-applied",
+      "skipped": "skipped",
+      "failed": "failed"
+    },
+    "history": {
+      "title": "Application history",
+      "loading": "Loading history…",
+      "empty": "No history rows logged for this pack.",
+      "platformsAffected_one": "Platform",
+      "platformsAffected_other": "Platforms"
+    },
+    "uploadHint": "Pack upload (multipart YAML) + per-platform override toggles land in a follow-up slice."
+  },
   "metadataSources": {
     "title": "Metadata Sources",
     "subtitle": "Per-field aggregation across the nine documented providers (IGDB, ScreenScraper, MobyGames, LaunchBox, SteamGridDB, RetroAchievements, HowLongToBeat, Hasheous, PlayMatch). Enable, prioritize, and test each one here.",

@@ -33,7 +33,7 @@ export const SETTINGS_NAV_ENTRIES: readonly SettingsNavEntry[] = [
   { to: "/settings/download-clients", slug: "download-clients", emoji: "⬇️", shipped: true },
   { to: "/settings/dat-sources", slug: "dat-sources", emoji: "📋" },
   { to: "/settings/metadata-sources", slug: "metadata-sources", emoji: "🗂️", shipped: true },
-  { to: "/settings/platforms", slug: "platforms", emoji: "🎮" },
+  { to: "/settings/platforms", slug: "platforms", emoji: "🎮", shipped: true },
   { to: "/settings/connect", slug: "connect", emoji: "🔔", shipped: true },
   { to: "/settings/tags", slug: "tags", emoji: "🏷️", shipped: true },
   { to: "/settings/unidentified", slug: "unidentified", emoji: "❓", shipped: true },

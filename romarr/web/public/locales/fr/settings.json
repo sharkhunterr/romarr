@@ -305,6 +305,36 @@
     },
     "editorHint": "Les formulaires de création + édition (chemins, politique de cycle de vie, profils, exporters) arriveront dans un slice à venir."
   },
+  "platforms": {
+    "title": "Packs de plateformes",
+    "subtitle": "Les définitions de plateformes sont distribuées en lot via des packs YAML (intégrés ou communautaires). Cette page audite chaque pack qui a été appliqué. L'envoi + la ré-application arriveront dans un slice à venir.",
+    "empty": {
+      "title": "Aucun pack appliqué",
+      "body": "Le pack intégré devrait être livré avec Romarr. Si cette liste est vide, redémarrez le serveur pour l'amorcer."
+    },
+    "source": {
+      "builtin": "Intégré",
+      "community": "Communauté",
+      "user": "Utilisateur"
+    },
+    "appliedBy": "appliqué par {{user}}",
+    "author": "par {{author}}",
+    "sourceUrl": "Source",
+    "action": {
+      "applied": "appliqué",
+      "reapplied": "ré-appliqué",
+      "skipped": "ignoré",
+      "failed": "échec"
+    },
+    "history": {
+      "title": "Historique d'application",
+      "loading": "Chargement de l'historique…",
+      "empty": "Aucune ligne d'historique pour ce pack.",
+      "platformsAffected_one": "Plateforme",
+      "platformsAffected_other": "Plateformes"
+    },
+    "uploadHint": "L'envoi de packs (YAML multipart) + les bascules d'override par plateforme arriveront dans un slice à venir."
+  },
   "metadataSources": {
     "title": "Sources de métadonnées",
     "subtitle": "Agrégation par champ sur les neuf fournisseurs documentés (IGDB, ScreenScraper, MobyGames, LaunchBox, SteamGridDB, RetroAchievements, HowLongToBeat, Hasheous, PlayMatch). Activez, priorisez et testez chacun ici.",
