@@ -69,3 +69,42 @@ export function useTestNotification(): UseMutationResult<
       ),
   });
 }
+
+/**
+ * PUT /api/v3/notification/{id} — narrow toggle subset (slice 124).
+ *
+ * Operator-toggleable event flags + the master `enabled` switch.
+ * Format strings + apprise_url rotation stay in the (deferred)
+ * full editor flow.
+ */
+export interface ToggleNotificationVariables {
+  id: number;
+  enabled?: boolean;
+  on_grab?: boolean;
+  on_import?: boolean;
+  on_upgrade?: boolean;
+  on_fail?: boolean;
+  on_health_issue?: boolean;
+  on_dat_update?: boolean;
+  on_game_added?: boolean;
+  include_health_errors?: boolean;
+  include_health_warnings?: boolean;
+}
+
+export function useToggleNotification(): UseMutationResult<
+  Notification,
+  ApiError,
+  ToggleNotificationVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<Notification, ApiError, ToggleNotificationVariables>({
+    mutationFn: ({ id, ...body }) =>
+      apiFetch<Notification>(`/api/v3/notification/${id}`, {
+        method: "PUT",
+        json: body,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
+    },
+  });
+}

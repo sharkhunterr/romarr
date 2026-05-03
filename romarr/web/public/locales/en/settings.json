@@ -65,7 +65,11 @@
       "confirm": "Remove",
       "cancel": "Cancel"
     },
-    "disabled": "Disabled"
+    "disabled": "Disabled",
+    "toggle": {
+      "enabled": "Enabled",
+      "errorFallback": "Toggle failed."
+    }
   },
   "downloadClients": {
     "title": "Download Clients",

@@ -65,7 +65,11 @@
       "confirm": "Supprimer",
       "cancel": "Annuler"
     },
-    "disabled": "Désactivé"
+    "disabled": "Désactivé",
+    "toggle": {
+      "enabled": "Activé",
+      "errorFallback": "Bascule échouée."
+    }
   },
   "downloadClients": {
     "title": "Clients de téléchargement",

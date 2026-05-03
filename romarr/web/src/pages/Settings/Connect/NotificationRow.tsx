@@ -17,35 +17,42 @@ import { useTranslation } from "react-i18next";
 import {
   useDeleteNotification,
   useTestNotification,
+  useToggleNotification,
   type Notification,
   type NotificationTestResult,
+  type ToggleNotificationVariables,
 } from "@/lib/api/queries/notifications";
 
-type EventKey =
-  | "onGrab"
-  | "onImport"
-  | "onUpgrade"
-  | "onFail"
-  | "onHealthIssue"
-  | "onDatUpdate"
-  | "onGameAdded";
+type ToggleField =
+  | "enabled"
+  | "on_grab"
+  | "on_import"
+  | "on_upgrade"
+  | "on_fail"
+  | "on_health_issue"
+  | "on_dat_update"
+  | "on_game_added";
 
-interface EventEntry {
-  key: EventKey;
-  enabled: boolean;
-}
+const TOGGLE_LABEL: Record<ToggleField, string> = {
+  enabled: "connect.toggle.enabled",
+  on_grab: "connect.events.onGrab",
+  on_import: "connect.events.onImport",
+  on_upgrade: "connect.events.onUpgrade",
+  on_fail: "connect.events.onFail",
+  on_health_issue: "connect.events.onHealthIssue",
+  on_dat_update: "connect.events.onDatUpdate",
+  on_game_added: "connect.events.onGameAdded",
+};
 
-function eventEntries(n: Notification): EventEntry[] {
-  return [
-    { key: "onGrab", enabled: n.on_grab },
-    { key: "onImport", enabled: n.on_import },
-    { key: "onUpgrade", enabled: n.on_upgrade },
-    { key: "onFail", enabled: n.on_fail },
-    { key: "onHealthIssue", enabled: n.on_health_issue },
-    { key: "onDatUpdate", enabled: n.on_dat_update },
-    { key: "onGameAdded", enabled: n.on_game_added },
-  ];
-}
+const EVENT_FIELDS: readonly ToggleField[] = [
+  "on_grab",
+  "on_import",
+  "on_upgrade",
+  "on_fail",
+  "on_health_issue",
+  "on_dat_update",
+  "on_game_added",
+];
 
 const STATUS_DOT: Record<"success" | "partial" | "failed" | "never", string> = {
   success: "bg-brand",
@@ -72,6 +79,7 @@ export function NotificationRow(props: NotificationRowProps): ReactElement {
   const { t } = useTranslation("settings");
   const test = useTestNotification();
   const del = useDeleteNotification();
+  const toggle = useToggleNotification();
 
   const [confirming, setConfirming] = useState(false);
   const [testResult, setTestResult] = useState<
@@ -79,6 +87,38 @@ export function NotificationRow(props: NotificationRowProps): ReactElement {
   >(null);
 
   const status = deriveStatus(notification);
+
+  function flip(field: ToggleField): void {
+    const variables: ToggleNotificationVariables = {
+      id: notification.id,
+      [field]: !notification[field],
+    };
+    toggle.mutate(variables);
+  }
+
+  function ToggleChip({ field }: { field: ToggleField }): ReactElement {
+    const active = notification[field];
+    return (
+      <button
+        type="button"
+        onClick={() => flip(field)}
+        disabled={toggle.isPending}
+        aria-pressed={active}
+        className={[
+          "rounded px-1.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-wider",
+          "ring-1 ring-inset transition-colors",
+          active
+            ? "bg-brand/20 text-brand ring-brand/40 hover:bg-brand/30"
+            : "bg-zinc-800 text-zinc-500 ring-zinc-700 hover:bg-zinc-700 hover:text-zinc-300",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+          "disabled:cursor-not-allowed disabled:opacity-60",
+        ].join(" ")}
+      >
+        {active ? "✓ " : ""}
+        {t(TOGGLE_LABEL[field])}
+      </button>
+    );
+  }
 
   function runTest(): void {
     setTestResult(null);
@@ -104,30 +144,25 @@ export function NotificationRow(props: NotificationRowProps): ReactElement {
             <p className="truncate text-sm font-medium text-zinc-100">
               {notification.name}
             </p>
-            {!notification.enabled && (
-              <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-zinc-500">
-                {t("connect.disabled")}
-              </span>
-            )}
           </div>
           <p className="truncate font-mono text-xs text-zinc-500">
             {notification.apprise_url_redacted}
           </p>
-          <div className="flex flex-wrap items-center gap-1.5 text-[0.6rem] uppercase tracking-wider">
-            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-400">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-zinc-400">
               {t(`connect.lastStatus.${status}`)}
             </span>
-            {eventEntries(notification)
-              .filter((e) => e.enabled)
-              .map((e) => (
-                <span
-                  key={e.key}
-                  className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-400"
-                >
-                  {t(`connect.events.${e.key}`)}
-                </span>
-              ))}
+            <ToggleChip field="enabled" />
+            {EVENT_FIELDS.map((field) => (
+              <ToggleChip key={field} field={field} />
+            ))}
           </div>
+          {toggle.isError && (
+            <p className="text-[0.7rem] text-red-300">
+              {toggle.error?.message ??
+                t("connect.toggle.errorFallback")}
+            </p>
+          )}
         </div>
       </div>
 
