@@ -15,18 +15,12 @@ import { Link } from "react-router-dom";
 
 import { useGames } from "@/lib/api/queries/games";
 import { usePlatformsById } from "@/lib/api/queries/platforms";
+import { formatRelativeTime } from "@/lib/i18n/dates";
 
 const RECENT_LIMIT = 10;
 
-function formatRelative(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleString();
-}
-
 export function RecentAdditions(): ReactElement | null {
-  const { t } = useTranslation("addNew");
+  const { t, i18n } = useTranslation("addNew");
   const games = useGames({
     sort: "added_at",
     direction: "desc",
@@ -72,7 +66,10 @@ export function RecentAdditions(): ReactElement | null {
         {games.data.map((game) => {
           const platform = byId.get(game.platform_id);
           const platformLabel = platform?.name ?? `#${game.platform_id}`;
-          const added = formatRelative(game.created_at);
+          const added = formatRelativeTime(
+            game.created_at,
+            i18n.resolvedLanguage,
+          );
           return (
             <li key={game.id}>
               <Link
@@ -95,7 +92,7 @@ export function RecentAdditions(): ReactElement | null {
                     )}
                   </p>
                 </div>
-                {added !== null && (
+                {added !== "" && (
                   <time
                     dateTime={game.created_at}
                     className="shrink-0 font-mono text-[0.6rem] text-zinc-500"

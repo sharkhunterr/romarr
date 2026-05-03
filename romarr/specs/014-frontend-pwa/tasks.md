@@ -982,9 +982,12 @@ is small but cross-cutting.
       keyed under `romarr.lang` (the spec's documented key);
       navigator fallback; English fallback. Suspense bridge
       wired in `App.tsx`.
-- [ ] T118 [P] [I18N] `lib/i18n/dates.ts` — date-fns locale
-      switching. Lands when the first page using formatted
-      dates migrates.
+- [X] T118 [P] [I18N] `lib/i18n/dates.ts` — date-fns locale
+      switching shipped (slice 170). Helpers ``formatShortDate``,
+      ``formatDateTime``, ``formatRelativeTime``,
+      ``formatRelativeDate`` route through the active i18next
+      language. Dashboard ActivityFeed and AddNew Recent
+      Additions migrated as the first consumers.
 - [X] T119 [P] [I18N] `pages/Settings/Ui/index.tsx` shipped
       (slice 56). Two labeled controls: theme (dark / light /
       auto) + language (EN / FR), each rendered as a

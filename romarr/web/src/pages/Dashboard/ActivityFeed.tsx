@@ -1,10 +1,15 @@
 /**
- * Recent activity feed (T062 part 3).
+ * Recent activity feed (T062 part 3, T118).
  *
  * Pulls the unified history (UNION across import_history /
  * search_history / job_run from spec 013 T058) sorted by date
  * descending, capped at 10 rows for the dashboard. The full
  * paginated history view lives on the Activity page (P-ACT).
+ *
+ * Slice 170 / T118: timestamps are now formatted via the
+ * locale-aware ``formatRelativeTime`` helper so the feed reads
+ * "il y a 2 minutes" in FR mode instead of always falling back
+ * to the OS locale.
  *
  * Strings resolve through `dashboard:activity.*` (slice 67).
  */
@@ -15,20 +20,10 @@ import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useHistory } from "@/lib/api/queries/system";
-
-function formatRelative(dateStr: string): string {
-  // Lightweight relative-time formatter — date-fns would do
-  // this with locale support, but date-fns is a follow-up
-  // dep. For now we render the operator's local time format.
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) {
-    return dateStr;
-  }
-  return date.toLocaleString();
-}
+import { formatRelativeTime } from "@/lib/i18n/dates";
 
 export function ActivityFeed(): ReactElement {
-  const { t } = useTranslation("dashboard");
+  const { t, i18n } = useTranslation("dashboard");
   const { data, isPending, isError, error } = useHistory({
     pageSize: 10,
     sortKey: "date",
@@ -84,7 +79,7 @@ export function ActivityFeed(): ReactElement {
               </span>
             </p>
             <p className="text-[0.7rem] text-zinc-500">
-              {formatRelative(event.date)}
+              {formatRelativeTime(event.date, i18n.resolvedLanguage)}
             </p>
           </div>
           <span
