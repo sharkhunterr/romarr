@@ -67,7 +67,14 @@
     "subjectGame": "this game",
     "statusOk": "OK",
     "statusFailed": "FAIL",
-    "showingMost": "Showing the most recent {{count}}."
+    "showingMost": "Showing the most recent {{count}}.",
+    "filter": {
+      "ariaLabel": "Event-type filter",
+      "all": "All",
+      "import": "Import",
+      "search": "Search",
+      "noMatches": "No history rows match the active filter. Pick a different chip or switch to All."
+    }
   },
   "files": {
     "loadError": "Couldn't load file detail",

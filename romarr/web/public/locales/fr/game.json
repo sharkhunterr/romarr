@@ -67,7 +67,14 @@
     "subjectGame": "ce jeu",
     "statusOk": "OK",
     "statusFailed": "ÉCHEC",
-    "showingMost": "Affichage des {{count}} entrées les plus récentes."
+    "showingMost": "Affichage des {{count}} entrées les plus récentes.",
+    "filter": {
+      "ariaLabel": "Filtre de type d'événement",
+      "all": "Tous",
+      "import": "Import",
+      "search": "Recherche",
+      "noMatches": "Aucune entrée ne correspond au filtre actif. Choisissez un autre filtre ou revenez à Tous."
+    }
   },
   "files": {
     "loadError": "Impossible de charger le détail des fichiers",
