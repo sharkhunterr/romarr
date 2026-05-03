@@ -1,5 +1,5 @@
 """Game + Release read + lock + per-field edit + notes + bulk
-endpoints (slices 86, 146, 147, 149, 151, 153, 154).
+endpoints (slices 86, 146, 147, 149, 151, 153, 154, 164).
 
 Foundation already ships the :class:`Game` + :class:`Release`
 ORM models; this router is the operator-facing read surface
@@ -33,10 +33,11 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import String, asc, cast, desc, func, select
+from sqlalchemy import String, and_, asc, cast, delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from romarr.api.dependencies import get_db, require_admin, require_readonly
+from romarr.api.models import Tag, TagAssignment
 from romarr.auth import Principal
 from romarr.domain.models import Dump, Game, Release
 from romarr.domain.schemas import DumpRead, GameRead, ReleaseRead
@@ -418,6 +419,30 @@ async def bulk_tag(
     _admin: Annotated[Principal, Depends(require_admin)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> BulkTagResponse:
+    # Pre-validate tag ids against the Tag catalogue so a
+    # bogus ``tagIds`` payload 400s cleanly instead of 500-ing
+    # on the FK INSERT slice 164 added below.
+    existing_tag_ids = set(
+        (
+            await db.execute(
+                select(Tag.id).where(Tag.id.in_(body.tag_ids))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    missing_tags = sorted(set(body.tag_ids) - existing_tag_ids)
+    if missing_tags:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "errorMessage": (
+                    f"unknown tag_ids: {missing_tags}"
+                ),
+                "errorCode": "unknown_tag_ids",
+            },
+        )
+
     rows = (
         (
             await db.execute(
@@ -440,6 +465,49 @@ async def bulk_tag(
         # to detect the mutation; sorted output keeps the JSON
         # shape stable across runs.
         row.tags = sorted(current)
+
+    # Slice 164: keep the polymorphic ``tag_assignment`` rows in
+    # sync with the JSON cache so the slice-135 ``usageCount``
+    # surface on the Tags page stays accurate. Read existing
+    # assignments for the affected (tag_id, entity_id) pairs to
+    # avoid violating the ``uq_tag_assignment_unique`` constraint
+    # on a re-add.
+    if found:
+        if body.action == "add":
+            existing = {
+                (row.tag_id, row.entity_id)
+                for row in (
+                    await db.execute(
+                        select(TagAssignment).where(
+                            TagAssignment.entity_type == "game",
+                            TagAssignment.entity_id.in_(found),
+                            TagAssignment.tag_id.in_(body.tag_ids),
+                        )
+                    )
+                ).scalars().all()
+            }
+            new_assignments = [
+                TagAssignment(
+                    tag_id=tag_id,
+                    entity_type="game",
+                    entity_id=entity_id,
+                )
+                for entity_id in found
+                for tag_id in body.tag_ids
+                if (tag_id, entity_id) not in existing
+            ]
+            db.add_all(new_assignments)
+        else:  # "remove"
+            await db.execute(
+                delete(TagAssignment).where(
+                    and_(
+                        TagAssignment.entity_type == "game",
+                        TagAssignment.entity_id.in_(found),
+                        TagAssignment.tag_id.in_(body.tag_ids),
+                    )
+                )
+            )
+
     await db.commit()
     return BulkTagResponse(updated=len(rows), missing=missing)
 

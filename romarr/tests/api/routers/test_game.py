@@ -6,8 +6,41 @@ import httpx
 import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
+from romarr.api.models import DEFAULT_TAG_COLOR, Tag, TagAssignment
 from romarr.domain.models import Dump, Game, Platform, Release
 from tests.api.test_auth_endpoints import _seed_admin_user
+
+
+async def _seed_tags(
+    api_engine: AsyncEngine, *, ids: list[int]
+) -> None:
+    """Seed Tag rows with the given ids — tests that exercise
+    the tag-assignment FK need real catalogue rows. Idempotent
+    on existing ids."""
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        existing = {
+            row
+            for row in (
+                await session.execute(
+                    Tag.__table__.select().where(Tag.id.in_(ids))
+                )
+            )
+            .scalars()
+            .all()
+        }
+        for tag_id in ids:
+            if tag_id in existing:
+                continue
+            session.add(
+                Tag(
+                    id=tag_id,
+                    name=f"tag-{tag_id}",
+                    label=f"Tag {tag_id}",
+                    color=DEFAULT_TAG_COLOR,
+                )
+            )
+        await session.commit()
 
 
 @pytest.fixture
@@ -1158,6 +1191,7 @@ async def test_bulk_tag_add_unions_into_existing(
 ) -> None:
     """Two games, one already carrying tag 1; bulk-add tags 2,3
     leaves tag 1 in place and unions 2,3 in (sorted, deduped)."""
+    await _seed_tags(api_engine, ids=[1, 2, 3])
     _, a, _ = await _seed_chain(api_engine, title="TagA")
     _, b, _ = await _seed_chain(api_engine, title="TagB")
 
@@ -1189,6 +1223,7 @@ async def test_bulk_tag_add_dedupes(
     authed_client: httpx.AsyncClient, api_engine: AsyncEngine
 ) -> None:
     """Re-adding tags already on the row is a no-op."""
+    await _seed_tags(api_engine, ids=[1, 2, 3])
     _, a, _ = await _seed_chain(api_engine, title="DedupeTag")
     sm = async_sessionmaker(api_engine, expire_on_commit=False)
     async with sm() as session:
@@ -1210,6 +1245,7 @@ async def test_bulk_tag_add_dedupes(
 async def test_bulk_tag_remove_strips(
     authed_client: httpx.AsyncClient, api_engine: AsyncEngine
 ) -> None:
+    await _seed_tags(api_engine, ids=[1, 2, 3, 4])
     _, a, _ = await _seed_chain(api_engine, title="StripTag")
     sm = async_sessionmaker(api_engine, expire_on_commit=False)
     async with sm() as session:
@@ -1232,6 +1268,7 @@ async def test_bulk_tag_remove_missing_tag_is_noop(
     authed_client: httpx.AsyncClient, api_engine: AsyncEngine
 ) -> None:
     """Removing a tag the row doesn't carry doesn't blow up."""
+    await _seed_tags(api_engine, ids=[5, 99, 100])
     _, a, _ = await _seed_chain(api_engine, title="NoOpRemove")
     sm = async_sessionmaker(api_engine, expire_on_commit=False)
     async with sm() as session:
@@ -1253,6 +1290,7 @@ async def test_bulk_tag_remove_missing_tag_is_noop(
 async def test_bulk_tag_reports_missing(
     authed_client: httpx.AsyncClient, api_engine: AsyncEngine
 ) -> None:
+    await _seed_tags(api_engine, ids=[1])
     _, real, _ = await _seed_chain(api_engine, title="RealTagged")
     resp = await authed_client.post(
         "/api/v3/game/bulk-tag",
@@ -1319,6 +1357,154 @@ async def test_bulk_tag_unauthenticated_401(
         json={"gameIds": [1], "tagIds": [1], "action": "add"},
     )
     assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# slice 164 — bulk-tag syncs the polymorphic ``tag_assignment`` table
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_bulk_tag_add_creates_tag_assignment_rows(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Bulk-add must INSERT into ``tag_assignment`` so the
+    slice-135 ``usageCount`` surface stays in sync with the
+    JSON cache (the bug slice 154 inadvertently shipped)."""
+    await _seed_tags(api_engine, ids=[1, 2])
+    _, a, _ = await _seed_chain(api_engine, title="AssignA")
+    _, b, _ = await _seed_chain(api_engine, title="AssignB")
+
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-tag",
+        json={"gameIds": [a, b], "tagIds": [1, 2], "action": "add"},
+    )
+    assert resp.status_code == 200, resp.json()
+
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        rows = (
+            await session.execute(
+                TagAssignment.__table__.select().where(
+                    TagAssignment.entity_type == "game",
+                    TagAssignment.entity_id.in_([a, b]),
+                )
+            )
+        ).all()
+    pairs = {(row.tag_id, row.entity_id) for row in rows}
+    assert pairs == {(1, a), (2, a), (1, b), (2, b)}
+
+
+@pytest.mark.asyncio
+async def test_bulk_tag_add_is_idempotent_on_assignments(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Re-adding the same (tag, game) pair must NOT violate the
+    ``uq_tag_assignment_unique`` constraint — the endpoint
+    pre-fetches existing rows and inserts only the diff."""
+    await _seed_tags(api_engine, ids=[1, 2])
+    _, a, _ = await _seed_chain(api_engine, title="ReAssign")
+
+    for _ in range(3):
+        resp = await authed_client.post(
+            "/api/v3/game/bulk-tag",
+            json={"gameIds": [a], "tagIds": [1, 2], "action": "add"},
+        )
+        assert resp.status_code == 200, resp.json()
+
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        rows = (
+            await session.execute(
+                TagAssignment.__table__.select().where(
+                    TagAssignment.entity_type == "game",
+                    TagAssignment.entity_id == a,
+                )
+            )
+        ).all()
+    assert {row.tag_id for row in rows} == {1, 2}
+    # Exactly two rows — not 6 (3 round-trips × 2 tags).
+    assert len(rows) == 2
+
+
+@pytest.mark.asyncio
+async def test_bulk_tag_remove_deletes_tag_assignment_rows(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    await _seed_tags(api_engine, ids=[1, 2, 3])
+    _, a, _ = await _seed_chain(api_engine, title="UnassignA")
+    # Seed via add first.
+    await authed_client.post(
+        "/api/v3/game/bulk-tag",
+        json={"gameIds": [a], "tagIds": [1, 2, 3], "action": "add"},
+    )
+
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-tag",
+        json={"gameIds": [a], "tagIds": [1, 3], "action": "remove"},
+    )
+    assert resp.status_code == 200
+
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        rows = (
+            await session.execute(
+                TagAssignment.__table__.select().where(
+                    TagAssignment.entity_type == "game",
+                    TagAssignment.entity_id == a,
+                )
+            )
+        ).all()
+    assert {row.tag_id for row in rows} == {2}
+
+
+@pytest.mark.asyncio
+async def test_bulk_tag_400_on_unknown_tag_id(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Passing a tag_id that doesn't exist in the Tag table 400s
+    cleanly instead of 500-ing on the FK INSERT."""
+    await _seed_tags(api_engine, ids=[1])
+    _, a, _ = await _seed_chain(api_engine, title="UnknownTag")
+
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-tag",
+        json={
+            "gameIds": [a],
+            "tagIds": [1, 999],
+            "action": "add",
+        },
+    )
+    assert resp.status_code == 400
+    assert resp.json()["errorCode"] == "unknown_tag_ids"
+
+
+@pytest.mark.asyncio
+async def test_bulk_tag_remove_missing_pair_is_noop(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Removing a (tag, game) pair that doesn't exist in
+    tag_assignment must not error — it's already absent."""
+    await _seed_tags(api_engine, ids=[1])
+    _, a, _ = await _seed_chain(api_engine, title="UnseenRemove")
+
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-tag",
+        json={"gameIds": [a], "tagIds": [1], "action": "remove"},
+    )
+    assert resp.status_code == 200
+
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        rows = (
+            await session.execute(
+                TagAssignment.__table__.select().where(
+                    TagAssignment.entity_type == "game",
+                    TagAssignment.entity_id == a,
+                )
+            )
+        ).all()
+    assert rows == []
 
 
 # ---------------------------------------------------------------------------
