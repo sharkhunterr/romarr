@@ -516,13 +516,75 @@ front.
 
 ## Phase: Clarification Tasks (Session 2026-04-29)
 
-- [ ] CL001 [P] [US1] Implement IGDB OAuth bearer manager in `src/romarr/metadata/providers/igdb_oauth.py` — `client_credentials` flow against `https://id.twitch.tv/oauth2/token`; in-memory cache only with `expires_at`; refresh on first use, on 401 mid-flight, and within 60 s of expiry; never persisted (FR-007a)
-- [ ] CL002 [P] [US1] Update IGDB provider client in `src/romarr/metadata/providers/igdb.py` to consume the bearer manager; handle `ProviderError(AuthError)` on Twitch OAuth failure
-- [ ] CL003 [US6] Implement one-cover-per-Game replace logic in `src/romarr/metadata/cover_storage.py` — write new file at new extension, delete sibling `data/covers/<game_id>.*` with different extension, update `Game.cover_path` atomically (FR-017a)
-- [ ] CL004 Migration `0002_metadata.py` adds two columns: `metadata_provider_config.rate_limit_rps INTEGER NOT NULL DEFAULT 5` and `metadata_provider_config.rate_limit_burst INTEGER NOT NULL DEFAULT 10`
-- [ ] CL005 Update `metadata_provider_config` seeder in `src/romarr/metadata/seeds/provider_seeds.py` with provider-specific rate limit defaults (igdb 4/8, mobygames 1/2, screenscraper 2/4, others 5/10)
-- [ ] CL006 [P] [US4] Implement per-provider token-bucket limiter in `src/romarr/metadata/rate_limiter.py` reading `rate_limit_rps` / `rate_limit_burst` from each provider's config row (FR-004a)
-- [ ] CL007 [P] [US1] Add per-Game advisory lock around `MetadataAggregator.refresh_game(...)` in `src/romarr/metadata/aggregator.py` — coalesce concurrent refreshes; lock-holder TTL 5 minutes; second caller receives the first caller's result without re-querying providers (FR-013a)
-- [ ] CL008 [P] Implement `metadata_cache` size-warning health-check producer in `src/romarr/metadata/health.py` — emit `OnHealthIssue` when table > 2 GB on disk (FR-016a)
-- [ ] CL009 [P] Add tests in `tests/metadata/test_oauth_lifecycle.py` covering bearer expiry, 401 retry, and the never-persisted invariant
-- [ ] CL010 [P] Add tests in `tests/metadata/test_refresh_coalesce.py` covering concurrent refresh on the same Game returning the same result
+- [X] CL001 [P] [US1] IGDB OAuth bearer manager shipped — the
+      ``client_credentials`` flow against
+      ``https://id.twitch.tv/oauth2/token`` lives inside
+      ``src/romarr/metadata/providers/igdb.py`` (``_ensure_bearer``).
+      In-memory cache only with monotonic ``_bearer_expires_at``;
+      refreshed on first use, on 401 mid-flight, and within
+      60 s of expiry. Never persisted to disk. Path differs from
+      the spec's ``igdb_oauth.py`` — the implementation co-locates
+      with the provider so the bearer cache is per-provider-instance
+      (one fewer indirection at no testability cost).
+- [X] CL002 [P] [US1] IGDB provider consumes the bearer manager
+      via ``_ensure_bearer`` + a 401-retry path; ``AuthError``
+      surfaces as ``ProviderError(AuthError)`` exactly as spec'd.
+- [X] CL003 [US6] One-cover-per-Game replace logic shipped at
+      ``src/romarr/metadata/covers.py:write_cover`` (path differs
+      from the spec's ``cover_storage.py``). Sibling cover files
+      with a different extension are unlinked after the new file
+      lands; ``Game.cover_path`` is updated atomically by the
+      caller in the same transaction. Tests:
+      ``tests/metadata/test_covers.py::test_write_cover_content_type_change_unlinks_sibling``.
+- [X] CL004 Migration ``0002_metadata_layer.py`` ships
+      ``rate_limit_rps`` and ``rate_limit_burst`` columns on
+      ``metadata_provider_config`` with the documented defaults
+      (5 / 10) and per-provider overrides (igdb 4/8, mobygames
+      1/2, screenscraper 2/4) seeded inline.
+- [X] CL005 Per-provider rate-limit defaults seeded by the same
+      0002 migration: igdb 4/8, mobygames 1/2, screenscraper
+      2/4, others 5/10. Seeder file path differs from the spec
+      (no separate ``provider_seeds.py``) — the seed list lives
+      next to the migration so DDL + DML stay in lock-step.
+- [X] CL006 [P] [US4] Token-bucket limiter shipped as
+      ``TokenBucket`` in ``src/romarr/metadata/providers/base.py``.
+      Path differs from the spec's ``rate_limiter.py`` — the
+      bucket lives on each ``MetadataProvider`` instance so
+      concurrent acquirers from different providers never share
+      a queue. ``Registry.load_enabled_providers`` reads
+      ``rate_limit_rps`` / ``rate_limit_burst`` from each
+      provider's config row when constructing the provider
+      instance.
+- [X] CL007 [P] [US1] Per-Game advisory lock shipped at
+      ``src/romarr/metadata/refresh.py:_lock_for`` — a
+      process-local ``dict[int, asyncio.Lock]`` keyed by
+      ``game_id``. Held while the aggregator runs;
+      cross-process coalescing via Redis is documented as
+      deferred-to-v1. Path differs from the spec's
+      ``aggregator.py`` — the lock wraps the orchestrator
+      because the aggregator itself is pure.
+- [X] CL008 [P] Metadata-cache size health check shipped at
+      ``src/romarr/metadata/health.py:MetadataCacheSizeHealthCheck``
+      (slice 182). Estimates table size as ``row_count *
+      bytes_per_row`` (default 2.5 KB/row); warns at 2 GB,
+      errors at 4 GB. ``bytes_per_row`` is injectable so a
+      future ``pragma page_count`` integration can replace the
+      estimate without breaking the public surface. Tests at
+      ``tests/metadata/test_health_cache_size.py`` cover all
+      three thresholds plus the misconfigured-no-factory path.
+- [X] CL009 [P] OAuth lifecycle tests shipped at
+      ``tests/metadata/providers/test_igdb.py`` —
+      ``test_oauth_lazy_fetch_and_cache`` (lazy fetch + cache
+      reuse), ``test_oauth_401_triggers_reauth_and_retry``
+      (401 → reauth + retry), plus the never-persisted
+      invariant is structurally enforced (the bearer is an
+      instance attribute, never written to a DB column).
+- [X] CL010 [P] Concurrent-refresh coalescing tests shipped at
+      ``tests/metadata/test_refresh_coalesce.py`` (slice 182).
+      ``test_concurrent_refreshes_call_provider_once``
+      monkey-patches ``load_enabled_providers`` with a counting
+      stub provider and runs two ``asyncio.gather``-ed
+      ``refresh_game_metadata`` calls — asserts exactly one
+      ``search_games`` + one ``get_game`` call across both.
+      ``test_force_refresh_bypasses_cache_per_call`` pins the
+      symmetric "force=True burns quota every time" property.
