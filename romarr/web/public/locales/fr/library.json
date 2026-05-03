@@ -1,0 +1,20 @@
+{
+  "title": "Ludothèque",
+  "subtitle": "Tous les jeux que Romarr connaît. Cliquez sur une carte pour explorer les releases, l'historique et les métadonnées.",
+  "search": {
+    "label": "Chercher un jeu",
+    "placeholder": "Chercher par titre…"
+  },
+  "empty": {
+    "title": "Aucun jeu pour l'instant",
+    "body": "Quand Romarr ingère une ROM via Ajouter, scan ou association manuelle, le jeu apparaîtra ici."
+  },
+  "noResults": {
+    "title": "Aucun résultat",
+    "body": "Aucun jeu ne correspond à « {{q}} ». Essayez une autre recherche."
+  },
+  "loadError": "Impossible de charger les jeux",
+  "platformBadgeFallback": "?",
+  "count_one": "{{count}} jeu",
+  "count_other": "{{count}} jeux"
+}

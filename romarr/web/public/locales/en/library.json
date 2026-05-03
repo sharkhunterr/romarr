@@ -1,0 +1,20 @@
+{
+  "title": "Library",
+  "subtitle": "Every game Romarr knows about. Click a card to drill into the game's releases, history, and metadata.",
+  "search": {
+    "label": "Search games",
+    "placeholder": "Search by title…"
+  },
+  "empty": {
+    "title": "No games yet",
+    "body": "Once Romarr ingests a ROM via Add New, scan, or manual match, the game lands here."
+  },
+  "noResults": {
+    "title": "No matches",
+    "body": "No games match \"{{q}}\". Try a different search."
+  },
+  "loadError": "Couldn't load games",
+  "platformBadgeFallback": "?",
+  "count_one": "{{count}} game",
+  "count_other": "{{count}} games"
+}

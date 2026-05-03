@@ -37,14 +37,9 @@ function PageShell(props: PageShellProps): ReactElement {
 // DashboardPage is the first real page implementation; lives at
 // @/pages/Dashboard/index.tsx (slice 47, P-DASH).
 
-export function LibraryPage(): ReactElement {
-  return (
-    <PageShell
-      titleKey="placeholder.library.title"
-      subtitleKey="placeholder.library.subtitle"
-    />
-  );
-}
+// LibraryPage is shipped (slice 88) at @/pages/Library/index.tsx —
+// real grid backed by GET /api/v3/game (slice 86).
+
 
 export function AddNewPage(): ReactElement {
   return (
