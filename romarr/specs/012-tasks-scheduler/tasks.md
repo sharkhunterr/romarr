@@ -395,20 +395,28 @@ this one.
 
 ### Tests
 
-- [ ] T044 [P] [NEWRUN] `tests/tasks/runners/test_backup.py::test_writes_db_and_config_tar`
-      — runner produces a `.tar.gz` at the configured backup_path;
-      verifies the archive contains the SQLite file and a
-      sanitized `config.json`.
-- [ ] T045 [P] [NEWRUN] `tests/tasks/runners/test_backup.py::test_keeps_last_30`
-      — runner keeps the most recent 30 backups; older ones pruned.
+- [X] T044 [P] [NEWRUN] Covered by slice 179 — see
+      ``tests/tasks/runners/test_backup.py::test_run_backup_writes_db_and_config_tarball``.
+      Asserts the snapshot is a real SQLite file containing the
+      seeded row and the tar.gz wraps a single ``settings.json``
+      with the three secret fields redacted.
+- [X] T045 [P] [NEWRUN] Covered by slice 179 — see
+      ``tests/tasks/runners/test_backup.py::test_run_backup_keeps_last_30``.
+      Seeds 32 dummy archive pairs, runs one real backup, asserts
+      exactly ``DEFAULT_RETENTION`` sqlite files survive.
 - [ ] T046 [P] [NEWRUN] `tests/tasks/runners/test_refresh_all_metadata.py::test_paginated`
       — 200 Games; runner processes them in batches of 25 to
       respect provider rate limits; respx asserts at most one
       provider call per Game.
-- [ ] T047 [P] [NEWRUN] `tests/tasks/runners/test_dat_update.py::test_downloads_and_ingests`
-      — respx-mocked No-Intro endpoint returns a sample DAT;
-      runner downloads it, hands it to spec 001's `DatManager.ingest`,
-      and emits `OnDatUpdate`.
+- [~] T047 [P] [NEWRUN] Download + ingest covered by slice 180 —
+      ``tests/tasks/runners/test_dat_update.py::test_run_dat_update_downloads_and_ingests``
+      uses a fetcher fake (cleaner than respx for our case) to
+      verify the bytes round-trip through ``DatManager.ingest``
+      and rows land in ``dat_entry``. ``OnDatUpdate`` event
+      emission is deferred — the notifications fan-out helper
+      hasn't been surfaced yet (same story as the bootstrap
+      slice 173 noted). Lands when an ``emit_event(payload)``
+      entry point exists on the dispatcher.
 - [ ] T048 [P] [NEWRUN] `tests/tasks/runners/test_auto_check_added.py::test_event_driven`
       — emit `OnGameAdded` event; runner is fired by the dispatcher
       (not by APScheduler's tick); calls spec 007's
@@ -441,10 +449,19 @@ this one.
       JobContext exposes a sessionmaker. 5 tests cover
       pagination, partial failure, scoping, empty libraries,
       and force-flag propagation.
-- [ ] T051 [P] [NEWRUN] Create
-      `src/romarr/tasks/runners/dat_update.py` — `DatUpdateRunner`
-      downloads DATs from configured sources and calls spec 001's
-      `DatManager.ingest`.
+- [X] T051 [P] [NEWRUN] ``DatUpdateRunner`` shipped at
+      ``src/romarr/tasks/runners/dat_update.py`` (slice 180).
+      Per-source ``(url, source, platform_id)`` fetch via
+      injectable ``HttpFetcher`` (default: httpx with 30s
+      timeout + 64 MiB body cap, follow_redirects). Per-source
+      failures are caught, captured as
+      ``DatUpdateOutcome.error``, and counted in
+      ``DatUpdateResult.failed`` so a single dead mirror doesn't
+      block the rest. ``DatUpdateAdapter`` parses
+      ``parameters["sources"]`` as a list of
+      ``{"url", "source", "platform_id"}`` dicts and delegates
+      to the runner when the JobContext supplies a sessionmaker;
+      otherwise falls back to the legacy stub.
 - [ ] T052 [P] [NEWRUN] Create
       `src/romarr/tasks/runners/auto_check_added.py` —
       `AutoCheckAddedRunner` subscribed to the `OnGameAdded` event

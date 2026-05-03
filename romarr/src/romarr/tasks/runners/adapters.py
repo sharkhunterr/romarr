@@ -218,10 +218,58 @@ class RefreshGameMetadataAdapter(_AdapterBase):
 
 
 class DatUpdateAdapter(_AdapterBase):
-    """Wraps the DAT pack auto-refresh."""
+    """Wraps the DAT pack auto-refresh (slice 180 / spec 012 T051).
+
+    When a ``sessionmaker`` is available on the JobContext and
+    the parameters carry a list of ``sources`` (each of the
+    shape ``{"url": ..., "source": ..., "platform_id": ...}``),
+    the adapter delegates to :func:`run_dat_update`. Without
+    those inputs it falls back to the legacy stub so the
+    scheduler dispatch path stays exercised end-to-end.
+    """
 
     def __init__(self) -> None:
         super().__init__(job_id="DatUpdate")
+
+    async def _run(self, context: JobContext) -> JobResult:
+        from romarr.tasks.runners.dat_update import (
+            DatSourceSpec,
+            run_dat_update,
+        )
+
+        sessionmaker = getattr(context, "sessionmaker", None)
+        raw_sources = context.parameters.get("sources") or []
+        if sessionmaker is None or not raw_sources:
+            return JobResult(
+                status=JobStatus.SUCCESS,
+                summary={
+                    "stub": True,
+                    "reason": (
+                        "no sessionmaker"
+                        if sessionmaker is None
+                        else "no sources configured"
+                    ),
+                },
+            )
+
+        specs = [
+            DatSourceSpec(
+                url=item["url"],
+                source=item["source"],
+                platform_id=int(item["platform_id"]),
+            )
+            for item in raw_sources
+        ]
+        async with sessionmaker() as session:
+            result = await run_dat_update(session, sources=specs)
+        return JobResult(
+            status=JobStatus.SUCCESS,
+            summary={
+                "total": result.total,
+                "succeeded": result.succeeded,
+                "failed": result.failed,
+            },
+        )
 
 
 class BackupAdapter(_AdapterBase):
