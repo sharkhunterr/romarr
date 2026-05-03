@@ -72,6 +72,25 @@
       "cancel": "Cancel",
       "errorTitle": "Couldn't save the edit"
     },
+    "cover": {
+      "changeAria": "Change cover artwork",
+      "changeShort": "Change cover",
+      "modalTitle": "Change cover artwork",
+      "subhead": "Paste a direct image URL — Romarr fetches the bytes server-side and stores them locally.",
+      "urlLabel": "Image URL",
+      "urlPlaceholder": "https://example.com/cover.jpg",
+      "autoLockHint": "The cover field is auto-locked after the swap so the metadata aggregator stops overwriting it. Unlock from the Overview lock toggle if you want refreshes to repick.",
+      "save": "Use this cover",
+      "saving": "Fetching…",
+      "cancel": "Cancel",
+      "reset": "Reset to aggregator-fetched cover",
+      "resetting": "Clearing…",
+      "successTitle": "Cover updated",
+      "successBody": "The new cover is stored locally and locked.",
+      "resetSuccessTitle": "Cover cleared",
+      "resetSuccessBody": "The aggregator will refetch on the next refresh unless the cover field stays locked.",
+      "errorTitle": "Couldn't update the cover"
+    },
     "tags": {
       "label": "Tags"
     }

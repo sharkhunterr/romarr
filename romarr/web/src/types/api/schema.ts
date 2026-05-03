@@ -307,9 +307,11 @@ export interface paths {
         };
         /** Stream the cover for a Game (any authenticated user). Cached for 24h with the ``immutable`` directive; the frontend cache-busts via ``?v=<updated_at>``. */
         get: operations["get_cover_api_v3_cover__game_id__get"];
-        put?: never;
+        /** Override the cover for a Game by fetching bytes from an operator-supplied URL (admin only). Optionally auto-locks the cover field so the metadata aggregator stops overwriting it. */
+        put: operations["put_cover_api_v3_cover__game_id__put"];
         post?: never;
-        delete?: never;
+        /** Clear the cover for a Game — removes the on-disk file and nulls ``cover_path`` (admin only). The aggregator will refetch on the next refresh unless ``cover`` is locked. */
+        delete: operations["delete_cover_api_v3_cover__game_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2515,6 +2517,31 @@ export interface components {
             code: "category_missing" | "version_old" | "tls_disabled_for_local";
             /** Message */
             message: string;
+        };
+        /**
+         * CoverOverrideRequest
+         * @description PUT /api/v3/cover/{game_id} — slice 160.
+         *
+         *     Operator override for the auto-fetched cover. The supplied
+         *     URL is fetched server-side (so the browser's CORS / mixed-
+         *     content rules don't matter) and persisted via the same
+         *     :func:`write_cover` pipeline the metadata aggregator uses.
+         *
+         *     ``auto_lock`` defaults to True so the operator's pick
+         *     survives the next refresh — the same anti-RomM-#1770
+         *     pattern that slice 147 ships for text fields.
+         */
+        CoverOverrideRequest: {
+            /**
+             * Auto Lock
+             * @default true
+             */
+            auto_lock: boolean;
+            /**
+             * Url
+             * Format: uri
+             */
+            url: string;
         };
         /** CreateApiKeyRequest */
         CreateApiKeyRequest: {
@@ -5757,6 +5784,72 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_cover_api_v3_cover__game_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoverOverrideRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_cover_api_v3_cover__game_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameRead"];
+                };
             };
             /** @description Validation Error */
             422: {

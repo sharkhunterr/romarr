@@ -72,6 +72,25 @@
       "cancel": "Annuler",
       "errorTitle": "Impossible d'enregistrer la modification"
     },
+    "cover": {
+      "changeAria": "Changer la jaquette",
+      "changeShort": "Changer la jaquette",
+      "modalTitle": "Changer la jaquette",
+      "subhead": "Collez l'URL directe d'une image — Romarr télécharge les octets côté serveur et les stocke localement.",
+      "urlLabel": "URL de l'image",
+      "urlPlaceholder": "https://example.com/cover.jpg",
+      "autoLockHint": "Le champ jaquette est verrouillé automatiquement après le changement pour empêcher l'agrégateur de l'écraser. Déverrouillez-le depuis le bouton de verrou si vous souhaitez que les rafraîchissements en choisissent une nouvelle.",
+      "save": "Utiliser cette jaquette",
+      "saving": "Téléchargement…",
+      "cancel": "Annuler",
+      "reset": "Revenir à la jaquette de l'agrégateur",
+      "resetting": "Nettoyage…",
+      "successTitle": "Jaquette mise à jour",
+      "successBody": "La nouvelle jaquette est stockée localement et verrouillée.",
+      "resetSuccessTitle": "Jaquette effacée",
+      "resetSuccessBody": "L'agrégateur la récupérera au prochain rafraîchissement, sauf si le champ jaquette reste verrouillé.",
+      "errorTitle": "Impossible de mettre à jour la jaquette"
+    },
     "tags": {
       "label": "Étiquettes"
     }

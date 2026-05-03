@@ -16,6 +16,7 @@ import { useEffect, useRef, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
 import { CoverImage } from "@/components/rom";
+import { CoverEditModal } from "./CoverEditModal";
 import {
   useEditGameField,
   useRefreshGameMetadata,
@@ -583,17 +584,49 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
     .map((id) => tagsById.get(id))
     .filter((tag): tag is NonNullable<typeof tag> => tag !== undefined);
 
+  const [coverEditOpen, setCoverEditOpen] = useState(false);
+  const coverLocked = (game.locked_fields ?? []).includes("cover");
+
   return (
     <div className="grid gap-4 md:grid-cols-[10rem_minmax(0,1fr)]">
       <div className="md:sticky md:top-20 md:self-start">
-        <CoverImage
-          gameId={game.id}
-          src={game.cover_path ?? null}
-          cacheKey={game.updated_at ?? null}
-          alt={game.title}
-          sizeClassName="aspect-[3/4] w-full md:w-40"
-        />
+        <button
+          type="button"
+          onClick={() => setCoverEditOpen(true)}
+          aria-label={t("overview.cover.changeAria")}
+          className="group relative block w-full rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          <CoverImage
+            gameId={game.id}
+            src={game.cover_path ?? null}
+            cacheKey={game.updated_at ?? null}
+            alt={game.title}
+            sizeClassName="aspect-[3/4] w-full md:w-40"
+          />
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-center rounded-b bg-zinc-950/70 py-1 text-[0.65rem] text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+          >
+            ✎ {t("overview.cover.changeShort")}
+          </span>
+          {coverLocked && (
+            <span
+              aria-hidden="true"
+              title={t("overview.lock.lockedHint")}
+              className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-zinc-950/80 text-[0.7rem] text-amber-400 ring-1 ring-inset ring-zinc-700 backdrop-blur-sm"
+            >
+              🔒
+            </span>
+          )}
+        </button>
       </div>
+
+      {coverEditOpen && (
+        <CoverEditModal
+          game={game}
+          onClose={() => setCoverEditOpen(false)}
+        />
+      )}
 
       <div className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">

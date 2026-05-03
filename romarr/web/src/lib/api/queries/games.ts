@@ -439,6 +439,57 @@ export function useBulkDeleteGames(): UseMutationResult<
   });
 }
 
+export interface SetCoverVariables {
+  gameId: number;
+  url: string;
+  autoLock?: boolean;
+}
+
+/**
+ * PUT /api/v3/cover/{gameId} — operator URL-paste cover
+ * override (slice 160). Auto-locks the cover field by default
+ * so the next aggregator refresh respects the operator's pick.
+ */
+export function useSetGameCover(): UseMutationResult<
+  Game,
+  ApiError,
+  SetCoverVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<Game, ApiError, SetCoverVariables>({
+    mutationFn: ({ gameId, url, autoLock }) =>
+      apiFetch<Game>(`/api/v3/cover/${gameId}`, {
+        method: "PUT",
+        json: { url, auto_lock: autoLock ?? true },
+      }),
+    onSuccess: (game) => {
+      void qc.invalidateQueries({ queryKey: ["games", "detail", game.id] });
+      void qc.invalidateQueries({ queryKey: ["games", "list"] });
+    },
+  });
+}
+
+/**
+ * DELETE /api/v3/cover/{gameId} — clear the cover. The
+ * aggregator will refetch on the next refresh unless the
+ * cover field is locked.
+ */
+export function useDeleteGameCover(): UseMutationResult<
+  Game,
+  ApiError,
+  { gameId: number }
+> {
+  const qc = useQueryClient();
+  return useMutation<Game, ApiError, { gameId: number }>({
+    mutationFn: ({ gameId }) =>
+      apiFetch<Game>(`/api/v3/cover/${gameId}`, { method: "DELETE" }),
+    onSuccess: (game) => {
+      void qc.invalidateQueries({ queryKey: ["games", "detail", game.id] });
+      void qc.invalidateQueries({ queryKey: ["games", "list"] });
+    },
+  });
+}
+
 export interface SetGameNotesVariables {
   gameId: number;
   notes: string | null;
