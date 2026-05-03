@@ -123,6 +123,57 @@
     },
     "comingSoonTitle": "Bientôt",
     "comingSoonBody": "La gestion du profil {{tab}} arrive dans un slice à venir. L'endpoint backend n'est pas encore livré — repassez une fois la spec correspondante shippée.",
+    "dump": {
+      "subtitle": "Filtre les releases selon la qualité du dump. La liste « autorisés » fixe les statuts éligibles ; les quatre toggles ouvrent l'accès à des variantes spécifiques.",
+      "empty": {
+        "title": "Aucun profil de dump",
+        "body": "Romarr fournit un catalogue factory par défaut. Si cette liste est vide, lancez la migration de seed."
+      },
+      "allowed": "Autorisés",
+      "preferRevision": "Préférer révision",
+      "flags": {
+        "protoBeta": "Autoriser proto / beta",
+        "hacks": "Autoriser hacks",
+        "trainers": "Autoriser trainers",
+        "translations": "Autoriser traductions"
+      },
+      "factory": "Factory",
+      "modified": "Modifié",
+      "delete": {
+        "button": "Supprimer",
+        "confirmTitle": "Supprimer ce profil ?",
+        "confirmBody": "Les ludothèques liées à {{name}} auront besoin d'un profil de remplacement avant leur prochaine décision.",
+        "confirm": "Supprimer",
+        "cancel": "Annuler",
+        "factoryBlocked": "Les profils factory ne peuvent pas être supprimés ; relancez la migration de seed pour les réinitialiser."
+      },
+      "editorHint": "Le multi-select des statuts + les quatre toggles + le sélecteur de révision arriveront dans un slice à venir."
+    },
+    "naming": {
+      "subtitle": "Templates de nom de fichier et d'arborescence. Chaque ludothèque s'attache à un profil de nommage ; la convention détermine le vocabulaire de tokens que le template peut référencer.",
+      "empty": {
+        "title": "Aucun profil de nommage",
+        "body": "Romarr fournit un catalogue factory par défaut. Si cette liste est vide, lancez la migration de seed."
+      },
+      "convention": "Convention",
+      "template": "Template",
+      "flags": {
+        "platformSubfolder": "Sous-dossier plateforme",
+        "replaceIllegal": "Remplacer les caractères illégaux",
+        "multiDiscSubfolder": "Sous-dossier multi-disque"
+      },
+      "factory": "Factory",
+      "modified": "Modifié",
+      "delete": {
+        "button": "Supprimer",
+        "confirmTitle": "Supprimer ce profil ?",
+        "confirmBody": "Les ludothèques liées à {{name}} auront besoin d'un profil de remplacement avant leur prochaine décision.",
+        "confirm": "Supprimer",
+        "cancel": "Annuler",
+        "factoryBlocked": "Les profils factory ne peuvent pas être supprimés ; relancez la migration de seed pour les réinitialiser."
+      },
+      "editorHint": "L'éditeur de template + l'aperçu live (POST /api/v3/rom/namingprofile/preview) arriveront dans un slice à venir."
+    },
     "region": {
       "subtitle": "Préférences de région pour départager les releases d'un même jeu. Les priorités gèrent les égalités (USA d'abord, EUR d'abord, etc.) ; les régions exclues sont rejetées d'office.",
       "empty": {

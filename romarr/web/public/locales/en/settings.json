@@ -123,6 +123,57 @@
     },
     "comingSoonTitle": "Coming soon",
     "comingSoonBody": "{{tab}} profile management lands in a follow-up slice. The backend endpoint isn't shipped yet — check back once the relevant spec lands.",
+    "dump": {
+      "subtitle": "Filter releases by dump quality. The allowed list pins which dump statuses qualify; the four toggles open the door to specific risky variants.",
+      "empty": {
+        "title": "No dump profiles",
+        "body": "Romarr ships a factory-default catalogue. If this list is empty, run the seed migration."
+      },
+      "allowed": "Allowed",
+      "preferRevision": "Prefer revision",
+      "flags": {
+        "protoBeta": "Allow proto / beta",
+        "hacks": "Allow hacks",
+        "trainers": "Allow trainers",
+        "translations": "Allow translations"
+      },
+      "factory": "Factory",
+      "modified": "Modified",
+      "delete": {
+        "button": "Delete",
+        "confirmTitle": "Remove this profile?",
+        "confirmBody": "Libraries bound to {{name}} will need a replacement profile before their next decision runs.",
+        "confirm": "Remove",
+        "cancel": "Cancel",
+        "factoryBlocked": "Factory-default profiles can't be deleted; reset them with the seed migration if needed."
+      },
+      "editorHint": "Allowed-list multi-select + four flag toggles + revision picker land in a follow-up slice."
+    },
+    "naming": {
+      "subtitle": "Filename + folder layout templates. Each library binds to one Naming profile; the convention determines the token vocabulary the template can reference.",
+      "empty": {
+        "title": "No naming profiles",
+        "body": "Romarr ships a factory-default catalogue. If this list is empty, run the seed migration."
+      },
+      "convention": "Convention",
+      "template": "Template",
+      "flags": {
+        "platformSubfolder": "Platform sub-folder",
+        "replaceIllegal": "Replace illegal characters",
+        "multiDiscSubfolder": "Multi-disc sub-folder"
+      },
+      "factory": "Factory",
+      "modified": "Modified",
+      "delete": {
+        "button": "Delete",
+        "confirmTitle": "Remove this profile?",
+        "confirmBody": "Libraries bound to {{name}} will need a replacement profile before their next decision runs.",
+        "confirm": "Remove",
+        "cancel": "Cancel",
+        "factoryBlocked": "Factory-default profiles can't be deleted; reset them with the seed migration if needed."
+      },
+      "editorHint": "Template editor + live preview (POST /api/v3/rom/namingprofile/preview) lands in a follow-up slice."
+    },
     "region": {
       "subtitle": "Region preferences for selecting between releases of the same game. Priorities resolve ties (USA-first, EUR-first, etc.); excluded regions are dropped outright.",
       "empty": {

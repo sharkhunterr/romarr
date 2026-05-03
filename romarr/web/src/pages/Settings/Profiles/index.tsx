@@ -21,10 +21,10 @@
 import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
-import { EmptyState } from "@/components/shared/EmptyState";
-
 import { CustomFormatsTab } from "./CustomFormatsTab";
+import { DumpTab } from "./DumpTab";
 import { LanguageTab } from "./LanguageTab";
+import { NamingTab } from "./NamingTab";
 import { QualityTab } from "./QualityTab";
 import { RegionTab } from "./RegionTab";
 
@@ -48,7 +48,9 @@ const TABS: readonly Tab[] = [
 const SHIPPED_TABS: ReadonlySet<Tab> = new Set<Tab>([
   "quality",
   "region",
+  "dump",
   "language",
+  "naming",
   "custom-formats",
 ]);
 
@@ -121,16 +123,10 @@ export function ProfilesPage(): ReactElement {
 
       {tab === "quality" && <QualityTab />}
       {tab === "region" && <RegionTab />}
+      {tab === "dump" && <DumpTab />}
       {tab === "language" && <LanguageTab />}
+      {tab === "naming" && <NamingTab />}
       {tab === "custom-formats" && <CustomFormatsTab />}
-      {(tab === "dump" || tab === "naming") && (
-        <EmptyState
-          title={t("profiles.comingSoonTitle")}
-          description={t("profiles.comingSoonBody", {
-            tab: t(`profiles.tabs.${tab}`),
-          })}
-        />
-      )}
     </div>
   );
 }
