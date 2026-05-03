@@ -17,6 +17,8 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { CoverImage } from "@/components/rom";
+import { BulkTagModal } from "@/pages/Library/BulkTagModal";
+
 import { CoverEditModal } from "./CoverEditModal";
 import {
   useEditGameField,
@@ -586,6 +588,7 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
     .filter((tag): tag is NonNullable<typeof tag> => tag !== undefined);
 
   const [coverEditOpen, setCoverEditOpen] = useState(false);
+  const [tagsEditOpen, setTagsEditOpen] = useState(false);
   const coverLocked = (game.locked_fields ?? []).includes("cover");
 
   return (
@@ -739,11 +742,21 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
           />
         </dl>
 
-        {tagPills.length > 0 && (
-          <div className="space-y-2">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
             <h3 className="text-[0.65rem] uppercase tracking-wider text-zinc-500">
               {t("overview.tags.label")}
             </h3>
+            <button
+              type="button"
+              onClick={() => setTagsEditOpen(true)}
+              aria-label={t("overview.tags.editAria")}
+              className="rounded-md border border-zinc-700 px-2 py-0.5 text-[0.6rem] font-medium text-zinc-300 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              {t("overview.tags.edit")}
+            </button>
+          </div>
+          {tagPills.length > 0 ? (
             <ul className="flex flex-wrap gap-1.5">
               {tagPills.map((tag) => (
                 <li key={tag.id}>
@@ -771,7 +784,19 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
                 </li>
               ))}
             </ul>
-          </div>
+          ) : (
+            <p className="text-[0.65rem] text-zinc-500 italic">
+              {t("overview.tags.empty")}
+            </p>
+          )}
+        </div>
+
+        {tagsEditOpen && (
+          <BulkTagModal
+            games={[game]}
+            onClose={() => setTagsEditOpen(false)}
+            onSuccess={() => setTagsEditOpen(false)}
+          />
         )}
       </div>
     </div>

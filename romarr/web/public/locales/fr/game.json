@@ -93,6 +93,9 @@
     },
     "tags": {
       "label": "Étiquettes",
+      "edit": "✎ Modifier",
+      "editAria": "Ajouter ou retirer des étiquettes sur ce jeu",
+      "empty": "Aucune étiquette. Cliquez sur ✎ Modifier pour en ajouter.",
       "drillAria": "Voir tous les jeux étiquetés « {{label}} »",
       "drillTitle": "Voir tous les jeux « {{label}} »"
     }

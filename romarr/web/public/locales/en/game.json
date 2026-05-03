@@ -93,6 +93,9 @@
     },
     "tags": {
       "label": "Tags",
+      "edit": "✎ Edit",
+      "editAria": "Add or remove tags on this game",
+      "empty": "No tags assigned. Click ✎ Edit to add some.",
       "drillAria": "View all games tagged \"{{label}}\"",
       "drillTitle": "View all \"{{label}}\" games"
     }
