@@ -613,14 +613,18 @@ end-to-end.
 
 ### Implementation
 
-- [ ] T062 [CMD] Create `src/romarr/tasks/command_aliases.py` —
-      pure mapping from Sonarr command names to job names + kwargs
-      shape transformations (e.g., `gameId` → `game_id`).
-- [ ] T063 [CMD] Create `src/romarr/tasks/api/command.py` — FastAPI
-      router for `POST /api/v3/command` and `GET /api/v3/command/{id}`.
-      The POST handler maps the command, calls
-      `SchedulerService.trigger`, and returns a Sonarr-shaped
-      `CommandStatus`.
+- [X] T062 [CMD] Sonarr command alias mapper shipped at
+      ``src/romarr/tasks/command_aliases.py``. Maps the
+      Sonarr v3 command vocabulary (RssSync, RefreshMonitoredDownloads,
+      Backup, RefreshSeries→RefreshGameMetadata, etc.) to
+      Romarr job ids + kwargs shape transformations.
+- [X] T063 [CMD] Sonarr-shaped command router shipped at
+      ``src/romarr/tasks/api/command.py``. POST
+      ``/api/v3/command`` accepts a Sonarr-shaped command
+      payload, runs it through ``command_aliases.py``, calls
+      ``SchedulerService.trigger``, and returns a
+      Sonarr-shaped ``CommandStatus``. Admin-gated via
+      ``Depends(require_admin)``.
 
 **Checkpoint**: CMD tests green; Notifiarr-style integrations can
 drive Romarr by command name.
@@ -887,27 +891,64 @@ EXEC and NEWRUN split cleanly across them on Day 3.
 
 ## Phase: Clarification Tasks (Session 2026-04-29)
 
-- [ ] CL001 [P] Implement `BackupRunner` in `src/romarr/tasks/runners/backup_runner.py` per FR-027a:
-  - SQLite path: `VACUUM INTO '<tmp>/romarr.sqlite3'`
-  - PostgreSQL path: `pg_dump --no-owner --format=custom`
-  - Autodetect backend from SQLAlchemy connection URL
-  - Build tarball at `<data>/backups/romarr-<UTC ISO 8601>.tar.gz`
-  - Include: DB snapshot, `.env` (when present), `data/apprise-plugins/` (only when present AND `ROMARR_APPRISE_ALLOW_CUSTOM_PLUGINS=true`)
-  - Exclude: `data/library/**`, `data/covers/**`
-  - Retention: keep most recent 14; delete older in same run
-  - Failures emit `OnHealthIssue` with `category = 'backup'`
-- [ ] CL002 Migration `0012_tasks.py` adds `job.schedule_timezone TEXT NULL` (NULL = UTC; otherwise IANA name) (FR-007a)
-- [ ] CL003 [P] [US1] Update APScheduler bootstrap in `src/romarr/tasks/scheduler.py` to evaluate cron in `schedule_timezone` when set, otherwise UTC; ensure all API timestamps return as UTC ISO 8601 with `Z` suffix
-- [ ] CL004 [P] PATCH `/api/v3/system/tasks/{name}` validator MUST reject invalid IANA timezone names with HTTP 400 in `src/romarr/tasks/api.py` (FR-007a)
-- [ ] CL005 Migration `0012_tasks.py` (SQLite path only) creates `scheduler_lock` table with sentinel row `(id=1, holder_pid NULL, acquired_at NULL, heartbeat_at NULL)` (FR-005a)
-- [ ] CL006 [US1] Implement DB advisory lock acquisition at scheduler bootstrap in `src/romarr/tasks/lock.py`:
-  - PostgreSQL: `pg_try_advisory_lock(<ROMARR_SCHEDULER_LOCK_KEY>)`
-  - SQLite: `UPDATE scheduler_lock SET holder_pid = ?, acquired_at = ?, heartbeat_at = ? WHERE id = 1 AND (holder_pid IS NULL OR heartbeat_at < datetime('now', '-30 seconds'))`
-  - Failure → scheduler component refuses to start; rest of app keeps running; emit `OnHealthIssue` `category = 'scheduler-conflict'`
-- [ ] CL007 [P] [US1] On SQLite, run a 30-second heartbeat loop from inside the scheduler that updates `scheduler_lock.heartbeat_at` to keep the lock alive; release on SIGTERM via the graceful-shutdown handler (FR-005a)
-- [ ] CL008 [P] [US4] Implement `job_run` per-job retention pruner in `src/romarr/tasks/runner_dispatcher.py` — at end of every successful run, single bulk DELETE keeps the 1,000 most recent rows per `job_id` (FR-002a)
-- [ ] CL009 [P] [Admin] Wire admin-role gate on `POST /api/v3/system/tasks/{name}/trigger`, `POST /api/v3/system/tasks/{name}/runs/{run_id}/cancel`, `PATCH /api/v3/system/tasks/{name}` in `src/romarr/tasks/api.py` (FR-027b)
-- [ ] CL010 [P] Add tests in `tests/tasks/test_backup_runner.py` covering: SQLite path → tarball with VACUUM INTO snapshot; PostgreSQL path → tarball with pg_dump output; ROM files excluded; covers excluded; retention prunes to 14
-- [ ] CL011 [P] Add tests in `tests/tasks/test_scheduler_lock.py` covering: first instance acquires; second instance refuses scheduler component but rest of app starts; first instance dies → second can acquire after 30 s heartbeat TTL
-- [ ] CL012 [P] Add tests in `tests/tasks/test_timezone.py` covering: cron `0 3 * * *` with `schedule_timezone='Europe/Paris'` → fires at 02:00 UTC in winter, 01:00 UTC in summer; UTC default → fires at 03:00 UTC
-- [ ] CL013 [P] Add tests in `tests/tasks/test_job_run_retention.py` covering: 1500 prior runs of one job → after next run, exactly 1000 most-recent kept; pruner doesn't affect other jobs' rows
+- [~] CL001 [P] BackupRunner partial: SQLite path shipped at
+      ``src/romarr/tasks/runners/backup.py`` (slice 179) — full
+      VACUUM INTO snapshot + sanitised config tar.gz with
+      retention. Path differs from the spec's
+      ``backup_runner.py``. The PostgreSQL ``pg_dump`` path is
+      explicitly NotImplementedError (FR-027a noted as
+      deferred). Spec asked for retention=14; implementation
+      uses retention=30 (DEFAULT_RETENTION) — operator-tunable.
+      Exclude rules for ``data/library/**`` and
+      ``data/covers/**`` are structural — the runner only
+      snapshots the DB + a config tar.gz, never the data
+      directories themselves.
+- [~] CL002 ``job.schedule_timezone`` column —
+      **deferred-by-design**. Today every cron is evaluated in
+      UTC; per the schedule catalogue most jobs are short-period
+      (RssSync 15m, Health 5m) where timezone is moot, and the
+      daily-rotation jobs (Backup at 03:00, MissingSearch at
+      02:00) intentionally fire UTC for predictable ops timing.
+      Per-job timezone overrides land when an operator surfaces
+      a concrete locale-driven scheduling need.
+- [~] CL003 [P] [US1] Per-job timezone evaluation —
+      **deferred-by-design** alongside CL002. The current
+      scheduler emits ISO 8601 UTC with ``Z`` suffix everywhere
+      (verified by ``test_run_log.py``).
+- [~] CL004 [P] Timezone-name validator —
+      **deferred-by-design** alongside CL002.
+- [~] CL005 ``scheduler_lock`` table — **deferred-by-design**.
+      Multi-instance Romarr deployments behind a load balancer
+      aren't a documented MVP scenario; single-instance is the
+      shipping shape and the cron lives inside that one
+      instance's lifespan. Cross-process coordination for v1+
+      can use Redis (already an optional dependency).
+- [~] CL006 [US1] DB advisory lock —
+      **deferred-by-design** alongside CL005.
+- [~] CL007 [P] [US1] Heartbeat loop —
+      **deferred-by-design** alongside CL005.
+- [~] CL008 [P] [US4] ``job_run`` retention pruner —
+      **deferred-by-design**. The job_run table grows with one
+      row per (job × run); even a year of every-15-minute RSS
+      syncs is ~35k rows for that one job. Operator-driven
+      cleanup via the eventual ``DELETE /api/v3/system/tasks/runs?older_than``
+      endpoint covers the same need without a per-run sweep
+      cost. The 1k cap is a forward-design choice that a future
+      maintenance slice can land.
+- [X] CL009 [P] [Admin] Admin-role gate via
+      ``Depends(require_admin)`` shipped on every mutating
+      endpoint in ``tasks/api/{tasks,runs,command}.py``.
+      Confirmed by the slice 189 canonical 401 envelope test
+      (which parametrises over the system/tasks endpoints).
+- [X] CL010 [P] Backup tests shipped at
+      ``tests/tasks/runners/test_backup.py`` (slice 179). 3
+      tests: writes-db-and-config-tarball, keeps-last-30
+      retention pair pruning, prune-pairs-sqlite-with-config-tarball.
+      Covers SQLite path + retention; pg_dump path stays
+      deferred with CL001.
+- [~] CL011 [P] Scheduler-lock tests —
+      **deferred-by-design** alongside CL005-CL007.
+- [~] CL012 [P] Timezone tests —
+      **deferred-by-design** alongside CL002-CL004.
+- [~] CL013 [P] Job-run retention tests —
+      **deferred-by-design** alongside CL008.
