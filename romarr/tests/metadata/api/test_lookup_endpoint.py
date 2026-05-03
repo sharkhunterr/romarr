@@ -1,10 +1,12 @@
-"""GET /api/v3/game/lookup tests (slice 144).
+"""GET /api/v3/game/lookup + POST /api/v3/game/lookup/add tests
+(slices 144 + 145).
 
-The endpoint aggregates `search_games` across every enabled
-provider. We monkeypatch :func:`load_enabled_providers` to
-return a small set of fake providers so the test stays
-hermetic — the real provider HTTP paths are exercised by
-their own provider unit tests.
+The endpoints aggregate `search_games` across every enabled
+provider and instantiate a Game from a chosen candidate. We
+monkeypatch :func:`load_enabled_providers` to return a small
+set of fake providers so the test stays hermetic — the real
+provider HTTP paths are exercised by their own provider unit
+tests.
 """
 
 from __future__ import annotations
@@ -13,9 +15,12 @@ from collections.abc import Iterable
 
 import httpx
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
 from romarr.auth import ROLE_ADMIN, User, hash_password
+from romarr.domain.models import Game, Platform
+from romarr.metadata.api.lookup import slugify_title
 from romarr.metadata.providers import MetadataProvider
 from romarr.metadata.providers.base import ProviderCapabilities
 from romarr.metadata.types import GameMetadata, GameSearchResult
@@ -236,3 +241,217 @@ async def test_lookup_limit_truncates_results(
     resp = await api_client.get("/api/v3/game/lookup?q=sonic&limit=3")
     assert resp.status_code == 200
     assert len(resp.json()) == 3
+
+
+# ---------------------------------------------------------------------------
+# slugify_title — pure helper unit tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "title, expected",
+    [
+        ("Sonic the Hedgehog", "sonic-the-hedgehog"),
+        ("Pokémon Red", "pokemon-red"),
+        ("Final Fantasy VII", "final-fantasy-vii"),
+        ("  Sonic   2  ", "sonic-2"),
+        ("Zelda: Ocarina of Time", "zelda-ocarina-of-time"),
+        ("!!!", "untitled"),
+        ("", "untitled"),
+    ],
+)
+def test_slugify_title(title: str, expected: str) -> None:
+    assert slugify_title(title) == expected
+
+
+# ---------------------------------------------------------------------------
+# POST /api/v3/game/lookup/add
+# ---------------------------------------------------------------------------
+
+
+async def _seed_platform(
+    api_engine: AsyncEngine, *, slug: str = "megadrive"
+) -> int:
+    """Seed a Platform row and return its id."""
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        platform = Platform(slug=slug, name=slug.upper())
+        session.add(platform)
+        await session.commit()
+        await session.refresh(platform)
+        return platform.id
+
+
+@pytest.mark.asyncio
+async def test_lookup_add_creates_game_with_provider_fk(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """The happy path persists a Game on the chosen platform with
+    the provider id stored in the matching FK column and
+    ``needs_metadata_refresh`` set so the aggregator picks it up."""
+    await _seed_admin_and_login(api_engine, api_client)
+    platform_id = await _seed_platform(api_engine)
+
+    resp = await api_client.post(
+        "/api/v3/game/lookup/add",
+        json={
+            "providerName": "igdb",
+            "providerGameId": "1234",
+            "title": "Sonic the Hedgehog",
+            "platformId": platform_id,
+            "monitored": True,
+        },
+    )
+    assert resp.status_code == 201, resp.json()
+    body = resp.json()
+    assert body["title"] == "Sonic the Hedgehog"
+    assert body["slug"] == "sonic-the-hedgehog"
+    assert body["platform_id"] == platform_id
+    assert body["igdb_id"] == 1234
+    assert body["monitored"] is True
+    assert body["needs_metadata_refresh"] is True
+    # The auxiliary FK columns stay null — only one provider gets
+    # written per add.
+    assert body["mobygames_id"] is None
+    assert body["screenscraper_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_lookup_add_disambiguates_slug_collision(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Two adds of the same title on the same platform produce
+    distinct slugs (``-2`` suffix) so the unique constraint
+    holds."""
+    await _seed_admin_and_login(api_engine, api_client)
+    platform_id = await _seed_platform(api_engine)
+
+    payload = {
+        "providerName": "igdb",
+        "providerGameId": "1",
+        "title": "Sonic",
+        "platformId": platform_id,
+    }
+    first = await api_client.post("/api/v3/game/lookup/add", json=payload)
+    assert first.status_code == 201
+    assert first.json()["slug"] == "sonic"
+
+    second_payload = dict(payload, providerGameId="2")
+    second = await api_client.post(
+        "/api/v3/game/lookup/add", json=second_payload
+    )
+    assert second.status_code == 201
+    assert second.json()["slug"] == "sonic-2"
+
+
+@pytest.mark.asyncio
+async def test_lookup_add_rejects_unknown_platform(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    await _seed_admin_and_login(api_engine, api_client)
+
+    resp = await api_client.post(
+        "/api/v3/game/lookup/add",
+        json={
+            "providerName": "igdb",
+            "providerGameId": "1",
+            "title": "Sonic",
+            "platformId": 99999,
+        },
+    )
+    assert resp.status_code == 404
+    assert resp.json()["errorCode"] == "platform_not_found"
+
+
+@pytest.mark.asyncio
+async def test_lookup_add_rejects_auxiliary_provider(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Auxiliary providers (covers, hashes, durations) don't have
+    a Game FK column — adding via them is a contract violation."""
+    await _seed_admin_and_login(api_engine, api_client)
+    platform_id = await _seed_platform(api_engine)
+
+    resp = await api_client.post(
+        "/api/v3/game/lookup/add",
+        json={
+            "providerName": "steamgriddb",
+            "providerGameId": "1",
+            "title": "Sonic",
+            "platformId": platform_id,
+        },
+    )
+    assert resp.status_code == 400
+    assert resp.json()["errorCode"] == "unsupported_provider"
+
+
+@pytest.mark.asyncio
+async def test_lookup_add_rejects_non_integer_provider_id(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    await _seed_admin_and_login(api_engine, api_client)
+    platform_id = await _seed_platform(api_engine)
+
+    resp = await api_client.post(
+        "/api/v3/game/lookup/add",
+        json={
+            "providerName": "igdb",
+            "providerGameId": "abc-not-a-number",
+            "title": "Sonic",
+            "platformId": platform_id,
+        },
+    )
+    assert resp.status_code == 400
+    assert resp.json()["errorCode"] == "invalid_provider_game_id"
+
+
+@pytest.mark.asyncio
+async def test_lookup_add_requires_admin(
+    api_client: httpx.AsyncClient,
+) -> None:
+    resp = await api_client.post(
+        "/api/v3/game/lookup/add",
+        json={
+            "providerName": "igdb",
+            "providerGameId": "1",
+            "title": "Sonic",
+            "platformId": 1,
+        },
+    )
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_lookup_add_persists_in_database(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """End-to-end check: the row created by the endpoint is
+    actually queryable from a fresh session, so the commit really
+    happened."""
+    await _seed_admin_and_login(api_engine, api_client)
+    platform_id = await _seed_platform(api_engine)
+
+    resp = await api_client.post(
+        "/api/v3/game/lookup/add",
+        json={
+            "providerName": "screenscraper",
+            "providerGameId": "42",
+            "title": "Pokémon Red",
+            "platformId": platform_id,
+            "monitored": False,
+        },
+    )
+    assert resp.status_code == 201
+    new_id = resp.json()["id"]
+
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        row = (
+            await session.execute(select(Game).where(Game.id == new_id))
+        ).scalar_one()
+        assert row.title == "Pokémon Red"
+        assert row.slug == "pokemon-red"
+        assert row.screenscraper_id == 42
+        assert row.igdb_id is None
+        assert row.monitored is False
+        assert row.needs_metadata_refresh is True

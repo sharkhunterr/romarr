@@ -3897,6 +3897,48 @@
         "title": "LoginRequest",
         "type": "object"
       },
+      "LookupAddRequest": {
+        "additionalProperties": false,
+        "description": "POST body for ``/api/v3/game/lookup/add``.\n\nThe ``providerName`` + ``providerGameId`` pair identifies the\nchosen candidate from the GET response; everything else is\noperator input from the Add modal.",
+        "properties": {
+          "monitored": {
+            "default": true,
+            "title": "Monitored",
+            "type": "boolean"
+          },
+          "platformId": {
+            "minimum": 1.0,
+            "title": "Platformid",
+            "type": "integer"
+          },
+          "providerGameId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Providergameid",
+            "type": "string"
+          },
+          "providerName": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Providername",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "providerName",
+          "providerGameId",
+          "title",
+          "platformId"
+        ],
+        "title": "LookupAddRequest",
+        "type": "object"
+      },
       "ManualMatchRequest": {
         "additionalProperties": false,
         "description": "Match an existing ``unidentified_dump`` row to a Game (and\noptionally a Release) \u2014 POST\n``/api/v3/rom/unidentified/{id}/match``.",
@@ -9005,6 +9047,47 @@
           }
         },
         "summary": "Search every enabled metadata provider for games matching the query. Returns the merged candidate list ranked by confidence (admin only).",
+        "tags": [
+          "Metadata"
+        ]
+      }
+    },
+    "/api/v3/game/lookup/add": {
+      "post": {
+        "operationId": "add_game_from_lookup_api_v3_game_lookup_add_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LookupAddRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add a Game to the Library from a lookup candidate. The metadata aggregator enriches the rest of the fields asynchronously via the ``needs_metadata_refresh`` flag (admin only).",
         "tags": [
           "Metadata"
         ]

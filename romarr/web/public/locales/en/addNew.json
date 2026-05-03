@@ -11,5 +11,21 @@
   },
   "loadError": "Couldn't run the lookup",
   "noResults": "No candidates returned for \"{{q}}\". Try a different spelling or check that providers are configured under Settings > Metadata Sources.",
-  "addHint": "The \"Add this game\" button (pick library / monitored / profile overrides) lands in a follow-up slice. For now this page surfaces the lookup candidates so you can verify provider coverage."
+  "addButton": "Add",
+  "addHint": "Once added the metadata aggregator enriches the rest of the fields (summary, cover, release date, …) on the next refresh cycle. Field-level edits stay editable on the Game Detail page.",
+  "add": {
+    "modalTitle": "Add \"{{title}}\" to Library",
+    "providerSource": "From {{provider}} (id {{id}})",
+    "platformLabel": "Platform",
+    "loadingPlatforms": "Loading platforms…",
+    "noPlatforms": "No platforms configured. Add one under Settings > Platforms first.",
+    "monitoredLabel": "Monitor for upgrades",
+    "refreshHint": "Romarr will fetch the rest of the metadata in the background — the Game appears in the Library immediately.",
+    "cancel": "Cancel",
+    "submit": "Add to Library",
+    "submitting": "Adding…",
+    "successTitle": "Game added",
+    "successBody": "\"{{title}}\" was added to the Library.",
+    "errorTitle": "Couldn't add the game"
+  }
 }

@@ -457,6 +457,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/game/lookup/add": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a Game to the Library from a lookup candidate. The metadata aggregator enriches the rest of the fields asynchronously via the ``needs_metadata_refresh`` flag (admin only). */
+        post: operations["add_game_from_lookup_api_v3_game_lookup_add_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/game/{game_id}": {
         parameters: {
             query?: never;
@@ -3364,6 +3381,29 @@ export interface components {
             username: string;
         };
         /**
+         * LookupAddRequest
+         * @description POST body for ``/api/v3/game/lookup/add``.
+         *
+         *     The ``providerName`` + ``providerGameId`` pair identifies the
+         *     chosen candidate from the GET response; everything else is
+         *     operator input from the Add modal.
+         */
+        LookupAddRequest: {
+            /**
+             * Monitored
+             * @default true
+             */
+            monitored: boolean;
+            /** Platformid */
+            platformId: number;
+            /** Providergameid */
+            providerGameId: string;
+            /** Providername */
+            providerName: string;
+            /** Title */
+            title: string;
+        };
+        /**
          * ManualMatchRequest
          * @description Match an existing ``unidentified_dump`` row to a Game (and
          *     optionally a Release) — POST
@@ -5784,6 +5824,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GameLookupRow"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_game_from_lookup_api_v3_game_lookup_add_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LookupAddRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameRead"];
                 };
             };
             /** @description Validation Error */

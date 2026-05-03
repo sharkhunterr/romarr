@@ -1,0 +1,178 @@
+/**
+ * Add-to-Library modal for the AddNew page (slice 145).
+ *
+ * Operator picks a Platform and a monitored toggle, then we
+ * fire `POST /api/v3/game/lookup/add` and navigate to the new
+ * Game's detail page on success.
+ *
+ * Strings resolve through the ``addNew`` namespace.
+ */
+
+import { useEffect, useState, type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+
+import {
+  useAddGameFromLookup,
+  type GameLookupRow,
+} from "@/lib/api/queries/lookup";
+import { usePlatforms } from "@/lib/api/queries/platforms";
+import { useToastStore } from "@/lib/store/toast";
+
+interface AddGameModalProps {
+  candidate: GameLookupRow;
+  onClose: () => void;
+}
+
+export function AddGameModal(props: AddGameModalProps): ReactElement {
+  const { t } = useTranslation("addNew");
+  const navigate = useNavigate();
+  const pushToast = useToastStore((s) => s.push);
+  const platforms = usePlatforms();
+  const add = useAddGameFromLookup();
+
+  const [platformId, setPlatformId] = useState<number | null>(null);
+  const [monitored, setMonitored] = useState(true);
+
+  // Default-pick the first platform once the list loads so the
+  // operator can submit immediately for the common case where
+  // they only have one platform configured.
+  useEffect(() => {
+    const first = platforms.data?.[0];
+    if (platformId === null && first !== undefined) {
+      setPlatformId(first.id);
+    }
+  }, [platforms.data, platformId]);
+
+  function submit(): void {
+    if (platformId === null) return;
+    add.mutate(
+      {
+        providerName: props.candidate.providerName,
+        providerGameId: props.candidate.providerGameId,
+        title: props.candidate.title,
+        platformId,
+        monitored,
+      },
+      {
+        onSuccess: (game) => {
+          pushToast({
+            kind: "success",
+            title: t("add.successTitle"),
+            description: t("add.successBody", { title: game.title }),
+          });
+          props.onClose();
+          navigate(`/game/${game.id}`);
+        },
+        onError: (err) => {
+          pushToast({
+            kind: "error",
+            title: t("add.errorTitle"),
+            description: err.message,
+          });
+        },
+      },
+    );
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("add.modalTitle", { title: props.candidate.title })}
+      className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/70 px-4 pt-[8vh] backdrop-blur-sm"
+      onClick={props.onClose}
+    >
+      <div
+        className="w-full max-w-md overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="border-b border-zinc-800 px-4 py-3">
+          <h2 className="text-sm font-semibold text-zinc-100">
+            {t("add.modalTitle", { title: props.candidate.title })}
+          </h2>
+          <p className="mt-0.5 text-[0.65rem] text-zinc-500">
+            {t("add.providerSource", {
+              provider: props.candidate.providerName,
+              id: props.candidate.providerGameId,
+            })}
+          </p>
+        </header>
+
+        <div className="space-y-4 p-4">
+          <label className="block">
+            <span className="mb-1 block text-[0.65rem] uppercase tracking-widest text-zinc-500">
+              {t("add.platformLabel")}
+            </span>
+            {platforms.isPending ? (
+              <p className="text-xs text-zinc-500">{t("add.loadingPlatforms")}</p>
+            ) : platforms.isError ? (
+              <p className="text-xs text-red-400">{platforms.error.message}</p>
+            ) : (platforms.data ?? []).length === 0 ? (
+              <p className="text-xs text-amber-400">
+                {t("add.noPlatforms")}
+              </p>
+            ) : (
+              <select
+                value={platformId ?? ""}
+                onChange={(e) => setPlatformId(Number(e.target.value))}
+                className="w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              >
+                {platforms.data!.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </label>
+
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={monitored}
+              onChange={(e) => setMonitored(e.target.checked)}
+              className="h-4 w-4 rounded border-zinc-700 bg-zinc-950 accent-brand"
+            />
+            <span className="text-sm text-zinc-200">
+              {t("add.monitoredLabel")}
+            </span>
+          </label>
+
+          <p className="rounded-md border border-dashed border-zinc-800 bg-zinc-900/40 p-3 text-[0.65rem] text-zinc-500">
+            {t("add.refreshHint")}
+          </p>
+
+          {add.isError && (
+            <p role="alert" className="text-xs text-red-400">
+              {add.error.message}
+            </p>
+          )}
+        </div>
+
+        <footer className="flex items-center justify-end gap-2 border-t border-zinc-800 px-4 py-3">
+          <button
+            type="button"
+            onClick={props.onClose}
+            className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            {t("add.cancel")}
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={platformId === null || add.isPending}
+            className={[
+              "rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-zinc-900",
+              "hover:bg-brand-300",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+              "disabled:cursor-not-allowed disabled:opacity-60",
+            ].join(" ")}
+          >
+            {add.isPending ? t("add.submitting") : t("add.submit")}
+          </button>
+        </footer>
+      </div>
+    </div>
+  );
+}

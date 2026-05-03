@@ -11,5 +11,21 @@
   },
   "loadError": "La recherche a échoué",
   "noResults": "Aucun candidat pour « {{q}} ». Essayez une autre orthographe ou vérifiez la configuration des fournisseurs sous Paramètres > Sources de métadonnées.",
-  "addHint": "Le bouton « Ajouter ce jeu » (choix ludothèque / suivi / overrides de profils) arrivera dans un slice à venir. Pour le moment cette page surface les candidats de la recherche pour vérifier la couverture des fournisseurs."
+  "addButton": "Ajouter",
+  "addHint": "Une fois ajouté, l'agrégateur de métadonnées enrichira automatiquement le reste des champs (résumé, jaquette, date de sortie, …) au prochain cycle de rafraîchissement. Les éditions par champ restent disponibles sur la page de détail.",
+  "add": {
+    "modalTitle": "Ajouter « {{title}} » à la ludothèque",
+    "providerSource": "Depuis {{provider}} (id {{id}})",
+    "platformLabel": "Plateforme",
+    "loadingPlatforms": "Chargement des plateformes…",
+    "noPlatforms": "Aucune plateforme configurée. Ajoutez-en une depuis Paramètres > Plateformes.",
+    "monitoredLabel": "Surveiller pour les mises à niveau",
+    "refreshHint": "Romarr récupère le reste des métadonnées en arrière-plan — le jeu apparaît immédiatement dans la ludothèque.",
+    "cancel": "Annuler",
+    "submit": "Ajouter à la ludothèque",
+    "submitting": "Ajout en cours…",
+    "successTitle": "Jeu ajouté",
+    "successBody": "« {{title}} » a été ajouté à la ludothèque.",
+    "errorTitle": "L'ajout du jeu a échoué"
+  }
 }

@@ -1,17 +1,13 @@
 /**
- * Add New page (P-ADD, slice 144).
+ * Add New page (P-ADD, slices 144 + 145).
  *
  * Operator-driven search across every enabled metadata
- * provider. Drives the spec 014 "Add New" workflow's first
- * step: find the game in the canonical metadata catalogue
- * before adding it to the Library.
- *
- * The "Add this game" button is intentionally deferred — the
- * full add-to-library mutation is multi-step (pick library,
- * pick monitored, pick profile overrides) and lands in a
- * follow-up slice. Today the page surfaces the lookup
- * candidates so the dependency on the metadata provider
- * surface is visible end-to-end.
+ * provider, plus a per-row "Add to Library" mutation. Drives
+ * the spec 014 "Add New" workflow:
+ *   1. Search every provider for matching titles.
+ *   2. Pick a candidate, choose a Platform + monitored flag.
+ *   3. Persist a Game row with ``needs_metadata_refresh=true``
+ *      so the aggregator enriches the rest of the fields.
  *
  * Strings resolve through the `addNew` namespace.
  */
@@ -23,6 +19,8 @@ import { useSearchParams } from "react-router-dom";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useGameLookup, type GameLookupRow } from "@/lib/api/queries/lookup";
+
+import { AddGameModal } from "./AddGameModal";
 
 function ProviderPill(props: { name: string }): ReactElement {
   return (
@@ -57,7 +55,11 @@ function ConfidenceBar(props: { value: number }): ReactElement {
   );
 }
 
-function LookupRow(props: { row: GameLookupRow }): ReactElement {
+function LookupRow(props: {
+  row: GameLookupRow;
+  onAdd: (row: GameLookupRow) => void;
+}): ReactElement {
+  const { t } = useTranslation("addNew");
   const { row } = props;
   return (
     <li
@@ -72,9 +74,22 @@ function LookupRow(props: { row: GameLookupRow }): ReactElement {
         </p>
         <ConfidenceBar value={row.confidence} />
       </div>
-      <div className="flex flex-wrap items-center gap-2 text-[0.65rem] text-zinc-500">
-        <ProviderPill name={row.providerName} />
-        <span className="font-mono">id: {row.providerGameId}</span>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-[0.65rem] text-zinc-500">
+        <div className="flex flex-wrap items-center gap-2">
+          <ProviderPill name={row.providerName} />
+          <span className="font-mono">id: {row.providerGameId}</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => props.onAdd(row)}
+          className={[
+            "rounded-md bg-brand px-2.5 py-1 text-[0.65rem] font-medium text-zinc-900",
+            "hover:bg-brand-300",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+          ].join(" ")}
+        >
+          {t("addButton")}
+        </button>
       </div>
     </li>
   );
@@ -85,6 +100,7 @@ export function AddNewPage(): ReactElement {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlQuery = searchParams.get("q") ?? "";
   const [query, setQuery] = useState(urlQuery);
+  const [pendingAdd, setPendingAdd] = useState<GameLookupRow | null>(null);
 
   // Debounce URL writes so keystrokes don't pollute history,
   // and the API call key only updates once the operator pauses.
@@ -153,13 +169,24 @@ export function AddNewPage(): ReactElement {
         <>
           <ul className="space-y-2">
             {lookup.data.map((row) => (
-              <LookupRow key={`${row.providerName}-${row.providerGameId}`} row={row} />
+              <LookupRow
+                key={`${row.providerName}-${row.providerGameId}`}
+                row={row}
+                onAdd={setPendingAdd}
+              />
             ))}
           </ul>
           <p className="mt-3 rounded-md border border-dashed border-zinc-800 bg-zinc-900/20 p-3 text-[0.7rem] text-zinc-500">
             {t("addHint")}
           </p>
         </>
+      )}
+
+      {pendingAdd !== null && (
+        <AddGameModal
+          candidate={pendingAdd}
+          onClose={() => setPendingAdd(null)}
+        />
       )}
     </div>
   );
