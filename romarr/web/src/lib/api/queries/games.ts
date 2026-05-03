@@ -26,6 +26,8 @@ import type { components } from "@/types/api/schema";
 export type Game = components["schemas"]["GameRead"];
 export type Release = components["schemas"]["ReleaseRead"];
 export type Dump = components["schemas"]["DumpRead"];
+export type RefreshMetadataResponse =
+  components["schemas"]["RefreshMetadataResponse"];
 
 export interface ListGamesParams {
   q?: string;
@@ -92,6 +94,47 @@ export function useDumpsForGame(
 export interface ToggleMonitorVariables {
   gameId: number;
   monitored: boolean;
+}
+
+export interface RefreshMetadataVariables {
+  gameId: number;
+  /**
+   * Bypass the cache TTL on metadata providers. Defaults to
+   * `false` (the spec 002 cache decides per-provider).
+   */
+  force?: boolean;
+}
+
+/**
+ * POST /api/v3/game/{id}/refresh-metadata — re-aggregate metadata
+ * from the enabled providers. Locked fields (FR-008) are
+ * preserved. The response carries which fields actually changed
+ * and which were skipped because the operator pinned them; the
+ * detail query is invalidated so cover + summary re-render.
+ */
+export function useRefreshGameMetadata(): UseMutationResult<
+  RefreshMetadataResponse,
+  ApiError,
+  RefreshMetadataVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<
+    RefreshMetadataResponse,
+    ApiError,
+    RefreshMetadataVariables
+  >({
+    mutationFn: ({ gameId, force }) =>
+      apiFetch<RefreshMetadataResponse>(
+        `/api/v3/game/${gameId}/refresh-metadata${force ? "?force=true" : ""}`,
+        { method: "POST" },
+      ),
+    onSuccess: (result) => {
+      void qc.invalidateQueries({
+        queryKey: ["games", "detail", result.game_id],
+      });
+      void qc.invalidateQueries({ queryKey: ["games", "list"] });
+    },
+  });
 }
 
 /**

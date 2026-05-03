@@ -34,6 +34,11 @@
     "monitor": {
       "on": "Suivi",
       "off": "Non suivi"
+    },
+    "refresh": {
+      "idle": "Rafraîchir les métadonnées",
+      "pending": "Rafraîchissement…",
+      "success": "Mis à jour ({{changed}} champs, {{skipped}} verrouillés)"
     }
   },
   "releases": {

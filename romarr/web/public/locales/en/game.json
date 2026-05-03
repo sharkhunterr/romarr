@@ -34,6 +34,11 @@
     "monitor": {
       "on": "Monitored",
       "off": "Not monitored"
+    },
+    "refresh": {
+      "idle": "Refresh metadata",
+      "pending": "Refreshing…",
+      "success": "Refreshed ({{changed}} fields, {{skipped}} locked)"
     }
   },
   "releases": {

@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 
 import { CoverImage } from "@/components/rom";
 import {
+  useRefreshGameMetadata,
   useToggleGameMonitor,
   type Game,
 } from "@/lib/api/queries/games";
@@ -59,6 +60,46 @@ function formatReleaseDate(value: string | null | undefined): string | null {
 function formatList(items: readonly string[] | undefined): string | null {
   if (!items || items.length === 0) return null;
   return items.join(", ");
+}
+
+function RefreshMetadataButton(props: { game: Game }): ReactElement {
+  const { t } = useTranslation("game");
+  const { game } = props;
+  const refresh = useRefreshGameMetadata();
+  const onClick = (): void => {
+    refresh.mutate({ gameId: game.id });
+  };
+  const label = refresh.isPending
+    ? t("overview.refresh.pending")
+    : refresh.isSuccess
+      ? t("overview.refresh.success", {
+          changed: Object.keys(refresh.data.fields).length,
+          skipped: refresh.data.skipped_locked.length,
+        })
+      : t("overview.refresh.idle");
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={refresh.isPending}
+      className={[
+        "inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5",
+        "text-xs font-medium ring-1 ring-inset",
+        "bg-zinc-800 text-zinc-200 ring-zinc-700",
+        "transition-colors hover:bg-zinc-700",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+        "disabled:cursor-not-allowed disabled:opacity-60",
+      ].join(" ")}
+      title={
+        refresh.isError && refresh.error?.message
+          ? refresh.error.message
+          : undefined
+      }
+    >
+      <span aria-hidden="true">{refresh.isPending ? "⏳" : "🔄"}</span>
+      <span>{label}</span>
+    </button>
+  );
 }
 
 function MonitorToggle(props: { game: Game }): ReactElement {
@@ -127,7 +168,10 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
                 : t("overview.noSummary")}
             </p>
           </div>
-          <MonitorToggle game={game} />
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <RefreshMetadataButton game={game} />
+            <MonitorToggle game={game} />
+          </div>
         </div>
 
         <dl className="rounded-md border border-zinc-800 bg-zinc-900/40 px-4">
