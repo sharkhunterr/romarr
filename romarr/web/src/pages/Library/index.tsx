@@ -1,33 +1,37 @@
 /**
- * Library page (P-LIB, slice 88).
+ * Library page (P-LIB, slice 88; slice 100 adds platform filter).
  *
- * MVP grid of every game from /api/v3/game (slice 86).
- * Title-substring search debounced 200 ms so we don't
- * pollute the query cache with every keystroke.
+ * Grid of every game from /api/v3/game. Title-substring search
+ * is debounced 200 ms; the platform filter (slice 100) reuses
+ * the existing `platform_id` query param on the same endpoint
+ * and reads its option list from the new `usePlatforms` hook
+ * (slice 99).
  *
- * Filters deferred to follow-up slices:
- *   * Platform — needs a platform-list endpoint.
+ * Filters still deferred to follow-up slices:
  *   * Region / quality / dump status / monitored — need
  *     additional joins / index columns on the Game/Release
  *     surface.
- *
- * Click-through routes to /game/{id} which is still a
- * placeholder pending the P-GAME slice.
  */
 
-import { useEffect, useState, type ReactElement } from "react";
+import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { CardGridSkeleton } from "@/components/shared/LoadingSkeleton";
-import { useGames } from "@/lib/api/queries/games";
+import { useGames, type ListGamesParams } from "@/lib/api/queries/games";
+import { usePlatforms } from "@/lib/api/queries/platforms";
 
 import { GameCard } from "./GameCard";
+
+const ALL_PLATFORMS = "all" as const;
 
 export function LibraryPage(): ReactElement {
   const { t } = useTranslation("library");
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [platformFilter, setPlatformFilter] = useState<
+    number | typeof ALL_PLATFORMS
+  >(ALL_PLATFORMS);
 
   useEffect(() => {
     const handle = window.setTimeout(
@@ -37,11 +41,19 @@ export function LibraryPage(): ReactElement {
     return () => window.clearTimeout(handle);
   }, [query]);
 
-  const games = useGames(
-    debouncedQuery.length > 0
-      ? { q: debouncedQuery, limit: 200 }
-      : { limit: 200 },
-  );
+  const platforms = usePlatforms();
+
+  const params: ListGamesParams = useMemo(() => {
+    const out: ListGamesParams = { limit: 200 };
+    if (debouncedQuery.length > 0) out.q = debouncedQuery;
+    if (platformFilter !== ALL_PLATFORMS) out.platformId = platformFilter;
+    return out;
+  }, [debouncedQuery, platformFilter]);
+
+  const games = useGames(params);
+
+  const filtersActive =
+    debouncedQuery.length > 0 || platformFilter !== ALL_PLATFORMS;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-8">
@@ -53,21 +65,51 @@ export function LibraryPage(): ReactElement {
           <p className="mt-1 text-sm text-zinc-400">{t("subtitle")}</p>
         </div>
 
-        <label className="block">
-          <span className="sr-only">{t("search.label")}</span>
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("search.placeholder")}
-            aria-label={t("search.label")}
-            className={[
-              "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
-              "ring-1 ring-inset ring-zinc-700",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-            ].join(" ")}
-          />
-        </label>
+        <div className="flex flex-col gap-2 md:flex-row md:items-center">
+          <label className="block flex-1">
+            <span className="sr-only">{t("search.label")}</span>
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("search.placeholder")}
+              aria-label={t("search.label")}
+              className={[
+                "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
+                "ring-1 ring-inset ring-zinc-700",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+              ].join(" ")}
+            />
+          </label>
+
+          <label className="block md:w-56">
+            <span className="sr-only">{t("filters.platform.label")}</span>
+            <select
+              value={platformFilter === ALL_PLATFORMS ? "" : String(platformFilter)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setPlatformFilter(
+                  v === "" ? ALL_PLATFORMS : Number.parseInt(v, 10),
+                );
+              }}
+              aria-label={t("filters.platform.label")}
+              disabled={!platforms.isSuccess}
+              className={[
+                "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
+                "ring-1 ring-inset ring-zinc-700",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                "disabled:cursor-not-allowed disabled:opacity-60",
+              ].join(" ")}
+            >
+              <option value="">{t("filters.platform.all")}</option>
+              {platforms.data?.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
 
         {games.isSuccess && (
           <p className="font-mono text-[0.65rem] text-zinc-500">
@@ -88,12 +130,10 @@ export function LibraryPage(): ReactElement {
       {games.isSuccess && games.data.length === 0 && (
         <EmptyState
           title={
-            debouncedQuery.length > 0
-              ? t("noResults.title")
-              : t("empty.title")
+            filtersActive ? t("noResults.title") : t("empty.title")
           }
           description={
-            debouncedQuery.length > 0
+            filtersActive
               ? t("noResults.body", { q: debouncedQuery })
               : t("empty.body")
           }

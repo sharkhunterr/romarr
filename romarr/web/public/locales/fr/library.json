@@ -5,13 +5,19 @@
     "label": "Chercher un jeu",
     "placeholder": "Chercher par titre…"
   },
+  "filters": {
+    "platform": {
+      "label": "Filtrer par plateforme",
+      "all": "Toutes les plateformes"
+    }
+  },
   "empty": {
     "title": "Aucun jeu pour l'instant",
     "body": "Quand Romarr ingère une ROM via Ajouter, scan ou association manuelle, le jeu apparaîtra ici."
   },
   "noResults": {
     "title": "Aucun résultat",
-    "body": "Aucun jeu ne correspond à « {{q}} ». Essayez une autre recherche."
+    "body": "Aucun jeu ne correspond aux filtres actifs. Élargissez la recherche ou choisissez une autre plateforme."
   },
   "loadError": "Impossible de charger les jeux",
   "platformBadgeFallback": "?",

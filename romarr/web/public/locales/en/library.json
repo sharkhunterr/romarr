@@ -5,13 +5,19 @@
     "label": "Search games",
     "placeholder": "Search by title…"
   },
+  "filters": {
+    "platform": {
+      "label": "Filter by platform",
+      "all": "All platforms"
+    }
+  },
   "empty": {
     "title": "No games yet",
     "body": "Once Romarr ingests a ROM via Add New, scan, or manual match, the game lands here."
   },
   "noResults": {
     "title": "No matches",
-    "body": "No games match \"{{q}}\". Try a different search."
+    "body": "No games match the active filters. Try a broader search or pick a different platform."
   },
   "loadError": "Couldn't load games",
   "platformBadgeFallback": "?",
