@@ -14,8 +14,22 @@
     "uptimeDays": "{{days}}d {{hours}}h"
   },
   "sections": {
+    "library": "Library",
     "quickActions": "Quick actions",
     "recentActivity": "Recent activity"
+  },
+  "library": {
+    "totalGames": "Total games",
+    "totalReleases": "Total releases",
+    "totalDumps": "Total dumps",
+    "totalDumpsHint": "files on disk",
+    "imports24h": "Imports today",
+    "monitoredHint_one": "{{count}} monitored",
+    "monitoredHint_other": "{{count}} monitored",
+    "wantedHint_one": "{{count}} wanted",
+    "wantedHint_other": "{{count}} wanted",
+    "importsSuccessHint_one": "{{count}} successful",
+    "importsSuccessHint_other": "{{count}} successful"
   },
   "health": {
     "title": "System health",

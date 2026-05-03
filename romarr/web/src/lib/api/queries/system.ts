@@ -83,6 +83,22 @@ export function useHealth(): UseQueryResult<HealthSnapshot, ApiError> {
 }
 
 // ---------------------------------------------------------------------------
+// /api/v3/system/stats — Dashboard aggregate counts (slice 104)
+// ---------------------------------------------------------------------------
+
+export type SystemStats = components["schemas"]["SystemStats"];
+
+export const SYSTEM_STATS_KEY = ["system", "stats"] as const;
+
+export function useSystemStats(): UseQueryResult<SystemStats, ApiError> {
+  return useQuery<SystemStats, ApiError>({
+    queryKey: SYSTEM_STATS_KEY,
+    queryFn: () => apiFetch<SystemStats>("/api/v3/system/stats"),
+    staleTime: 30_000,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // /api/v3/history — unified history feed (paginated)
 // ---------------------------------------------------------------------------
 

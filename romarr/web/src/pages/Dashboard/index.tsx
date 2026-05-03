@@ -17,7 +17,10 @@
 import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
-import { useSystemStatus } from "@/lib/api/queries/system";
+import {
+  useSystemStats,
+  useSystemStatus,
+} from "@/lib/api/queries/system";
 
 import { ActivityFeed } from "./ActivityFeed";
 import { HealthPanel } from "./HealthPanel";
@@ -49,6 +52,7 @@ function useFormatUptime(): (startTime: string | undefined) => string {
 export function DashboardPage(): ReactElement {
   const { t } = useTranslation("dashboard");
   const status = useSystemStatus();
+  const stats = useSystemStats();
   const formatUptime = useFormatUptime();
 
   return (
@@ -87,6 +91,56 @@ export function DashboardPage(): ReactElement {
           loading={status.isPending}
           hint={status.data?.osName ?? null}
         />
+      </section>
+
+      <section className="mt-8">
+        <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-zinc-500">
+          {t("sections.library")}
+        </h2>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <StatCard
+            label={t("library.totalGames")}
+            value={stats.data?.totalGames ?? 0}
+            loading={stats.isPending}
+            hint={
+              stats.data
+                ? t("library.monitoredHint", {
+                    count: stats.data.monitoredGames,
+                  })
+                : null
+            }
+          />
+          <StatCard
+            label={t("library.totalReleases")}
+            value={stats.data?.totalReleases ?? 0}
+            loading={stats.isPending}
+            hint={
+              stats.data
+                ? t("library.wantedHint", {
+                    count: stats.data.wantedReleases,
+                  })
+                : null
+            }
+          />
+          <StatCard
+            label={t("library.totalDumps")}
+            value={stats.data?.totalDumps ?? 0}
+            loading={stats.isPending}
+            hint={t("library.totalDumpsHint")}
+          />
+          <StatCard
+            label={t("library.imports24h")}
+            value={stats.data?.imports24h ?? 0}
+            loading={stats.isPending}
+            hint={
+              stats.data
+                ? t("library.importsSuccessHint", {
+                    count: stats.data.importsSuccess24h,
+                  })
+                : null
+            }
+          />
+        </div>
       </section>
 
       <section className="mt-8">

@@ -6502,6 +6502,50 @@
         "title": "SetupResponse",
         "type": "object"
       },
+      "SystemStats": {
+        "description": "Aggregate counts surfaced on the Dashboard (slice 104).\n\nCheap to compute (one COUNT per metric) so the Dashboard\ncan poll it as often as it likes. The ``imports24h`` /\n``importsSuccess24h`` pair lets the UI render a one-line\n\"n imported today (m successful)\" stat without a separate\nhistory scan.",
+        "properties": {
+          "imports24h": {
+            "title": "Imports24H",
+            "type": "integer"
+          },
+          "importsSuccess24h": {
+            "title": "Importssuccess24H",
+            "type": "integer"
+          },
+          "monitoredGames": {
+            "title": "Monitoredgames",
+            "type": "integer"
+          },
+          "totalDumps": {
+            "title": "Totaldumps",
+            "type": "integer"
+          },
+          "totalGames": {
+            "title": "Totalgames",
+            "type": "integer"
+          },
+          "totalReleases": {
+            "title": "Totalreleases",
+            "type": "integer"
+          },
+          "wantedReleases": {
+            "title": "Wantedreleases",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "totalGames",
+          "totalReleases",
+          "totalDumps",
+          "monitoredGames",
+          "wantedReleases",
+          "imports24h",
+          "importsSuccess24h"
+        ],
+        "title": "SystemStats",
+        "type": "object"
+      },
       "TagDetail": {
         "additionalProperties": false,
         "description": "Sonarr `/tag/detail/{id}` shape \u2014 lists the IDs of every\nentity currently using the tag, grouped by entity type. The\nJSON keys are camelCase (``gameIds`` / ``indexerIds`` / ...)\nvia Pydantic aliases.",
@@ -12718,6 +12762,27 @@
         "summary": "Stream a log file as text/plain. Admin-only \u2014 log contents commonly include URLs with API keys and stack traces with on-disk paths.",
         "tags": [
           "Log"
+        ]
+      }
+    },
+    "/api/v3/system/stats": {
+      "get": {
+        "operationId": "get_stats_api_v3_system_stats_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemStats"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Aggregate counts (games / releases / dumps / wanted / imports today). Drives the Dashboard stat cards.",
+        "tags": [
+          "System"
         ]
       }
     },

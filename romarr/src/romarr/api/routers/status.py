@@ -22,15 +22,24 @@ from __future__ import annotations
 
 import platform
 import sys
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Request
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from romarr import __version__
-from romarr.api.dependencies import get_current_principal
+from romarr.api.dependencies import (
+    get_current_principal,
+    get_db,
+    require_readonly,
+)
 from romarr.auth import Principal
 from romarr.config import get_settings
+from romarr.domain.models import Dump, Game, Release
+from romarr.importer.models import ImportHistory
 
 router = APIRouter(prefix="/api/v3/system", tags=["System"])
 
@@ -96,6 +105,88 @@ async def get_status(
         "migrationVersion": "",
         "runtimeName": "python",
     }
+
+
+class SystemStats(BaseModel):
+    """Aggregate counts surfaced on the Dashboard (slice 104).
+
+    Cheap to compute (one COUNT per metric) so the Dashboard
+    can poll it as often as it likes. The ``imports24h`` /
+    ``importsSuccess24h`` pair lets the UI render a one-line
+    "n imported today (m successful)" stat without a separate
+    history scan.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    total_games: int = Field(alias="totalGames")
+    total_releases: int = Field(alias="totalReleases")
+    total_dumps: int = Field(alias="totalDumps")
+    monitored_games: int = Field(alias="monitoredGames")
+    wanted_releases: int = Field(alias="wantedReleases")
+    imports_24h: int = Field(alias="imports24h")
+    imports_success_24h: int = Field(alias="importsSuccess24h")
+
+
+@router.get(
+    "/stats",
+    response_model=SystemStats,
+    response_model_by_alias=True,
+    summary=(
+        "Aggregate counts (games / releases / dumps / wanted / "
+        "imports today). Drives the Dashboard stat cards."
+    ),
+)
+async def get_stats(
+    _user: Annotated[Principal, Depends(require_readonly)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> SystemStats:
+    cutoff = datetime.now(UTC) - timedelta(hours=24)
+
+    async def _scalar(stmt: Any) -> int:
+        return int((await db.execute(stmt)).scalar_one() or 0)
+
+    total_games = await _scalar(select(func.count()).select_from(Game))
+    total_releases = await _scalar(
+        select(func.count()).select_from(Release)
+    )
+    total_dumps = await _scalar(select(func.count()).select_from(Dump))
+    monitored_games = await _scalar(
+        select(func.count())
+        .select_from(Game)
+        .where(Game.monitored.is_(True))
+    )
+    wanted_releases = await _scalar(
+        select(func.count())
+        .select_from(Release)
+        .where(
+            Release.status == "wanted",
+            Release.monitored.is_(True),
+        )
+    )
+    imports_24h = await _scalar(
+        select(func.count())
+        .select_from(ImportHistory)
+        .where(ImportHistory.started_at >= cutoff)
+    )
+    imports_success_24h = await _scalar(
+        select(func.count())
+        .select_from(ImportHistory)
+        .where(
+            ImportHistory.started_at >= cutoff,
+            ImportHistory.success.is_(True),
+        )
+    )
+
+    return SystemStats(
+        totalGames=total_games,
+        totalReleases=total_releases,
+        totalDumps=total_dumps,
+        monitoredGames=monitored_games,
+        wantedReleases=wanted_releases,
+        imports24h=imports_24h,
+        importsSuccess24h=imports_success_24h,
+    )
 
 
 __all__ = ["router"]

@@ -1608,6 +1608,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/system/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Aggregate counts (games / releases / dumps / wanted / imports today). Drives the Dashboard stat cards. */
+        get: operations["get_stats_api_v3_system_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/system/status": {
         parameters: {
             query?: never;
@@ -4283,6 +4300,32 @@ export interface components {
         /** SetupResponse */
         SetupResponse: {
             user: components["schemas"]["UserPublic"];
+        };
+        /**
+         * SystemStats
+         * @description Aggregate counts surfaced on the Dashboard (slice 104).
+         *
+         *     Cheap to compute (one COUNT per metric) so the Dashboard
+         *     can poll it as often as it likes. The ``imports24h`` /
+         *     ``importsSuccess24h`` pair lets the UI render a one-line
+         *     "n imported today (m successful)" stat without a separate
+         *     history scan.
+         */
+        SystemStats: {
+            /** Imports24H */
+            imports24h: number;
+            /** Importssuccess24H */
+            importsSuccess24h: number;
+            /** Monitoredgames */
+            monitoredGames: number;
+            /** Totaldumps */
+            totalDumps: number;
+            /** Totalgames */
+            totalGames: number;
+            /** Totalreleases */
+            totalReleases: number;
+            /** Wantedreleases */
+            wantedReleases: number;
         };
         /**
          * TagDetail
@@ -8366,6 +8409,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_stats_api_v3_system_stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemStats"];
                 };
             };
         };

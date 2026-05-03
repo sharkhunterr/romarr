@@ -8,11 +8,16 @@ Verifies the auth-tiered contract from spec 013:
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+from uuid import uuid4
+
 import httpx
 import pytest
-from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
 import romarr
+from romarr.domain.models import Dump, Game, Platform, Release
+from romarr.importer.models import ImportHistory
 from tests.api.test_auth_endpoints import _seed_admin_user
 
 # ---------------------------------------------------------------------------
@@ -122,3 +127,154 @@ async def test_status_public_tier_does_not_leak_topology(
         "runtimeName",
     }
     assert forbidden.isdisjoint(resp.json().keys())
+
+
+# ---------------------------------------------------------------------------
+# slice 104 — /api/v3/system/stats
+# ---------------------------------------------------------------------------
+
+
+async def _login(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    await _seed_admin_user(api_engine)
+    resp = await api_client.post(
+        "/api/v3/auth/login",
+        json={"username": "alice", "password": "goodpassword"},
+    )
+    assert resp.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_stats_zeroes_on_empty_database(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    await _login(api_client, api_engine)
+    resp = await api_client.get("/api/v3/system/stats")
+    assert resp.status_code == 200
+    body = resp.json()
+    for key in (
+        "totalGames",
+        "totalReleases",
+        "totalDumps",
+        "monitoredGames",
+        "wantedReleases",
+        "imports24h",
+        "importsSuccess24h",
+    ):
+        assert body[key] == 0
+
+
+@pytest.mark.asyncio
+async def test_stats_counts_aggregate_correctly(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Two games (one monitored, one not), three releases (two
+    wanted+monitored, one imported), two dumps, three imports
+    in the last hour (two successful)."""
+    await _login(api_client, api_engine)
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        platform = Platform(slug="md", name="Mega Drive")
+        session.add(platform)
+        await session.flush()
+        g1 = Game(
+            platform_id=platform.id,
+            slug="g1",
+            title="G1",
+            monitored=True,
+        )
+        g2 = Game(
+            platform_id=platform.id,
+            slug="g2",
+            title="G2",
+            monitored=False,
+        )
+        session.add_all([g1, g2])
+        await session.flush()
+        r_wanted_a = Release(
+            game_id=g1.id, name="r-a", status="wanted", monitored=True
+        )
+        r_wanted_b = Release(
+            game_id=g1.id, name="r-b", status="wanted", monitored=True
+        )
+        r_imported = Release(
+            game_id=g2.id, name="r-i", status="imported", monitored=True
+        )
+        session.add_all([r_wanted_a, r_wanted_b, r_imported])
+        await session.flush()
+        d1 = Dump(
+            release_id=r_imported.id,
+            path="/lib/d1.zip",
+            original_filename="d1.zip",
+            size_bytes=1,
+            format="zip",
+            crc32="00000000",
+            md5="0" * 32,
+            sha1="a" * 40,
+        )
+        d2 = Dump(
+            release_id=r_imported.id,
+            path="/lib/d2.zip",
+            original_filename="d2.zip",
+            size_bytes=1,
+            format="zip",
+            crc32="00000001",
+            md5="1" * 32,
+            sha1="b" * 40,
+        )
+        session.add_all([d1, d2])
+        recent = datetime.now(UTC) - timedelta(minutes=10)
+        old = datetime.now(UTC) - timedelta(days=2)
+        session.add_all(
+            [
+                ImportHistory(
+                    source_path="/in/ok-1.zip",
+                    imported_via="manual",
+                    success=True,
+                    correlation_id=str(uuid4()),
+                    started_at=recent,
+                ),
+                ImportHistory(
+                    source_path="/in/ok-2.zip",
+                    imported_via="manual",
+                    success=True,
+                    correlation_id=str(uuid4()),
+                    started_at=recent,
+                ),
+                ImportHistory(
+                    source_path="/in/fail-1.zip",
+                    imported_via="manual",
+                    success=False,
+                    correlation_id=str(uuid4()),
+                    started_at=recent,
+                ),
+                ImportHistory(
+                    source_path="/in/old.zip",
+                    imported_via="manual",
+                    success=True,
+                    correlation_id=str(uuid4()),
+                    started_at=old,
+                ),
+            ]
+        )
+        await session.commit()
+
+    resp = await api_client.get("/api/v3/system/stats")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["totalGames"] == 2
+    assert body["totalReleases"] == 3
+    assert body["totalDumps"] == 2
+    assert body["monitoredGames"] == 1
+    assert body["wantedReleases"] == 2
+    assert body["imports24h"] == 3
+    assert body["importsSuccess24h"] == 2
+
+
+@pytest.mark.asyncio
+async def test_stats_unauthenticated_401(
+    api_client: httpx.AsyncClient,
+) -> None:
+    resp = await api_client.get("/api/v3/system/stats")
+    assert resp.status_code == 401

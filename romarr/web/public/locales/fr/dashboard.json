@@ -14,8 +14,22 @@
     "uptimeDays": "{{days}}j {{hours}}h"
   },
   "sections": {
+    "library": "Ludothèque",
     "quickActions": "Actions rapides",
     "recentActivity": "Activité récente"
+  },
+  "library": {
+    "totalGames": "Total jeux",
+    "totalReleases": "Total releases",
+    "totalDumps": "Total dumps",
+    "totalDumpsHint": "fichiers sur disque",
+    "imports24h": "Imports aujourd'hui",
+    "monitoredHint_one": "{{count}} suivi",
+    "monitoredHint_other": "{{count}} suivis",
+    "wantedHint_one": "{{count}} souhaité",
+    "wantedHint_other": "{{count}} souhaités",
+    "importsSuccessHint_one": "{{count}} réussi",
+    "importsSuccessHint_other": "{{count}} réussis"
   },
   "health": {
     "title": "Santé système",
