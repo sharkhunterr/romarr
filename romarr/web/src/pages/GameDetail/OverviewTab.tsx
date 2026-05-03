@@ -1,10 +1,11 @@
 /**
- * GameDetail > Overview tab (slice 89).
+ * GameDetail > Overview tab (slices 89, 146).
  *
  * Read-only metadata view: cover (CoverImage with gradient
- * fallback), title, summary, key facts. Edit-in-place per
- * field with the lock toggle (per the spec) lands in a
- * follow-up slice once the field-locking surface is wired.
+ * fallback), title, summary, key facts. Each FactRow with a
+ * known :data:`ProviderField` carries a lock toggle — locking
+ * a field tells the aggregator to skip it on every refresh,
+ * the constitutional anti-RomM-#1770 mechanism.
  */
 
 import { type ReactElement } from "react";
@@ -13,8 +14,10 @@ import { useTranslation } from "react-i18next";
 import { CoverImage } from "@/components/rom";
 import {
   useRefreshGameMetadata,
+  useToggleFieldLock,
   useToggleGameMonitor,
   type Game,
+  type ProviderField,
 } from "@/lib/api/queries/games";
 import { usePlatformsById } from "@/lib/api/queries/platforms";
 import { useTagsById } from "@/lib/api/queries/tags";
@@ -26,13 +29,64 @@ interface OverviewTabProps {
 interface FactRowProps {
   label: string;
   value: string | null | undefined;
+  field?: ProviderField;
+  lockedFields: readonly string[];
+  gameId: number;
+}
+
+function FieldLockButton(props: {
+  field: ProviderField;
+  locked: boolean;
+  gameId: number;
+}): ReactElement {
+  const { t } = useTranslation("game");
+  const toggle = useToggleFieldLock();
+  const onClick = (): void => {
+    toggle.mutate({
+      gameId: props.gameId,
+      field: props.field,
+      locked: !props.locked,
+    });
+  };
+  const ariaLabel = props.locked
+    ? t("overview.lock.unlockAria", { field: props.field })
+    : t("overview.lock.lockAria", { field: props.field });
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={toggle.isPending}
+      aria-pressed={props.locked}
+      aria-label={ariaLabel}
+      title={ariaLabel}
+      className={[
+        "shrink-0 rounded p-0.5 text-[0.7rem] leading-none",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+        "disabled:cursor-not-allowed disabled:opacity-60",
+        props.locked
+          ? "text-amber-400 hover:text-amber-300"
+          : "text-zinc-600 hover:text-zinc-400",
+      ].join(" ")}
+    >
+      <span aria-hidden="true">{props.locked ? "🔒" : "🔓"}</span>
+    </button>
+  );
 }
 
 function FactRow(props: FactRowProps): ReactElement {
+  const locked =
+    props.field !== undefined && props.lockedFields.includes(props.field);
   return (
     <div className="grid grid-cols-2 gap-3 border-b border-zinc-800 py-2 last:border-b-0">
-      <dt className="text-[0.65rem] uppercase tracking-wider text-zinc-500">
-        {props.label}
+      <dt className="flex items-center gap-1.5 text-[0.65rem] uppercase tracking-wider text-zinc-500">
+        <span>{props.label}</span>
+        {props.field !== undefined && (
+          <FieldLockButton
+            field={props.field}
+            locked={locked}
+            gameId={props.gameId}
+          />
+        )}
       </dt>
       <dd className="text-xs text-zinc-200">{props.value ?? "—"}</dd>
     </div>
@@ -189,18 +243,29 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
           <FactRow
             label={t("overview.fields.developer")}
             value={game.developer ?? null}
+            field="developer"
+            lockedFields={game.locked_fields ?? []}
+            gameId={game.id}
           />
           <FactRow
             label={t("overview.fields.publisher")}
             value={game.publisher ?? null}
+            field="publisher"
+            lockedFields={game.locked_fields ?? []}
+            gameId={game.id}
           />
           <FactRow
             label={t("overview.fields.releaseDate")}
             value={formatReleaseDate(game.release_date)}
+            field="release_date"
+            lockedFields={game.locked_fields ?? []}
+            gameId={game.id}
           />
           <FactRow
             label={t("overview.fields.platform")}
             value={platformLabel}
+            lockedFields={game.locked_fields ?? []}
+            gameId={game.id}
           />
           <FactRow
             label={t("overview.fields.rating")}
@@ -209,14 +274,22 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
                 ? game.rating.toFixed(1)
                 : null
             }
+            field="rating"
+            lockedFields={game.locked_fields ?? []}
+            gameId={game.id}
           />
           <FactRow
             label={t("overview.fields.ageRating")}
             value={game.age_rating ?? null}
+            field="age_rating"
+            lockedFields={game.locked_fields ?? []}
+            gameId={game.id}
           />
           <FactRow
             label={t("overview.fields.players")}
             value={formatPlayers(game, t)}
+            lockedFields={game.locked_fields ?? []}
+            gameId={game.id}
           />
           <FactRow
             label={t("overview.fields.hltb")}
@@ -225,6 +298,9 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
                 ? t("overview.hltbHours", { hours: game.hltb_main })
                 : null
             }
+            field="hltb_main"
+            lockedFields={game.locked_fields ?? []}
+            gameId={game.id}
           />
           <FactRow
             label={t("overview.fields.achievements")}
@@ -234,18 +310,30 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
                 ? String(game.achievements_count)
                 : null
             }
+            field="achievements_count"
+            lockedFields={game.locked_fields ?? []}
+            gameId={game.id}
           />
           <FactRow
             label={t("overview.fields.genres")}
             value={formatList(game.genres)}
+            field="genres"
+            lockedFields={game.locked_fields ?? []}
+            gameId={game.id}
           />
           <FactRow
             label={t("overview.fields.themes")}
             value={formatList(game.themes)}
+            field="themes"
+            lockedFields={game.locked_fields ?? []}
+            gameId={game.id}
           />
           <FactRow
             label={t("overview.fields.franchises")}
             value={formatList(game.franchises)}
+            field="franchises"
+            lockedFields={game.locked_fields ?? []}
+            gameId={game.id}
           />
         </dl>
 

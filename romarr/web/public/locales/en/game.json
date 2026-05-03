@@ -40,6 +40,10 @@
       "pending": "Refreshing…",
       "success": "Refreshed ({{changed}} fields, {{skipped}} locked)"
     },
+    "lock": {
+      "lockAria": "Lock {{field}} so the metadata aggregator stops overwriting it",
+      "unlockAria": "Unlock {{field}} so the metadata aggregator can update it again"
+    },
     "tags": {
       "label": "Tags"
     }

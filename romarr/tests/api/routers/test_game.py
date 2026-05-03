@@ -456,3 +456,154 @@ async def test_list_games_monitored_false_keeps_only_unmonitored(
     titles = [row["title"] for row in response.json()]
     assert "B" in titles
     assert "A" not in titles
+
+
+# ---------------------------------------------------------------------------
+# slice 146 — PATCH /api/v3/game/{id}/locked-fields (anti-RomM-#1770)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_patch_locked_fields_locks_a_field(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Locking ``title`` adds it to ``locked_fields`` and the
+    response surfaces the updated list."""
+    _, game_id, _ = await _seed_chain(api_engine, title="LockMe")
+
+    resp = await authed_client.patch(
+        f"/api/v3/game/{game_id}/locked-fields",
+        json={"field": "title", "locked": True},
+    )
+    assert resp.status_code == 200, resp.json()
+    body = resp.json()
+    assert body["locked_fields"] == ["title"]
+
+
+@pytest.mark.asyncio
+async def test_patch_locked_fields_unlocks_a_field(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Locking then unlocking returns the field to the unlocked
+    set (idempotent path)."""
+    _, game_id, _ = await _seed_chain(api_engine, title="UnlockMe")
+
+    await authed_client.patch(
+        f"/api/v3/game/{game_id}/locked-fields",
+        json={"field": "summary", "locked": True},
+    )
+    resp = await authed_client.patch(
+        f"/api/v3/game/{game_id}/locked-fields",
+        json={"field": "summary", "locked": False},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["locked_fields"] == []
+
+
+@pytest.mark.asyncio
+async def test_patch_locked_fields_idempotent_lock(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Re-locking an already-locked field is a no-op — no
+    duplicates in the JSON list."""
+    _, game_id, _ = await _seed_chain(api_engine, title="DoubleLock")
+
+    for _ in range(3):
+        resp = await authed_client.patch(
+            f"/api/v3/game/{game_id}/locked-fields",
+            json={"field": "developer", "locked": True},
+        )
+        assert resp.status_code == 200
+    assert resp.json()["locked_fields"] == ["developer"]
+
+
+@pytest.mark.asyncio
+async def test_patch_locked_fields_keeps_other_locks(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Toggling one field never disturbs the others. Locks for
+    ``title`` and ``summary`` survive an unlock of ``rating``
+    that wasn't even locked to begin with."""
+    _, game_id, _ = await _seed_chain(api_engine, title="MultiLock")
+
+    await authed_client.patch(
+        f"/api/v3/game/{game_id}/locked-fields",
+        json={"field": "title", "locked": True},
+    )
+    await authed_client.patch(
+        f"/api/v3/game/{game_id}/locked-fields",
+        json={"field": "summary", "locked": True},
+    )
+    resp = await authed_client.patch(
+        f"/api/v3/game/{game_id}/locked-fields",
+        json={"field": "rating", "locked": False},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["locked_fields"] == ["summary", "title"]
+
+
+@pytest.mark.asyncio
+async def test_patch_locked_fields_rejects_unknown_field(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """The body is validated against ``ProviderField`` — random
+    strings 422 instead of silently no-op'ing (which would let
+    drift creep in)."""
+    _, game_id, _ = await _seed_chain(api_engine, title="UnknownField")
+    resp = await authed_client.patch(
+        f"/api/v3/game/{game_id}/locked-fields",
+        json={"field": "not_a_real_field", "locked": True},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_patch_locked_fields_rejects_extra_keys(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    _, game_id, _ = await _seed_chain(api_engine, title="ExtraGuardLock")
+    resp = await authed_client.patch(
+        f"/api/v3/game/{game_id}/locked-fields",
+        json={"field": "title", "locked": True, "stowaway": "x"},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_patch_locked_fields_404_when_missing(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.patch(
+        "/api/v3/game/9999999/locked-fields",
+        json={"field": "title", "locked": True},
+    )
+    assert resp.status_code == 404
+    assert resp.json()["errorCode"] == "game_not_found"
+
+
+@pytest.mark.asyncio
+async def test_patch_locked_fields_unauthenticated_401(
+    api_client: httpx.AsyncClient,
+) -> None:
+    resp = await api_client.patch(
+        "/api/v3/game/1/locked-fields",
+        json={"field": "title", "locked": True},
+    )
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_patch_locked_fields_persists_across_read(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """End-to-end: lock a field, then GET the Game and verify
+    the lock survived the round-trip (so the commit really
+    landed, not just the in-memory mutation)."""
+    _, game_id, _ = await _seed_chain(api_engine, title="Persisted")
+    await authed_client.patch(
+        f"/api/v3/game/{game_id}/locked-fields",
+        json={"field": "cover", "locked": True},
+    )
+    resp = await authed_client.get(f"/api/v3/game/{game_id}")
+    assert resp.status_code == 200
+    assert resp.json()["locked_fields"] == ["cover"]

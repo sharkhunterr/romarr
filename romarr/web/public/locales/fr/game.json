@@ -40,6 +40,10 @@
       "pending": "Rafraîchissement…",
       "success": "Mis à jour ({{changed}} champs, {{skipped}} verrouillés)"
     },
+    "lock": {
+      "lockAria": "Verrouiller {{field}} pour que l'agrégateur de métadonnées cesse de l'écraser",
+      "unlockAria": "Déverrouiller {{field}} pour que l'agrégateur de métadonnées puisse le mettre à jour"
+    },
     "tags": {
       "label": "Étiquettes"
     }

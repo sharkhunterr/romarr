@@ -509,6 +509,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/game/{game_id}/locked-fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Lock or unlock one metadata field on a Game (admin only). Locked fields are skipped by the aggregator on every refresh — the constitutional anti-RomM-#1770 mechanism (FR-008). */
+        patch: operations["patch_locked_fields_api_v3_game__game_id__locked_fields_patch"];
+        trace?: never;
+    };
     "/api/v3/game/{game_id}/refresh-metadata": {
         parameters: {
             query?: never;
@@ -2604,6 +2621,21 @@ export interface components {
          * @enum {string}
          */
         DumpStatus: "verified" | "good" | "proto" | "beta" | "demo" | "sample" | "hack" | "trainer" | "translation" | "baddump" | "overdump" | "unknown";
+        /**
+         * FieldLockRequest
+         * @description PATCH /api/v3/game/{id}/locked-fields — toggle one field.
+         *
+         *     The slice-146 anti-RomM-#1770 surface. ``field`` is
+         *     constrained to :class:`ProviderField` so the only fields
+         *     the operator can lock are the ones the aggregator could
+         *     overwrite — locking an unrecognised field would be a no-op
+         *     that silently drifts.
+         */
+        FieldLockRequest: {
+            field: components["schemas"]["ProviderField"];
+            /** Locked */
+            locked: boolean;
+        };
         /** FieldPriorityEntry */
         FieldPriorityEntry: {
             /** Field Name */
@@ -4052,6 +4084,16 @@ export interface components {
             /** Rate Limit Rps */
             rate_limit_rps?: number | null;
         };
+        /**
+         * ProviderField
+         * @description Canonical field-name vocabulary used by every provider.
+         *
+         *     The aggregator's per-field priority logic is keyed on these names.
+         *     Adding a field is a configuration change (insert ``field_priority``
+         *     rows), NEVER a schema migration — see ``data-model.md``.
+         * @enum {string}
+         */
+        ProviderField: "title" | "summary" | "cover" | "genres" | "release_date" | "developer" | "publisher" | "rating" | "age_rating" | "themes" | "franchises" | "players_min" | "players_max" | "hltb_main" | "achievements_count";
         /** ProviderTestResponse */
         ProviderTestResponse: {
             /** Error */
@@ -5954,6 +5996,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DumpRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_locked_fields_api_v3_game__game_id__locked_fields_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldLockRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameRead"];
                 };
             };
             /** @description Validation Error */

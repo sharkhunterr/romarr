@@ -1,4 +1,4 @@
-"""Game + Release read endpoints (slice 86).
+"""Game + Release read + lock endpoints (slices 86, 146).
 
 Foundation already ships the :class:`Game` + :class:`Release`
 ORM models; this router is the operator-facing read surface
@@ -39,6 +39,7 @@ from romarr.api.dependencies import get_db, require_admin, require_readonly
 from romarr.auth import Principal
 from romarr.domain.models import Dump, Game, Release
 from romarr.domain.schemas import DumpRead, GameRead, ReleaseRead
+from romarr.metadata.types import ProviderField
 
 # Whitelist of sortable Game columns. Operator-facing names map
 # to ORM columns; anything else 422s at the FastAPI validator.
@@ -64,6 +65,23 @@ class GameToggleRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     monitored: bool
+
+
+class FieldLockRequest(BaseModel):
+    """PATCH /api/v3/game/{id}/locked-fields — toggle one field.
+
+    The slice-146 anti-RomM-#1770 surface. ``field`` is
+    constrained to :class:`ProviderField` so the only fields
+    the operator can lock are the ones the aggregator could
+    overwrite — locking an unrecognised field would be a no-op
+    that silently drifts.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    field: ProviderField
+    locked: bool
+
 
 router = APIRouter(prefix="/api/v3/game", tags=["Game"])
 
@@ -229,6 +247,51 @@ async def patch_game(
             },
         )
     row.monitored = body.monitored
+    await db.commit()
+    await db.refresh(row)
+    return GameRead.model_validate(row, from_attributes=True)
+
+
+@router.patch(
+    "/{game_id}/locked-fields",
+    response_model=GameRead,
+    summary=(
+        "Lock or unlock one metadata field on a Game (admin "
+        "only). Locked fields are skipped by the aggregator on "
+        "every refresh — the constitutional anti-RomM-#1770 "
+        "mechanism (FR-008)."
+    ),
+)
+async def patch_locked_fields(
+    game_id: int,
+    body: Annotated[FieldLockRequest, Body()],
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> GameRead:
+    row = (
+        await db.execute(select(Game).where(Game.id == game_id))
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "errorMessage": f"game_id={game_id} not found",
+                "errorCode": "game_not_found",
+            },
+        )
+
+    # `locked_fields` is a JSON column — copy-mutate-reassign so
+    # SQLAlchemy actually flushes the change. The membership set
+    # is canonicalised by alphabetical sort so the JSON shape
+    # stays stable across toggles.
+    field_value = body.field.value
+    current = set(row.locked_fields or [])
+    if body.locked:
+        current.add(field_value)
+    else:
+        current.discard(field_value)
+    row.locked_fields = sorted(current)
+
     await db.commit()
     await db.refresh(row)
     return GameRead.model_validate(row, from_attributes=True)

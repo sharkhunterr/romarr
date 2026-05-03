@@ -214,3 +214,38 @@ export function useToggleGameMonitor(): UseMutationResult<
     },
   });
 }
+
+export type ProviderField = components["schemas"]["ProviderField"];
+
+export interface ToggleFieldLockVariables {
+  gameId: number;
+  field: ProviderField;
+  locked: boolean;
+}
+
+/**
+ * PATCH /api/v3/game/{id}/locked-fields — toggle one field's
+ * lock state (slice 146 — anti-RomM-#1770).
+ *
+ * Locked fields are skipped by the metadata aggregator on every
+ * refresh, so the operator's manual edits survive forever. The
+ * canonical detail key is invalidated on success so the
+ * Overview tab repaints with the new lock badge immediately.
+ */
+export function useToggleFieldLock(): UseMutationResult<
+  Game,
+  ApiError,
+  ToggleFieldLockVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<Game, ApiError, ToggleFieldLockVariables>({
+    mutationFn: ({ gameId, field, locked }) =>
+      apiFetch<Game>(`/api/v3/game/${gameId}/locked-fields`, {
+        method: "PATCH",
+        json: { field, locked },
+      }),
+    onSuccess: (game) => {
+      void qc.invalidateQueries({ queryKey: ["games", "detail", game.id] });
+    },
+  });
+}

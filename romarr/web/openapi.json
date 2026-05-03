@@ -1641,6 +1641,25 @@
         "title": "DumpStatus",
         "type": "string"
       },
+      "FieldLockRequest": {
+        "additionalProperties": false,
+        "description": "PATCH /api/v3/game/{id}/locked-fields \u2014 toggle one field.\n\nThe slice-146 anti-RomM-#1770 surface. ``field`` is\nconstrained to :class:`ProviderField` so the only fields\nthe operator can lock are the ones the aggregator could\noverwrite \u2014 locking an unrecognised field would be a no-op\nthat silently drifts.",
+        "properties": {
+          "field": {
+            "$ref": "#/components/schemas/ProviderField"
+          },
+          "locked": {
+            "title": "Locked",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "field",
+          "locked"
+        ],
+        "title": "FieldLockRequest",
+        "type": "object"
+      },
       "FieldPriorityEntry": {
         "additionalProperties": false,
         "properties": {
@@ -5728,6 +5747,28 @@
         "title": "ProviderConfigUpdate",
         "type": "object"
       },
+      "ProviderField": {
+        "description": "Canonical field-name vocabulary used by every provider.\n\nThe aggregator's per-field priority logic is keyed on these names.\nAdding a field is a configuration change (insert ``field_priority``\nrows), NEVER a schema migration \u2014 see ``data-model.md``.",
+        "enum": [
+          "title",
+          "summary",
+          "cover",
+          "genres",
+          "release_date",
+          "developer",
+          "publisher",
+          "rating",
+          "age_rating",
+          "themes",
+          "franchises",
+          "players_min",
+          "players_max",
+          "hltb_main",
+          "achievements_count"
+        ],
+        "title": "ProviderField",
+        "type": "string"
+      },
       "ProviderTestResponse": {
         "additionalProperties": false,
         "properties": {
@@ -9226,6 +9267,58 @@
           }
         },
         "summary": "List every Dump that belongs to a game (joined through the game's Releases). Drives GameDetail > Files.",
+        "tags": [
+          "Game"
+        ]
+      }
+    },
+    "/api/v3/game/{game_id}/locked-fields": {
+      "patch": {
+        "operationId": "patch_locked_fields_api_v3_game__game_id__locked_fields_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "title": "Game Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FieldLockRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lock or unlock one metadata field on a Game (admin only). Locked fields are skipped by the aggregator on every refresh \u2014 the constitutional anti-RomM-#1770 mechanism (FR-008).",
         "tags": [
           "Game"
         ]
