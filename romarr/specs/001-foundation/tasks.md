@@ -44,9 +44,15 @@ and Alembic skeleton. No domain logic yet.
 - [X] T006 [SCAF] Create `src/romarr/config/settings.py` — Pydantic `BaseSettings` with
       `database_url` (default `sqlite+aiosqlite:///./romarr.db`), `hasheous_base_url`,
       `playmatch_base_url`, `hash_buffer_bytes` (default 1 MiB), env prefix `ROMARR_`.
-- [ ] T007 [SCAF] Create `src/romarr/db/base.py` — `DeclarativeBase` subclass with the
-      SQLAlchemy naming convention dict (`ix`, `uq`, `ck`, `fk`, `pk` patterns) so
-      Alembic generates portable, predictable constraint names.
+- [X] T007 [SCAF] ``DeclarativeBase`` shipped at
+      ``src/romarr/domain/base.py`` (path differs from the
+      spec — colocated with domain models). Slice 176 added
+      the SQLAlchemy ``naming_convention`` dict (``ix``,
+      ``uq``, ``ck``, ``fk``, ``pk`` patterns) to
+      ``Base.metadata`` so Alembic autogen emits stable
+      constraint names matching the hand-written migrations
+      across SQLAlchemy versions. Pinned by
+      ``tests/domain/test_naming_convention.py``.
 - [X] T008 [SCAF] Create `src/romarr/db/session.py` — async engine factory + async
       sessionmaker, configurable from `Settings.database_url`.
 - [X] T009 [SCAF] Initialize Alembic at `src/romarr/db/alembic/` (`alembic init`),
