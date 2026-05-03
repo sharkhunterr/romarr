@@ -59,8 +59,11 @@ function parseDirectionParam(raw: string | null): SortDirection {
 export function LibraryPage(): ReactElement {
   const { t } = useTranslation("library");
   const [searchParams, setSearchParams] = useSearchParams();
-  const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const urlQuery = searchParams.get("q") ?? "";
+  // Local input state seeded from the URL on mount; debounced
+  // commits write back to the URL so the API call key (and the
+  // shareable link) only updates once the operator pauses.
+  const [query, setQuery] = useState(urlQuery);
   const platformFilter = parsePlatformParam(searchParams.get("platform"));
   const monitoredOnly = searchParams.get("monitoredOnly") === "true";
   const sortKey = parseSortParam(searchParams.get("sort"));
@@ -115,13 +118,25 @@ export function LibraryPage(): ReactElement {
     );
   };
 
+  // Debounce the URL write — keystrokes don't pollute history,
+  // and the API key (and shareable link) settles 200 ms after
+  // the operator stops typing.
   useEffect(() => {
-    const handle = window.setTimeout(
-      () => setDebouncedQuery(query.trim()),
-      200,
-    );
+    const trimmed = query.trim();
+    if (trimmed === urlQuery) return;
+    const handle = window.setTimeout(() => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (trimmed === "") next.delete("q");
+          else next.set("q", trimmed);
+          return next;
+        },
+        { replace: true },
+      );
+    }, 200);
     return () => window.clearTimeout(handle);
-  }, [query]);
+  }, [query, urlQuery, setSearchParams]);
 
   const platforms = usePlatforms();
 
@@ -131,16 +146,16 @@ export function LibraryPage(): ReactElement {
       sort: sortKey,
       direction: sortDirection,
     };
-    if (debouncedQuery.length > 0) out.q = debouncedQuery;
+    if (urlQuery.length > 0) out.q = urlQuery;
     if (platformFilter !== ALL_PLATFORMS) out.platformId = platformFilter;
     if (monitoredOnly) out.monitored = true;
     return out;
-  }, [debouncedQuery, platformFilter, monitoredOnly, sortKey, sortDirection]);
+  }, [urlQuery, platformFilter, monitoredOnly, sortKey, sortDirection]);
 
   const games = useGames(params);
 
   const filtersActive =
-    debouncedQuery.length > 0 ||
+    urlQuery.length > 0 ||
     platformFilter !== ALL_PLATFORMS ||
     monitoredOnly;
 
@@ -284,7 +299,7 @@ export function LibraryPage(): ReactElement {
           }
           description={
             filtersActive
-              ? t("noResults.body", { q: debouncedQuery })
+              ? t("noResults.body", { q: urlQuery })
               : t("empty.body")
           }
         />
