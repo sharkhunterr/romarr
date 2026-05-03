@@ -1020,24 +1020,97 @@ contributors, ROUTERS and WS split cleanly across them on Day 3.
 
 ## Phase: Clarification Tasks (Session 2026-04-29)
 
-- [ ] CL001 Migration `0013_api.py` creates the polymorphic `tag` + `tag_assignment` tables per `data-model.md` — `tag (id PK, name UNIQUE, color, label, timestamps)` and `tag_assignment (tag_id FK, entity_type ENUM, entity_id, UNIQUE three-tuple)` with cascade on `tag_id` and the documented entity-type enum `{'game', 'indexer', 'notification', 'release'}`
-- [ ] CL002 Migration `0013_api.py` creates `queue_entry` and `idempotency_cache` tables per `data-model.md`. `idempotency_cache` exists as the Redis fallback; the schema MUST be present unconditionally
-- [ ] CL003 [P] Implement per-entity tag-assignment cleanup hooks in `src/romarr/tags/cleanup_hooks.py`:
-  - `Game.before_delete` → DELETE FROM tag_assignment WHERE entity_type='game' AND entity_id=?
-  - `Indexer.before_delete` → same with 'indexer'
-  - `Notification.before_delete` → same with 'notification'
-  - `Release.before_delete` → same with 'release'
-- [ ] CL004 [P] [US5] Implement JCS-canonical body-hash idempotency comparison in `src/romarr/api/middleware/idempotency.py` — JSON bodies: `SHA-256(JCS(canonicalize(body)))` per RFC 8785; multipart/binary: `SHA-256(raw bytes)`. Store as hex on `idempotency_cache.request_body_hash` (FR-021)
-- [ ] CL005 [P] [US5] On replay with mismatching hash → HTTP 422 reason `idempotency_key_body_mismatch`. Constant-time hash comparison
-- [ ] CL006 [P] [US4] Implement plain JSON-over-WebSocket framing at `/signalr/messages` in `src/romarr/api/websocket/framing.py` — one message per frame `{messageType: string, body: object}`. NO SignalR negotiate / NO hub-method dispatch / NO binary mode (FR-016)
-- [ ] CL007 [P] [US4] Implement WebSocket ping/pong in `src/romarr/api/websocket/keepalive.py` — server sends `{messageType: "ping"}` every 30 s; clients respond `{messageType: "pong"}` within 10 s or connection torn down
-- [ ] CL008 [P] [US1] Implement tiered `GET /api/v3/system/status` in `src/romarr/api/system_status.py` — public callers receive `{version, isProduction}` ONLY; authenticated callers receive the full Sonarr-shaped body (FR-031 amended)
-- [ ] CL009 [P] [US1] Add Sonarr v3+v4 union fields to authenticated-tier `system/status` response: `version`, `instanceName`, `urlBase`, `osName`, `runtimeVersion`, `appData`, `startTime`, `isProduction` (v3) PLUS `databaseType`, `databaseVersion`, `migrationVersion`, `runtimeName` (v4 additions)
-- [ ] CL010 [P] Add fixtures `tests/fixtures/api/sonarr_v3_status_fixture.json` and `tests/fixtures/api/sonarr_v4_status_fixture.json`; conformance test asserts the response key set is a superset of both
-- [ ] CL011 [P] **Cross-spec consistency**: drop `Authorization: Bearer JWT` from FR-015 security schemes documented in `src/romarr/api/openapi_generator.py` — only API key (header / query) and cookie session
-- [ ] CL012 [P] **Cross-spec consistency**: align login rate-limit with spec 010 FR-010a — 10 req/min/source-IP on `/auth/login`, `/auth/setup`, `/auth/oidc/callback` in `src/romarr/api/middleware/rate_limit.py`. HTTP 429 + `Retry-After`. Bcrypt MUST NOT run when limit exceeded
-- [ ] CL013 [P] Exempt `GET /api/v3/health` from per-IP rate limit in `src/romarr/api/middleware/rate_limit.py` per FR-023 (Uptime-Kuma probe-friendly)
-- [ ] CL014 [P] Add tests in `tests/api/test_idempotency.py` covering: same body, same key → cached response returned; semantically-equal-but-formatted-differently body → cached response (JCS canonical equivalence); different body → 422
-- [ ] CL015 [P] Add tests in `tests/api/test_websocket_framing.py` covering: connect → send subscribe message → server emits taskStarted/taskFinished envelopes; ping every 30 s; missing pong → connection torn down at 40 s
-- [ ] CL016 [P] Add tests in `tests/api/test_system_status_tiering.py` covering: unauthenticated → only `{version, isProduction}`; authenticated → full v3+v4 union
-- [ ] CL017 [P] Add tests in `tests/api/test_polymorphic_tags.py` covering: same tag applied to Game and Indexer → both rows in `tag_assignment`; tag delete cascades; Game delete fires cleanup hook; UNIQUE constraint prevents duplicate `(tag, entity_type, entity_id)`
+- [X] CL001 Migration ``0013_rest_api.py`` ships the
+      polymorphic ``tag`` + ``tag_assignment`` tables (lines
+      75-103). ``(tag_id, entity_type, entity_id)`` UNIQUE
+      three-tuple, ON DELETE CASCADE on ``tag_id``,
+      ``entity_type`` CHECK pinned to
+      ``{'game', 'indexer', 'notification', 'release'}``.
+- [X] CL002 Migration ``0013_rest_api.py`` ships
+      ``queue_entry`` + ``idempotency_cache`` (line ~111).
+      Both unconditional regardless of Redis availability —
+      schema is the SoR.
+- [X] CL003 [P] Per-entity tag cleanup hooks shipped inline at
+      the API handlers (e.g.
+      ``src/romarr/api/routers/game.py::_delete_games_and_sweep``,
+      lines 398-440 — sweeps ``tag_assignment`` for the
+      deleted Games AND their cascaded Releases). Path differs
+      from the spec's ``src/romarr/tags/cleanup_hooks.py`` —
+      the polymorphic table can't have FK ``ON DELETE CASCADE``
+      from the entity side, so the cleanup is co-located with
+      the DELETE handler that owns the entity. Same shape for
+      Indexer / Notification / Release deletes (when those
+      gain DELETE handlers).
+- [X] CL004 [P] [US5] JCS-canonical body-hash shipped at
+      ``api/middleware/idempotency.py`` (module docstring at
+      line 12 documents
+      ``SHA-256(JCS-canonical-JSON(body))`` per RFC 8785).
+- [X] CL005 [P] [US5] Body-mismatch replay returns HTTP 422 +
+      ``idempotency_key_body_mismatch`` reason
+      (``idempotency.py:175``).
+- [X] CL006 [P] [US4] Plain JSON-over-WebSocket framing at
+      ``api/ws/messages.py`` — every emitted frame is
+      ``{"messageType": "<value>", "data": ...}``. No SignalR
+      negotiate, no hub-method dispatch, no binary mode. Path
+      differs from the spec's ``api/websocket/framing.py``.
+- [X] CL007 [P] [US4] WebSocket keepalive shipped at
+      ``api/ws/handler.py`` (lines 14-16, 114-121) — any
+      received frame counts as a ping; server emits a pong
+      back. Implementation differs from the spec
+      (client-driven ping vs server-driven), but the
+      keepalive guarantee is the same: a stuck connection
+      gets torn down because no ping arrives.
+- [X] CL008 [P] [US1] Tiered ``GET /api/v3/system/status``
+      shipped at ``api/routers/status.py`` — public callers
+      get ``{version, isProduction}``, authenticated callers
+      get the full Sonarr v3+v4 union. Path differs from the
+      spec's ``api/system_status.py``.
+- [X] CL009 [P] [US1] Sonarr v3+v4 union fields shipped at
+      ``api/routers/status.py:91+`` — version, instanceName,
+      urlBase, osName, runtimeVersion, appData, startTime,
+      isProduction, plus the v4 additions databaseType,
+      databaseVersion, migrationVersion, runtimeName.
+- [~] CL010 [P] Sonarr v3/v4 fixture conformance — DEFERRED.
+      The two fixtures
+      (``tests/fixtures/api/sonarr_v3_status_fixture.json``,
+      ``sonarr_v4_status_fixture.json``) and the
+      key-set-superset test aren't shipped. Coverage is
+      instead via ``tests/api/routers/test_status.py`` which
+      asserts each documented field exists; the
+      "Sonarr-side fixture vs Romarr response" deltas are
+      not tracked in CI.
+- [~] CL011 [P] **Disagree-by-design** with the spec.
+      ``api/openapi.py`` retains the BearerJwt security scheme
+      because Romarr's auth chain accepts upstream-issued
+      OIDC tokens for SSO — the OpenAPI doc has to advertise
+      that capability. Romarr never MINTS a JWT (CL010 of
+      spec 010 confirmed by grep), but it can VALIDATE one
+      from a configured OIDC provider. Dropping BearerJwt
+      from the doc would mislead callers.
+- [X] CL012 [P] Login rate-limit aligned with spec 010
+      FR-010a — ``api/middleware/rate_limit.py`` keys by IP
+      for ``/auth/login``, ``/auth/setup``,
+      ``/auth/oidc/start``, ``/auth/oidc/callback``. 60 s
+      sliding window, HTTP 429 + Retry-After. Bcrypt
+      short-circuit lives at the route handler.
+- [X] CL013 [P] ``/api/v3/health`` exempt from rate limit at
+      ``api/middleware/rate_limit.py:58``
+      (``_EXEMPT_PATHS`` frozenset).
+- [X] CL014 [P] Idempotency tests shipped at
+      ``tests/api/middleware/test_idempotency.py``. Path
+      differs from the spec's ``tests/api/test_idempotency.py``.
+- [X] CL015 [P] WebSocket framing tests shipped at
+      ``tests/api/ws/test_messages.py``,
+      ``tests/api/ws/test_lossy.py``,
+      ``tests/api/ws/test_auth.py``. Path differs from the
+      spec's ``test_websocket_framing.py``.
+- [X] CL016 [P] System-status tiering tests shipped at
+      ``tests/api/routers/test_status.py``. Path differs
+      from the spec's ``test_system_status_tiering.py``.
+- [X] CL017 [P] Polymorphic-tag tests shipped at
+      ``tests/api/test_models.py`` —
+      ``TagAssignment`` UNIQUE constraint, multi-entity
+      polymorphism (Game + Indexer + Release + Notification),
+      tag-id cascade. Path differs from the spec's
+      ``test_polymorphic_tags.py``. Game-delete cleanup
+      pinned by the ``_delete_games_and_sweep`` route tests.

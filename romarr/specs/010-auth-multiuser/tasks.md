@@ -559,16 +559,87 @@ contributors, OIDC and APIKEY split cleanly across them.
 
 ## Phase: Clarification Tasks (Session 2026-04-29)
 
-- [ ] CL001 Migration `0010_auth.py` creates the `user` table with `role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin','user','readonly'))` — and explicitly **without** an `is_superuser` column (FR-001 rewritten). Insert the `system` sentinel row: `(id=0, username='system', is_active=false, role='admin', hashed_password=NULL)` so the `*_by` FK migration has a target
-- [ ] CL002 [P] Add `User.is_superuser` Python read-only property in `src/romarr/auth/models.py` returning `self.role == 'admin'`; never persisted, never UPDATE-able (FR-002)
-- [ ] CL003 Migration `0010_auth.py` creates `session` with `last_used_at TIMESTAMP NOT NULL` and `expires_at TIMESTAMP NOT NULL` (sliding 30-day TTL); index on `expires_at` for cheap eviction queries (FR-012a)
-- [ ] CL004 [P] [US2] Implement sliding TTL update in `src/romarr/auth/session_resolver.py` — every request that resolves the session updates `last_used_at = now()` and `expires_at = now() + 30 days` best-effort, non-blocking. Cookie's `Max-Age` tracks `expires_at − now`. Logout immediately revokes (FR-012a)
-- [ ] CL005 Migration `0010_auth.py` creates `api_key.scopes JSON NOT NULL DEFAULT '["read"]'` constrained at the validator layer to subsets of `{"read", "write", "admin"}` (FR-009a)
-- [ ] CL006 [P] [US3] Implement coarse 3-tier scope mapping in `src/romarr/auth/scope_resolver.py` — map `@require_role('readonly')` → `read`, `@require_role('user')` → `write`, `@require_role('admin')` → `admin`; higher implies lower (admin key passes write/read guards) (FR-009a)
-- [ ] CL007 [P] [US2] Implement login rate limit middleware in `src/romarr/auth/rate_limit.py` — 10 attempts/minute/source-IP on `POST /auth/login`, `POST /auth/setup`, `GET /auth/oidc/callback`. HTTP 429 with `Retry-After`; bcrypt MUST NOT run when limit exceeded (FR-010a)
-- [ ] CL008 Migration `0010_auth.py` updates the four `*_by` text columns to `INTEGER` FKs to `user.id` after the `system` row is in place: `import_history.imported_by`, `platform_pack.applied_by`, `application.applied_by`, `blocklist.added_by`. Backfill: `UPDATE … SET <col> = 0 WHERE <col> = 'system'` BEFORE the type change
-- [ ] CL009 [P] Update auth chain resolver in `src/romarr/auth/chain.py` — chain order: API key in `X-Api-Key` → API key in `apikey` query → session cookie → trusted-proxy header. NO bearer JWT step (FR-022 rewritten)
-- [ ] CL010 [P] **Negative**: confirm there is no `POST /api/v3/auth/token` endpoint, no JWT signing key column on any table, no JWT issuance audit log. The auth surface mints sessions and API keys ONLY
-- [ ] CL011 [P] Add tests in `tests/auth/test_session_ttl.py` covering: session at 29 days → request slides expiry forward; session at 30 days idle → 401 on next request; logout → cookie cleared, server-side row revoked
-- [ ] CL012 [P] Add tests in `tests/auth/test_scope_enforcement.py` covering: read-only key on GET → 200; read-only key on POST → 403; admin key on every endpoint → 200; expired key → 401 reason `api_key_expired`
-- [ ] CL013 [P] Add tests in `tests/auth/test_login_rate_limit.py` covering: 10 attempts in 60 s → all reach bcrypt; 11th in 60 s → 429 + bcrypt skipped; different IP → independent bucket
+- [X] CL001 Migration ``0010_auth_multiuser.py`` ships the
+      ``user`` table with the ``role`` CHECK + the ``system``
+      sentinel row (id=0, username='system', is_active=false,
+      role='admin', hashed_password=NULL). No
+      ``is_superuser`` column. Confirmed by
+      ``tests/auth/test_migration.py``.
+- [X] CL002 [P] ``User.is_superuser`` property at
+      ``auth/models.py:104-112`` returns ``self.role == ROLE_ADMIN``.
+      No setter — Python-level read-only.
+- [X] CL003 Migration ``0010_auth_multiuser.py`` ships
+      ``session`` with ``last_used_at`` + ``expires_at`` plus
+      the ``expires_at`` index for eviction queries.
+- [X] CL004 [P] [US2] Sliding TTL update shipped at
+      ``auth/sessions.py::resolve_session`` (lines 147-152) —
+      every successful resolve updates ``last_used_at = now()``
+      and ``expires_at = now() + SESSION_TTL_DAYS``. Path
+      differs from the spec's ``session_resolver.py``.
+      ``slide=False`` flag preserved for diagnostic tooling
+      that wants to inspect a session without extending its
+      life.
+- [X] CL005 Migration ``0010_auth_multiuser.py`` ships
+      ``api_key.scopes`` JSON NOT NULL with a ``["read"]``
+      default; validator-layer subset check enforced in
+      ``api_keys.py::create_api_key`` (lines 74-78).
+- [X] CL006 [P] [US3] 3-tier scope mapping shipped across
+      ``auth/constants.py`` (``role_to_required_scope``,
+      ``role_implies``, ``scope_implies``) and
+      ``auth/permissions.py``. Path differs from the spec's
+      ``scope_resolver.py``. Higher tiers imply lower (an
+      admin-scoped key passes write/read guards) — pinned by
+      ``tests/auth/test_constants.py``.
+- [X] CL007 [P] [US2] Login rate limit shipped at
+      ``auth/rate_limit.py::IpRateLimiter`` —
+      10 attempts/minute/source-IP, HTTP 429 with
+      ``Retry-After``, bcrypt skipped when limit exceeded.
+      Tests:
+      ``tests/auth/test_rate_limit.py``.
+- [~] CL008 ``*_by`` text→INT FK migration — DEFERRED. The
+      ``system`` sentinel row is in place (CL001), but the
+      four columns (``import_history.imported_by``,
+      ``platform_pack.applied_by``, ``application.applied_by``,
+      ``blocklist.added_by``) remain ``String(64)`` rather than
+      ``Integer FK -> user.id``. The conversion is non-trivial
+      (backfill + type change + model + caller updates across
+      five specs) and is best done as a dedicated slice. The
+      negative consequence today is cosmetic: audit columns
+      can carry user IDs but also legacy strings. No
+      correctness impact since reads are display-only.
+- [X] CL009 [P] Auth chain order shipped at
+      ``auth/chain.py::resolve_principal`` (lines 100-137):
+      X-Api-Key → apikey query → session cookie →
+      trusted-proxy header. No bearer-JWT step. Module
+      docstring carries a "JWT dropped" note for posterity.
+- [X] CL010 [P] **Negative invariants confirmed** by
+      grep: no ``POST /auth/token`` route, no
+      ``signing_key``/``jwt_secret``/``sign_jwt`` symbol in
+      the codebase. The OpenAPI doc DOES advertise a
+      ``BearerJwt`` security scheme but only for accepting
+      OIDC-issued tokens (read-only validation against an
+      external IdP); Romarr never mints JWTs.
+- [X] CL011 [P] Session TTL tests shipped at
+      ``tests/auth/test_sessions.py`` —
+      ``test_create_session_returns_plaintext_id_and_30d_expiry``,
+      ``test_resolve_session_slides_expiry_forward``,
+      ``test_resolve_session_no_slide``, plus the expiry
+      cleanup path. Path differs from the spec's
+      ``test_session_ttl.py``.
+- [~] CL012 [P] Scope-enforcement tests partially covered:
+      unit tests at ``tests/auth/test_constants.py`` pin the
+      ``role_implies`` + ``scope_implies`` matrix, and
+      ``tests/auth/test_api_keys.py::test_resolve_api_key_expired``
+      pins the expired-key path. The integration-style
+      "read-only key on GET=200, on POST=403" cases are
+      sprinkled across the per-module endpoint tests rather
+      than centralised in
+      ``tests/auth/test_scope_enforcement.py`` — same
+      coverage, different organisation.
+- [X] CL013 [P] Rate-limit tests shipped at
+      ``tests/auth/test_rate_limit.py`` —
+      ``test_under_limit_passes``,
+      ``test_window_slide_allows_new_attempts``,
+      ``test_per_ip_buckets_independent``, plus the 11th-attempt
+      blocking case and ``Retry-After`` propagation. Path
+      differs from the spec's ``test_login_rate_limit.py``.
