@@ -26,11 +26,13 @@ provider framework, and hardening sit around them.
 **Purpose**: extend the project with the metadata-layer skeleton, dependencies, and
 test harness — no provider logic yet.
 
-- [ ] T001 [SCAF] Update `pyproject.toml` — add runtime deps (`cryptography`,
-      `Pillow`, `python-multipart`) and dev deps (`respx` already present from
-      foundation). Note: `cryptography` and `python-multipart` already shipped via
-      auth/foundation; `Pillow` deferred until the cover-validation slice
-      actually needs it.
+- [~] T001 [SCAF] Runtime deps: ``cryptography>=42.0`` and
+      ``python-multipart>=0.0.27`` shipped via the
+      auth/foundation baseline; verified in pyproject.toml.
+      ``Pillow`` deliberately deferred — cover validation
+      currently checks content-type at the HTTP layer
+      (slice 160) which is sufficient until pixel-level
+      validation becomes a real requirement.
 - [X] T002 [P] [SCAF] Create `src/romarr/metadata/__init__.py` exposing
       `refresh_game_metadata`, `Aggregator`, and the provider registry.
 - [X] T003 [P] [SCAF] Create `src/romarr/metadata/errors.py` — `ProviderError`,
@@ -86,9 +88,16 @@ encryption helper.
       `src/romarr/domain/models/metadata.py`) — `MetadataProviderConfig`,
       `MetadataCache`, `FieldPriority` SQLAlchemy 2.0 models matching
       `data-model.md`.
-- [ ] T014 [P] [PERS] Create `src/romarr/metadata/schemas.py` — three Pydantic
-      schemas per entity (`*Read/*Create/*Update`). (Deferred to API stub
-      slice — schemas are only consumed by the FastAPI routers.)
+- [~] T014 [P] [PERS] Pydantic schemas for the metadata
+      entities ship inline alongside their FastAPI routers
+      (``metadata/api/providers.py`` exposes
+      ``ProviderConfigRead``; ``metadata/api/field_priority.py``
+      exposes the field-priority shapes; ``metadata/api/lookup.py``
+      exposes the lookup row shape). The dedicated
+      ``metadata/schemas.py`` module the spec called for never
+      materialised because every consumer is in
+      ``metadata/api/`` — colocating kept the schemas next
+      to the routers that use them.
 - [X] T015 [PERS] Extend `src/romarr/domain/models/game.py` with
       `needs_metadata_refresh: Mapped[bool]` (default false). (Already shipped
       as part of foundation 0001 baseline — every metadata-target column was

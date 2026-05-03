@@ -84,6 +84,20 @@ class Settings(BaseSettings):
         description="Root data directory for covers, backups, and runtime files.",
     )
 
+    # Spec 003 — Platform Packs
+    builtin_pack_path: str | None = Field(
+        default=None,
+        description=(
+            "Spec 003 T005 — explicit path to the built-in "
+            "Platform Pack YAML. When unset, the resolver "
+            "falls back to /opt/romarr/builtin-packs/ and the "
+            "wheel resource. Setting this overrides the "
+            "env-only ``ROMARR_BUILTIN_PACK_PATH`` (which now "
+            "feeds this field via the SettingsConfigDict env "
+            "prefix)."
+        ),
+    )
+
     # API middleware (spec 013)
     gzip_min_size_bytes: int = Field(
         default=1024,

@@ -119,7 +119,42 @@ def test_resolve_path_honors_env_override(
     fake = tmp_path / "operator-builtin.yaml"
     fake.write_text("pack_version: '2026.04.001'\nschema_version: 1\nplatforms: []\n")
     monkeypatch.setenv("ROMARR_BUILTIN_PACK_PATH", str(fake))
-    assert resolve_builtin_pack_path() == fake
+    # Settings cache may already be primed by another test; clear
+    # it so the env override is picked up.
+    from romarr.config.settings import get_settings
+
+    get_settings.cache_clear()
+    try:
+        assert resolve_builtin_pack_path() == fake
+    finally:
+        get_settings.cache_clear()
+
+
+def test_resolve_path_honors_typed_settings_field(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """T005 / slice 174: the typed ``Settings.builtin_pack_path``
+    field — populated from ``ROMARR_BUILTIN_PACK_PATH`` via the
+    Pydantic Settings env-prefix — is consulted before the
+    wheel-resource fallback."""
+    fake = tmp_path / "from-settings.yaml"
+    fake.write_text(
+        "pack_version: '2026.04.001'\nschema_version: 1\nplatforms: []\n"
+    )
+    monkeypatch.setenv("ROMARR_BUILTIN_PACK_PATH", str(fake))
+    monkeypatch.setenv(
+        "ROMARR_AUTH_SECRET_KEY",
+        "test-only-secret-key-do-not-use-in-prod",
+    )
+    from romarr.config.settings import get_settings
+
+    get_settings.cache_clear()
+    try:
+        # Sanity-check the typed field actually surfaces.
+        assert get_settings().builtin_pack_path == str(fake)
+        assert resolve_builtin_pack_path() == fake
+    finally:
+        get_settings.cache_clear()
 
 
 def test_resolve_path_returns_wheel_resource_when_unset(

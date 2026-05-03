@@ -48,7 +48,28 @@ def resolve_builtin_pack_path() -> Path | None:
     Returns ``None`` when no candidate file exists. Callers MUST treat
     that as a benign "operator stripped the built-in pack" condition
     rather than a hard error (FR-019).
+
+    Slice 174 / T005 — the typed ``Settings.builtin_pack_path``
+    field (loaded from ``ROMARR_BUILTIN_PACK_PATH`` via the
+    Pydantic Settings env-prefix) takes precedence over the
+    bare ``os.environ`` lookup. The bare lookup is kept as a
+    fallback so older deployments that set the env var
+    without restarting still see it picked up before the
+    settings cache primes.
     """
+    from romarr.config.settings import get_settings
+
+    try:
+        settings_path = get_settings().builtin_pack_path
+    except Exception:
+        # Settings construction can fail in test contexts that
+        # haven't seeded the required ``ROMARR_AUTH_SECRET_KEY``;
+        # fall through to the bare env lookup below.
+        settings_path = None
+
+    if settings_path:
+        candidate = Path(settings_path)
+        return candidate if candidate.is_file() else None
     if env := os.environ.get("ROMARR_BUILTIN_PACK_PATH"):
         candidate = Path(env)
         return candidate if candidate.is_file() else None

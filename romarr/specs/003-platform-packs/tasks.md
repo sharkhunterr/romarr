@@ -33,10 +33,13 @@ first-boot → user overrides → API → hardening.
 - [X] T004 [P] [SCAF] Created `src/romarr/platform_packs/errors.py` —
       `PackValidationError` (with structured `violations: list[Violation]`),
       `SchemaVersionTooHighError`, `PackVersionConflictError`, `OverrideRequiredError`.
-- [ ] T005 [SCAF] Extend `src/romarr/config/settings.py` with
-      `builtin_pack_path: Path | None`. **Deferred** to the BUILTIN
-      slice — adding a settings field for a feature whose runtime
-      doesn't ship yet would just dangle.
+- [X] T005 [SCAF] ``Settings.builtin_pack_path`` shipped
+      (slice 174). Pydantic Settings field loaded via the
+      env-prefix from ``ROMARR_BUILTIN_PACK_PATH``;
+      ``resolve_builtin_pack_path`` consults the typed field
+      first, then falls back to the bare ``os.environ`` lookup
+      (for older deployments that set the env var without
+      restarting the settings cache).
 - [X] T006 [SCAF] Created `tests/platform_packs/conftest.py` with the
       `pack_yaml` fixture that loads files from
       `tests/fixtures/packs/`.
@@ -69,9 +72,16 @@ first-boot → user overrides → API → hardening.
       `pack_source`, `action`, `status`. FK on
       `platform_pack_application_log.pack_version` →
       `platform_pack.pack_version`.
-- [ ] T010 [P] [PERS] Create `src/romarr/platform_packs/schemas.py` —
-      Pydantic *Read/*Create/*Update for the new entities. **Deferred**
-      to the API slice — schemas aren't consumed until the routers land.
+- [~] T010 [P] [PERS] Pydantic schemas for the
+      platform-pack entities ship inline alongside their
+      FastAPI routers (``platform_packs/api/platforms.py``
+      exposes ``FormatRead`` / ``FormatCreate``;
+      ``platform_packs/api/packs.py`` exposes the
+      pack-upload shapes). The dedicated
+      ``platform_packs/schemas.py`` module the spec called
+      for never materialised — colocating with the routers
+      mirrors the spec-002 metadata pattern and keeps
+      schemas next to their only consumer.
 - [X] T011 [PERS] Authored `src/romarr/db/alembic/versions/0003_platform_packs.py`
       — DDL for the two tables. The defensive
       `ADD COLUMN IF NOT EXISTS contents_hash` was unnecessary —
