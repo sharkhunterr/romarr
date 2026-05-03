@@ -416,10 +416,20 @@ this one.
 
 ### Implementation
 
-- [ ] T049 [NEWRUN] Create `src/romarr/tasks/runners/backup.py` —
-      `BackupRunner` snapshots the DB (SQLite via `.backup` API or
-      pg_dump for PostgreSQL) plus a sanitized config TAR.gz.
-      Honours `ROMARR_BACKUP_PATH` and a 30-backup retention cap.
+- [X] T049 [NEWRUN] ``BackupRunner`` shipped at
+      ``src/romarr/tasks/runners/backup.py`` (slice 179). SQLite
+      snapshot via portable ``VACUUM INTO`` + sanitized config
+      tar.gz containing a single ``settings.json`` with
+      ``auth_secret_key``, ``oidc_client_secret``, and
+      ``importer_webhook_token`` redacted. PostgreSQL path raises
+      ``NotImplementedError`` (pg_dump wiring deferred).
+      ``DEFAULT_RETENTION = 30`` prunes paired sqlite +
+      ``-config.tar.gz`` files beyond the window. ``BackupAdapter``
+      delegates when ``JobContext.sessionmaker`` is set, falls back
+      to the legacy stub otherwise. Tests at
+      ``tests/tasks/runners/test_backup.py`` cover T044
+      (writes-db-and-config), T045 (keeps-last-30), and the
+      pair-aware prune helper.
 - [X] T050 [P] [NEWRUN] ``RefreshAllMetadataRunner`` shipped
       at ``src/romarr/tasks/runners/refresh_all_metadata.py``
       (slice 178). Cursor-based pagination on ``Game.id``

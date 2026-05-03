@@ -225,11 +225,46 @@ class DatUpdateAdapter(_AdapterBase):
 
 
 class BackupAdapter(_AdapterBase):
-    """Wraps the backup runner — backs up the DB + config to
-    ``<data>/backups/`` per FR-027a."""
+    """Wraps the backup runner — snapshots DB + config to
+    ``<data>/backups/`` per FR-027a (slice 179 / spec 012 T049).
+
+    When the JobContext exposes a ``sessionmaker`` the adapter
+    calls :func:`run_backup` directly; older test contexts
+    that don't supply one fall through to the legacy stub
+    behavior so the scheduler dispatch path stays exercised.
+    """
 
     def __init__(self) -> None:
         super().__init__(job_id="Backup")
+
+    async def _run(self, context: JobContext) -> JobResult:
+        from pathlib import Path
+
+        from romarr.config.settings import get_settings
+        from romarr.tasks.runners.backup import run_backup
+
+        sessionmaker = getattr(context, "sessionmaker", None)
+        if sessionmaker is None:
+            return JobResult(
+                status=JobStatus.SUCCESS,
+                summary={"stub": True},
+            )
+        settings = get_settings()
+        backup_dir = Path(settings.backup_path)
+        async with sessionmaker() as session:
+            result = await run_backup(
+                session,
+                backup_dir=backup_dir,
+                settings=settings,
+            )
+        return JobResult(
+            status=JobStatus.SUCCESS,
+            summary={
+                "db_path": str(result.db_path),
+                "config_path": str(result.config_path),
+                "pruned_count": len(result.pruned),
+            },
+        )
 
 
 class LibraryScanAdapter(_AdapterBase):
