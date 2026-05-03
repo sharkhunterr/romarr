@@ -393,6 +393,18 @@
         "confirmBody": "{{username}} perdra immédiatement l'accès. Ses clés API et notifications sont révoquées.",
         "confirm": "Supprimer",
         "cancel": "Annuler"
+      },
+      "create": {
+        "title": "Ajouter un nouvel utilisateur",
+        "usernameLabel": "Nom d'utilisateur",
+        "passwordLabel": "Mot de passe",
+        "emailLabel": "Email",
+        "emailPlaceholder": "optionnel",
+        "roleLabel": "Rôle",
+        "activeLabel": "Actif (l'utilisateur peut se connecter)",
+        "submit": "Créer l'utilisateur",
+        "pending": "Création…",
+        "success": "{{username}} créé. Il peut se connecter maintenant."
       }
     }
   },

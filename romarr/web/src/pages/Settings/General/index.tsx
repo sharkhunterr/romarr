@@ -18,6 +18,7 @@ import { useUsers } from "@/lib/api/queries/users";
 
 import { ApiKeyRow } from "./ApiKeyRow";
 import { CreateApiKeyForm } from "./CreateApiKeyForm";
+import { CreateUserForm } from "./CreateUserForm";
 import { UserRow } from "./UserRow";
 
 export function GeneralPage(): ReactElement {
@@ -78,6 +79,8 @@ export function GeneralPage(): ReactElement {
           <p className="text-[0.7rem] text-zinc-500">
             {t("general.users.subtitle")}
           </p>
+
+          <CreateUserForm />
 
           {users.isLoading && <ListSkeleton rows={2} />}
           {users.isError && (

@@ -393,6 +393,18 @@
         "confirmBody": "{{username}} will lose access immediately. Their API keys and notifications are revoked.",
         "confirm": "Delete",
         "cancel": "Cancel"
+      },
+      "create": {
+        "title": "Add a new user",
+        "usernameLabel": "Username",
+        "passwordLabel": "Password",
+        "emailLabel": "Email",
+        "emailPlaceholder": "optional",
+        "roleLabel": "Role",
+        "activeLabel": "Active (the user can sign in)",
+        "submit": "Create user",
+        "pending": "Creating…",
+        "success": "{{username}} created. They can sign in now."
       }
     }
   },
