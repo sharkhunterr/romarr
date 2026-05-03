@@ -18,8 +18,9 @@
  * actionable.
  */
 
-import { useState, type ReactElement } from "react";
+import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 import { CustomFormatsTab } from "./CustomFormatsTab";
 import { DumpTab } from "./DumpTab";
@@ -35,6 +36,19 @@ type Tab =
   | "language"
   | "naming"
   | "custom-formats";
+
+const TAB_SET: ReadonlySet<Tab> = new Set<Tab>([
+  "quality",
+  "region",
+  "dump",
+  "language",
+  "naming",
+  "custom-formats",
+]);
+
+function parseTabParam(raw: string | null): Tab {
+  return raw !== null && TAB_SET.has(raw as Tab) ? (raw as Tab) : "quality";
+}
 
 const TABS: readonly Tab[] = [
   "quality",
@@ -93,7 +107,20 @@ function TabButton(props: TabButtonProps): ReactElement {
 
 export function ProfilesPage(): ReactElement {
   const { t } = useTranslation("settings");
-  const [tab, setTab] = useState<Tab>("quality");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = parseTabParam(searchParams.get("tab"));
+
+  const setTab = (next: Tab): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === "quality") params.delete("tab");
+        else params.set("tab", next);
+        return params;
+      },
+      { replace: false },
+    );
+  };
 
   return (
     <div className="space-y-4">

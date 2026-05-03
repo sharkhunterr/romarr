@@ -16,8 +16,9 @@
  * Strings resolve through the `system` namespace (slice 69).
  */
 
-import { useState, type ReactElement } from "react";
+import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate, useParams } from "react-router-dom";
 
 import { BackupsTab } from "./BackupsTab";
 import { LogsTab } from "./LogsTab";
@@ -25,6 +26,19 @@ import { StatusTab } from "./StatusTab";
 import { TasksTab } from "./TasksTab";
 
 type Tab = "status" | "tasks" | "logs" | "backup";
+
+const TAB_SET: ReadonlySet<Tab> = new Set<Tab>([
+  "status",
+  "tasks",
+  "logs",
+  "backup",
+]);
+
+function parseSubParam(raw: string | undefined): Tab {
+  return raw !== undefined && TAB_SET.has(raw as Tab)
+    ? (raw as Tab)
+    : "status";
+}
 
 interface TabButtonProps {
   tab: Tab;
@@ -57,7 +71,13 @@ function TabButton(props: TabButtonProps): ReactElement {
 
 export function SystemPage(): ReactElement {
   const { t } = useTranslation("system");
-  const [tab, setTab] = useState<Tab>("status");
+  const navigate = useNavigate();
+  const params = useParams<{ sub?: string }>();
+  const tab = parseSubParam(params.sub);
+
+  const setTab = (next: Tab): void => {
+    navigate(next === "status" ? "/system" : `/system/${next}`);
+  };
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-6 md:py-8">
