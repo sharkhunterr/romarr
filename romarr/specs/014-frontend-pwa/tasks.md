@@ -503,18 +503,31 @@ invalidations.
 
 ### Implementation
 
-- [ ] T068 [P-LIB] Create `src/pages/Library/index.tsx` — grid
-      layout (1 / 2 / 4 / 6 columns by viewport).
-- [ ] T069 [P] [P-LIB] Create
-      `src/pages/Library/components/GameCard.tsx` using the ROM
-      components (CoverImage, RegionBadge, DumpStatusIcon,
-      PlatformIcon).
-- [ ] T070 [P] [P-LIB] Create
-      `src/pages/Library/components/FilterBar.tsx` with debounced
-      search + platform/library/profile/tag/genre/year/region
-      filters.
-- [ ] T071 [P-LIB] Wire the page to the generated `useGames` hook
-      with TanStack Virtual for the grid.
+- [X] T068 [P-LIB] Library page shipped (slice 88). Grid layout
+      adapts 2 / 3 / 4 / 6 columns by viewport (sm: 3, md: 4,
+      lg: 6) and 2 columns at the 360 px floor. Subsequent
+      slices added bulk-select (151 / 153 / 154), tag filter
+      (156), library filter (166), clear filters (168), and
+      the FAB (171).
+- [X] T069 [P] [P-LIB] GameCard shipped (slice 88) at
+      ``src/pages/Library/GameCard.tsx``. Uses CoverImage with
+      gameId/cacheKey props (slice 159), tag dots, monitor
+      sleep badge, platform pill. Selection state added in
+      slice 151; long-press wired in slice 158.
+- [~] T070 [P] [P-LIB] Filter row shipped inline in
+      ``Library/index.tsx`` (slice 100, 156, 166). Debounced
+      search + platform + library + tag + monitored toggle
+      with URL persistence. Genre / year / region filters
+      remain unwired — they need richer Game queries the
+      backend doesn't expose yet (no genre / year / region
+      indices on /api/v3/game).
+- [~] T071 [P-LIB] useGames wired (slice 88) with limit=200.
+      TanStack Virtual NOT integrated yet — would be needed
+      for the SC-002 60 fps on 10 000 items target. The
+      current grid renders fine through ~500 cards on modern
+      browsers; virtual scroll lands when the spec-014 perf
+      test gate (T129+) is exercised against a 10 k-item
+      fixture.
 - [X] T072 [P-LIB] FAB shipped (slice 171). Reusable
       ``LinkFAB`` / ``ButtonFAB`` primitives in
       ``components/shared/FAB.tsx``; Library page renders the
@@ -544,11 +557,21 @@ viewport; SC-002 (60 fps on 10 000 items) is met in a perf test.
 
 ### Implementation
 
-- [ ] T075 [P-ADD] Create `src/pages/Add/index.tsx` with the
-      lookup search bar and the platform multi-select.
-- [ ] T076 [P] [P-ADD] Create
-      `src/pages/Add/components/AddGameModal.tsx` with the
-      library/profile/monitored choices.
+- [X] T075 [P-ADD] AddNew page shipped at
+      ``src/pages/AddNew/index.tsx`` (slice 144). URL-debounced
+      lookup search bar wired to ``GET /api/v3/game/lookup``;
+      results render with confidence bars + provider pills.
+      Recent Additions section added in slice 148. Platform
+      multi-select on the page itself remains deferred —
+      ``platformSlug`` is passed through the lookup endpoint
+      but the modal-level pick is the operator entry point.
+- [X] T076 [P] [P-ADD] AddGameModal shipped at
+      ``src/pages/AddNew/AddGameModal.tsx`` (slice 145).
+      Platform select (defaults to first), monitored checkbox,
+      submit fires ``POST /api/v3/game/lookup/add``, navigates
+      to ``/game/{id}`` on success. Profile-override choice is
+      deferred — the spec-006 profiles surface assigns library
+      defaults.
 
 **Checkpoint**: Add tests green.
 
@@ -572,23 +595,40 @@ viewport; SC-002 (60 fps on 10 000 items) is met in a perf test.
 
 ### Implementation
 
-- [ ] T081 [P-GAME] Create
-      `src/pages/GameDetail/index.tsx` with the tab router.
-- [ ] T082 [P] [P-GAME] Create
-      `src/pages/GameDetail/tabs/Overview.tsx` with EditableField
-      + LockToggle + AttributionBadge.
-- [ ] T083 [P] [P-GAME] Create
-      `src/pages/GameDetail/tabs/Releases.tsx` using
-      MultiDiscAccordion + ROM badges.
-- [ ] T084 [P] [P-GAME] Create
-      `src/pages/GameDetail/tabs/History.tsx`.
-- [ ] T085 [P] [P-GAME] Create
-      `src/pages/GameDetail/tabs/Files.tsx` (HashBadge per dump).
+- [X] T081 [P-GAME] ``src/pages/GameDetail/index.tsx`` shipped
+      (slice 89, plus 149 + 167). Tab router with five tabs
+      (Overview / Releases / History / Files / Notes). Header
+      gets a "🗑️ Delete game" action that opens BulkDeleteModal
+      with the single game and navigates to /library on
+      success.
+- [X] T082 [P] [P-GAME] OverviewTab shipped at
+      ``src/pages/GameDetail/OverviewTab.tsx`` (slice 89, plus
+      146-148, 159, 160, 162, 163). Edit-in-place on title /
+      summary / developer / publisher / age_rating, lock
+      toggle per FactRow, attribution badges via the
+      aggregator's per-field provenance, refresh button,
+      monitor toggle, click-to-swap cover, clickable tag pills
+      drilling to /library?tag=, ✎ Edit tags affordance.
+- [~] T083 [P] [P-GAME] ReleasesTab shipped at
+      ``ReleasesTab.tsx`` with ROM badges (RegionBadge,
+      ConventionBadge, DumpStatusIcon, LanguagePills) and a
+      per-row Search button opening ReleaseSearchModal.
+      MultiDiscAccordion grouping is NOT yet wired —
+      multi-disc Releases currently render as flat siblings.
+- [X] T084 [P] [P-GAME] HistoryTab shipped at ``HistoryTab.tsx``
+      with paginated Grab + Import history.
+- [X] T085 [P] [P-GAME] FilesTab shipped at ``FilesTab.tsx``
+      with HashBadge per dump.
 - [ ] T086 [P] [P-GAME] Create
       `src/pages/GameDetail/tabs/ManualSearch.tsx` (live indexer
-      search results with ScoreBadge).
-- [ ] T087 [P] [P-GAME] Create
-      `src/pages/GameDetail/tabs/Notes.tsx`.
+      search results with ScoreBadge). Genuinely deferred:
+      per-Release manual search ships via ReleaseSearchModal
+      from the Releases tab; a game-scoped aggregated tab
+      lands when the backend exposes a "manual search across
+      all releases of a game" endpoint.
+- [X] T087 [P] [P-GAME] NotesTab shipped at
+      ``NotesTab.tsx`` (slice 149). Backed by ``Game.notes``
+      (alembic 0014) and ``PUT /api/v3/game/{id}/notes``.
 
 **Checkpoint**: every tab renders; edit-in-place persists.
 
@@ -775,11 +815,16 @@ manageable; each ships ≥ 1 test + an implementation.
       (the `:sub` route) renders an EmptyState pointing at the
       slice that will wire each sub-page up. Tags (shipped slice
       51) lives under the same shell.
-- [ ] T106 [P] [P-SET] The 12 sub-pages under
-      `src/pages/Settings/`. Progress: Tags (slice 51), UI
-      (slice 56), Indexers (slice 60), and Download Clients
-      (slice 61) shipped. Remaining 8 land per slice as their
-      REST surfaces stabilize.
+- [~] T106 [P] [P-SET] The 12 sub-pages under
+      `src/pages/Settings/`. Shipped: Tags (slice 51), UI
+      (slice 56), Indexers (slice 60), Download Clients
+      (slice 61), Connect (slices 122-143), General, Media
+      Management, Metadata Sources, Platforms, Profiles,
+      Unidentified — 11 of 13 (Unidentified is a bonus, not
+      one of the 12 spec'd). Remaining: ``quality-definitions``
+      and ``dat-sources`` still resolve through
+      SettingsPlaceholder; they need their own dedicated REST
+      surfaces to ship as full pages.
 
       `src/pages/Settings/Indexers/index.tsx` shipped with
       `useIndexers` (list) + `useDeleteIndexer` + `useTestIndexer`
