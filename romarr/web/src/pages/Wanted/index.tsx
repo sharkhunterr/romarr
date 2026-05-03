@@ -31,6 +31,19 @@ import { ReleaseRow } from "./ReleaseRow";
 const ALL_PLATFORMS = "all" as const;
 type PlatformFilter = number | typeof ALL_PLATFORMS;
 
+type WantedSortKey = "name" | "created_at" | "updated_at" | "status";
+const SORT_KEYS: readonly WantedSortKey[] = [
+  "name",
+  "created_at",
+  "updated_at",
+  "status",
+];
+const SORT_KEY_SET: ReadonlySet<WantedSortKey> = new Set<WantedSortKey>(
+  SORT_KEYS,
+);
+
+type SortDirection = "asc" | "desc";
+
 function parsePlatformParam(raw: string | null): PlatformFilter {
   if (raw === null || raw === "") return ALL_PLATFORMS;
   const parsed = Number.parseInt(raw, 10);
@@ -39,6 +52,16 @@ function parsePlatformParam(raw: string | null): PlatformFilter {
 
 function parseTabParam(raw: string | null): Tab {
   return raw === "cutoff" ? "cutoff" : "missing";
+}
+
+function parseSortParam(raw: string | null): WantedSortKey {
+  return raw !== null && SORT_KEY_SET.has(raw as WantedSortKey)
+    ? (raw as WantedSortKey)
+    : "name";
+}
+
+function parseDirectionParam(raw: string | null): SortDirection {
+  return raw === "desc" ? "desc" : "asc";
 }
 
 interface BulkSearchButtonProps {
@@ -119,14 +142,16 @@ function TabButton(props: TabButtonProps): ReactElement {
 
 interface TabBodyProps {
   platformId: number | undefined;
+  sortKey: WantedSortKey;
+  sortDirection: SortDirection;
 }
 
 function MissingTab(props: TabBodyProps): ReactElement {
   const { t } = useTranslation("wanted");
   const { data, isPending, isError, error } = useWantedMissing({
     pageSize: 50,
-    sortKey: "name",
-    sortDirection: "asc",
+    sortKey: props.sortKey,
+    sortDirection: props.sortDirection,
     platformId: props.platformId,
   });
 
@@ -162,8 +187,8 @@ function CutoffTab(props: TabBodyProps): ReactElement {
   const { t } = useTranslation("wanted");
   const { data, isPending, isError, error } = useWantedCutoff({
     pageSize: 50,
-    sortKey: "name",
-    sortDirection: "asc",
+    sortKey: props.sortKey,
+    sortDirection: props.sortDirection,
     platformId: props.platformId,
   });
 
@@ -200,6 +225,8 @@ export function WantedPage(): ReactElement {
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = parseTabParam(searchParams.get("tab"));
   const platformFilter = parsePlatformParam(searchParams.get("platform"));
+  const sortKey = parseSortParam(searchParams.get("sort"));
+  const sortDirection = parseDirectionParam(searchParams.get("direction"));
   const platforms = usePlatforms();
 
   const setTab = (next: Tab): void => {
@@ -220,6 +247,31 @@ export function WantedPage(): ReactElement {
         const params = new URLSearchParams(prev);
         if (next === ALL_PLATFORMS) params.delete("platform");
         else params.set("platform", String(next));
+        return params;
+      },
+      { replace: false },
+    );
+  };
+
+  const setSortKey = (next: WantedSortKey): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === "name") params.delete("sort");
+        else params.set("sort", next);
+        return params;
+      },
+      { replace: false },
+    );
+  };
+
+  const toggleSortDirection = (): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        const next = sortDirection === "asc" ? "desc" : "asc";
+        if (next === "asc") params.delete("direction");
+        else params.set("direction", next);
         return params;
       },
       { replace: false },
@@ -286,6 +338,49 @@ export function WantedPage(): ReactElement {
           </select>
         </label>
 
+        <div className="flex items-stretch gap-1">
+          <label className="block md:w-44">
+            <span className="sr-only">{t("sort.label")}</span>
+            <select
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value as WantedSortKey)}
+              aria-label={t("sort.label")}
+              className={[
+                "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
+                "ring-1 ring-inset ring-zinc-700",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+              ].join(" ")}
+            >
+              {SORT_KEYS.map((k) => (
+                <option key={k} value={k}>
+                  {t(`sort.key.${k}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            onClick={toggleSortDirection}
+            aria-label={
+              sortDirection === "asc"
+                ? t("sort.direction.asc")
+                : t("sort.direction.desc")
+            }
+            title={
+              sortDirection === "asc"
+                ? t("sort.direction.asc")
+                : t("sort.direction.desc")
+            }
+            className={[
+              "rounded-md bg-zinc-950 px-3 text-sm text-zinc-100",
+              "ring-1 ring-inset ring-zinc-700 hover:bg-zinc-900",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+            ].join(" ")}
+          >
+            {sortDirection === "asc" ? "↑" : "↓"}
+          </button>
+        </div>
+
         {tab === "missing" ? (
           <BulkSearchButton
             command="MissingSearch"
@@ -304,9 +399,17 @@ export function WantedPage(): ReactElement {
       </div>
 
       {tab === "missing" ? (
-        <MissingTab platformId={platformId} />
+        <MissingTab
+          platformId={platformId}
+          sortKey={sortKey}
+          sortDirection={sortDirection}
+        />
       ) : (
-        <CutoffTab platformId={platformId} />
+        <CutoffTab
+          platformId={platformId}
+          sortKey={sortKey}
+          sortDirection={sortDirection}
+        />
       )}
     </div>
   );
