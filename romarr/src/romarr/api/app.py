@@ -63,6 +63,7 @@ from romarr.metadata.api import (
     providers_router,
     refresh_router,
 )
+from romarr.metadata.api.lookup import router as metadata_lookup_router
 from romarr.notifications.api import (
     health_router as notifications_health_router,
 )
@@ -266,6 +267,10 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     # the Frontend's manual-match Game picker (slice 84's
     # POST /unidentified/{id}/match needs a way to pick the
     # target Game + Release).
+    # IMPORTANT: lookup must register BEFORE game_router so that
+    # `GET /api/v3/game/lookup` doesn't get swallowed by the
+    # ``{game_id}`` catch-all on game_router.
+    app.include_router(metadata_lookup_router)
     app.include_router(game_router)
     # Spec 014 (slice 98) — Release operator-toggle surface
     # (PATCH /api/v3/rom/release/{id} for the monitor flag).

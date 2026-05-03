@@ -24,15 +24,13 @@ import { AuthGuard } from "@/components/shared/AuthGuard";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
 import { QueryProvider } from "@/lib/api/QueryProvider";
 import { ActivityPage } from "@/pages/Activity";
+import { AddNewPage } from "@/pages/AddNew";
 import { CalendarPage } from "@/pages/Calendar";
 import { DashboardPage } from "@/pages/Dashboard";
 import { GameDetailPage } from "@/pages/GameDetail";
 import { LibraryPage } from "@/pages/Library";
 import { LoginPage } from "@/pages/Login";
-import {
-  AddNewPage,
-  NotFoundPage,
-} from "@/pages/placeholders";
+import { NotFoundPage } from "@/pages/placeholders";
 import { SetupPage } from "@/pages/Setup";
 import { ConnectPage } from "@/pages/Settings/Connect";
 import { DownloadClientsPage } from "@/pages/Settings/DownloadClients";

@@ -1,0 +1,15 @@
+{
+  "title": "Ajouter",
+  "subtitle": "Cherchez parmi tous les fournisseurs de métadonnées activés un jeu à ajouter à la ludothèque.",
+  "search": {
+    "label": "Chercher un jeu",
+    "placeholder": "Chercher par titre…"
+  },
+  "empty": {
+    "title": "Tapez pour chercher",
+    "body": "Commencez à taper un titre — Romarr interroge chaque fournisseur de métadonnées activé (IGDB, ScreenScraper, MobyGames, …) et affiche la liste fusionnée triée par confiance."
+  },
+  "loadError": "La recherche a échoué",
+  "noResults": "Aucun candidat pour « {{q}} ». Essayez une autre orthographe ou vérifiez la configuration des fournisseurs sous Paramètres > Sources de métadonnées.",
+  "addHint": "Le bouton « Ajouter ce jeu » (choix ludothèque / suivi / overrides de profils) arrivera dans un slice à venir. Pour le moment cette page surface les candidats de la recherche pour vérifier la couverture des fournisseurs."
+}

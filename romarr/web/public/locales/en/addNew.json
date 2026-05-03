@@ -1,0 +1,15 @@
+{
+  "title": "Add New",
+  "subtitle": "Search every enabled metadata provider for a game to add to the Library.",
+  "search": {
+    "label": "Search games",
+    "placeholder": "Search by title…"
+  },
+  "empty": {
+    "title": "Type to search",
+    "body": "Start typing a game title — Romarr queries every enabled metadata provider (IGDB, ScreenScraper, MobyGames, …) and shows the merged candidate list ranked by confidence."
+  },
+  "loadError": "Couldn't run the lookup",
+  "noResults": "No candidates returned for \"{{q}}\". Try a different spelling or check that providers are configured under Settings > Metadata Sources.",
+  "addHint": "The \"Add this game\" button (pick library / monitored / profile overrides) lands in a follow-up slice. For now this page surfaces the lookup candidates so you can verify provider coverage."
+}

@@ -440,6 +440,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/game/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search every enabled metadata provider for games matching the query. Returns the merged candidate list ranked by confidence (admin only). */
+        get: operations["lookup_games_api_v3_game_lookup_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/game/{game_id}": {
         parameters: {
             query?: never;
@@ -2613,6 +2630,26 @@ export interface components {
             max_size_bytes?: number | null;
             /** Min Size Bytes */
             min_size_bytes?: number | null;
+        };
+        /**
+         * GameLookupRow
+         * @description One row in the lookup response — a single provider candidate.
+         *
+         *     Mirrors :class:`GameSearchResult` plus a deterministic ``rank``
+         *     so the frontend can preserve the server-side ordering across
+         *     React Query cache hits.
+         */
+        GameLookupRow: {
+            /** Confidence */
+            confidence: number;
+            /** Providergameid */
+            providerGameId: string;
+            /** Providername */
+            providerName: string;
+            /** Rank */
+            rank: number;
+            /** Title */
+            title: string;
         };
         /** GameRead */
         GameRead: {
@@ -5712,6 +5749,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GameRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lookup_games_api_v3_game_lookup_get: {
+        parameters: {
+            query: {
+                /** @description Title substring to look up. */
+                q: string;
+                /** @description Optional platform slug filter — providers that honour platform mapping use it to scope results. */
+                platformSlug?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameLookupRow"][];
                 };
             };
             /** @description Validation Error */

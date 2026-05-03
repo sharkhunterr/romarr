@@ -1816,6 +1816,41 @@
         "title": "FormatUpdate",
         "type": "object"
       },
+      "GameLookupRow": {
+        "additionalProperties": false,
+        "description": "One row in the lookup response \u2014 a single provider candidate.\n\nMirrors :class:`GameSearchResult` plus a deterministic ``rank``\nso the frontend can preserve the server-side ordering across\nReact Query cache hits.",
+        "properties": {
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "providerGameId": {
+            "title": "Providergameid",
+            "type": "string"
+          },
+          "providerName": {
+            "title": "Providername",
+            "type": "string"
+          },
+          "rank": {
+            "title": "Rank",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rank",
+          "providerName",
+          "providerGameId",
+          "title",
+          "confidence"
+        ],
+        "title": "GameLookupRow",
+        "type": "object"
+      },
       "GameRead": {
         "additionalProperties": false,
         "properties": {
@@ -8891,6 +8926,87 @@
         "summary": "List games (any authenticated user). Supports title-substring + platform filters.",
         "tags": [
           "Game"
+        ]
+      }
+    },
+    "/api/v3/game/lookup": {
+      "get": {
+        "operationId": "lookup_games_api_v3_game_lookup_get",
+        "parameters": [
+          {
+            "description": "Title substring to look up.",
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "description": "Title substring to look up.",
+              "maxLength": 255,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional platform slug filter \u2014 providers that honour platform mapping use it to scope results.",
+            "in": "query",
+            "name": "platformSlug",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional platform slug filter \u2014 providers that honour platform mapping use it to scope results.",
+              "title": "Platformslug"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GameLookupRow"
+                  },
+                  "title": "Response Lookup Games Api V3 Game Lookup Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search every enabled metadata provider for games matching the query. Returns the merged candidate list ranked by confidence (admin only).",
+        "tags": [
+          "Metadata"
         ]
       }
     },
