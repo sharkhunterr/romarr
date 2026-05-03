@@ -18,8 +18,10 @@ import { useTranslation } from "react-i18next";
 import {
   useDeleteIndexer,
   useTestIndexer,
+  useToggleIndexer,
   type Indexer,
   type IndexerTestResult,
+  type ToggleIndexerVariables,
 } from "@/lib/api/queries/indexers";
 
 type Health = "ok" | "auth" | "protocol" | "connectivity" | "circuit_open" | "untested";
@@ -54,11 +56,23 @@ interface IndexerRowProps {
   indexer: Indexer;
 }
 
+type ToggleField =
+  | "enable_rss"
+  | "enable_automatic_search"
+  | "enable_interactive_search";
+
+const TOGGLE_LABELS: Record<ToggleField, string> = {
+  enable_rss: "indexers.rss",
+  enable_automatic_search: "indexers.auto",
+  enable_interactive_search: "indexers.interactive",
+};
+
 export function IndexerRow(props: IndexerRowProps): ReactElement {
   const { indexer } = props;
   const { t } = useTranslation("settings");
   const test = useTestIndexer();
   const del = useDeleteIndexer();
+  const toggle = useToggleIndexer();
 
   const [confirming, setConfirming] = useState(false);
   const [testResult, setTestResult] = useState<IndexerTestResult | null>(null);
@@ -67,6 +81,38 @@ export function IndexerRow(props: IndexerRowProps): ReactElement {
   const sourceLabel = indexer.source === "prowlarr"
     ? t("indexers.source.prowlarr")
     : t("indexers.source.manual");
+
+  function flip(field: ToggleField): void {
+    const variables: ToggleIndexerVariables = {
+      id: indexer.id,
+      [field]: !indexer[field],
+    };
+    toggle.mutate(variables);
+  }
+
+  function ToggleChip({ field }: { field: ToggleField }): ReactElement {
+    const active = indexer[field];
+    return (
+      <button
+        type="button"
+        onClick={() => flip(field)}
+        disabled={toggle.isPending}
+        aria-pressed={active}
+        className={[
+          "rounded px-1.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-wider",
+          "ring-1 ring-inset transition-colors",
+          active
+            ? "bg-brand/20 text-brand ring-brand/40 hover:bg-brand/30"
+            : "bg-zinc-800 text-zinc-500 ring-zinc-700 hover:bg-zinc-700 hover:text-zinc-300",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+          "disabled:cursor-not-allowed disabled:opacity-60",
+        ].join(" ")}
+      >
+        {active ? "✓ " : ""}
+        {t(TOGGLE_LABELS[field])}
+      </button>
+    );
+  }
 
   function runTest(): void {
     setTestResult(null);
@@ -99,26 +145,20 @@ export function IndexerRow(props: IndexerRowProps): ReactElement {
           <p className="truncate font-mono text-xs text-zinc-500">
             {indexer.url}
           </p>
-          <div className="flex flex-wrap items-center gap-1.5 text-[0.6rem] uppercase tracking-wider">
-            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-400">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-zinc-400">
               {t(`indexers.health.${health}`)}
             </span>
-            {indexer.enable_rss && (
-              <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-400">
-                {t("indexers.rss")}
-              </span>
-            )}
-            {indexer.enable_automatic_search && (
-              <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-400">
-                {t("indexers.auto")}
-              </span>
-            )}
-            {indexer.enable_interactive_search && (
-              <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-400">
-                {t("indexers.interactive")}
-              </span>
-            )}
+            <ToggleChip field="enable_rss" />
+            <ToggleChip field="enable_automatic_search" />
+            <ToggleChip field="enable_interactive_search" />
           </div>
+          {toggle.isError && (
+            <p className="text-[0.7rem] text-red-300">
+              {toggle.error?.message ??
+                t("indexers.toggle.errorFallback")}
+            </p>
+          )}
         </div>
       </div>
 

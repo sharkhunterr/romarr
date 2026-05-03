@@ -510,7 +510,10 @@
     },
     "rss": "RSS",
     "auto": "Auto",
-    "interactive": "Interactif"
+    "interactive": "Interactif",
+    "toggle": {
+      "errorFallback": "Bascule échouée."
+    }
   },
   "unidentified": {
     "title": "Non identifiés",

@@ -67,3 +67,37 @@ export function useTestIndexer(): UseMutationResult<
       }),
   });
 }
+
+/**
+ * PUT /api/v3/indexer/{id} — narrow toggle subset (slice 122).
+ *
+ * The IndexerUpdate body is broad; this hook only exposes the
+ * three search-mode toggles operators flip from the audit list.
+ * The full edit form (URL / categories / api_key rotation /
+ * priority) lands when the multi-step indexer-editor slice
+ * ships.
+ */
+export interface ToggleIndexerVariables {
+  id: number;
+  enable_rss?: boolean;
+  enable_automatic_search?: boolean;
+  enable_interactive_search?: boolean;
+}
+
+export function useToggleIndexer(): UseMutationResult<
+  Indexer,
+  ApiError,
+  ToggleIndexerVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<Indexer, ApiError, ToggleIndexerVariables>({
+    mutationFn: ({ id, ...body }) =>
+      apiFetch<Indexer>(`/api/v3/indexer/${id}`, {
+        method: "PUT",
+        json: body,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: INDEXERS_KEY });
+    },
+  });
+}

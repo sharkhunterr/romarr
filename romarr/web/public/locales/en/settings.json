@@ -510,7 +510,10 @@
     },
     "rss": "RSS",
     "auto": "Auto",
-    "interactive": "Interactive"
+    "interactive": "Interactive",
+    "toggle": {
+      "errorFallback": "Toggle failed."
+    }
   },
   "unidentified": {
     "title": "Unidentified",
