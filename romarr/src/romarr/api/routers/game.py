@@ -33,7 +33,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import asc, desc, func, select
+from sqlalchemy import String, asc, cast, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from romarr.api.dependencies import get_db, require_admin, require_readonly
@@ -258,6 +258,16 @@ async def list_games(
     platform_id: Annotated[
         int | None, Query(ge=1, description="Restrict to one platform.")
     ] = None,
+    tag_id: Annotated[
+        int | None,
+        Query(
+            ge=1,
+            description=(
+                "Restrict to games carrying a specific tag id. "
+                "Matched against the Game.tags JSON list."
+            ),
+        ),
+    ] = None,
     monitored: Annotated[
         bool | None,
         Query(
@@ -291,6 +301,24 @@ async def list_games(
     stmt = select(Game).order_by(column.is_(None).asc(), order, Game.id.asc())
     if platform_id is not None:
         stmt = stmt.where(Game.platform_id == platform_id)
+    if tag_id is not None:
+        # Game.tags is a JSON list of int. To match "list contains
+        # tag_id" portably across SQLite + Postgres we cast the
+        # JSON to text, normalise the delimiters (replace ``[``
+        # and ``]`` with ``,``, drop whitespace), then look for
+        # ``,<id>,``. This survives both compact (`[1,2]`) and
+        # spaced (`[1, 2]`) serialisations and rejects the
+        # ``[15]`` vs id=5 false-match.
+        normalised = func.replace(
+            func.replace(
+                func.replace(cast(Game.tags, String), " ", ""),
+                "[",
+                ",",
+            ),
+            "]",
+            ",",
+        )
+        stmt = stmt.where(normalised.like(f"%,{tag_id},%"))
     if monitored is not None:
         stmt = stmt.where(Game.monitored.is_(monitored))
     if q is not None and q.strip():

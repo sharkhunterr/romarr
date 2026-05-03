@@ -35,6 +35,7 @@ export type SortDirection = "asc" | "desc";
 export interface ListGamesParams {
   q?: string;
   platformId?: number;
+  tagId?: number;
   /** Filter on the `monitored` flag. */
   monitored?: boolean;
   sort?: GameSortKey;
@@ -51,6 +52,9 @@ export function useGames(
   }
   if (params.platformId !== undefined) {
     search.set("platform_id", String(params.platformId));
+  }
+  if (params.tagId !== undefined) {
+    search.set("tag_id", String(params.tagId));
   }
   if (params.monitored !== undefined)
     search.set("monitored", String(params.monitored));

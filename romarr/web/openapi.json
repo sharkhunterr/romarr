@@ -9212,6 +9212,25 @@
             }
           },
           {
+            "description": "Restrict to games carrying a specific tag id. Matched against the Game.tags JSON list.",
+            "in": "query",
+            "name": "tag_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to games carrying a specific tag id. Matched against the Game.tags JSON list.",
+              "title": "Tag Id"
+            }
+          },
+          {
             "description": "Filter on the `monitored` flag. `true` is the most common operator workflow (\"show me what I'm tracking\").",
             "in": "query",
             "name": "monitored",

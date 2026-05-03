@@ -1319,3 +1319,115 @@ async def test_bulk_tag_unauthenticated_401(
         json={"gameIds": [1], "tagIds": [1], "action": "add"},
     )
     assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# slice 156 — GET /api/v3/game?tag_id= filter
+# ---------------------------------------------------------------------------
+
+
+async def _seed_with_tags(
+    api_engine: AsyncEngine, *, title: str, tags: list[int]
+) -> int:
+    """Seed a Game with the given tag-id list and return its id."""
+    _, gid, _ = await _seed_chain(api_engine, title=title)
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        row = await session.get(Game, gid)
+        assert row is not None
+        row.tags = tags
+        await session.commit()
+    return gid
+
+
+@pytest.mark.asyncio
+async def test_list_games_tag_filter_finds_matching(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    a = await _seed_with_tags(api_engine, title="Alpha", tags=[5])
+    b = await _seed_with_tags(api_engine, title="Bravo", tags=[5, 9])
+    _ = await _seed_with_tags(api_engine, title="Charlie", tags=[7])
+
+    resp = await authed_client.get("/api/v3/game?tag_id=5")
+    assert resp.status_code == 200
+    ids = {row["id"] for row in resp.json()}
+    assert a in ids
+    assert b in ids
+    assert all(row["title"] != "Charlie" for row in resp.json())
+
+
+@pytest.mark.asyncio
+async def test_list_games_tag_filter_rejects_substring_collision(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Filtering by tag id 5 must NOT match a game tagged with
+    15 — the bracket-and-comma normalisation prevents that
+    common JSON-text-LIKE bug."""
+    real = await _seed_with_tags(api_engine, title="Real", tags=[5])
+    decoy = await _seed_with_tags(api_engine, title="Decoy", tags=[15])
+
+    resp = await authed_client.get("/api/v3/game?tag_id=5")
+    assert resp.status_code == 200
+    ids = {row["id"] for row in resp.json()}
+    assert real in ids
+    assert decoy not in ids
+
+
+@pytest.mark.asyncio
+async def test_list_games_tag_filter_handles_first_and_last_position(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """The bracket-replace pattern needs to match at every
+    position: first, middle, last, and singleton."""
+    first = await _seed_with_tags(api_engine, title="First", tags=[7, 1, 2])
+    middle = await _seed_with_tags(api_engine, title="Middle", tags=[1, 7, 2])
+    last = await _seed_with_tags(api_engine, title="Last", tags=[1, 2, 7])
+    only = await _seed_with_tags(api_engine, title="Only", tags=[7])
+
+    resp = await authed_client.get("/api/v3/game?tag_id=7")
+    assert resp.status_code == 200
+    ids = {row["id"] for row in resp.json()}
+    assert {first, middle, last, only} <= ids
+
+
+@pytest.mark.asyncio
+async def test_list_games_tag_filter_returns_empty_for_unused_tag(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    await _seed_with_tags(api_engine, title="HasOne", tags=[1])
+    resp = await authed_client.get("/api/v3/game?tag_id=999")
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_list_games_tag_filter_skips_games_with_no_tags(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Games seeded with the empty default tag list are not
+    matched by any tag-id filter — confirms the empty `[]` JSON
+    doesn't collide with the comma-padded pattern."""
+    untagged = await _seed_with_tags(api_engine, title="Untagged", tags=[])
+    tagged = await _seed_with_tags(api_engine, title="Tagged", tags=[3])
+
+    resp = await authed_client.get("/api/v3/game?tag_id=3")
+    assert resp.status_code == 200
+    ids = {row["id"] for row in resp.json()}
+    assert tagged in ids
+    assert untagged not in ids
+
+
+@pytest.mark.asyncio
+async def test_list_games_tag_filter_combines_with_platform_and_q(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """tag_id stacks with platform_id and q like the other
+    filters do."""
+    a = await _seed_with_tags(api_engine, title="Combo Match", tags=[2])
+    _ = await _seed_with_tags(api_engine, title="Combo NoTag", tags=[])
+    _ = await _seed_with_tags(api_engine, title="Other", tags=[2])
+
+    resp = await authed_client.get("/api/v3/game?tag_id=2&q=combo")
+    assert resp.status_code == 200
+    ids = [row["id"] for row in resp.json()]
+    assert ids == [a]

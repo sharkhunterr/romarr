@@ -10,6 +10,10 @@
       "label": "Filter by platform",
       "all": "All platforms"
     },
+    "tag": {
+      "label": "Filter by tag",
+      "all": "All tags"
+    },
     "monitoredOnly": {
       "off": "Monitored only",
       "on": "✓ Monitored only"
