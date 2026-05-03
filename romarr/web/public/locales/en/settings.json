@@ -264,6 +264,47 @@
     },
     "builderHint": "The visual condition builder (add / remove conditions, OR-grouping) lands in a follow-up slice. For now POST /api/v3/customformat to create new formats."
   },
+  "mediaManagement": {
+    "title": "Media Management",
+    "subtitle": "Library destinations on disk plus their lifecycle policy and per-library exporter switches. Each library binds to one of every profile type (Quality / Region / Dump / Language / Naming).",
+    "empty": {
+      "title": "No libraries configured",
+      "body": "Add a library to point Romarr at a destination directory. The first library is the operator's primary acquisition target."
+    },
+    "lifecycle": {
+      "hardlink_and_seed": "Hardlink + seed",
+      "move_and_remove": "Move + remove",
+      "copy_and_keep": "Copy + keep"
+    },
+    "status": {
+      "ok": "OK",
+      "degraded": "Degraded",
+      "missing": "Missing path",
+      "stalled": "Stalled"
+    },
+    "exporters": {
+      "label": "Exporters",
+      "romm": "RomM",
+      "esde": "ES-DE",
+      "pegasus": "Pegasus",
+      "launchbox": "LaunchBox"
+    },
+    "platformSubfolders": "Platform sub-folders",
+    "useHardlinks": "Hardlinks",
+    "deleteAfterImport": "Delete source after import",
+    "keepDumpHistory": "Keep dump history",
+    "minDiskFreeGb": "Min free: {{value}} GiB",
+    "delete": {
+      "button": "Delete",
+      "confirmTitle": "Remove this library?",
+      "confirmBody": "Releases bound to {{name}} will need a replacement library. The directory on disk is NOT touched.",
+      "confirm": "Remove",
+      "force": "Force (detach Releases)",
+      "cancel": "Cancel",
+      "needsForce": "{{name}} has bound Releases. Use force-delete to detach them first."
+    },
+    "editorHint": "Library create + edit forms (paths, lifecycle policy, profile bindings, exporter wiring) land in a follow-up slice."
+  },
   "metadataSources": {
     "title": "Metadata Sources",
     "subtitle": "Per-field aggregation across the nine documented providers (IGDB, ScreenScraper, MobyGames, LaunchBox, SteamGridDB, RetroAchievements, HowLongToBeat, Hasheous, PlayMatch). Enable, prioritize, and test each one here.",

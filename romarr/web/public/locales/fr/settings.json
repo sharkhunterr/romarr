@@ -264,6 +264,47 @@
     },
     "builderHint": "Le builder visuel de conditions (ajout / suppression, OR-grouping) arrivera dans un slice à venir. Pour l'instant, POST /api/v3/customformat pour créer de nouveaux formats."
   },
+  "mediaManagement": {
+    "title": "Gestion des médias",
+    "subtitle": "Destinations de ludothèques sur disque, politique de cycle de vie et toggles d'exporters par ludothèque. Chaque ludothèque s'attache à un profil de chaque type (Qualité / Région / Dump / Langue / Nommage).",
+    "empty": {
+      "title": "Aucune ludothèque configurée",
+      "body": "Ajoutez une ludothèque pour pointer Romarr vers un répertoire de destination. La première ludothèque est la cible d'acquisition principale de l'opérateur."
+    },
+    "lifecycle": {
+      "hardlink_and_seed": "Hardlink + seed",
+      "move_and_remove": "Move + suppression",
+      "copy_and_keep": "Copy + conservation"
+    },
+    "status": {
+      "ok": "OK",
+      "degraded": "Dégradée",
+      "missing": "Chemin manquant",
+      "stalled": "Bloquée"
+    },
+    "exporters": {
+      "label": "Exporters",
+      "romm": "RomM",
+      "esde": "ES-DE",
+      "pegasus": "Pegasus",
+      "launchbox": "LaunchBox"
+    },
+    "platformSubfolders": "Sous-dossiers plateforme",
+    "useHardlinks": "Hardlinks",
+    "deleteAfterImport": "Supprimer la source après import",
+    "keepDumpHistory": "Conserver l'historique des dumps",
+    "minDiskFreeGb": "Min libre : {{value}} Gio",
+    "delete": {
+      "button": "Supprimer",
+      "confirmTitle": "Supprimer cette ludothèque ?",
+      "confirmBody": "Les releases liées à {{name}} auront besoin d'une ludothèque de remplacement. Le répertoire sur disque n'est PAS touché.",
+      "confirm": "Supprimer",
+      "force": "Forcer (détacher les releases)",
+      "cancel": "Annuler",
+      "needsForce": "{{name}} a des releases liées. Utilisez la suppression forcée pour les détacher d'abord."
+    },
+    "editorHint": "Les formulaires de création + édition (chemins, politique de cycle de vie, profils, exporters) arriveront dans un slice à venir."
+  },
   "metadataSources": {
     "title": "Sources de métadonnées",
     "subtitle": "Agrégation par champ sur les neuf fournisseurs documentés (IGDB, ScreenScraper, MobyGames, LaunchBox, SteamGridDB, RetroAchievements, HowLongToBeat, Hasheous, PlayMatch). Activez, priorisez et testez chacun ici.",
