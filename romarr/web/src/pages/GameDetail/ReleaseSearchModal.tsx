@@ -15,6 +15,7 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useIndexersById } from "@/lib/api/queries/indexers";
 import {
   useManualGrab,
   useManualSearch,
@@ -49,10 +50,11 @@ function CandidateRow(props: {
   candidate: Candidate;
   releaseId: number;
   force: boolean;
+  indexerName: string | null;
   onGrabSuccess: () => void;
 }): ReactElement {
   const { t } = useTranslation("game");
-  const { candidate, releaseId, force, onGrabSuccess } = props;
+  const { candidate, releaseId, force, indexerName, onGrabSuccess } = props;
   const grab = useManualGrab();
   const onClick = (): void => {
     grab.mutate(
@@ -112,7 +114,9 @@ function CandidateRow(props: {
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5 text-[0.65rem] text-zinc-400">
-        <span className="font-mono">indexer #{candidate.indexer_id}</span>
+        <span className="font-mono">
+          {indexerName ?? `indexer #${candidate.indexer_id}`}
+        </span>
         {sizeLabel && (
           <>
             <span>·</span>
@@ -169,6 +173,7 @@ export function ReleaseSearchModal(
   const [query, setQuery] = useState(props.initialQuery);
   const [force, setForce] = useState(false);
   const search = useManualSearch();
+  const indexersById = useIndexersById();
 
   useEffect(() => {
     if (props.open) {
@@ -290,6 +295,7 @@ export function ReleaseSearchModal(
                   candidate={c}
                   releaseId={props.releaseId}
                   force={force}
+                  indexerName={indexersById.get(c.indexer_id)?.name ?? null}
                   onGrabSuccess={props.onClose}
                 />
               ))}

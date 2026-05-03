@@ -13,6 +13,7 @@
  * with the IndexerCreate / IndexerUpdate schemas.
  */
 
+import { useMemo } from "react";
 import {
   useMutation,
   useQuery,
@@ -38,6 +39,24 @@ export function useIndexers(): UseQueryResult<Indexer[], ApiError> {
     queryFn: () => apiFetch<Indexer[]>("/api/v3/indexer"),
     staleTime: 30_000,
   });
+}
+
+/**
+ * Lookup helper — id → Indexer. Returns an empty Map until the
+ * underlying query resolves. Memoised on the query result so
+ * consumers don't rebuild the index on every render. Used by
+ * the manual-search modal to surface indexer names instead of
+ * bare ids on each candidate row.
+ */
+export function useIndexersById(): Map<number, Indexer> {
+  const indexers = useIndexers();
+  return useMemo(() => {
+    const out = new Map<number, Indexer>();
+    for (const i of indexers.data ?? []) {
+      out.set(i.id, i);
+    }
+    return out;
+  }, [indexers.data]);
 }
 
 export function useDeleteIndexer(): UseMutationResult<
