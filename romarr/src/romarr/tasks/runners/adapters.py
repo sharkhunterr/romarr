@@ -149,19 +149,70 @@ class RefreshGameMetadataAdapter(_AdapterBase):
     """Wraps spec 002's metadata refresh.
 
     Accepts an optional ``gameId`` parameter for single-game
-    refresh; without it, refreshes the full library batch."""
+    refresh; without it, sweeps the full library via
+    :func:`refresh_all_metadata` (slice 178 / spec 012 T050).
+    The ``platformId`` parameter further scopes the all-games
+    path to a single Platform; ``force`` forwards through.
+
+    Single-game path is still a structured stub — wiring it
+    into the per-Game refresh requires the JobContext to carry
+    a sessionmaker, which lands once spec 012's runner-context
+    plumbing exposes one.
+    """
 
     def __init__(self) -> None:
         super().__init__(job_id="RefreshGameMetadata")
 
     async def _run(self, context: JobContext) -> JobResult:
         game_id = context.parameters.get("gameId")
+        if game_id is not None:
+            # Single-game refresh — still a stub. Lands when the
+            # JobContext exposes a sessionmaker.
+            return JobResult(
+                status=JobStatus.SUCCESS,
+                summary={
+                    "stub": True,
+                    "scope": "single-game",
+                    "gameId": game_id,
+                },
+            )
+
+        # All-games path — slice 178 wires the real runner.
+        from romarr.tasks.runners.refresh_all_metadata import (
+            refresh_all_metadata,
+        )
+
+        sessionmaker = getattr(context, "sessionmaker", None)
+        if sessionmaker is None:
+            # Older test contexts may not provide one — keep the
+            # stub behavior so the scheduler dispatch path stays
+            # exercised end-to-end.
+            return JobResult(
+                status=JobStatus.SUCCESS,
+                summary={
+                    "stub": True,
+                    "scope": "all-games",
+                    "gameId": None,
+                },
+            )
+
+        platform_id = context.parameters.get("platformId")
+        force = bool(context.parameters.get("force", False))
+        async with sessionmaker() as session:
+            result = await refresh_all_metadata(
+                session,
+                platform_id=platform_id,
+                force=force,
+            )
         return JobResult(
             status=JobStatus.SUCCESS,
             summary={
-                "stub": True,
-                "scope": "single-game" if game_id else "all-games",
-                "gameId": game_id,
+                "scope": "all-games",
+                "platformId": platform_id,
+                "force": force,
+                "total": result.total,
+                "refreshed": result.refreshed,
+                "failed": result.failed,
             },
         )
 

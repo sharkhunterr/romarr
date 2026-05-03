@@ -420,10 +420,17 @@ this one.
       `BackupRunner` snapshots the DB (SQLite via `.backup` API or
       pg_dump for PostgreSQL) plus a sanitized config TAR.gz.
       Honours `ROMARR_BACKUP_PATH` and a 30-backup retention cap.
-- [ ] T050 [P] [NEWRUN] Create
-      `src/romarr/tasks/runners/refresh_all_metadata.py` —
-      `RefreshAllMetadataRunner` paginates over Games and calls
-      spec 002's per-Game refresh in batches.
+- [X] T050 [P] [NEWRUN] ``RefreshAllMetadataRunner`` shipped
+      at ``src/romarr/tasks/runners/refresh_all_metadata.py``
+      (slice 178). Cursor-based pagination on ``Game.id``
+      (page_size=100) so memory stays bounded for large
+      libraries; per-Game errors are caught + counted (not
+      fatal); optional ``platform_id`` scope; ``force`` flag
+      forwards through. ``RefreshGameMetadataAdapter`` now
+      delegates the all-games path to this runner when the
+      JobContext exposes a sessionmaker. 5 tests cover
+      pagination, partial failure, scoping, empty libraries,
+      and force-flag propagation.
 - [ ] T051 [P] [NEWRUN] Create
       `src/romarr/tasks/runners/dat_update.py` — `DatUpdateRunner`
       downloads DATs from configured sources and calls spec 001's
