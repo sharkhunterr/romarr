@@ -38,7 +38,7 @@ export const SETTINGS_NAV_ENTRIES: readonly SettingsNavEntry[] = [
   { to: "/settings/tags", slug: "tags", emoji: "🏷️", shipped: true },
   { to: "/settings/unidentified", slug: "unidentified", emoji: "❓", shipped: true },
   { to: "/settings/ui", slug: "ui", emoji: "🎨", shipped: true },
-  { to: "/settings/general", slug: "general", emoji: "⚙️" },
+  { to: "/settings/general", slug: "general", emoji: "⚙️", shipped: true },
 ];
 
 function entryClass(isActive: boolean): string {

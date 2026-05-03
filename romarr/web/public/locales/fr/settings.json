@@ -335,6 +335,41 @@
     },
     "uploadHint": "L'envoi de packs (YAML multipart) + les bascules d'override par plateforme arriveront dans un slice à venir."
   },
+  "general": {
+    "title": "Général",
+    "subtitle": "Paramètres du compte opérateur. Le slice du jour couvre les clés API personnelles ; les surfaces plus riches (changement de mot de passe, dissociation OIDC, historique de connexion) arriveront avec leurs endpoints.",
+    "apiKeys": {
+      "section": "Clés API",
+      "empty": {
+        "title": "Aucune clé API",
+        "body": "Créez une clé via le formulaire ci-dessus pour scripter Romarr depuis notifiarr / scripts / dashboards."
+      },
+      "neverUsed": "jamais utilisée",
+      "timestamps": "Créée le {{created}} · dernière utilisation {{lastUsed}}",
+      "create": {
+        "title": "Créer une nouvelle clé",
+        "nameLabel": "Nom",
+        "namePlaceholder": "Notifiarr / Homepage / dashboard…",
+        "scopesLabel": "Scopes (optionnel)",
+        "scopesPlaceholder": "read:queue, read:games",
+        "scopesHint": "Séparés par des virgules. Laissez vide pour un accès lecture + écriture complet.",
+        "submit": "Créer la clé",
+        "pending": "Création…"
+      },
+      "created": {
+        "title": "Clé créée — copiez-la maintenant",
+        "body": "{{name}} — le texte en clair n'est affiché qu'UNE SEULE FOIS et ne sera plus récupérable. Stockez-le dans votre gestionnaire de secrets.",
+        "copy": "Copier"
+      },
+      "revoke": {
+        "button": "Révoquer",
+        "confirmTitle": "Révoquer cette clé API ?",
+        "confirmBody": "{{name}} cessera immédiatement d'authentifier. Les appelants qui l'utilisent devront en obtenir une nouvelle.",
+        "confirm": "Révoquer",
+        "cancel": "Annuler"
+      }
+    }
+  },
   "metadataSources": {
     "title": "Sources de métadonnées",
     "subtitle": "Agrégation par champ sur les neuf fournisseurs documentés (IGDB, ScreenScraper, MobyGames, LaunchBox, SteamGridDB, RetroAchievements, HowLongToBeat, Hasheous, PlayMatch). Activez, priorisez et testez chacun ici.",

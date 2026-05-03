@@ -335,6 +335,41 @@
     },
     "uploadHint": "Pack upload (multipart YAML) + per-platform override toggles land in a follow-up slice."
   },
+  "general": {
+    "title": "General",
+    "subtitle": "Operator account settings. Today's slice covers personal API keys; richer surfaces (password change, OIDC unlink, login history) land as their endpoints surface.",
+    "apiKeys": {
+      "section": "API keys",
+      "empty": {
+        "title": "No API keys minted",
+        "body": "Mint a key from the form above to script Romarr from notifiarr / scripts / dashboards."
+      },
+      "neverUsed": "never used",
+      "timestamps": "Created {{created}} · last used {{lastUsed}}",
+      "create": {
+        "title": "Mint a new key",
+        "nameLabel": "Name",
+        "namePlaceholder": "Notifiarr / Homepage / dashboard…",
+        "scopesLabel": "Scopes (optional)",
+        "scopesPlaceholder": "read:queue, read:games",
+        "scopesHint": "Comma-separated. Leave blank for full read+write scope.",
+        "submit": "Mint key",
+        "pending": "Minting…"
+      },
+      "created": {
+        "title": "Key minted — copy it now",
+        "body": "{{name}} — the plaintext is shown ONCE and will not be retrievable later. Store it in your secrets manager.",
+        "copy": "Copy"
+      },
+      "revoke": {
+        "button": "Revoke",
+        "confirmTitle": "Revoke this API key?",
+        "confirmBody": "{{name}} will stop authenticating immediately. Any caller using this key will need a new one.",
+        "confirm": "Revoke",
+        "cancel": "Cancel"
+      }
+    }
+  },
   "metadataSources": {
     "title": "Metadata Sources",
     "subtitle": "Per-field aggregation across the nine documented providers (IGDB, ScreenScraper, MobyGames, LaunchBox, SteamGridDB, RetroAchievements, HowLongToBeat, Hasheous, PlayMatch). Enable, prioritize, and test each one here.",
