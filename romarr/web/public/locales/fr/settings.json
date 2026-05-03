@@ -569,12 +569,16 @@
       "body": "Créez-en une ci-dessus pour commencer à étiqueter les Jeux, Indexeurs, Notifications ou Releases."
     },
     "loadError": "Impossible de charger les étiquettes",
+    "search": {
+      "label": "Chercher une étiquette",
+      "placeholder": "Chercher par nom ou libellé…"
+    },
     "filter": {
       "unusedOnly": {
         "off": "{{count}} non utilisés",
         "on": "✓ Affichage non utilisés ({{count}})"
       },
-      "noMatches": "Aucune étiquette non utilisée. Désactivez le filtre pour voir toutes les étiquettes."
+      "noMatches": "Aucune étiquette ne correspond au filtre actif."
     },
     "create": {
       "heading": "Créer une étiquette",

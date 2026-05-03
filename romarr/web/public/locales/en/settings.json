@@ -569,12 +569,16 @@
       "body": "Create one above to start tagging Games, Indexers, Notifications, or Releases."
     },
     "loadError": "Couldn't load tags",
+    "search": {
+      "label": "Search tags",
+      "placeholder": "Search by name or label…"
+    },
     "filter": {
       "unusedOnly": {
         "off": "{{count}} unused",
         "on": "✓ Showing unused ({{count}})"
       },
-      "noMatches": "No unused tags. Toggle the chip off to see all tags."
+      "noMatches": "No tags match the active filter."
     },
     "create": {
       "heading": "Create tag",

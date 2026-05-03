@@ -45,12 +45,32 @@ export function TagsPage(): ReactElement {
     );
   };
 
+  const rawQuery = searchParams.get("q") ?? "";
+  const queryNormalized = rawQuery.trim().toLowerCase();
+
+  const setQuery = (next: string): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next.trim() === "") params.delete("q");
+        else params.set("q", next);
+        return params;
+      },
+      { replace: true },
+    );
+  };
+
   const filtered = useMemo(() => {
     if (!data) return [];
-    return unusedOnly
-      ? data.filter((tag) => tag.usageCount === 0)
-      : data;
-  }, [data, unusedOnly]);
+    return data.filter((tag) => {
+      if (unusedOnly && tag.usageCount > 0) return false;
+      if (queryNormalized.length === 0) return true;
+      return (
+        tag.name.toLowerCase().includes(queryNormalized) ||
+        tag.label.toLowerCase().includes(queryNormalized)
+      );
+    });
+  }, [data, unusedOnly, queryNormalized]);
 
   const totalCount = data?.length ?? 0;
   const unusedCount = useMemo(
@@ -70,6 +90,24 @@ export function TagsPage(): ReactElement {
       <CreateTagForm />
 
       <section>
+        {totalCount > 0 && (
+          <label className="mb-3 block">
+            <span className="sr-only">{t("tags.search.label")}</span>
+            <input
+              type="search"
+              value={rawQuery}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("tags.search.placeholder")}
+              aria-label={t("tags.search.label")}
+              className={[
+                "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
+                "ring-1 ring-inset ring-zinc-700",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+              ].join(" ")}
+            />
+          </label>
+        )}
+
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-mono text-xs uppercase tracking-widest text-zinc-500">
             {t("tags.existing")}
