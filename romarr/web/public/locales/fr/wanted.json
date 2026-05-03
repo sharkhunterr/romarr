@@ -31,6 +31,12 @@
       "aria": "Effacer tous les filtres actifs (recherche, plateforme, bibliothèque, étiquette)"
     }
   },
+  "fab": {
+    "missingSearch": "Rechercher les manquants",
+    "missingSearchAria": "Lancer une recherche pour chaque release manquante surveillée",
+    "cutoffSearch": "Rechercher les cutoff",
+    "cutoffSearchAria": "Lancer une recherche pour chaque candidat cutoff surveillé"
+  },
   "sort": {
     "label": "Trier par",
     "key": {

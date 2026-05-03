@@ -31,6 +31,12 @@
       "aria": "Clear every active filter (search, platform, library, tag)"
     }
   },
+  "fab": {
+    "missingSearch": "Search missing",
+    "missingSearchAria": "Trigger a search for every monitored missing release",
+    "cutoffSearch": "Search cutoff",
+    "cutoffSearchAria": "Trigger a search for every monitored cutoff candidate"
+  },
   "sort": {
     "label": "Sort by",
     "key": {

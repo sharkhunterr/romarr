@@ -27,6 +27,10 @@
       "aria": "Effacer tous les filtres actifs (recherche, plateforme, bibliothèque, étiquette, suivi)"
     }
   },
+  "fab": {
+    "add": "Ajouter",
+    "addAria": "Ajouter un nouveau jeu à la ludothèque"
+  },
   "sort": {
     "label": "Trier par",
     "key": {

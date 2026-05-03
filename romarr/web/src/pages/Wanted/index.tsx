@@ -17,6 +17,7 @@ import { useSearchParams } from "react-router-dom";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
+import { ButtonFAB } from "@/components/shared/FAB";
 import { useBulkMonitorReleases } from "@/lib/api/queries/games";
 import { useLibraries } from "@/lib/api/queries/libraries";
 import { usePlatforms } from "@/lib/api/queries/platforms";
@@ -405,6 +406,11 @@ export function WantedPage(): ReactElement {
     );
   };
 
+  // FAB-scoped trigger hook — separate mutation state from the
+  // in-row BulkSearchButton so the FAB shows its own pending
+  // state without interfering.
+  const trigger = useTriggerCommand();
+
   // -- Bulk select state (slice 152) ----------------------------------------
   const pushToast = useToastStore((s) => s.push);
   const bulkMonitor = useBulkMonitorReleases();
@@ -792,6 +798,28 @@ export function WantedPage(): ReactElement {
           releases={visibleRecords.filter((r) => selectedIds.has(r.id))}
           onClose={() => setDeleteOpen(false)}
           onSuccess={exitSelection}
+        />
+      )}
+
+      {!selectionActive && (
+        <ButtonFAB
+          ariaLabel={
+            tab === "missing"
+              ? t("fab.missingSearchAria")
+              : t("fab.cutoffSearchAria")
+          }
+          icon="🔍"
+          label={
+            tab === "missing"
+              ? t("fab.missingSearch")
+              : t("fab.cutoffSearch")
+          }
+          onClick={() =>
+            trigger.mutate({
+              name: tab === "missing" ? "MissingSearch" : "CutoffSearch",
+            })
+          }
+          disabled={trigger.isPending}
         />
       )}
     </div>

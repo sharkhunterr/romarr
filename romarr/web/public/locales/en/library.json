@@ -27,6 +27,10 @@
       "aria": "Clear every active filter (search, platform, library, tag, monitored)"
     }
   },
+  "fab": {
+    "add": "Add",
+    "addAria": "Add a new game to the Library"
+  },
   "sort": {
     "label": "Sort by",
     "key": {

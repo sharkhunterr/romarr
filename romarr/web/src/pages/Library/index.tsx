@@ -31,6 +31,8 @@ import { usePlatforms } from "@/lib/api/queries/platforms";
 import { useTags } from "@/lib/api/queries/tags";
 import { useToastStore } from "@/lib/store/toast";
 
+import { LinkFAB } from "@/components/shared/FAB";
+
 import { BulkDeleteModal } from "./BulkDeleteModal";
 import { BulkTagModal } from "./BulkTagModal";
 import { GameCard } from "./GameCard";
@@ -636,6 +638,15 @@ export function LibraryPage(): ReactElement {
           games={games.data.filter((g) => selectedIds.has(g.id))}
           onClose={() => setTagOpen(false)}
           onSuccess={exitSelection}
+        />
+      )}
+
+      {!selectionActive && (
+        <LinkFAB
+          to="/add"
+          ariaLabel={t("fab.addAria")}
+          icon="+"
+          label={t("fab.add")}
         />
       )}
     </div>

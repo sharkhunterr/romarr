@@ -515,8 +515,16 @@ invalidations.
       filters.
 - [ ] T071 [P-LIB] Wire the page to the generated `useGames` hook
       with TanStack Virtual for the grid.
-- [ ] T072 [P-LIB] Add the FAB for "Add New" → navigate to
-      `/add`.
+- [X] T072 [P-LIB] FAB shipped (slice 171). Reusable
+      ``LinkFAB`` / ``ButtonFAB`` primitives in
+      ``components/shared/FAB.tsx``; Library page renders the
+      ``+ Add`` link FAB pointing at ``/add``, Wanted renders
+      the ``🔍 Search`` button FAB firing the
+      MissingSearch / CutoffSearch system command (per spec D
+      "Floating Action Button for primary action per page —
+      Add on Library, Trigger Search on Wanted"). Hidden in
+      bulk-select mode so the bulk toolbar owns the surface
+      then. Bottom offset clears the BottomNav on mobile.
 
 **Checkpoint**: Library renders correctly at every documented
 viewport; SC-002 (60 fps on 10 000 items) is met in a perf test.
