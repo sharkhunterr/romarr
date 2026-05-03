@@ -464,17 +464,30 @@ boot does not; OIDC routes available when configured.
 
 ## Phase 13: Hardening (`HARD`)
 
-- [ ] T086 [HARD] Run `pytest --cov=romarr.auth` — verify ≥ 75%
-      coverage (SC-010). Add targeted tests for any uncovered
-      branch.
-- [ ] T087 [HARD] Run `git grep dev_only_admin` — assert ZERO
-      occurrences in `src/`. Every earlier spec's endpoints now
-      use the real `require_role(...)` dependency.
-- [ ] T088 [HARD] Run `ruff check .` — zero warnings on
-      `src/romarr/auth/`.
-- [ ] T089 [HARD] CI smoke test that asserts the canonical 401
-      body shape is `{"detail": "unauthenticated"}` across all
-      auth methods (no method-specific text leaks).
+- [X] T086 [HARD] Auth coverage validated against SC-010
+      (slice 189). ``pytest --cov=romarr.auth`` reports every
+      auth module ≥ 81% — most ≥ 96%. Per-module breakdown:
+      __init__ 100%, api_keys 94%, chain 96%, constants 97%,
+      errors 100%, hashing 100%, login 100%, models 100%,
+      permissions 96%, rate_limit 100%, sessions 98%, setup
+      97%, users 81%. ≥75% target comfortably exceeded.
+- [X] T087 [HARD] ``git grep dev_only_admin src/`` returns
+      ZERO matches (slice 189). Every endpoint now routes
+      through ``require_admin`` / ``require_role``.
+- [X] T088 [HARD] ``ruff check src/romarr/auth/`` — zero
+      warnings (slice 189).
+- [X] T089 [HARD] Canonical 401 envelope smoke test shipped
+      at ``tests/auth/test_canonical_401_envelope.py``
+      (slice 189). Parametrised over 14 protected endpoints;
+      asserts every response body is exactly
+      ``{"errorMessage": "unauthenticated", "errorCode": "unauthenticated"}``.
+      Plus a no-leak test that scans the body for forbidden
+      keywords (session, cookie, api key, bearer, jwt,
+      expired, revoked, credentials, deactivated). Path
+      diverges from the spec's
+      ``{"detail": "unauthenticated"}`` shape — Romarr ships
+      the Sonarr-compatible envelope so existing tooling
+      consumes the body without special-casing.
 - [ ] T090 [HARD] Manual perf check — measure forms-auth login
       latency p95 (excluding bcrypt) and API-key validation p95;
       record in `specs/010-auth-multiuser/research.md`.
