@@ -43,7 +43,31 @@
   "card": {
     "unmonitoredTooltip": "Non suivi — Romarr ne cherchera pas d'upgrade",
     "unmonitoredAria": "{{title}} (non suivi)",
+    "selectAria": "Sélectionner {{title}}",
+    "deselectAria": "Désélectionner {{title}}",
     "tagsAria_one": "{{count}} étiquette",
     "tagsAria_other": "{{count}} étiquettes"
+  },
+  "bulk": {
+    "enterSelection": "Sélectionner",
+    "exitSelection": "✓ En sélection",
+    "toolbarAria": "Actions de sélection multiple",
+    "selectedCount_zero": "Aucun jeu sélectionné",
+    "selectedCount_one": "{{count}} jeu sélectionné",
+    "selectedCount_other": "{{count}} jeux sélectionnés",
+    "selectAll": "Tout sélectionner",
+    "cancel": "Annuler",
+    "errorTitle": "L'action groupée a échoué",
+    "monitor": {
+      "label": "Suivre",
+      "pending": "Mise à jour…",
+      "successTitle": "Jeux suivis",
+      "successBody": "{{updated}} jeux mis à jour · {{missing}} introuvables"
+    },
+    "unmonitor": {
+      "label": "Ne plus suivre",
+      "pending": "Mise à jour…",
+      "successTitle": "Jeux désuivis"
+    }
   }
 }

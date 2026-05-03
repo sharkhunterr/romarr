@@ -370,6 +370,54 @@
         "title": "Body_validate_only_api_v3_rom_platform_pack_validate_post",
         "type": "object"
       },
+      "BulkMonitorRequest": {
+        "additionalProperties": false,
+        "description": "POST /api/v3/game/bulk-monitor \u2014 flip the monitored flag\non a batch of Games.\n\nPowers the Library page's bulk-select action bar (slice\n152). Capped at 500 ids per request so an accidental\n\"select everything\" doesn't lock up the DB; the UI shards\nlarger selections client-side.",
+        "properties": {
+          "gameIds": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Gameids",
+            "type": "array"
+          },
+          "monitored": {
+            "title": "Monitored",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "gameIds",
+          "monitored"
+        ],
+        "title": "BulkMonitorRequest",
+        "type": "object"
+      },
+      "BulkMonitorResponse": {
+        "additionalProperties": false,
+        "description": "Response envelope for the bulk-monitor endpoint.\n\n``updated`` is the count of rows actually flipped. Rows\nwhose ``monitored`` flag was already at the requested value\nare still counted as \"updated\" \u2014 the operator's intent\n(idempotent set) is what matters here. ``missing`` lists\nany ids the operator passed that didn't resolve to a Game.",
+        "properties": {
+          "missing": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "updated": {
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated",
+          "missing"
+        ],
+        "title": "BulkMonitorResponse",
+        "type": "object"
+      },
       "CalendarEvent": {
         "description": "One preservation event on the calendar.\n\nModeled on Sonarr's `/calendar` shape but adapted for ROM\npreservation: each event is a community-curated upcoming\nrelease (ROM hack, homebrew, fan translation). The\n``platformId`` is nullable \u2014 multi-platform events (e.g. a\ncross-platform homebrew port) carry ``null`` here.",
         "properties": {
@@ -9070,6 +9118,47 @@
           }
         },
         "summary": "List games (any authenticated user). Supports title-substring + platform filters.",
+        "tags": [
+          "Game"
+        ]
+      }
+    },
+    "/api/v3/game/bulk-monitor": {
+      "post": {
+        "operationId": "bulk_monitor_api_v3_game_bulk_monitor_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkMonitorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkMonitorResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Flip the monitored flag on a batch of games (admin only). Capped at 500 ids per call. Returns the number of rows updated and the ids that didn't resolve.",
         "tags": [
           "Game"
         ]

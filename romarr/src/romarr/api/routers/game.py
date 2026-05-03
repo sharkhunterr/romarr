@@ -1,5 +1,5 @@
-"""Game + Release read + lock + per-field edit + notes endpoints
-(slices 86, 146, 147, 149).
+"""Game + Release read + lock + per-field edit + notes + bulk
+endpoints (slices 86, 146, 147, 149, 151).
 
 Foundation already ships the :class:`Game` + :class:`Release`
 ORM models; this router is the operator-facing read surface
@@ -32,7 +32,7 @@ from __future__ import annotations
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -95,6 +95,41 @@ _EDITABLE_TEXT_FIELDS: dict[ProviderField, tuple[str, int | None]] = {
     ProviderField.PUBLISHER: ("publisher", 128),
     ProviderField.AGE_RATING: ("age_rating", 16),
 }
+
+
+class BulkMonitorRequest(BaseModel):
+    """POST /api/v3/game/bulk-monitor — flip the monitored flag
+    on a batch of Games.
+
+    Powers the Library page's bulk-select action bar (slice
+    152). Capped at 500 ids per request so an accidental
+    "select everything" doesn't lock up the DB; the UI shards
+    larger selections client-side.
+    """
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    game_ids: Annotated[
+        list[int],
+        Field(alias="gameIds", min_length=1, max_length=500),
+    ]
+    monitored: bool
+
+
+class BulkMonitorResponse(BaseModel):
+    """Response envelope for the bulk-monitor endpoint.
+
+    ``updated`` is the count of rows actually flipped. Rows
+    whose ``monitored`` flag was already at the requested value
+    are still counted as "updated" — the operator's intent
+    (idempotent set) is what matters here. ``missing`` lists
+    any ids the operator passed that didn't resolve to a Game.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    updated: int
+    missing: list[int]
 
 
 class NotesUpdateRequest(BaseModel):
@@ -204,6 +239,37 @@ async def list_games(
     return [
         GameRead.model_validate(row, from_attributes=True) for row in rows
     ]
+
+
+@router.post(
+    "/bulk-monitor",
+    response_model=BulkMonitorResponse,
+    summary=(
+        "Flip the monitored flag on a batch of games (admin "
+        "only). Capped at 500 ids per call. Returns the number "
+        "of rows updated and the ids that didn't resolve."
+    ),
+)
+async def bulk_monitor(
+    body: Annotated[BulkMonitorRequest, Body()],
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> BulkMonitorResponse:
+    rows = (
+        (
+            await db.execute(
+                select(Game).where(Game.id.in_(body.game_ids))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    found = {row.id for row in rows}
+    missing = sorted(set(body.game_ids) - found)
+    for row in rows:
+        row.monitored = body.monitored
+    await db.commit()
+    return BulkMonitorResponse(updated=len(rows), missing=missing)
 
 
 @router.get(

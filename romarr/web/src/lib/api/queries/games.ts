@@ -258,6 +258,38 @@ export type EditableTextField =
   | "publisher"
   | "age_rating";
 
+export type BulkMonitorResponse =
+  components["schemas"]["BulkMonitorResponse"];
+
+export interface BulkMonitorVariables {
+  gameIds: number[];
+  monitored: boolean;
+}
+
+/**
+ * POST /api/v3/game/bulk-monitor — flip the monitored flag on
+ * a batch of Games (slice 151). Capped at 500 ids per call;
+ * the Library page shards larger selections client-side.
+ */
+export function useBulkMonitorGames(): UseMutationResult<
+  BulkMonitorResponse,
+  ApiError,
+  BulkMonitorVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<BulkMonitorResponse, ApiError, BulkMonitorVariables>({
+    mutationFn: ({ gameIds, monitored }) =>
+      apiFetch<BulkMonitorResponse>("/api/v3/game/bulk-monitor", {
+        method: "POST",
+        json: { gameIds, monitored },
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["games"] });
+      void qc.invalidateQueries({ queryKey: ["wanted"] });
+    },
+  });
+}
+
 export interface SetGameNotesVariables {
   gameId: number;
   notes: string | null;

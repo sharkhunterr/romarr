@@ -909,3 +909,119 @@ async def test_put_notes_persists_across_read(
     resp = await authed_client.get(f"/api/v3/game/{game_id}")
     assert resp.status_code == 200
     assert resp.json()["notes"] == "Verified working on Mega Drive 2."
+
+
+# ---------------------------------------------------------------------------
+# slice 151 — POST /api/v3/game/bulk-monitor
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_bulk_monitor_flips_to_false(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Three games default-monitored; bulk-flip them off in one
+    call and confirm via individual reads."""
+    _, a, _ = await _seed_chain(api_engine, title="A")
+    _, b, _ = await _seed_chain(api_engine, title="B")
+    _, c, _ = await _seed_chain(api_engine, title="C")
+
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-monitor",
+        json={"gameIds": [a, b, c], "monitored": False},
+    )
+    assert resp.status_code == 200, resp.json()
+    body = resp.json()
+    assert body["updated"] == 3
+    assert body["missing"] == []
+
+    for gid in (a, b, c):
+        row = await authed_client.get(f"/api/v3/game/{gid}")
+        assert row.json()["monitored"] is False
+
+
+@pytest.mark.asyncio
+async def test_bulk_monitor_reports_missing_ids(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Missing ids surface in the response without sinking the
+    rest of the batch — partial success is the contract."""
+    _, a, _ = await _seed_chain(api_engine, title="Real")
+
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-monitor",
+        json={"gameIds": [a, 999_999, 888_888], "monitored": True},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["updated"] == 1
+    assert body["missing"] == [888_888, 999_999]
+
+
+@pytest.mark.asyncio
+async def test_bulk_monitor_idempotent(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Setting the same flag twice still returns updated=N
+    (intent-based, not change-based)."""
+    _, a, _ = await _seed_chain(api_engine, title="Idem")
+    for _ in range(3):
+        resp = await authed_client.post(
+            "/api/v3/game/bulk-monitor",
+            json={"gameIds": [a], "monitored": False},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["updated"] == 1
+
+
+@pytest.mark.asyncio
+async def test_bulk_monitor_rejects_empty_list(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-monitor",
+        json={"gameIds": [], "monitored": False},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_bulk_monitor_rejects_too_many(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    """Cap is 500 — 501 is rejected upfront so we never let an
+    accidental SELECT-IN explode."""
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-monitor",
+        json={
+            "gameIds": list(range(1, 502)),
+            "monitored": False,
+        },
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_bulk_monitor_rejects_extra_keys(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-monitor",
+        json={
+            "gameIds": [1],
+            "monitored": False,
+            "stowaway": "x",
+        },
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_bulk_monitor_unauthenticated_401(
+    api_client: httpx.AsyncClient,
+) -> None:
+    resp = await api_client.post(
+        "/api/v3/game/bulk-monitor",
+        json={"gameIds": [1], "monitored": False},
+    )
+    assert resp.status_code == 401

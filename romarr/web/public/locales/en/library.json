@@ -43,7 +43,31 @@
   "card": {
     "unmonitoredTooltip": "Not monitored — Romarr won't search for upgrades",
     "unmonitoredAria": "{{title}} (not monitored)",
+    "selectAria": "Select {{title}}",
+    "deselectAria": "Deselect {{title}}",
     "tagsAria_one": "{{count}} tag",
     "tagsAria_other": "{{count}} tags"
+  },
+  "bulk": {
+    "enterSelection": "Select",
+    "exitSelection": "✓ Selecting",
+    "toolbarAria": "Bulk selection actions",
+    "selectedCount_zero": "No games selected",
+    "selectedCount_one": "{{count}} game selected",
+    "selectedCount_other": "{{count}} games selected",
+    "selectAll": "Select all visible",
+    "cancel": "Cancel",
+    "errorTitle": "Bulk action failed",
+    "monitor": {
+      "label": "Monitor",
+      "pending": "Updating…",
+      "successTitle": "Games monitored",
+      "successBody": "{{updated}} games updated · {{missing}} missing"
+    },
+    "unmonitor": {
+      "label": "Unmonitor",
+      "pending": "Updating…",
+      "successTitle": "Games unmonitored"
+    }
   }
 }

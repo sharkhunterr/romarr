@@ -1,10 +1,14 @@
 /**
- * Single game card (slice 88).
+ * Single game card (slices 88, 151).
  *
  * Used by the Library grid. Cover (gradient fallback when
  * `cover_path` is null or no covers endpoint is configured),
- * title, platform-id pill, click-through to /game/{id}
- * (still a placeholder until the GameDetail page ships).
+ * title, platform-id pill, click-through to /game/{id}.
+ *
+ * In bulk-select mode (``selectionActive=true``) the card
+ * becomes a button — clicking toggles selection instead of
+ * navigating to the detail page; a ✓ overlay marks selected
+ * cards and the border lights up brand-tinted.
  */
 
 import { type ReactElement } from "react";
@@ -18,6 +22,9 @@ import { useTagsById } from "@/lib/api/queries/tags";
 
 interface GameCardProps {
   game: Game;
+  selectionActive?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (gameId: number) => void;
 }
 
 export function GameCard(props: GameCardProps): ReactElement {
@@ -43,28 +50,50 @@ export function GameCard(props: GameCardProps): ReactElement {
     platform?.name ||
     `P#${game.platform_id}`;
 
-  return (
-    <Link
-      to={`/game/${game.id}`}
-      className={[
-        "group relative flex flex-col gap-2 rounded-md border border-zinc-800",
-        "bg-zinc-900/40 p-2",
-        "hover:border-brand/40 hover:bg-zinc-900",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-        "transition-colors",
-      ].join(" ")}
-      aria-label={
-        game.monitored
-          ? game.title
-          : t("card.unmonitoredAria", { title: game.title })
-      }
-    >
+  const selectionActive = props.selectionActive ?? false;
+  const selected = props.selected ?? false;
+
+  const cardClassName = [
+    "group relative flex flex-col gap-2 rounded-md border p-2 text-left",
+    "bg-zinc-900/40",
+    selected
+      ? "border-brand ring-2 ring-brand/60 bg-brand/10"
+      : "border-zinc-800 hover:border-brand/40 hover:bg-zinc-900",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+    "transition-colors",
+  ].join(" ");
+
+  const ariaLabel = selectionActive
+    ? selected
+      ? t("card.deselectAria", { title: game.title })
+      : t("card.selectAria", { title: game.title })
+    : game.monitored
+      ? game.title
+      : t("card.unmonitoredAria", { title: game.title });
+
+  const inner = (
+    <>
       <div className="relative">
         <CoverImage
           src={game.cover_path ?? null}
           alt={game.title}
           sizeClassName="aspect-[3/4] w-full"
         />
+        {selectionActive && (
+          <span
+            aria-hidden="true"
+            className={[
+              "absolute left-1 top-1 flex h-5 w-5 items-center justify-center",
+              "rounded-md text-[0.7rem] ring-1 ring-inset",
+              selected
+                ? "bg-brand text-zinc-950 ring-brand"
+                : "bg-zinc-950/80 text-zinc-500 ring-zinc-700",
+              "backdrop-blur-sm",
+            ].join(" ")}
+          >
+            {selected ? "✓" : ""}
+          </span>
+        )}
         {!game.monitored && (
           <span
             aria-hidden="true"
@@ -111,7 +140,7 @@ export function GameCard(props: GameCardProps): ReactElement {
         <p
           className={[
             "line-clamp-2 text-xs font-medium",
-            "group-hover:text-brand",
+            selectionActive ? "" : "group-hover:text-brand",
             game.monitored ? "text-zinc-100" : "text-zinc-400",
           ].join(" ")}
         >
@@ -127,6 +156,26 @@ export function GameCard(props: GameCardProps): ReactElement {
           <span className="shrink-0">#{game.id}</span>
         </div>
       </div>
+    </>
+  );
+
+  if (selectionActive) {
+    return (
+      <button
+        type="button"
+        onClick={() => props.onToggleSelect?.(game.id)}
+        aria-pressed={selected}
+        aria-label={ariaLabel}
+        className={cardClassName}
+      >
+        {inner}
+      </button>
+    );
+  }
+
+  return (
+    <Link to={`/game/${game.id}`} className={cardClassName} aria-label={ariaLabel}>
+      {inner}
     </Link>
   );
 }

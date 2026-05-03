@@ -1,5 +1,5 @@
 /**
- * Library page (P-LIB, slice 88; slice 100 adds platform filter).
+ * Library page (P-LIB, slices 88, 100, 151).
  *
  * Grid of every game from /api/v3/game. Title-substring search
  * is debounced 200 ms; the platform filter (slice 100) reuses
@@ -7,10 +7,10 @@
  * and reads its option list from the new `usePlatforms` hook
  * (slice 99).
  *
- * Filters still deferred to follow-up slices:
- *   * Region / quality / dump status / monitored — need
- *     additional joins / index columns on the Game/Release
- *     surface.
+ * Slice 151 adds a bulk-select mode: hit "Select" to enter,
+ * tap cards to toggle selection, then hit Monitor / Unmonitor
+ * to flip the flag on every selected Game in one batch via
+ * /api/v3/game/bulk-monitor.
  */
 
 import { useEffect, useMemo, useState, type ReactElement } from "react";
@@ -20,12 +20,14 @@ import { useSearchParams } from "react-router-dom";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { CardGridSkeleton } from "@/components/shared/LoadingSkeleton";
 import {
+  useBulkMonitorGames,
   useGames,
   type GameSortKey,
   type ListGamesParams,
   type SortDirection,
 } from "@/lib/api/queries/games";
 import { usePlatforms } from "@/lib/api/queries/platforms";
+import { useToastStore } from "@/lib/store/toast";
 
 import { GameCard } from "./GameCard";
 
@@ -159,6 +161,63 @@ export function LibraryPage(): ReactElement {
     platformFilter !== ALL_PLATFORMS ||
     monitoredOnly;
 
+  // -- Bulk select state (slice 151) ----------------------------------------
+  const pushToast = useToastStore((s) => s.push);
+  const bulkMonitor = useBulkMonitorGames();
+  const [selectionActive, setSelectionActive] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<number>>(
+    () => new Set<number>(),
+  );
+
+  const exitSelection = (): void => {
+    setSelectionActive(false);
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelect = (gameId: number): void => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(gameId)) next.delete(gameId);
+      else next.add(gameId);
+      return next;
+    });
+  };
+
+  const selectAllVisible = (): void => {
+    if (!games.data) return;
+    setSelectedIds(new Set(games.data.map((g) => g.id)));
+  };
+
+  const runBulkMonitor = (monitored: boolean): void => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    bulkMonitor.mutate(
+      { gameIds: ids, monitored },
+      {
+        onSuccess: (resp) => {
+          pushToast({
+            kind: "success",
+            title: monitored
+              ? t("bulk.monitor.successTitle")
+              : t("bulk.unmonitor.successTitle"),
+            description: t("bulk.monitor.successBody", {
+              updated: resp.updated,
+              missing: resp.missing.length,
+            }),
+          });
+          exitSelection();
+        },
+        onError: (err) => {
+          pushToast({
+            kind: "error",
+            title: t("bulk.errorTitle"),
+            description: err.message,
+          });
+        },
+      },
+    );
+  };
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-8">
       <header className="mb-6 space-y-3">
@@ -274,7 +333,77 @@ export function LibraryPage(): ReactElement {
               ? t("filters.monitoredOnly.on")
               : t("filters.monitoredOnly.off")}
           </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              selectionActive ? exitSelection() : setSelectionActive(true)
+            }
+            aria-pressed={selectionActive}
+            className={[
+              "shrink-0 rounded-md px-3 py-2 text-xs font-medium ring-1 ring-inset",
+              "transition-colors",
+              selectionActive
+                ? "bg-brand/20 text-brand ring-brand/40 hover:bg-brand/30"
+                : "bg-zinc-950 text-zinc-400 ring-zinc-700 hover:bg-zinc-900",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+            ].join(" ")}
+          >
+            {selectionActive
+              ? t("bulk.exitSelection")
+              : t("bulk.enterSelection")}
+          </button>
         </div>
+
+        {selectionActive && (
+          <div
+            role="region"
+            aria-label={t("bulk.toolbarAria")}
+            className="flex flex-wrap items-center gap-2 rounded-md border border-brand/40 bg-brand/10 px-3 py-2"
+          >
+            <p className="text-xs text-zinc-100">
+              {t("bulk.selectedCount", { count: selectedIds.size })}
+            </p>
+            <div className="ml-auto flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={selectAllVisible}
+                disabled={!games.data || games.data.length === 0}
+                className="rounded-md border border-zinc-700 px-2 py-1 text-[0.65rem] font-medium text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {t("bulk.selectAll")}
+              </button>
+              <button
+                type="button"
+                onClick={() => runBulkMonitor(true)}
+                disabled={selectedIds.size === 0 || bulkMonitor.isPending}
+                className="rounded-md bg-emerald-600 px-2 py-1 text-[0.65rem] font-medium text-zinc-950 hover:bg-emerald-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {bulkMonitor.isPending
+                  ? t("bulk.monitor.pending")
+                  : t("bulk.monitor.label")}
+              </button>
+              <button
+                type="button"
+                onClick={() => runBulkMonitor(false)}
+                disabled={selectedIds.size === 0 || bulkMonitor.isPending}
+                className="rounded-md bg-zinc-700 px-2 py-1 text-[0.65rem] font-medium text-zinc-100 hover:bg-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {bulkMonitor.isPending
+                  ? t("bulk.unmonitor.pending")
+                  : t("bulk.unmonitor.label")}
+              </button>
+              <button
+                type="button"
+                onClick={exitSelection}
+                disabled={bulkMonitor.isPending}
+                className="rounded-md border border-zinc-700 px-2 py-1 text-[0.65rem] font-medium text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {t("bulk.cancel")}
+              </button>
+            </div>
+          </div>
+        )}
 
         {games.isSuccess && (
           <p className="font-mono text-[0.65rem] text-zinc-500">
@@ -309,7 +438,12 @@ export function LibraryPage(): ReactElement {
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
           {games.data.map((game) => (
             <li key={game.id}>
-              <GameCard game={game} />
+              <GameCard
+                game={game}
+                selectionActive={selectionActive}
+                selected={selectedIds.has(game.id)}
+                onToggleSelect={toggleSelect}
+              />
             </li>
           ))}
         </ul>

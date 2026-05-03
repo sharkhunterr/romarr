@@ -440,6 +440,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/game/bulk-monitor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Flip the monitored flag on a batch of games (admin only). Capped at 500 ids per call. Returns the number of rows updated and the ids that didn't resolve. */
+        post: operations["bulk_monitor_api_v3_game_bulk_monitor_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/game/lookup": {
         parameters: {
             query?: never;
@@ -2170,6 +2187,38 @@ export interface components {
              * @description The YAML pack body
              */
             file: string;
+        };
+        /**
+         * BulkMonitorRequest
+         * @description POST /api/v3/game/bulk-monitor — flip the monitored flag
+         *     on a batch of Games.
+         *
+         *     Powers the Library page's bulk-select action bar (slice
+         *     152). Capped at 500 ids per request so an accidental
+         *     "select everything" doesn't lock up the DB; the UI shards
+         *     larger selections client-side.
+         */
+        BulkMonitorRequest: {
+            /** Gameids */
+            gameIds: number[];
+            /** Monitored */
+            monitored: boolean;
+        };
+        /**
+         * BulkMonitorResponse
+         * @description Response envelope for the bulk-monitor endpoint.
+         *
+         *     ``updated`` is the count of rows actually flipped. Rows
+         *     whose ``monitored`` flag was already at the requested value
+         *     are still counted as "updated" — the operator's intent
+         *     (idempotent set) is what matters here. ``missing`` lists
+         *     any ids the operator passed that didn't resolve to a Game.
+         */
+        BulkMonitorResponse: {
+            /** Missing */
+            missing: number[];
+            /** Updated */
+            updated: number;
         };
         /**
          * CalendarEvent
@@ -5904,6 +5953,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GameRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_monitor_api_v3_game_bulk_monitor_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkMonitorRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkMonitorResponse"];
                 };
             };
             /** @description Validation Error */
