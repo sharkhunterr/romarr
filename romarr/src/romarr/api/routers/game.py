@@ -8,32 +8,51 @@ endpoint requires `game_id` + `release_id`).
 
 Surface today:
 
-  * `GET /api/v3/game` — list games with optional
+  * `GET   /api/v3/game` — list games with optional
     title-substring + platform-id filter, paginated.
-  * `GET /api/v3/game/{game_id}` — single game read.
-  * `GET /api/v3/game/{game_id}/release` — list every
+  * `GET   /api/v3/game/{game_id}` — single game read.
+  * `GET   /api/v3/game/{game_id}/release` — list every
     Release belonging to the game (the Frontend Match form
     needs this to populate the "which release" picker).
+  * `GET   /api/v3/game/{game_id}/dump` — list every Dump
+    that belongs to a game (joined through Releases).
+  * `PATCH /api/v3/game/{game_id}` — toggle ``monitored``
+    (admin only). Other Game fields are owned by spec 002's
+    metadata aggregator and stay immutable here.
 
-Write endpoints (POST / PUT / DELETE) intentionally omitted —
-spec 002's metadata aggregator owns Game creation; the
-operator-facing surface is "search IGDB + add" via
-``/api/v3/game/lookup`` which lands with spec 010 once the
-metadata-driven add flow is wired.
+Game creation + free-form metadata edits are out of scope —
+spec 002 owns those; the operator-facing add flow is "search
+IGDB + add" via ``/api/v3/game/lookup`` which lands with
+spec 010.
 """
 
 from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from romarr.api.dependencies import get_db, require_readonly
+from romarr.api.dependencies import get_db, require_admin, require_readonly
 from romarr.auth import Principal
 from romarr.domain.models import Dump, Game, Release
 from romarr.domain.schemas import DumpRead, GameRead, ReleaseRead
+
+
+class GameToggleRequest(BaseModel):
+    """PATCH /api/v3/game/{id} — operator-toggle subset.
+
+    Only fields that are NOT owned by the metadata aggregator
+    are mutable here. Today: just ``monitored``. Adding more
+    operator-toggleable bits is straightforward — they go in
+    this schema.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    monitored: bool
 
 router = APIRouter(prefix="/api/v3/game", tags=["Game"])
 
@@ -142,6 +161,37 @@ async def list_releases_for_game(
     return [
         ReleaseRead.model_validate(row, from_attributes=True) for row in rows
     ]
+
+
+@router.patch(
+    "/{game_id}",
+    response_model=GameRead,
+    summary=(
+        "Toggle a Game's ``monitored`` flag (admin only). "
+        "All other fields are owned by the metadata aggregator."
+    ),
+)
+async def patch_game(
+    game_id: int,
+    body: Annotated[GameToggleRequest, Body()],
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> GameRead:
+    row = (
+        await db.execute(select(Game).where(Game.id == game_id))
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "errorMessage": f"game_id={game_id} not found",
+                "errorCode": "game_not_found",
+            },
+        )
+    row.monitored = body.monitored
+    await db.commit()
+    await db.refresh(row)
+    return GameRead.model_validate(row, from_attributes=True)
 
 
 @router.get(

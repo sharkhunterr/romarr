@@ -11,7 +11,10 @@ import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
 import { CoverImage } from "@/components/rom";
-import type { Game } from "@/lib/api/queries/games";
+import {
+  useToggleGameMonitor,
+  type Game,
+} from "@/lib/api/queries/games";
 
 interface OverviewTabProps {
   game: Game;
@@ -58,6 +61,46 @@ function formatList(items: readonly string[] | undefined): string | null {
   return items.join(", ");
 }
 
+function MonitorToggle(props: { game: Game }): ReactElement {
+  const { t } = useTranslation("game");
+  const { game } = props;
+  const toggle = useToggleGameMonitor();
+  const onClick = (): void => {
+    toggle.mutate({ gameId: game.id, monitored: !game.monitored });
+  };
+  const tone = game.monitored
+    ? "bg-emerald-700/30 text-emerald-200 ring-emerald-500/40"
+    : "bg-zinc-800 text-zinc-400 ring-zinc-700";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={toggle.isPending}
+      aria-pressed={game.monitored}
+      className={[
+        "inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5",
+        "text-xs font-medium ring-1 ring-inset",
+        "transition-colors hover:brightness-110",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+        "disabled:cursor-not-allowed disabled:opacity-60",
+        tone,
+      ].join(" ")}
+      title={
+        toggle.isError && toggle.error?.message
+          ? toggle.error.message
+          : undefined
+      }
+    >
+      <span aria-hidden="true">{game.monitored ? "👁️" : "💤"}</span>
+      <span>
+        {game.monitored
+          ? t("overview.monitor.on")
+          : t("overview.monitor.off")}
+      </span>
+    </button>
+  );
+}
+
 export function OverviewTab(props: OverviewTabProps): ReactElement {
   const { t } = useTranslation("game");
   const { game } = props;
@@ -73,15 +116,18 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
       </div>
 
       <div className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold text-zinc-100">
-            {game.title}
-          </h2>
-          <p className="mt-2 text-sm text-zinc-400">
-            {game.summary && game.summary.trim().length > 0
-              ? game.summary
-              : t("overview.noSummary")}
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-semibold text-zinc-100">
+              {game.title}
+            </h2>
+            <p className="mt-2 text-sm text-zinc-400">
+              {game.summary && game.summary.trim().length > 0
+                ? game.summary
+                : t("overview.noSummary")}
+            </p>
+          </div>
+          <MonitorToggle game={game} />
         </div>
 
         <dl className="rounded-md border border-zinc-800 bg-zinc-900/40 px-4">
@@ -145,10 +191,6 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
           <FactRow
             label={t("overview.fields.franchises")}
             value={formatList(game.franchises)}
-          />
-          <FactRow
-            label={t("overview.fields.monitored")}
-            value={game.monitored ? t("overview.yes") : t("overview.no")}
           />
         </dl>
       </div>

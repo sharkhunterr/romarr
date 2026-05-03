@@ -13,7 +13,10 @@
  */
 
 import {
+  useMutation,
   useQuery,
+  useQueryClient,
+  type UseMutationResult,
   type UseQueryResult,
 } from "@tanstack/react-query";
 
@@ -83,5 +86,36 @@ export function useDumpsForGame(
     queryFn: () => apiFetch<Dump[]>(`/api/v3/game/${gameId}/dump`),
     enabled: gameId !== null,
     staleTime: 30_000,
+  });
+}
+
+export interface ToggleMonitorVariables {
+  gameId: number;
+  monitored: boolean;
+}
+
+/**
+ * PATCH /api/v3/game/{id} — toggle a game's `monitored` flag.
+ *
+ * On success the canonical detail + list query keys are
+ * invalidated so the GameDetail header and the Library card
+ * pick up the new state without a manual refresh.
+ */
+export function useToggleGameMonitor(): UseMutationResult<
+  Game,
+  ApiError,
+  ToggleMonitorVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<Game, ApiError, ToggleMonitorVariables>({
+    mutationFn: ({ gameId, monitored }) =>
+      apiFetch<Game>(`/api/v3/game/${gameId}`, {
+        method: "PATCH",
+        json: { monitored },
+      }),
+    onSuccess: (game) => {
+      void qc.invalidateQueries({ queryKey: ["games", "detail", game.id] });
+      void qc.invalidateQueries({ queryKey: ["games", "list"] });
+    },
   });
 }

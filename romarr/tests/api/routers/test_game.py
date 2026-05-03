@@ -266,3 +266,78 @@ async def test_list_dumps_unauthenticated_401(
 ) -> None:
     resp = await api_client.get("/api/v3/game/1/dump")
     assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# slice 96 — PATCH /api/v3/game/{id} monitor toggle
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_patch_game_toggles_monitored_to_false(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Game seeds with monitored=True (default). PATCH flips it."""
+    _, game_id, _ = await _seed_chain(api_engine, title="Toggle Game")
+
+    resp = await authed_client.patch(
+        f"/api/v3/game/{game_id}", json={"monitored": False}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["monitored"] is False
+
+    # Re-read confirms the persistence path, not just the response.
+    resp2 = await authed_client.get(f"/api/v3/game/{game_id}")
+    assert resp2.json()["monitored"] is False
+
+
+@pytest.mark.asyncio
+async def test_patch_game_toggles_monitored_back_to_true(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    _, game_id, _ = await _seed_chain(api_engine, title="Re-monitor")
+    # Off, then on.
+    await authed_client.patch(
+        f"/api/v3/game/{game_id}", json={"monitored": False}
+    )
+    resp = await authed_client.patch(
+        f"/api/v3/game/{game_id}", json={"monitored": True}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["monitored"] is True
+
+
+@pytest.mark.asyncio
+async def test_patch_game_404_when_missing(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.patch(
+        "/api/v3/game/9999999", json={"monitored": False}
+    )
+    assert resp.status_code == 404
+    assert resp.json()["errorCode"] == "game_not_found"
+
+
+@pytest.mark.asyncio
+async def test_patch_game_rejects_unknown_fields(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """``extra=forbid`` on GameToggleRequest — only ``monitored``
+    is operator-toggleable here. Title edits go through the
+    metadata aggregator."""
+    _, game_id, _ = await _seed_chain(api_engine, title="ExtraGuard")
+    resp = await authed_client.patch(
+        f"/api/v3/game/{game_id}",
+        json={"monitored": False, "title": "Hacked Title"},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_patch_game_unauthenticated_401(
+    api_client: httpx.AsyncClient,
+) -> None:
+    resp = await api_client.patch(
+        "/api/v3/game/1", json={"monitored": False}
+    )
+    assert resp.status_code == 401

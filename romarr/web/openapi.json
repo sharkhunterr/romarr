@@ -2101,6 +2101,21 @@
         "title": "GameRead",
         "type": "object"
       },
+      "GameToggleRequest": {
+        "additionalProperties": false,
+        "description": "PATCH /api/v3/game/{id} \u2014 operator-toggle subset.\n\nOnly fields that are NOT owned by the metadata aggregator\nare mutable here. Today: just ``monitored``. Adding more\noperator-toggleable bits is straightforward \u2014 they go in\nthis schema.",
+        "properties": {
+          "monitored": {
+            "title": "Monitored",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "monitored"
+        ],
+        "title": "GameToggleRequest",
+        "type": "object"
+      },
       "GrabRequest": {
         "additionalProperties": false,
         "description": "POST /api/v3/rom/release/grab.\n\nOperator picks an exact result from a manual search. ``force``\noverrides the blocklist gate (FR-022 / SC-006); the pipeline's\nprofile gates still apply.",
@@ -8580,6 +8595,56 @@
           }
         },
         "summary": "Read one game (any authenticated user).",
+        "tags": [
+          "Game"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_game_api_v3_game__game_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "title": "Game Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GameToggleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Toggle a Game's ``monitored`` flag (admin only). All other fields are owned by the metadata aggregator.",
         "tags": [
           "Game"
         ]

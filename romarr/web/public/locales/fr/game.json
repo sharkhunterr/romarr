@@ -30,7 +30,11 @@
     "playersRange": "{{min}}–{{max}}",
     "playersSolo": "{{count}}",
     "hltbHours": "{{hours}} h",
-    "noValue": "—"
+    "noValue": "—",
+    "monitor": {
+      "on": "Suivi",
+      "off": "Non suivi"
+    }
   },
   "releases": {
     "loadError": "Impossible de charger les releases",

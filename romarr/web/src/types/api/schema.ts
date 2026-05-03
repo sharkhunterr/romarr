@@ -454,7 +454,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Toggle a Game's ``monitored`` flag (admin only). All other fields are owned by the metadata aggregator. */
+        patch: operations["patch_game_api_v3_game__game_id__patch"];
         trace?: never;
     };
     "/api/v3/game/{game_id}/dump": {
@@ -2635,6 +2636,19 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * GameToggleRequest
+         * @description PATCH /api/v3/game/{id} — operator-toggle subset.
+         *
+         *     Only fields that are NOT owned by the metadata aggregator
+         *     are mutable here. Today: just ``monitored``. Adding more
+         *     operator-toggleable bits is straightforward — they go in
+         *     this schema.
+         */
+        GameToggleRequest: {
+            /** Monitored */
+            monitored: boolean;
         };
         /**
          * GrabRequest
@@ -5525,6 +5539,41 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_game_api_v3_game__game_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GameToggleRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
