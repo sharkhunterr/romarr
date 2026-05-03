@@ -74,6 +74,10 @@
       "import": "Import",
       "search": "Search",
       "noMatches": "No history rows match the active filter. Pick a different chip or switch to All."
+    },
+    "failuresOnly": {
+      "off": "Failures only",
+      "on": "✓ Failures only"
     }
   },
   "files": {

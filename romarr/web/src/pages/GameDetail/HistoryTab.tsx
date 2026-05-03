@@ -1,23 +1,28 @@
 /**
- * GameDetail > History tab (slice 94; slice 115 adds filter chips).
+ * GameDetail > History tab (slice 94; slice 115 added filter
+ * chips; slice 120 pushes everything to the server).
  *
  * Filters the unified `/api/v3/history` feed to a single
- * game via the spec-013 router's new `gameId` query param.
+ * game via the spec-013 router's `gameId` query param.
  * Job-run rows (which carry no game_id) are excluded
  * server-side, so the feed is import + search only.
  *
- * Slice 115 adds client-side filter chips (All / Import /
- * Search) on top of the server-filtered records — the chip
- * persists in the URL via `?historyFilter=import|search`.
+ * Filter state — `historyFilter` (event-type chip) and
+ * `failuresOnly` (toggle) — round-trips through
+ * `useHistory({ eventType, successful })` so totals + page
+ * counts always reflect the active filter.
  */
 
-import { useMemo, type ReactElement } from "react";
+import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
-import { useHistory } from "@/lib/api/queries/system";
+import {
+  useHistory,
+  type HistoryEventType,
+} from "@/lib/api/queries/system";
 
 const PAGE_SIZE = 50;
 
@@ -53,6 +58,7 @@ export function HistoryTab(props: HistoryTabProps): ReactElement {
   const { t, i18n } = useTranslation("game");
   const [searchParams, setSearchParams] = useSearchParams();
   const filter = parseFilterParam(searchParams.get("historyFilter"));
+  const failuresOnly = searchParams.get("failuresOnly") === "true";
 
   const setFilter = (next: HistoryFilter): void => {
     setSearchParams(
@@ -66,18 +72,31 @@ export function HistoryTab(props: HistoryTabProps): ReactElement {
     );
   };
 
+  const setFailuresOnly = (next: boolean): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next) params.set("failuresOnly", "true");
+        else params.delete("failuresOnly");
+        return params;
+      },
+      { replace: false },
+    );
+  };
+
+  const eventType: HistoryEventType | undefined =
+    filter === "all" ? undefined : filter;
+
   const history = useHistory({
     gameId: props.gameId,
     pageSize: PAGE_SIZE,
     sortKey: "date",
     sortDirection: "desc",
+    eventType,
+    successful: failuresOnly ? false : undefined,
   });
 
-  const filteredRecords = useMemo(() => {
-    if (!history.isSuccess) return [];
-    if (filter === "all") return history.data.records;
-    return history.data.records.filter((e) => e.eventType === filter);
-  }, [history.isSuccess, history.data, filter]);
+  const filtersActive = filter !== "all" || failuresOnly;
 
   if (history.isPending) return <ListSkeleton rows={6} />;
   if (history.isError) {
@@ -88,7 +107,7 @@ export function HistoryTab(props: HistoryTabProps): ReactElement {
       />
     );
   }
-  if (history.data.records.length === 0) {
+  if (history.data.records.length === 0 && !filtersActive) {
     return (
       <EmptyState
         title={t("history.empty.title")}
@@ -101,39 +120,58 @@ export function HistoryTab(props: HistoryTabProps): ReactElement {
 
   return (
     <div className="space-y-2">
-      <div
-        role="tablist"
-        aria-label={t("history.filter.ariaLabel")}
-        className="flex flex-wrap gap-1"
-      >
-        {FILTER_VALUES.map((value) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setFilter(value)}
-            aria-pressed={filter === value}
-            className={[
-              "rounded-md px-3 py-1 text-xs font-medium ring-1 ring-inset",
-              "transition-colors",
-              filter === value
-                ? "bg-brand/20 text-brand ring-brand/40"
-                : "bg-zinc-900/40 text-zinc-400 ring-zinc-700 hover:bg-zinc-800",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-            ].join(" ")}
-          >
-            {t(`history.filter.${value}`)}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-2">
+        <div
+          role="tablist"
+          aria-label={t("history.filter.ariaLabel")}
+          className="flex flex-wrap gap-1"
+        >
+          {FILTER_VALUES.map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setFilter(value)}
+              aria-pressed={filter === value}
+              className={[
+                "rounded-md px-3 py-1 text-xs font-medium ring-1 ring-inset",
+                "transition-colors",
+                filter === value
+                  ? "bg-brand/20 text-brand ring-brand/40"
+                  : "bg-zinc-900/40 text-zinc-400 ring-zinc-700 hover:bg-zinc-800",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+              ].join(" ")}
+            >
+              {t(`history.filter.${value}`)}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => setFailuresOnly(!failuresOnly)}
+          aria-pressed={failuresOnly}
+          className={[
+            "rounded-md px-3 py-1 text-xs font-medium ring-1 ring-inset",
+            "transition-colors",
+            failuresOnly
+              ? "bg-red-700/30 text-red-200 ring-red-500/40"
+              : "bg-zinc-900/40 text-zinc-400 ring-zinc-700 hover:bg-zinc-800",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500",
+          ].join(" ")}
+        >
+          {failuresOnly
+            ? t("history.failuresOnly.on")
+            : t("history.failuresOnly.off")}
+        </button>
       </div>
 
-      {filteredRecords.length === 0 && (
+      {history.data.records.length === 0 && filtersActive && (
         <p className="rounded-md border border-dashed border-zinc-800 bg-zinc-900/20 p-3 text-[0.7rem] text-zinc-500">
           {t("history.filter.noMatches")}
         </p>
       )}
 
       <ul className="space-y-2">
-        {filteredRecords.map((event) => (
+        {history.data.records.map((event) => (
           <li
             key={`${event.eventType}-${event.id}`}
             className={[
@@ -175,7 +213,7 @@ export function HistoryTab(props: HistoryTabProps): ReactElement {
           </li>
         ))}
       </ul>
-      {overflow && filter === "all" && (
+      {overflow && !filtersActive && (
         <p className="text-[0.7rem] text-zinc-500">
           {t("history.showingMost", { count: history.data.records.length })}
         </p>

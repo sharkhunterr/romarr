@@ -74,6 +74,10 @@
       "import": "Import",
       "search": "Recherche",
       "noMatches": "Aucune entrée ne correspond au filtre actif. Choisissez un autre filtre ou revenez à Tous."
+    },
+    "failuresOnly": {
+      "off": "Échecs uniquement",
+      "on": "✓ Échecs uniquement"
     }
   },
   "files": {
