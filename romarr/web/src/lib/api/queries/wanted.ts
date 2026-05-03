@@ -34,6 +34,11 @@ export interface UseWantedParams {
   sortDirection?: "asc" | "desc";
   /** Restrict to a single platform (joined via Game). */
   platformId?: number;
+  /**
+   * Restrict to releases whose joined Game carries this tag id
+   * (slice 157, matched against Game.tags JSON list).
+   */
+  tagId?: number;
   /** Case-insensitive substring filter on Release.name. */
   q?: string;
 }
@@ -48,6 +53,8 @@ function buildQueryString(params: UseWantedParams): string {
     search.set("sortDirection", params.sortDirection);
   if (params.platformId !== undefined)
     search.set("platformId", String(params.platformId));
+  if (params.tagId !== undefined)
+    search.set("tagId", String(params.tagId));
   if (params.q !== undefined && params.q.trim() !== "")
     search.set("q", params.q.trim());
   const qs = search.toString();

@@ -1,4 +1,4 @@
-"""Wanted lists — `/missing` and `/cutoff` (T056, FR-014).
+"""Wanted lists — `/missing` and `/cutoff` (T056, FR-014, slice 157).
 
 Spec 013 ships an `/api/v3/wanted` surface backed by the
 :class:`Release` table from spec 001 / 007. Two paginated reads:
@@ -10,9 +10,10 @@ Spec 013 ships an `/api/v3/wanted` surface backed by the
     meet the configured upgrade cutoff. Filter:
     ``status = 'imported' AND cutoff_met = false AND monitored = true``.
 
-The bulk-search trigger
-(POST `/wanted/missing/search`) needs the spec 007
-``run_manual_search`` hook and lands in a follow-up slice.
+Both endpoints accept ``platformId`` (joined via Game) and
+``tagId`` (slice 157, matched against ``Game.tags`` JSON list)
+filters; the substring filter on ``Release.name`` is exposed
+as ``q``.
 """
 
 from __future__ import annotations
@@ -21,14 +22,38 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import func, select
+from sqlalchemy import String, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import Select
 
 from romarr.api.dependencies import get_db, require_readonly
 from romarr.api.envelopes import PaginationEnvelope
 from romarr.api.pagination import PageRequest, page_request, paginate
 from romarr.auth import Principal
 from romarr.domain.models import Game, Release
+
+
+def _apply_tag_filter(stmt: Select[Any], tag_id: int) -> Select[Any]:
+    """Restrict ``stmt`` to rows whose joined ``Game.tags`` JSON
+    list contains ``tag_id``.
+
+    Mirrors the slice-156 portable JSON-text trick used on
+    ``/api/v3/game``: cast → strip whitespace → replace ``[`` /
+    ``]`` with ``,`` → look for ``,<id>,``. Works on SQLite +
+    Postgres without dialect-specific JSON operators and avoids
+    the substring-collision bug (filtering by ``5`` matching
+    rows tagged ``[15]``).
+    """
+    normalised = func.replace(
+        func.replace(
+            func.replace(cast(Game.tags, String), " ", ""),
+            "[",
+            ",",
+        ),
+        "]",
+        ",",
+    )
+    return stmt.where(normalised.like(f"%,{tag_id},%"))
 
 router = APIRouter(prefix="/api/v3/wanted", tags=["Wanted"])
 
@@ -140,6 +165,17 @@ async def list_missing(
             description="Restrict to one platform (joined via Game).",
         ),
     ] = None,
+    tag_id: Annotated[
+        int | None,
+        Query(
+            alias="tagId",
+            ge=1,
+            description=(
+                "Restrict to releases whose joined Game carries "
+                "this tag id (matched against Game.tags JSON list)."
+            ),
+        ),
+    ] = None,
     q: Annotated[
         str | None,
         Query(
@@ -161,6 +197,8 @@ async def list_missing(
     )
     if platform_id is not None:
         base = base.where(Game.platform_id == platform_id)
+    if tag_id is not None:
+        base = _apply_tag_filter(base, tag_id)
     if q is not None and q.strip():
         needle = f"%{q.strip().lower()}%"
         base = base.where(func.lower(Release.name).like(needle))
@@ -200,6 +238,17 @@ async def list_cutoff(
             description="Restrict to one platform (joined via Game).",
         ),
     ] = None,
+    tag_id: Annotated[
+        int | None,
+        Query(
+            alias="tagId",
+            ge=1,
+            description=(
+                "Restrict to releases whose joined Game carries "
+                "this tag id (matched against Game.tags JSON list)."
+            ),
+        ),
+    ] = None,
     q: Annotated[
         str | None,
         Query(
@@ -222,6 +271,8 @@ async def list_cutoff(
     )
     if platform_id is not None:
         base = base.where(Game.platform_id == platform_id)
+    if tag_id is not None:
+        base = _apply_tag_filter(base, tag_id)
     if q is not None and q.strip():
         needle = f"%{q.strip().lower()}%"
         base = base.where(func.lower(Release.name).like(needle))

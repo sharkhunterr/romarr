@@ -14815,6 +14815,25 @@
             }
           },
           {
+            "description": "Restrict to releases whose joined Game carries this tag id (matched against Game.tags JSON list).",
+            "in": "query",
+            "name": "tagId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to releases whose joined Game carries this tag id (matched against Game.tags JSON list).",
+              "title": "Tagid"
+            }
+          },
+          {
             "description": "Case-insensitive substring filter on Release.name. Trimmed; empty/whitespace-only ignored.",
             "in": "query",
             "name": "q",
@@ -14936,6 +14955,25 @@
               ],
               "description": "Restrict to one platform (joined via Game).",
               "title": "Platformid"
+            }
+          },
+          {
+            "description": "Restrict to releases whose joined Game carries this tag id (matched against Game.tags JSON list).",
+            "in": "query",
+            "name": "tagId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to releases whose joined Game carries this tag id (matched against Game.tags JSON list).",
+              "title": "Tagid"
             }
           },
           {

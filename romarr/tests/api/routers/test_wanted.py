@@ -381,3 +381,138 @@ async def test_missing_q_empty_ignored(
     resp = await authed_client.get("/api/v3/wanted/missing?q=%20%20")
     assert resp.status_code == 200
     assert resp.json()["totalRecords"] == 2
+
+
+# ---------------------------------------------------------------------------
+# slice 157 — tagId filter on Wanted (mirror of slice 156 on Library)
+# ---------------------------------------------------------------------------
+
+
+async def _seed_game_with_tags(
+    engine: AsyncEngine,
+    *,
+    title: str,
+    tags: list[int],
+    platform_slug: str = "megadrive",
+) -> int:
+    """Seed a Platform + Game (with tags) and return the Game id."""
+    sm = async_sessionmaker(engine, expire_on_commit=False)
+    async with sm() as session:
+        # Use a fresh platform slug per call so successive seeds
+        # in the same test don't trip the platform unique key.
+        suffix = title.lower().replace(" ", "-")
+        platform = Platform(
+            slug=f"{platform_slug}-{suffix}",
+            name="Mega Drive",
+            short_name="MD",
+            manufacturer="Sega",
+        )
+        session.add(platform)
+        await session.flush()
+        game = Game(
+            platform_id=platform.id,
+            slug=f"slug-{suffix}",
+            title=title,
+            tags=tags,
+        )
+        session.add(game)
+        await session.flush()
+        await session.commit()
+        return game.id
+
+
+@pytest.mark.asyncio
+async def test_missing_tag_id_filter_keeps_matching_games(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    a = await _seed_game_with_tags(
+        api_engine, title="Tagged-A", tags=[5, 9]
+    )
+    b = await _seed_game_with_tags(
+        api_engine, title="Tagged-B", tags=[7]
+    )
+    await _seed_release(api_engine, game_id=a, name="A USA")
+    await _seed_release(api_engine, game_id=b, name="B USA")
+
+    resp = await authed_client.get("/api/v3/wanted/missing?tagId=5")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["totalRecords"] == 1
+    assert body["records"][0]["name"] == "A USA"
+
+
+@pytest.mark.asyncio
+async def test_missing_tag_id_filter_rejects_substring_collision(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """The bracket-replace pattern avoids matching ``5`` against
+    a game tagged ``[15]``."""
+    real = await _seed_game_with_tags(
+        api_engine, title="Tag5", tags=[5]
+    )
+    decoy = await _seed_game_with_tags(
+        api_engine, title="Tag15", tags=[15]
+    )
+    await _seed_release(api_engine, game_id=real, name="real")
+    await _seed_release(api_engine, game_id=decoy, name="decoy")
+
+    resp = await authed_client.get("/api/v3/wanted/missing?tagId=5")
+    assert resp.status_code == 200
+    names = {row["name"] for row in resp.json()["records"]}
+    assert "real" in names
+    assert "decoy" not in names
+
+
+@pytest.mark.asyncio
+async def test_cutoff_tag_id_filter_keeps_matching_games(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Same shape as missing — verifies the helper works on the
+    cutoff endpoint too."""
+    a = await _seed_game_with_tags(
+        api_engine, title="Cut-A", tags=[3]
+    )
+    b = await _seed_game_with_tags(
+        api_engine, title="Cut-B", tags=[42]
+    )
+    await _seed_release(
+        api_engine,
+        game_id=a,
+        name="A imported",
+        status="imported",
+        cutoff_met=False,
+    )
+    await _seed_release(
+        api_engine,
+        game_id=b,
+        name="B imported",
+        status="imported",
+        cutoff_met=False,
+    )
+
+    resp = await authed_client.get("/api/v3/wanted/cutoff?tagId=3")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["totalRecords"] == 1
+    assert body["records"][0]["name"] == "A imported"
+
+
+@pytest.mark.asyncio
+async def test_missing_tag_id_filter_stacks_with_platform_and_q(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """tagId stacks with platformId + q the same way platformId
+    + q stack today."""
+    a = await _seed_game_with_tags(
+        api_engine, title="Stack Game", tags=[2]
+    )
+    await _seed_release(api_engine, game_id=a, name="Combo USA")
+    await _seed_release(api_engine, game_id=a, name="Other JPN")
+
+    resp = await authed_client.get(
+        "/api/v3/wanted/missing?tagId=2&q=combo"
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["totalRecords"] == 1
+    assert body["records"][0]["name"] == "Combo USA"

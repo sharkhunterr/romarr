@@ -17,6 +17,10 @@
     "platform": {
       "label": "Filtrer par plateforme",
       "all": "Toutes les plateformes"
+    },
+    "tag": {
+      "label": "Filtrer par étiquette",
+      "all": "Toutes les étiquettes"
     }
   },
   "sort": {
