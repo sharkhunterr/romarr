@@ -68,12 +68,23 @@ test endpoint → API → hardening.
       — ``NotificationCreate`` rejects all-False ``on_*`` (FR-005);
       ``test_notification_create_with_one_flag_succeeds`` covers
       the symmetric pass.
-- [ ] T010 [P] [PERS] `tests/notifications/test_models.py::test_template_validates_at_save`
-      — ``on_import_format`` referencing an unknown variable
-      rejected at save time (re-uses spec 006's renderer).
-      *(Deferred — spec 006's renderer integration lands with
-      the TEMPLATES slice; today templates persist as opaque
-      strings and the dispatcher will validate at render time.)*
+- [X] T010 [P] [PERS] Template validation at save time shipped
+      at
+      ``src/romarr/notifications/api/notifications.py::_validate_template_fields``.
+      Every non-empty ``*_format`` override runs through spec
+      006's sandboxed ``validate_template(...)`` against its
+      matching event-type stub. Failure raises HTTP 400 with
+      the offending field name in the body (FR-013). Pinned
+      by
+      ``tests/notifications/api/test_notification_endpoints.py::test_bad_template_rejected_at_save``
+      — POST with ``{{ unknown_variable }}`` returns 400 with
+      ``on_import_format`` in the body. Path differs from the
+      spec's ``test_models.py::test_template_validates_at_save``
+      — the validator lives at the API handler so the failure
+      surfaces as the canonical ``errorMessage`` envelope
+      rather than a Pydantic 422 (this is what slice 199's
+      attempt to add a schema-level validator broke; the
+      handler-level path is the right design).
 - [X] T011 [P] [PERS] `tests/notifications/test_migration_0011.py`
       — 2 tests: ``test_migration_creates_both_tables`` (every
       documented column + UNIQUE constraints) and
