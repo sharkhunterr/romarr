@@ -237,6 +237,11 @@ class Game(Base, TimestampMixin):
         Boolean, nullable=False, default=False
     )
 
+    # Operator-owned free-text notes (spec 014 slice 149). Never
+    # touched by the spec-002 aggregator — distinct from
+    # ``summary``, which is provider-owned.
+    notes: Mapped[str | None] = mapped_column(String, nullable=True)
+
     # Relationships
     platform: Mapped[Platform] = relationship(back_populates="games")
     releases: Mapped[list[Release]] = relationship(

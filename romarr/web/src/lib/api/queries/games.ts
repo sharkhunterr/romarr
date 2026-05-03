@@ -258,6 +258,34 @@ export type EditableTextField =
   | "publisher"
   | "age_rating";
 
+export interface SetGameNotesVariables {
+  gameId: number;
+  notes: string | null;
+}
+
+/**
+ * PUT /api/v3/game/{id}/notes — replace operator-owned notes
+ * (slice 149). Notes never flow through the metadata aggregator,
+ * so the surface stays minimal and untouched by lock state.
+ */
+export function useSetGameNotes(): UseMutationResult<
+  Game,
+  ApiError,
+  SetGameNotesVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<Game, ApiError, SetGameNotesVariables>({
+    mutationFn: ({ gameId, notes }) =>
+      apiFetch<Game>(`/api/v3/game/${gameId}/notes`, {
+        method: "PUT",
+        json: { notes },
+      }),
+    onSuccess: (game) => {
+      void qc.invalidateQueries({ queryKey: ["games", "detail", game.id] });
+    },
+  });
+}
+
 export interface EditFieldVariables {
   gameId: number;
   field: EditableTextField;

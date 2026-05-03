@@ -1,5 +1,5 @@
-"""Game + Release read + lock + per-field edit endpoints
-(slices 86, 146, 147).
+"""Game + Release read + lock + per-field edit + notes endpoints
+(slices 86, 146, 147, 149).
 
 Foundation already ships the :class:`Game` + :class:`Release`
 ORM models; this router is the operator-facing read surface
@@ -95,6 +95,20 @@ _EDITABLE_TEXT_FIELDS: dict[ProviderField, tuple[str, int | None]] = {
     ProviderField.PUBLISHER: ("publisher", 128),
     ProviderField.AGE_RATING: ("age_rating", 16),
 }
+
+
+class NotesUpdateRequest(BaseModel):
+    """PUT /api/v3/game/{id}/notes — operator-owned free text.
+
+    The notes column is operator-owned and never touched by the
+    metadata aggregator, so the surface is intentionally
+    minimal: write the new value, get the updated Game back.
+    Set ``notes=null`` (or empty string) to clear.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    notes: str | None
 
 
 class FieldEditRequest(BaseModel):
@@ -413,6 +427,45 @@ async def patch_field(
         current = set(row.locked_fields or [])
         current.add(body.field.value)
         row.locked_fields = sorted(current)
+
+    await db.commit()
+    await db.refresh(row)
+    return GameRead.model_validate(row, from_attributes=True)
+
+
+@router.put(
+    "/{game_id}/notes",
+    response_model=GameRead,
+    summary=(
+        "Replace the operator-owned free-text notes for a Game "
+        "(admin only). Notes are never touched by the metadata "
+        "aggregator, distinct from the provider-owned summary."
+    ),
+)
+async def put_notes(
+    game_id: int,
+    body: Annotated[NotesUpdateRequest, Body()],
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> GameRead:
+    row = (
+        await db.execute(select(Game).where(Game.id == game_id))
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "errorMessage": f"game_id={game_id} not found",
+                "errorCode": "game_not_found",
+            },
+        )
+
+    # Empty string + whitespace-only → null so reads have a
+    # canonical "no notes" representation.
+    cleaned = body.notes
+    if cleaned is not None:
+        cleaned = cleaned.strip() or None
+    row.notes = cleaned
 
     await db.commit()
     await db.refresh(row)

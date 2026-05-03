@@ -2038,6 +2038,17 @@
             "title": "Needs Metadata Refresh",
             "type": "boolean"
           },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
           "platform_id": {
             "title": "Platform Id",
             "type": "integer"
@@ -4233,6 +4244,28 @@
           "updated_at"
         ],
         "title": "NamingProfileRead",
+        "type": "object"
+      },
+      "NotesUpdateRequest": {
+        "additionalProperties": false,
+        "description": "PUT /api/v3/game/{id}/notes \u2014 operator-owned free text.\n\nThe notes column is operator-owned and never touched by the\nmetadata aggregator, so the surface is intentionally\nminimal: write the new value, get the updated Game back.\nSet ``notes=null`` (or empty string) to clear.",
+        "properties": {
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "required": [
+          "notes"
+        ],
+        "title": "NotesUpdateRequest",
         "type": "object"
       },
       "NotificationCreate": {
@@ -9401,6 +9434,58 @@
           }
         },
         "summary": "Lock or unlock one metadata field on a Game (admin only). Locked fields are skipped by the aggregator on every refresh \u2014 the constitutional anti-RomM-#1770 mechanism (FR-008).",
+        "tags": [
+          "Game"
+        ]
+      }
+    },
+    "/api/v3/game/{game_id}/notes": {
+      "put": {
+        "operationId": "put_notes_api_v3_game__game_id__notes_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "title": "Game Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotesUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Replace the operator-owned free-text notes for a Game (admin only). Notes are never touched by the metadata aggregator, distinct from the provider-owned summary.",
         "tags": [
           "Game"
         ]

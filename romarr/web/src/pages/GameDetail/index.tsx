@@ -1,10 +1,9 @@
 /**
- * Game detail page (P-GAME, slice 89).
+ * Game detail page (P-GAME, slices 89, 149).
  *
- * Tabbed view: Overview / Releases / History (deferred) /
- * Files (deferred). Per the spec the full surface includes
- * Manual Search and Notes — both deferred until their
- * backend endpoints surface.
+ * Tabbed view: Overview / Releases / History / Files / Notes.
+ * Manual Search remains deferred until the indexer search UI
+ * lands.
  */
 
 import { type ReactElement } from "react";
@@ -17,13 +16,20 @@ import { useGame } from "@/lib/api/queries/games";
 
 import { FilesTab } from "./FilesTab";
 import { HistoryTab } from "./HistoryTab";
+import { NotesTab } from "./NotesTab";
 import { OverviewTab } from "./OverviewTab";
 import { PendingDownloads } from "./PendingDownloads";
 import { ReleasesTab } from "./ReleasesTab";
 
-type Tab = "overview" | "releases" | "history" | "files";
+type Tab = "overview" | "releases" | "history" | "files" | "notes";
 
-const TABS: readonly Tab[] = ["overview", "releases", "history", "files"];
+const TABS: readonly Tab[] = [
+  "overview",
+  "releases",
+  "history",
+  "files",
+  "notes",
+];
 
 const TAB_SET: ReadonlySet<Tab> = new Set(TABS);
 
@@ -102,7 +108,7 @@ export function GameDetailPage(): ReactElement {
           <div
             role="tablist"
             aria-label={t("tabs.ariaLabel")}
-            className="mb-4 grid grid-cols-4 gap-1 rounded-md border border-zinc-800 bg-zinc-900/40 p-1"
+            className="mb-4 grid grid-cols-5 gap-1 rounded-md border border-zinc-800 bg-zinc-900/40 p-1"
           >
             {TABS.map((id) => (
               <TabButton
@@ -124,6 +130,7 @@ export function GameDetailPage(): ReactElement {
           )}
           {tab === "history" && <HistoryTab gameId={gameId} />}
           {tab === "files" && <FilesTab gameId={gameId} />}
+          {tab === "notes" && <NotesTab game={game.data} />}
         </>
       )}
     </div>

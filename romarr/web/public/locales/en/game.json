@@ -6,7 +6,21 @@
     "releases": "Releases",
     "history": "History",
     "files": "Files",
+    "notes": "Notes",
     "ariaLabel": "Game tabs"
+  },
+  "notes": {
+    "heading": "Notes",
+    "subhead": "Operator-owned free text. The metadata aggregator never touches this — your notes survive every refresh.",
+    "textareaAria": "Notes for this game",
+    "placeholder": "Anything you want to remember about this title — collection condition, swap history, multi-disc gotchas, …",
+    "hint": "Cmd/Ctrl+Enter to save • Esc to revert",
+    "save": "Save notes",
+    "saving": "Saving…",
+    "revert": "Revert",
+    "successTitle": "Notes saved",
+    "successBody": "Your notes are persisted to the Game.",
+    "errorTitle": "Couldn't save notes"
   },
   "overview": {
     "noSummary": "No summary on file. Refresh metadata to populate.",

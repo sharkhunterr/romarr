@@ -183,6 +183,7 @@ class GameCreate(_SchemaBase):
     custom_metadata: dict[str, Any] = Field(default_factory=dict)
     monitored: bool = True
     needs_metadata_refresh: bool = False
+    notes: str | None = None
 
     @model_validator(mode="after")
     def _check_slug(self) -> GameCreate:

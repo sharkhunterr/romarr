@@ -6,7 +6,21 @@
     "releases": "Releases",
     "history": "Historique",
     "files": "Fichiers",
+    "notes": "Notes",
     "ariaLabel": "Onglets Jeu"
+  },
+  "notes": {
+    "heading": "Notes",
+    "subhead": "Texte libre, géré uniquement par l'opérateur. L'agrégateur de métadonnées ne touche jamais à ce champ — vos notes survivent à chaque rafraîchissement.",
+    "textareaAria": "Notes pour ce jeu",
+    "placeholder": "Tout ce que vous voulez garder sous la main — état de la collection, historique d'échange, particularités multi-disques, …",
+    "hint": "Cmd/Ctrl+Entrée pour enregistrer • Échap pour annuler",
+    "save": "Enregistrer les notes",
+    "saving": "Enregistrement…",
+    "revert": "Annuler",
+    "successTitle": "Notes enregistrées",
+    "successBody": "Vos notes sont persistées sur le jeu.",
+    "errorTitle": "Impossible d'enregistrer les notes"
   },
   "overview": {
     "noSummary": "Aucun résumé enregistré. Rafraîchissez les métadonnées pour le remplir.",

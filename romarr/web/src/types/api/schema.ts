@@ -543,6 +543,23 @@ export interface paths {
         patch: operations["patch_locked_fields_api_v3_game__game_id__locked_fields_patch"];
         trace?: never;
     };
+    "/api/v3/game/{game_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace the operator-owned free-text notes for a Game (admin only). Notes are never touched by the metadata aggregator, distinct from the provider-owned summary. */
+        put: operations["put_notes_api_v3_game__game_id__notes_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/game/{game_id}/refresh-metadata": {
         parameters: {
             query?: never;
@@ -2786,6 +2803,8 @@ export interface components {
              * @default false
              */
             needs_metadata_refresh: boolean;
+            /** Notes */
+            notes?: string | null;
             /** Platform Id */
             platform_id: number;
             /** Players Max */
@@ -3584,6 +3603,19 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * NotesUpdateRequest
+         * @description PUT /api/v3/game/{id}/notes — operator-owned free text.
+         *
+         *     The notes column is operator-owned and never touched by the
+         *     metadata aggregator, so the surface is intentionally
+         *     minimal: write the new value, get the updated Game back.
+         *     Set ``notes=null`` (or empty string) to clear.
+         */
+        NotesUpdateRequest: {
+            /** Notes */
+            notes: string | null;
         };
         /**
          * NotificationCreate
@@ -6097,6 +6129,41 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["FieldLockRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_notes_api_v3_game__game_id__notes_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotesUpdateRequest"];
             };
         };
         responses: {

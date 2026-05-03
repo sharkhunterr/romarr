@@ -791,3 +791,121 @@ async def test_patch_field_persists_across_read(
     body = resp.json()
     assert body["summary"] == "A blue hedgehog runs fast."
     assert body["locked_fields"] == ["summary"]
+
+
+# ---------------------------------------------------------------------------
+# slice 149 — PUT /api/v3/game/{id}/notes (operator-owned free text)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_put_notes_writes_value(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    _, game_id, _ = await _seed_chain(api_engine, title="WriteNotes")
+    resp = await authed_client.put(
+        f"/api/v3/game/{game_id}/notes",
+        json={"notes": "Picked up at a swap meet — region locked."},
+    )
+    assert resp.status_code == 200, resp.json()
+    body = resp.json()
+    assert body["notes"] == "Picked up at a swap meet — region locked."
+    # Notes do not flip the lock surface — they're a separate
+    # column outside the aggregator's reach by design.
+    assert body["locked_fields"] == []
+
+
+@pytest.mark.asyncio
+async def test_put_notes_clears_with_null(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    _, game_id, _ = await _seed_chain(api_engine, title="ClearNotes")
+    await authed_client.put(
+        f"/api/v3/game/{game_id}/notes",
+        json={"notes": "Old note"},
+    )
+    resp = await authed_client.put(
+        f"/api/v3/game/{game_id}/notes",
+        json={"notes": None},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["notes"] is None
+
+
+@pytest.mark.asyncio
+async def test_put_notes_strips_to_null(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Whitespace-only input canonicalises to null so reads have
+    one representation of empty."""
+    _, game_id, _ = await _seed_chain(api_engine, title="StripNotes")
+    resp = await authed_client.put(
+        f"/api/v3/game/{game_id}/notes",
+        json={"notes": "   \n  "},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["notes"] is None
+
+
+@pytest.mark.asyncio
+async def test_put_notes_preserves_internal_whitespace(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Multi-paragraph notes survive the strip — only leading /
+    trailing whitespace is trimmed."""
+    _, game_id, _ = await _seed_chain(api_engine, title="MultiParaNotes")
+    notes = "Line one.\n\nLine two — see disc 2 for menu glitch."
+    resp = await authed_client.put(
+        f"/api/v3/game/{game_id}/notes",
+        json={"notes": f"  {notes}  "},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["notes"] == notes
+
+
+@pytest.mark.asyncio
+async def test_put_notes_404_when_missing(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.put(
+        "/api/v3/game/9999999/notes",
+        json={"notes": "x"},
+    )
+    assert resp.status_code == 404
+    assert resp.json()["errorCode"] == "game_not_found"
+
+
+@pytest.mark.asyncio
+async def test_put_notes_unauthenticated_401(
+    api_client: httpx.AsyncClient,
+) -> None:
+    resp = await api_client.put(
+        "/api/v3/game/1/notes", json={"notes": "x"}
+    )
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_put_notes_rejects_extra_keys(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    _, game_id, _ = await _seed_chain(api_engine, title="ExtraNotes")
+    resp = await authed_client.put(
+        f"/api/v3/game/{game_id}/notes",
+        json={"notes": "x", "stowaway": "y"},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_put_notes_persists_across_read(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    _, game_id, _ = await _seed_chain(api_engine, title="NotesRead")
+    await authed_client.put(
+        f"/api/v3/game/{game_id}/notes",
+        json={"notes": "Verified working on Mega Drive 2."},
+    )
+    resp = await authed_client.get(f"/api/v3/game/{game_id}")
+    assert resp.status_code == 200
+    assert resp.json()["notes"] == "Verified working on Mega Drive 2."
