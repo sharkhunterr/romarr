@@ -453,6 +453,22 @@
   "indexers": {
     "title": "Indexers",
     "subtitle": "Newznab + Torznab sources Romarr searches when grabbing a release. Prowlarr-managed indexers sync automatically.",
+    "applications": {
+      "section": "Prowlarr applications",
+      "adminOnly": "admin",
+      "subtitle": "Registered Prowlarr instances that push indexers into Romarr. Sync level controls whether Prowlarr can also pull state back.",
+      "empty": "No Prowlarr instances registered. The recommended setup is to add Romarr as a Prowlarr application — Prowlarr will then push indexers here automatically.",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "syncLevel": {
+        "disabled": "no sync",
+        "add_only": "add only",
+        "full_sync": "full sync"
+      },
+      "lastSync": "Last sync {{when}}",
+      "unregister": "Unregister",
+      "unregisterConfirm": "Unregister Prowlarr application \"{{name}}\"? Indexers it pushed will remain but won't receive future updates."
+    },
     "empty": {
       "title": "No indexers configured",
       "body": "Add an indexer manually below, or push one from Prowlarr — Romarr is registered as a Prowlarr application and accepts pushed sources."

@@ -21,6 +21,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useIndexers } from "@/lib/api/queries/indexers";
 
+import { ApplicationsPanel } from "./ApplicationsPanel";
 import { IndexerRow } from "./IndexerRow";
 
 export function IndexersPage(): ReactElement {
@@ -35,6 +36,8 @@ export function IndexersPage(): ReactElement {
         </h2>
         <p className="mt-1 text-sm text-zinc-400">{t("indexers.subtitle")}</p>
       </header>
+
+      <ApplicationsPanel />
 
       {indexers.isLoading && <ListSkeleton rows={3} />}
       {indexers.isError && (
