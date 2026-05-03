@@ -403,8 +403,15 @@ the spec; encrypted blobs never leak in responses.
 - [~] T067 [HARD] Manual perf check — connectivity test against a
       throwaway local qBit completes in < 3 s p95; record in
       `specs/005-download-clients/research.md`.
-      *(Deferred — requires a live qBit instance; CI lane will
-      re-validate once the deployment harness lands.)*
+      *(Deferred-by-design — requires a live qBit instance with a
+      reachable network endpoint. The Dockerfile shipped in
+      slice 188 makes spinning up a paired qBit + Romarr stack
+      cheap; the SC-005 perf budget gets verified manually
+      against a docker-compose lane at release-cut time. The
+      timeout machinery itself is unit-tested via
+      ``tests/downloaders/test_qbittorrent_client.py``'s
+      ``test_test_connection_times_out`` — that pins the
+      breaker behaviour even without a live target.)*
 - [X] T068 [HARD] Update `pyproject.toml` `version = "0.5.0a1"`;
       add a one-line note to `CHANGELOG.md`: "0.5.0a1 — Download
       Clients: qBittorrent + SABnzbd MVP, deterministic routing,
