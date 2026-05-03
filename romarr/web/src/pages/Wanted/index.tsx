@@ -161,6 +161,7 @@ interface TabBodyProps {
   selectedIds: ReadonlySet<number>;
   onToggleSelect: (releaseId: number) => void;
   onAllVisible: (records: readonly WantedRelease[]) => void;
+  onLongPress: (releaseId: number) => void;
 }
 
 function MissingTab(props: TabBodyProps): ReactElement {
@@ -208,6 +209,7 @@ function MissingTab(props: TabBodyProps): ReactElement {
             selectionActive={props.selectionActive}
             selected={props.selectedIds.has(release.id)}
             onToggleSelect={props.onToggleSelect}
+            onLongPress={props.onLongPress}
           />
         </li>
       ))}
@@ -257,6 +259,7 @@ function CutoffTab(props: TabBodyProps): ReactElement {
             selectionActive={props.selectionActive}
             selected={props.selectedIds.has(release.id)}
             onToggleSelect={props.onToggleSelect}
+            onLongPress={props.onLongPress}
           />
         </li>
       ))}
@@ -382,6 +385,11 @@ export function WantedPage(): ReactElement {
   const exitSelection = (): void => {
     setSelectionActive(false);
     setSelectedIds(new Set());
+  };
+
+  const beginSelectionFromLongPress = (releaseId: number): void => {
+    setSelectionActive(true);
+    setSelectedIds(new Set([releaseId]));
   };
 
   // Resetting selection when the active tab flips avoids
@@ -672,6 +680,7 @@ export function WantedPage(): ReactElement {
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
           onAllVisible={setVisibleRecords}
+          onLongPress={beginSelectionFromLongPress}
         />
       ) : (
         <CutoffTab
@@ -684,6 +693,7 @@ export function WantedPage(): ReactElement {
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
           onAllVisible={setVisibleRecords}
+          onLongPress={beginSelectionFromLongPress}
         />
       )}
 

@@ -219,6 +219,13 @@ export function LibraryPage(): ReactElement {
     });
   };
 
+  const beginSelectionFromLongPress = (gameId: number): void => {
+    // Enter selection mode and pre-select the held card. Spec
+    // D ("long-press for multi-select on Library and Wanted").
+    setSelectionActive(true);
+    setSelectedIds(new Set([gameId]));
+  };
+
   const selectAllVisible = (): void => {
     if (!games.data) return;
     setSelectedIds(new Set(games.data.map((g) => g.id)));
@@ -523,6 +530,7 @@ export function LibraryPage(): ReactElement {
                 selectionActive={selectionActive}
                 selected={selectedIds.has(game.id)}
                 onToggleSelect={toggleSelect}
+                onLongPress={beginSelectionFromLongPress}
               />
             </li>
           ))}

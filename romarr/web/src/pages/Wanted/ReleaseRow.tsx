@@ -1,5 +1,6 @@
 /**
- * Single-release row used by both Wanted tabs (slices 68, 152).
+ * Single-release row used by both Wanted tabs
+ * (slices 68, 152, 158).
  *
  * Composes the slice 43 ROM components: ConventionBadge,
  * DumpStatusIcon, RegionBadge, LanguagePills. The row is a
@@ -9,6 +10,10 @@
  * In bulk-select mode the row swaps to a button that toggles
  * inclusion in the selection set; a brand-tinted ring + ✓
  * marker show selected state.
+ *
+ * On mobile, holding a row for ~500 ms (long-press) fires
+ * ``onLongPress`` so the parent can flip into selection mode
+ * pre-selecting the held row — matches spec D.
  */
 
 import { type ReactElement } from "react";
@@ -25,12 +30,14 @@ import {
 } from "@/components/rom";
 import { usePlatformsById } from "@/lib/api/queries/platforms";
 import type { WantedRelease } from "@/lib/api/queries/wanted";
+import { useLongPress } from "@/lib/hooks/useLongPress";
 
 export interface ReleaseRowProps {
   release: WantedRelease;
   selectionActive?: boolean;
   selected?: boolean;
   onToggleSelect?: (releaseId: number) => void;
+  onLongPress?: (releaseId: number) => void;
 }
 
 const KNOWN_CONVENTIONS: ReadonlySet<NamingConvention> = new Set([
@@ -81,6 +88,11 @@ export function ReleaseRow(props: ReleaseRowProps): ReactElement {
 
   const selectionActive = props.selectionActive ?? false;
   const selected = props.selected ?? false;
+
+  const longPress = useLongPress(
+    () => props.onLongPress?.(release.id),
+    { disabled: selectionActive || props.onLongPress === undefined },
+  );
 
   const className = [
     "flex flex-col gap-2 rounded-md border p-3 text-left",
@@ -171,7 +183,12 @@ export function ReleaseRow(props: ReleaseRowProps): ReactElement {
   }
 
   return (
-    <Link to={`/game/${release.gameId}`} className={className}>
+    <Link
+      to={`/game/${release.gameId}`}
+      className={className}
+      style={{ touchAction: "manipulation" }}
+      {...longPress}
+    >
       {inner}
     </Link>
   );

@@ -1,5 +1,5 @@
 /**
- * Single game card (slices 88, 151).
+ * Single game card (slices 88, 151, 158).
  *
  * Used by the Library grid. Cover (gradient fallback when
  * `cover_path` is null or no covers endpoint is configured),
@@ -9,6 +9,11 @@
  * becomes a button — clicking toggles selection instead of
  * navigating to the detail page; a ✓ overlay marks selected
  * cards and the border lights up brand-tinted.
+ *
+ * On mobile, holding a card for ~500 ms (long-press) fires
+ * ``onLongPress`` so the parent can flip into selection mode
+ * and pre-select the held card — matches the spec D
+ * "long-press for multi-select on Library and Wanted" rule.
  */
 
 import { type ReactElement } from "react";
@@ -19,12 +24,16 @@ import { CoverImage } from "@/components/rom";
 import type { Game } from "@/lib/api/queries/games";
 import { usePlatformsById } from "@/lib/api/queries/platforms";
 import { useTagsById } from "@/lib/api/queries/tags";
+import { useLongPress } from "@/lib/hooks/useLongPress";
 
 interface GameCardProps {
   game: Game;
   selectionActive?: boolean;
   selected?: boolean;
   onToggleSelect?: (gameId: number) => void;
+  /** Fires when the operator long-presses (~500 ms). Parents
+   * use this to enter bulk-select mode + pre-select the card. */
+  onLongPress?: (gameId: number) => void;
 }
 
 export function GameCard(props: GameCardProps): ReactElement {
@@ -52,6 +61,11 @@ export function GameCard(props: GameCardProps): ReactElement {
 
   const selectionActive = props.selectionActive ?? false;
   const selected = props.selected ?? false;
+
+  const longPress = useLongPress(
+    () => props.onLongPress?.(game.id),
+    { disabled: selectionActive || props.onLongPress === undefined },
+  );
 
   const cardClassName = [
     "group relative flex flex-col gap-2 rounded-md border p-2 text-left",
@@ -174,7 +188,13 @@ export function GameCard(props: GameCardProps): ReactElement {
   }
 
   return (
-    <Link to={`/game/${game.id}`} className={cardClassName} aria-label={ariaLabel}>
+    <Link
+      to={`/game/${game.id}`}
+      className={cardClassName}
+      aria-label={ariaLabel}
+      style={{ touchAction: "manipulation" }}
+      {...longPress}
+    >
       {inner}
     </Link>
   );
