@@ -1,0 +1,49 @@
+/**
+ * Region-profile read + delete hooks (slice 90).
+ *
+ * Same pattern as quality-profiles.ts (slice 65). Read +
+ * delete only — full editor (priorities drag-list +
+ * exclude-regions multi-select) lands in a follow-up slice.
+ */
+
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseMutationResult,
+  type UseQueryResult,
+} from "@tanstack/react-query";
+
+import { ApiError, apiFetch } from "@/lib/api/client";
+import type { components } from "@/types/api/schema";
+
+export type RegionProfile = components["schemas"]["RegionProfileRead"];
+
+const KEY = ["settings", "region-profiles"] as const;
+
+export function useRegionProfiles(): UseQueryResult<
+  RegionProfile[],
+  ApiError
+> {
+  return useQuery<RegionProfile[], ApiError>({
+    queryKey: KEY,
+    queryFn: () =>
+      apiFetch<RegionProfile[]>("/api/v3/rom/regionprofile"),
+    staleTime: 30_000,
+  });
+}
+
+export function useDeleteRegionProfile(): UseMutationResult<
+  void,
+  ApiError,
+  number
+> {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, number>({
+    mutationFn: (id) =>
+      apiFetch<void>(`/api/v3/rom/regionprofile/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: KEY });
+    },
+  });
+}

@@ -123,6 +123,49 @@
     },
     "comingSoonTitle": "Coming soon",
     "comingSoonBody": "{{tab}} profile management lands in a follow-up slice. The backend endpoint isn't shipped yet — check back once the relevant spec lands.",
+    "region": {
+      "subtitle": "Region preferences for selecting between releases of the same game. Priorities resolve ties (USA-first, EUR-first, etc.); excluded regions are dropped outright.",
+      "empty": {
+        "title": "No region profiles",
+        "body": "Romarr ships a factory-default catalogue. If this list is empty, run the seed migration."
+      },
+      "priorities": "Priorities",
+      "excluded": "Excluded",
+      "fallback": "Allow fallback outside priorities",
+      "noFallback": "Strict — no fallback",
+      "factory": "Factory",
+      "modified": "Modified",
+      "delete": {
+        "button": "Delete",
+        "confirmTitle": "Remove this profile?",
+        "confirmBody": "Libraries bound to {{name}} will need a replacement profile before their next decision runs.",
+        "confirm": "Remove",
+        "cancel": "Cancel",
+        "factoryBlocked": "Factory-default profiles can't be deleted; reset them with the seed migration if needed."
+      },
+      "editorHint": "Drag-list editor for priorities + multi-select for excluded regions lands in a follow-up slice."
+    },
+    "language": {
+      "subtitle": "Language preferences. Required languages must all be present on a release for it to qualify; preferred languages tie-break between qualifying releases.",
+      "empty": {
+        "title": "No language profiles",
+        "body": "Romarr ships a factory-default catalogue. If this list is empty, run the seed migration."
+      },
+      "required": "Required",
+      "preferred": "Preferred",
+      "excludeJa": "Exclude Japanese-only",
+      "factory": "Factory",
+      "modified": "Modified",
+      "delete": {
+        "button": "Delete",
+        "confirmTitle": "Remove this profile?",
+        "confirmBody": "Libraries bound to {{name}} will need a replacement profile before their next decision runs.",
+        "confirm": "Remove",
+        "cancel": "Cancel",
+        "factoryBlocked": "Factory-default profiles can't be deleted; reset them with the seed migration if needed."
+      },
+      "editorHint": "Required + preferred drag-list editors land in a follow-up slice."
+    },
     "quality": {
       "subtitle": "Each library binds to one Quality profile. The profile lists the formats Romarr will accept (allowed), the one it prefers as the upgrade target (preferred), and the ceiling beyond which it won't keep upgrading (upgrade-until).",
       "empty": {

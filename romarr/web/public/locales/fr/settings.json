@@ -123,6 +123,49 @@
     },
     "comingSoonTitle": "Bientôt",
     "comingSoonBody": "La gestion du profil {{tab}} arrive dans un slice à venir. L'endpoint backend n'est pas encore livré — repassez une fois la spec correspondante shippée.",
+    "region": {
+      "subtitle": "Préférences de région pour départager les releases d'un même jeu. Les priorités gèrent les égalités (USA d'abord, EUR d'abord, etc.) ; les régions exclues sont rejetées d'office.",
+      "empty": {
+        "title": "Aucun profil de région",
+        "body": "Romarr fournit un catalogue factory par défaut. Si cette liste est vide, lancez la migration de seed."
+      },
+      "priorities": "Priorités",
+      "excluded": "Exclues",
+      "fallback": "Fallback hors priorités autorisé",
+      "noFallback": "Strict — pas de fallback",
+      "factory": "Factory",
+      "modified": "Modifié",
+      "delete": {
+        "button": "Supprimer",
+        "confirmTitle": "Supprimer ce profil ?",
+        "confirmBody": "Les ludothèques liées à {{name}} auront besoin d'un profil de remplacement avant leur prochaine décision.",
+        "confirm": "Supprimer",
+        "cancel": "Annuler",
+        "factoryBlocked": "Les profils factory ne peuvent pas être supprimés ; relancez la migration de seed pour les réinitialiser."
+      },
+      "editorHint": "L'éditeur drag-list pour les priorités + multi-select pour les régions exclues arrivera dans un slice à venir."
+    },
+    "language": {
+      "subtitle": "Préférences linguistiques. Les langues requises doivent toutes être présentes pour qu'une release soit éligible ; les langues préférées départagent entre releases éligibles.",
+      "empty": {
+        "title": "Aucun profil de langue",
+        "body": "Romarr fournit un catalogue factory par défaut. Si cette liste est vide, lancez la migration de seed."
+      },
+      "required": "Requises",
+      "preferred": "Préférées",
+      "excludeJa": "Exclure le japonais seul",
+      "factory": "Factory",
+      "modified": "Modifié",
+      "delete": {
+        "button": "Supprimer",
+        "confirmTitle": "Supprimer ce profil ?",
+        "confirmBody": "Les ludothèques liées à {{name}} auront besoin d'un profil de remplacement avant leur prochaine décision.",
+        "confirm": "Supprimer",
+        "cancel": "Annuler",
+        "factoryBlocked": "Les profils factory ne peuvent pas être supprimés ; relancez la migration de seed pour les réinitialiser."
+      },
+      "editorHint": "Les éditeurs drag-list requis + préférés arriveront dans un slice à venir."
+    },
     "quality": {
       "subtitle": "Chaque ludothèque s'attache à un profil de qualité. Le profil liste les formats acceptés (allowed), celui visé comme cible d'upgrade (preferred) et le plafond au-delà duquel Romarr arrête d'upgrade (upgrade-until).",
       "empty": {

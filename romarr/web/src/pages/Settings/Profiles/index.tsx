@@ -24,7 +24,9 @@ import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/shared/EmptyState";
 
 import { CustomFormatsTab } from "./CustomFormatsTab";
+import { LanguageTab } from "./LanguageTab";
 import { QualityTab } from "./QualityTab";
+import { RegionTab } from "./RegionTab";
 
 type Tab =
   | "quality"
@@ -45,6 +47,8 @@ const TABS: readonly Tab[] = [
 
 const SHIPPED_TABS: ReadonlySet<Tab> = new Set<Tab>([
   "quality",
+  "region",
+  "language",
   "custom-formats",
 ]);
 
@@ -116,8 +120,10 @@ export function ProfilesPage(): ReactElement {
       </div>
 
       {tab === "quality" && <QualityTab />}
+      {tab === "region" && <RegionTab />}
+      {tab === "language" && <LanguageTab />}
       {tab === "custom-formats" && <CustomFormatsTab />}
-      {tab !== "quality" && tab !== "custom-formats" && (
+      {(tab === "dump" || tab === "naming") && (
         <EmptyState
           title={t("profiles.comingSoonTitle")}
           description={t("profiles.comingSoonBody", {
