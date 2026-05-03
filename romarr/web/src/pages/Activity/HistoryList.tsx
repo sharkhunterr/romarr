@@ -13,13 +13,16 @@
  * Strings resolve through `activity:history.*` (slice 68).
  */
 
-import { useMemo, useState, type ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
-import { useHistory } from "@/lib/api/queries/system";
+import {
+  useHistory,
+  type HistoryEventType,
+} from "@/lib/api/queries/system";
 
 const PAGE_SIZE = 50;
 
@@ -67,18 +70,16 @@ export function HistoryList(): ReactElement {
     setPage(1);
   };
 
+  const eventType: HistoryEventType | undefined =
+    filter === "all" ? undefined : filter;
+
   const { data, isPending, isError, error } = useHistory({
     page,
     pageSize: PAGE_SIZE,
     sortKey: "date",
     sortDirection: "desc",
+    eventType,
   });
-
-  const filteredRecords = useMemo(() => {
-    if (!data) return [];
-    if (filter === "all") return data.records;
-    return data.records.filter((e) => e.eventType === filter);
-  }, [data, filter]);
 
   if (isPending) return <ListSkeleton rows={8} />;
   if (isError) {
@@ -89,7 +90,11 @@ export function HistoryList(): ReactElement {
       />
     );
   }
-  if (data.records.length === 0 && page === 1) {
+  if (data.records.length === 0 && page === 1 && filter === "all") {
+    // Only short-circuit to the EmptyState when there's truly
+    // nothing — when a chip is active and the server returned
+    // zero rows we want to keep the chip strip visible so the
+    // operator can switch back to All without leaving the page.
     return (
       <EmptyState
         title={t("history.empty.title")}
@@ -130,14 +135,14 @@ export function HistoryList(): ReactElement {
         ))}
       </div>
 
-      {filteredRecords.length === 0 && (
+      {data.records.length === 0 && filter !== "all" && (
         <p className="rounded-md border border-dashed border-zinc-800 bg-zinc-900/20 p-3 text-[0.7rem] text-zinc-500">
           {t("history.filter.noMatches")}
         </p>
       )}
 
       <ul className="space-y-2">
-        {filteredRecords.map((event) => (
+        {data.records.map((event) => (
           <li
             key={`${event.eventType}-${event.id}`}
             className={[

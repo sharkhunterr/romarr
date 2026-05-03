@@ -115,6 +115,8 @@ interface HistoryEnvelope {
 
 export const HISTORY_KEY = ["system", "history"] as const;
 
+export type HistoryEventType = "import" | "search" | "job_run";
+
 export interface UseHistoryParams {
   page?: number;
   pageSize?: number;
@@ -125,6 +127,8 @@ export interface UseHistoryParams {
    * carry no `gameId`) are excluded server-side when this is set.
    */
   gameId?: number;
+  /** Filter to one of the three documented event types. */
+  eventType?: HistoryEventType;
 }
 
 export function useHistory(
@@ -138,6 +142,8 @@ export function useHistory(
   if (params.sortDirection !== undefined)
     search.set("sortDirection", params.sortDirection);
   if (params.gameId !== undefined) search.set("gameId", String(params.gameId));
+  if (params.eventType !== undefined)
+    search.set("eventType", params.eventType);
   const qs = search.toString();
 
   return useQuery<HistoryEnvelope, ApiError>({

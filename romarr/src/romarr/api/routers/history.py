@@ -38,7 +38,7 @@ Companion `/since` endpoint filters on ``date >= since``.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field
@@ -168,11 +168,23 @@ async def list_history(
             ),
         ),
     ] = None,
+    event_type: Annotated[
+        Literal["import", "search", "job_run"] | None,
+        Query(
+            alias="eventType",
+            description=(
+                "Filter to one of the three documented event types. "
+                "Drives the Activity > History filter chips."
+            ),
+        ),
+    ] = None,
 ) -> PaginationEnvelope[HistoryEvent]:
     sq = _build_union_subquery()
     base_query = select(sq)
     if game_id is not None:
         base_query = base_query.where(sq.c.game_id == game_id)
+    if event_type is not None:
+        base_query = base_query.where(sq.c.event_type == event_type)
     sortable_keys = {
         "date": sq.c.date,
         "event_type": sq.c.event_type,

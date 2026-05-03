@@ -9139,6 +9139,29 @@
             }
           },
           {
+            "description": "Filter to one of the three documented event types. Drives the Activity > History filter chips.",
+            "in": "query",
+            "name": "eventType",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "import",
+                    "search",
+                    "job_run"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to one of the three documented event types. Drives the Activity > History filter chips.",
+              "title": "Eventtype"
+            }
+          },
+          {
             "in": "query",
             "name": "page",
             "required": false,

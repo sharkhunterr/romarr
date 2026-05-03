@@ -369,3 +369,49 @@ async def test_game_id_filter_invalid_zero_rejected(
     """`gameId` is `ge=1`; ``0`` is rejected by FastAPI's validator."""
     resp = await authed_client.get("/api/v3/history?gameId=0")
     assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# slice 117 — eventType filter
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_event_type_filter_keeps_only_matching_rows(
+    authed_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+) -> None:
+    """One row in each of the three audit tables; `?eventType=import`
+    keeps only the import row."""
+    await _seed_three_event_kinds(api_engine)
+
+    resp = await authed_client.get("/api/v3/history?eventType=import")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["totalRecords"] == 1
+    assert body["records"][0]["eventType"] == "import"
+
+
+@pytest.mark.asyncio
+async def test_event_type_filter_search_only(
+    authed_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+) -> None:
+    await _seed_three_event_kinds(api_engine)
+    resp = await authed_client.get("/api/v3/history?eventType=search")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["totalRecords"] == 1
+    assert body["records"][0]["eventType"] == "search"
+
+
+@pytest.mark.asyncio
+async def test_event_type_filter_unknown_value_rejected(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    """The Literal-typed param rejects values outside the
+    documented {import, search, job_run} set."""
+    resp = await authed_client.get(
+        "/api/v3/history?eventType=NotAnEventKind"
+    )
+    assert resp.status_code == 422

@@ -5907,6 +5907,8 @@ export interface operations {
             query?: {
                 /** @description Filter to entries whose ``gameId`` matches. Job-run rows (which carry no game_id) are excluded when this is set. */
                 gameId?: number | null;
+                /** @description Filter to one of the three documented event types. Drives the Activity > History filter chips. */
+                eventType?: ("import" | "search" | "job_run") | null;
                 page?: number;
                 pageSize?: number;
                 sortKey?: string | null;

@@ -55,7 +55,7 @@
       "import": "Import",
       "search": "Recherche",
       "job_run": "Tâche",
-      "noMatches": "Aucune entrée ne correspond au filtre actif sur cette page."
+      "noMatches": "Aucune entrée ne correspond au filtre actif."
     }
   }
 }
