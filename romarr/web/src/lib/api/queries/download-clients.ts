@@ -11,6 +11,7 @@
  * required fields to bake into a single mutation today.
  */
 
+import { useMemo } from "react";
 import {
   useMutation,
   useQuery,
@@ -39,6 +40,23 @@ export function useDownloadClients(): UseQueryResult<
     queryFn: () => apiFetch<DownloadClient[]>("/api/v3/downloadclient"),
     staleTime: 30_000,
   });
+}
+
+/**
+ * Lookup helper — id → DownloadClient. Returns an empty Map until
+ * the underlying query resolves. Memoised on the query result so
+ * consumers don't rebuild the index on every render. Used by
+ * Activity > Queue to surface client names instead of bare ids.
+ */
+export function useDownloadClientsById(): Map<number, DownloadClient> {
+  const clients = useDownloadClients();
+  return useMemo(() => {
+    const out = new Map<number, DownloadClient>();
+    for (const c of clients.data ?? []) {
+      out.set(c.id, c);
+    }
+    return out;
+  }, [clients.data]);
 }
 
 export function useDeleteDownloadClient(): UseMutationResult<

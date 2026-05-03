@@ -15,7 +15,7 @@
       "title": "Queue is empty",
       "body": "No active downloads. Triggering a missing search will queue grabs here."
     },
-    "subtitle": "release #{{releaseId}} · client #{{clientId}}",
+    "subtitle": "release #{{releaseId}} · client {{clientId}}",
     "attempt": " · attempt {{count}}",
     "size": "size {{value}}",
     "eta": "eta {{value}}",

@@ -20,6 +20,7 @@ import { useSearchParams } from "react-router-dom";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
+import { useDownloadClientsById } from "@/lib/api/queries/download-clients";
 import {
   useQueue,
   type QueueEntry,
@@ -86,9 +87,12 @@ function formatEta(seconds: number | null | undefined, t: TFunction): string {
   });
 }
 
-function QueueRow(props: { entry: QueueEntry }): ReactElement {
+function QueueRow(props: {
+  entry: QueueEntry;
+  clientName: string | null;
+}): ReactElement {
   const { t } = useTranslation("activity");
-  const { entry } = props;
+  const { entry, clientName } = props;
   const stateClass =
     STATE_BADGE[entry.state] ??
     "bg-zinc-800 text-zinc-300 ring-zinc-700";
@@ -104,7 +108,7 @@ function QueueRow(props: { entry: QueueEntry }): ReactElement {
           <p className="text-[0.7rem] text-zinc-500">
             {t("queue.subtitle", {
               releaseId: entry.releaseId,
-              clientId: entry.downloadClientId,
+              clientId: clientName ?? `#${entry.downloadClientId}`,
             })}
             {entry.attemptCount > 0 &&
               t("queue.attempt", { count: entry.attemptCount })}
@@ -158,6 +162,7 @@ export function QueueList(): ReactElement {
   const { t } = useTranslation("activity");
   const [searchParams, setSearchParams] = useSearchParams();
   const filter = parseFilterParam(searchParams.get("queueState"));
+  const clientsById = useDownloadClientsById();
 
   const setFilter = (next: StateFilter): void => {
     setSearchParams(
@@ -233,7 +238,13 @@ export function QueueList(): ReactElement {
 
       <ul className="space-y-2">
         {data.records.map((entry) => (
-          <QueueRow key={entry.id} entry={entry} />
+          <QueueRow
+            key={entry.id}
+            entry={entry}
+            clientName={
+              clientsById.get(entry.downloadClientId)?.name ?? null
+            }
+          />
         ))}
       </ul>
     </div>

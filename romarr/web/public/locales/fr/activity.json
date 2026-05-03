@@ -15,7 +15,7 @@
       "title": "La file est vide",
       "body": "Aucun téléchargement actif. Lancer une recherche des manquants ajoute des grabs ici."
     },
-    "subtitle": "release n°{{releaseId}} · client n°{{clientId}}",
+    "subtitle": "release n°{{releaseId}} · client {{clientId}}",
     "attempt": " · tentative {{count}}",
     "size": "taille {{value}}",
     "eta": "eta {{value}}",
