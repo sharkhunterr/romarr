@@ -417,10 +417,17 @@ this one.
       hasn't been surfaced yet (same story as the bootstrap
       slice 173 noted). Lands when an ``emit_event(payload)``
       entry point exists on the dispatcher.
-- [ ] T048 [P] [NEWRUN] `tests/tasks/runners/test_auto_check_added.py::test_event_driven`
-      — emit `OnGameAdded` event; runner is fired by the dispatcher
-      (not by APScheduler's tick); calls spec 007's
-      `run_search_on_add(game)`.
+- [~] T048 [P] [NEWRUN] Runner half covered by slice 181 —
+      ``tests/tasks/runners/test_auto_check_added.py`` verifies
+      ``run_search_on_add`` loads the Game, calls the injected
+      search function with the right title + platform_id,
+      captures candidate / grab counts, and returns a
+      structured ``skipped`` result for a missing game. The
+      dispatcher-fires-this-not-APScheduler half is already
+      pinned by the seeder + scheduler tests
+      (``auto_check_added`` job-type guard). End-to-end
+      "OnGameAdded → dispatcher → AutoCheckAddedAdapter" wire-up
+      lands when the event-bus fan-out helper exists.
 
 ### Implementation
 
@@ -462,12 +469,24 @@ this one.
       ``{"url", "source", "platform_id"}`` dicts and delegates
       to the runner when the JobContext supplies a sessionmaker;
       otherwise falls back to the legacy stub.
-- [ ] T052 [P] [NEWRUN] Create
-      `src/romarr/tasks/runners/auto_check_added.py` —
-      `AutoCheckAddedRunner` subscribed to the `OnGameAdded` event
-      channel from spec 011; fires spec 007's `run_search_on_add`.
-      Registered with `RUNNER_REGISTRY` but NOT scheduled in
-      APScheduler.
+- [X] T052 [P] [NEWRUN] ``AutoCheckAddedRunner`` shipped at
+      ``src/romarr/tasks/runners/auto_check_added.py``
+      (slice 181). ``run_search_on_add(session, game_id,
+      search_fn=None)`` loads the Game (so the runner has
+      authoritative title + platform_id even if the
+      OnGameAdded payload was stale), runs one manual search
+      round scoped to the game's title + platform via the
+      injected ``search_fn`` (default builds the indexer
+      client factory and calls
+      :func:`run_manual_search`), and returns an
+      ``AutoCheckAddedResult`` with candidate / grab counts.
+      Missing games surface as ``skipped=True`` rather than
+      raising so the audit row reflects the "fired but
+      no-op" outcome. ``AutoCheckAddedAdapter`` delegates
+      when the JobContext supplies a sessionmaker + gameId;
+      it stays event-driven (already pinned in
+      ``schemas.py``'s job-type guard so APScheduler refuses
+      to schedule it).
 
 **Checkpoint**: NEWRUN tests green; the three new runners work
 end-to-end.

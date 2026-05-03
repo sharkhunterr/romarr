@@ -344,18 +344,54 @@ class LibraryScanAdapter(_AdapterBase):
 class AutoCheckAddedAdapter(_AdapterBase):
     """Event-driven; the scheduler doesn't fire it on a cron.
     The API layer calls ``trigger("AutoCheckAdded", ...)``
-    when a new game is added (spec 008's importer)."""
+    when a new game is added (spec 008's importer).
+
+    Slice 181 / spec 012 T052: when the JobContext supplies a
+    sessionmaker we delegate to :func:`run_search_on_add`,
+    which loads the Game, runs one manual search round, and
+    reports candidate / grab counts. Without a sessionmaker
+    we keep the legacy stub behaviour so the scheduler dispatch
+    path stays exercised end-to-end.
+    """
 
     def __init__(self) -> None:
         super().__init__(job_id="AutoCheckAdded")
 
     async def _run(self, context: JobContext) -> JobResult:
         game_id = context.parameters.get("gameId")
+        sessionmaker = getattr(context, "sessionmaker", None)
+        if game_id is None or sessionmaker is None:
+            return JobResult(
+                status=JobStatus.SUCCESS,
+                summary={
+                    "stub": True,
+                    "gameId": game_id,
+                    "reason": (
+                        "no gameId"
+                        if game_id is None
+                        else "no sessionmaker"
+                    ),
+                },
+            )
+
+        from romarr.tasks.runners.auto_check_added import (
+            run_search_on_add,
+        )
+
+        async with sessionmaker() as session:
+            result = await run_search_on_add(
+                session, game_id=int(game_id)
+            )
         return JobResult(
             status=JobStatus.SUCCESS,
             summary={
-                "stub": True,
-                "gameId": game_id,
+                "gameId": result.game_id,
+                "title": result.title,
+                "platformId": result.platform_id,
+                "candidates": result.candidates,
+                "grabs": result.grabs,
+                "skipped": result.skipped,
+                "skipReason": result.skip_reason,
             },
         )
 
