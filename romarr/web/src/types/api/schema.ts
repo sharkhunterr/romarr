@@ -423,6 +423,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/game": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List games (any authenticated user). Supports title-substring + platform filters. */
+        get: operations["list_games_api_v3_game_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/game/{game_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one game (any authenticated user). */
+        get: operations["read_game_api_v3_game__game_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/game/{game_id}/refresh-metadata": {
         parameters: {
             query?: never;
@@ -434,6 +468,23 @@ export interface paths {
         put?: never;
         /** Refresh metadata for a Game from the enabled providers (admin only). */
         post: operations["refresh_metadata_endpoint_api_v3_game__game_id__refresh_metadata_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/game/{game_id}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List every Release for a game. Drives the Match form's Release picker. */
+        get: operations["list_releases_for_game_api_v3_game__game_id__release_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2385,6 +2436,15 @@ export interface components {
              */
             updated_at: string;
         };
+        /**
+         * DumpStatus
+         * @description Authoritative dump-quality classification.
+         *
+         *     Order is preference-relevant: ``verified`` is best, ``baddump`` /
+         *     ``overdump`` are worst.
+         * @enum {string}
+         */
+        DumpStatus: "verified" | "good" | "proto" | "beta" | "demo" | "sample" | "hack" | "trainer" | "translation" | "baddump" | "overdump" | "unknown";
         /** FieldPriorityEntry */
         FieldPriorityEntry: {
             /** Field Name */
@@ -2428,6 +2488,85 @@ export interface components {
             max_size_bytes?: number | null;
             /** Min Size Bytes */
             min_size_bytes?: number | null;
+        };
+        /** GameRead */
+        GameRead: {
+            /** Achievements Count */
+            achievements_count?: number | null;
+            /** Age Rating */
+            age_rating?: string | null;
+            /** Cover Path */
+            cover_path?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Custom Metadata */
+            custom_metadata?: {
+                [key: string]: unknown;
+            };
+            /** Developer */
+            developer?: string | null;
+            /** Franchises */
+            franchises?: string[];
+            /** Genres */
+            genres?: string[];
+            /** Hltb Main */
+            hltb_main?: number | null;
+            /** Id */
+            id: number;
+            /** Igdb Id */
+            igdb_id?: number | null;
+            /** Launchbox Id */
+            launchbox_id?: number | null;
+            /** Locked Fields */
+            locked_fields?: string[];
+            /** Mobygames Id */
+            mobygames_id?: number | null;
+            /**
+             * Monitored
+             * @default true
+             */
+            monitored: boolean;
+            /**
+             * Needs Metadata Refresh
+             * @default false
+             */
+            needs_metadata_refresh: boolean;
+            /** Platform Id */
+            platform_id: number;
+            /** Players Max */
+            players_max?: number | null;
+            /** Players Min */
+            players_min?: number | null;
+            /** Publisher */
+            publisher?: string | null;
+            /** Rating */
+            rating?: number | null;
+            /** Release Date */
+            release_date?: string | null;
+            /** Retroachievements Id */
+            retroachievements_id?: number | null;
+            /** Screenscraper Id */
+            screenscraper_id?: number | null;
+            /** Slug */
+            slug: string;
+            /** Sort Title */
+            sort_title?: string | null;
+            /** Summary */
+            summary?: string | null;
+            /** Tags */
+            tags?: number[];
+            /** Themes */
+            themes?: string[];
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /**
          * GrabRequest
@@ -3078,6 +3217,12 @@ export interface components {
              */
             strict: boolean;
         };
+        /**
+         * NamingConvention
+         * @description Filename naming convention recognised by the parsers.
+         * @enum {string}
+         */
+        NamingConvention: "no-intro" | "redump" | "tosec" | "goodtools" | "scene" | "unknown";
         /** NamingPreviewRequest */
         NamingPreviewRequest: {
             profile: components["schemas"]["NamingProfileCreate"];
@@ -3767,6 +3912,66 @@ export interface components {
          * @enum {string}
          */
         RejectionCode: "no_game_match" | "region_excluded" | "region_out_of_priorities" | "language_required" | "japanese_only_excluded" | "dump_status_disallowed" | "hack_disallowed" | "trainer_disallowed" | "translation_disallowed" | "proto_beta_disallowed" | "format_not_allowed" | "dat_required" | "custom_format_reject" | "blocklisted_guid" | "blocklisted_hash" | "size_out_of_bounds" | "seeders_below_threshold";
+        /** ReleaseRead */
+        ReleaseRead: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Cutoff Met
+             * @default false
+             */
+            cutoff_met: boolean;
+            /**
+             * Disc Number
+             * @default 1
+             */
+            disc_number: number;
+            /**
+             * Disc Total
+             * @default 1
+             */
+            disc_total: number;
+            /** @default unknown */
+            dump_status: components["schemas"]["DumpStatus"];
+            /** Game Id */
+            game_id: number;
+            /** Id */
+            id: number;
+            /** Languages */
+            languages?: string[];
+            /**
+             * Monitored
+             * @default true
+             */
+            monitored: boolean;
+            /** Name */
+            name: string;
+            /** @default unknown */
+            naming_convention: components["schemas"]["NamingConvention"];
+            /** Original Name */
+            original_name?: string | null;
+            /** Parent Release Id */
+            parent_release_id?: number | null;
+            /** Regions */
+            regions?: string[];
+            /** Revision */
+            revision?: string | null;
+            /**
+             * Status
+             * @default wanted
+             */
+            status: string;
+            /** Tags */
+            tags?: string[];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** ResetTokenResponse */
         ResetTokenResponse: {
             /**
@@ -5206,6 +5411,73 @@ export interface operations {
             };
         };
     };
+    list_games_api_v3_game_get: {
+        parameters: {
+            query?: {
+                /** @description Case-insensitive substring filter on the game title. Trimmed; empty/whitespace-only ignored. */
+                q?: string | null;
+                /** @description Restrict to one platform. */
+                platform_id?: number | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_game_api_v3_game__game_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     refresh_metadata_endpoint_api_v3_game__game_id__refresh_metadata_post: {
         parameters: {
             query?: {
@@ -5226,6 +5498,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RefreshMetadataResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_releases_for_game_api_v3_game__game_id__release_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReleaseRead"][];
                 };
             };
             /** @description Validation Error */

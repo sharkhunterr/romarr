@@ -1486,6 +1486,25 @@
         "title": "DumpProfileRead",
         "type": "object"
       },
+      "DumpStatus": {
+        "description": "Authoritative dump-quality classification.\n\nOrder is preference-relevant: ``verified`` is best, ``baddump`` /\n``overdump`` are worst.",
+        "enum": [
+          "verified",
+          "good",
+          "proto",
+          "beta",
+          "demo",
+          "sample",
+          "hack",
+          "trainer",
+          "translation",
+          "baddump",
+          "overdump",
+          "unknown"
+        ],
+        "title": "DumpStatus",
+        "type": "string"
+      },
       "FieldPriorityEntry": {
         "additionalProperties": false,
         "properties": {
@@ -1659,6 +1678,291 @@
           }
         },
         "title": "FormatUpdate",
+        "type": "object"
+      },
+      "GameRead": {
+        "additionalProperties": false,
+        "properties": {
+          "achievements_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Achievements Count"
+          },
+          "age_rating": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Rating"
+          },
+          "cover_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Path"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "custom_metadata": {
+            "additionalProperties": true,
+            "title": "Custom Metadata",
+            "type": "object"
+          },
+          "developer": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Developer"
+          },
+          "franchises": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Franchises",
+            "type": "array"
+          },
+          "genres": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Genres",
+            "type": "array"
+          },
+          "hltb_main": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hltb Main"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "igdb_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Igdb Id"
+          },
+          "launchbox_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Launchbox Id"
+          },
+          "locked_fields": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Locked Fields",
+            "type": "array"
+          },
+          "mobygames_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mobygames Id"
+          },
+          "monitored": {
+            "default": true,
+            "title": "Monitored",
+            "type": "boolean"
+          },
+          "needs_metadata_refresh": {
+            "default": false,
+            "title": "Needs Metadata Refresh",
+            "type": "boolean"
+          },
+          "platform_id": {
+            "title": "Platform Id",
+            "type": "integer"
+          },
+          "players_max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Players Max"
+          },
+          "players_min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Players Min"
+          },
+          "publisher": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publisher"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rating"
+          },
+          "release_date": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Date"
+          },
+          "retroachievements_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retroachievements Id"
+          },
+          "screenscraper_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Screenscraper Id"
+          },
+          "slug": {
+            "maxLength": 192,
+            "title": "Slug",
+            "type": "string"
+          },
+          "sort_title": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Title"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "tags": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "themes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Themes",
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 255,
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "platform_id",
+          "slug",
+          "title",
+          "id",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "GameRead",
         "type": "object"
       },
       "GrabRequest": {
@@ -3479,6 +3783,19 @@
         ],
         "title": "ManualSearchRequest",
         "type": "object"
+      },
+      "NamingConvention": {
+        "description": "Filename naming convention recognised by the parsers.",
+        "enum": [
+          "no-intro",
+          "redump",
+          "tosec",
+          "goodtools",
+          "scene",
+          "unknown"
+        ],
+        "title": "NamingConvention",
+        "type": "string"
       },
       "NamingPreviewRequest": {
         "additionalProperties": false,
@@ -5351,6 +5668,132 @@
         ],
         "title": "RejectionCode",
         "type": "string"
+      },
+      "ReleaseRead": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "cutoff_met": {
+            "default": false,
+            "title": "Cutoff Met",
+            "type": "boolean"
+          },
+          "disc_number": {
+            "default": 1,
+            "title": "Disc Number",
+            "type": "integer"
+          },
+          "disc_total": {
+            "default": 1,
+            "title": "Disc Total",
+            "type": "integer"
+          },
+          "dump_status": {
+            "$ref": "#/components/schemas/DumpStatus",
+            "default": "unknown"
+          },
+          "game_id": {
+            "title": "Game Id",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "languages": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Languages",
+            "type": "array"
+          },
+          "monitored": {
+            "default": true,
+            "title": "Monitored",
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 255,
+            "title": "Name",
+            "type": "string"
+          },
+          "naming_convention": {
+            "$ref": "#/components/schemas/NamingConvention",
+            "default": "unknown"
+          },
+          "original_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Name"
+          },
+          "parent_release_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Release Id"
+          },
+          "regions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Regions",
+            "type": "array"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision"
+          },
+          "status": {
+            "default": "wanted",
+            "title": "Status",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "game_id",
+          "name",
+          "id",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ReleaseRead",
+        "type": "object"
       },
       "ResetTokenResponse": {
         "additionalProperties": false,
@@ -7866,6 +8309,146 @@
         ]
       }
     },
+    "/api/v3/game": {
+      "get": {
+        "operationId": "list_games_api_v3_game_get",
+        "parameters": [
+          {
+            "description": "Case-insensitive substring filter on the game title. Trimmed; empty/whitespace-only ignored.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 255,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Case-insensitive substring filter on the game title. Trimmed; empty/whitespace-only ignored.",
+              "title": "Q"
+            }
+          },
+          {
+            "description": "Restrict to one platform.",
+            "in": "query",
+            "name": "platform_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to one platform.",
+              "title": "Platform Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GameRead"
+                  },
+                  "title": "Response List Games Api V3 Game Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List games (any authenticated user). Supports title-substring + platform filters.",
+        "tags": [
+          "Game"
+        ]
+      }
+    },
+    "/api/v3/game/{game_id}": {
+      "get": {
+        "operationId": "read_game_api_v3_game__game_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "title": "Game Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read one game (any authenticated user).",
+        "tags": [
+          "Game"
+        ]
+      }
+    },
     "/api/v3/game/{game_id}/refresh-metadata": {
       "post": {
         "operationId": "refresh_metadata_endpoint_api_v3_game__game_id__refresh_metadata_post",
@@ -7915,6 +8498,52 @@
         "summary": "Refresh metadata for a Game from the enabled providers (admin only).",
         "tags": [
           "Metadata"
+        ]
+      }
+    },
+    "/api/v3/game/{game_id}/release": {
+      "get": {
+        "operationId": "list_releases_for_game_api_v3_game__game_id__release_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "title": "Game Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReleaseRead"
+                  },
+                  "title": "Response List Releases For Game Api V3 Game  Game Id  Release Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List every Release for a game. Drives the Match form's Release picker.",
+        "tags": [
+          "Game"
         ]
       }
     },
