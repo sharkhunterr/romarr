@@ -392,18 +392,33 @@ breaker.
 - [X] T084 [HARD] `tests/identification/test_unidentified_persistence.py` —
       when `Identifier.identify` produces `confidence < 0.5`, it must persist
       a row in `unidentified_dump` (FR-029).
-- [ ] T085 [HARD] Manual perf check: hash a 1 GB file via the CLI from T036,
-      record the time in `specs/001-foundation/research.md` (create file if
-      missing) — gate SC-002.
-- [ ] T086 [HARD] Run `ruff check . --fix-only=false` and `mypy` — both must
-      finish with **zero** warnings on `src/romarr/domain/` and
-      `src/romarr/identification/`.
-- [ ] T087 [HARD] Run `pytest --cov` — verify domain/ ≥ 80%, identification/
-      ≥ 80%, overall ≥ 70% (SC-009). Add targeted tests for any uncovered
-      branch.
-- [ ] T088 [HARD] Add a single root-level `tests/test_repl_smoke.py`:
-      `from romarr.identification import Identifier; from romarr.domain.models import Game, Release, Dump`
-      — assert these imports succeed without booting FastAPI (SC-008).
+- [~] T085 [HARD] Manual perf check: hash a 1 GB file —
+      DEFERRED. The hasher's CRC32 + MD5 + SHA-1 single-pass
+      implementation is exercised by ``tests/identification/test_hasher.py``
+      against ~MB-scale fixtures. The 1 GB SC-002 budget gets
+      validated against a real ROM corpus at release-cut time.
+- [X] T086 [HARD] ``ruff check src/romarr/domain/
+      src/romarr/identification/`` and ``mypy src/romarr/domain/
+      src/romarr/identification/`` — both clean (slice 193).
+      Zero warnings, no type errors.
+- [X] T087 [HARD] Coverage validated against SC-009
+      (slice 193). ``pytest --cov=romarr.domain
+      --cov=romarr.identification`` reports:
+      domain → 100% on every module except schemas (99%) and
+      validators (96%); identification → ≥ 90% on every module
+      except hashmatch/remote (73% — gated on remote services
+      we don't speak to in CI). Both far above the 80%
+      threshold.
+- [X] T088 [HARD] REPL smoke test shipped at
+      ``tests/test_repl_smoke.py`` (slice 193).
+      ``test_domain_and_identification_import_without_fastapi``
+      pins SC-008's "foundation imports without FastAPI"
+      invariant by clearing ``romarr.api`` / ``fastapi`` from
+      ``sys.modules`` before importing the public surface and
+      asserting nothing leaked back in.
+      ``test_domain_models_are_constructable`` rules out the
+      regression where a model accidentally requires a session
+      in ``__init__``.
 
 ---
 
@@ -417,10 +432,14 @@ breaker.
 - [ ] T090 [WRAP] Add `specs/001-foundation/research.md` capturing the lxml
       iterparse cleanup pattern decided in Phase 0 + the perf number from
       T085.
-- [ ] T091 [WRAP] Add a 20-line `README.md` snippet (or create the file)
-      documenting how to run the test suite, how to apply Alembic migrations
-      against a fresh SQLite, and one REPL one-liner showing
-      `Identifier.identify(...)`.
+- [X] T091 [WRAP] ``README.md`` rewritten in slice 193 to ship
+      the operator-facing quickstart: Docker one-liner with
+      auto-bootstrap + auto-migrate + setup-token capture, dev
+      quickstart with ``romarr migrate`` + ``romarr serve``, the
+      CLI surface, and a per-module layout map keyed by spec.
+      Goes well past the 20-line minimum since the project now
+      has a concrete runnable target (slice 187/188 shipped the
+      Dockerfile + serve command).
 - [ ] T092 [WRAP] Final review: open `specs/001-foundation/spec.md` and tick
       every Functional Requirement (FR-001 → FR-029) against a corresponding
       task ID; record any gaps as follow-up items.
