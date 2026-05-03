@@ -1,0 +1,60 @@
+# Build context exclusions — keep the docker context minimal so
+# rebuilds are fast and the image doesn't carry CI / dev cruft.
+
+# Python build / cache / venv
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+*.cover
+
+# Frontend node_modules + dev artefacts (the Vite build runs in
+# its own stage; we don't want the host node_modules in the
+# context).
+web/node_modules/
+web/dist/
+web/.vite/
+web/coverage/
+
+# Test fixtures + tests themselves don't need to ship
+tests/
+
+# Local SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Specs + checklists (already published in git; not needed at
+# runtime).
+specs/
+.specify/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+.github/
+
+# Claude / AI tooling
+.claude/
+
+# Documentation source not needed for runtime
+docs/
+
+# CI / scripts
+.gitlab-ci.yml
+.gitlab/

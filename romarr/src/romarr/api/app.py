@@ -28,6 +28,7 @@ from romarr.api.middleware import (
     register_rate_limit,
 )
 from romarr.api.openapi import customize_openapi
+from romarr.api.spa import register_spa
 from romarr.api.routers.auth import router as auth_router
 from romarr.api.routers.backup import router as backup_router
 from romarr.api.routers.calendar import router as calendar_router
@@ -316,10 +317,6 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     # this off app.state to broadcast events to subscribers.
     app.state.ws_subscriptions = SubscriptionRegistry()
 
-    @app.get("/", include_in_schema=False)
-    async def _root() -> JSONResponse:
-        return JSONResponse({"name": "romarr", "version": __version__})
-
     # Spec 013 phase MW. Middleware order matters: Starlette runs the
     # last-registered middleware first, so GZip lands on the outermost
     # layer (it must see the final response bytes). CORS goes next,
@@ -444,6 +441,24 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     # customisation that follows sees the full HTTP surface;
     # WebSocket routes don't appear in the OpenAPI doc.
     app.include_router(ws_router)
+
+    # Spec 014 T009 — SPA static-file mount. Registered after
+    # every router so router routes still take precedence;
+    # only unmatched paths fall through to the SPA's catch-all
+    # which returns ``index.html`` (React Router takes over
+    # client-side). When ``spa_enabled`` is False (test
+    # default) we keep the legacy JSON ``GET /`` smoke
+    # response so the existing root-route assertions hold.
+    spa_mounted = register_spa(
+        app,
+        enabled=settings.spa_enabled,
+        dist_path=settings.spa_dist_path,
+    )
+    if not spa_mounted:
+
+        @app.get("/", include_in_schema=False)
+        async def _root() -> JSONResponse:
+            return JSONResponse({"name": "romarr", "version": __version__})
 
     # Spec 013 phase OPENAPI — runs after every router has been
     # registered so the customizer sees the full route set.

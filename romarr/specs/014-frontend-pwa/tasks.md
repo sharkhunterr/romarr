@@ -79,12 +79,36 @@ hardening.
       `localhost:8585`). The `vite-plugin-pwa` integration with
       Workbox runtime caching (NetworkFirst /api/v3, CacheFirst
       assets, no-cache for mutations) lands with the PWA phase.
-- [~] T009 [SCAF] Docker integration **deferred** — needs the
-      backend's `StaticFiles` mount wired at `/`, which is a
-      coordinated change touching `src/romarr/api/app.py`. The
-      multi-stage build outline is documented in
-      `web/README.md`; the actual Dockerfile lands when the
-      frontend has enough to serve.
+- [X] T009 [SCAF] Docker integration shipped (slice 188).
+      Backend's ``StaticFiles`` mount lives at
+      ``src/romarr/api/spa.py::register_spa`` — gated on
+      ``Settings.spa_enabled`` (default OFF for tests).
+      Mounted AFTER every router so the API surface keeps
+      precedence; only unmatched paths fall through to
+      ``index.html`` (React Router takes over). Defence
+      against API-shadowing: any ``/api/*`` or ``/signalr/*``
+      that didn't match a registered route returns 404 rather
+      than ``index.html``.
+
+      Multi-stage Dockerfile shipped at repo root:
+      Stage 1 builds the SPA via Vite (pnpm). Stage 2
+      installs Python deps, bundles the dist from stage 1,
+      runs as the unprivileged ``romarr`` user (PUID/PGID
+      configurable per the LinuxServer.io convention),
+      defaults ``ROMARR_BOOTSTRAP_ENABLED=true``,
+      ``ROMARR_AUTO_MIGRATE=true``,
+      ``ROMARR_SCHEDULER_ENABLED=true``,
+      ``ROMARR_SPA_ENABLED=true``. Mounts ``/data`` as the
+      volume; binds 8585. ``tini`` as PID 1 for graceful
+      shutdown signal forwarding. ``.dockerignore`` excludes
+      tests / specs / dev caches so the build context stays
+      lean.
+
+      Tests at ``tests/api/test_spa_mount.py`` cover six
+      cases: SPA disabled (JSON fallback), SPA enabled +
+      ``GET /``, asset serving, catch-all SPA route
+      fall-through, API 404 not shadowed by SPA, missing
+      dist path falls back gracefully.
 
 **Checkpoint**: `pnpm dev` brings up a working Vite dev server;
 `pnpm build` produces a deployable artifact.

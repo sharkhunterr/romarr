@@ -230,6 +230,24 @@ class Settings(BaseSettings):
         "phase; operators with a CI/CD migration step should "
         "leave this False and run migrations explicitly.",
     )
+    spa_enabled: bool = Field(
+        default=False,
+        description="Spec 014 T009. When True, the app serves "
+        "the built React SPA from ``spa_dist_path`` at the "
+        "root (``/`` returns ``index.html``, ``/assets/*`` "
+        "returns the hashed bundle, anything not matching a "
+        "router falls through to the SPA so React Router "
+        "handles the route). Defaults to False so the test "
+        "suite keeps the JSON ``GET /`` smoke-info response. "
+        "Production sets ROMARR_SPA_ENABLED=true.",
+    )
+    spa_dist_path: str = Field(
+        default="./web/dist",
+        description="Filesystem path to the built SPA. "
+        "Honoured only when ``spa_enabled`` is True. The "
+        "directory must contain ``index.html`` plus the "
+        "Vite-emitted ``assets/`` subdirectory.",
+    )
 
     # CSRF protection (spec 013, FR-027)
     csrf_protect: bool = Field(
