@@ -9,9 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from romarr.indexers.models import Indexer
 from romarr.indexers.types import SearchResult
 from romarr.search.blocklist import (
+    AUTO_BLOCKLIST_SUBREASONS,
+    TRANSIENT_FAILURE_SUBREASONS,
     add_entry,
     auto_add_on_import_failure,
     delete_entry,
+    is_auto_blocklist_subreason,
     is_blocklisted,
 )
 from romarr.search.models import Blocklist
@@ -77,9 +80,117 @@ async def test_auto_add_does_not_double_prefix(
     row = await auto_add_on_import_failure(
         async_session,
         result=_result(indexer_id=indexer.id, sha1="b" * 40),
-        reason="import-failed:custom",
+        reason="import-failed:dat-rejected",
     )
-    assert row.reason == "import-failed:custom"
+    assert row is not None
+    assert row.reason == "import-failed:dat-rejected"
+
+
+# ---------------------------------------------------------------------------
+# CL010 — auto-blocklist taxonomy (FR-021 rewritten)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "subreason",
+    sorted(AUTO_BLOCKLIST_SUBREASONS),
+)
+@pytest.mark.asyncio
+async def test_content_correctness_subreason_creates_blocklist_row(
+    async_session: AsyncSession, subreason: str
+) -> None:
+    """Each content-correctness subreason MUST blocklist the
+    release. These are the failure modes where the bytes
+    themselves are wrong, so re-grabbing the same payload would
+    fail again."""
+    indexer = await _make_indexer(async_session)
+    row = await auto_add_on_import_failure(
+        async_session,
+        result=_result(indexer_id=indexer.id, sha1="c" * 40),
+        reason=subreason,
+    )
+    assert row is not None, f"{subreason} must blocklist"
+    assert row.reason == f"import-failed:{subreason}"
+
+
+@pytest.mark.parametrize(
+    "subreason",
+    sorted(TRANSIENT_FAILURE_SUBREASONS),
+)
+@pytest.mark.asyncio
+async def test_transient_subreason_does_not_blocklist(
+    async_session: AsyncSession, subreason: str
+) -> None:
+    """Each transient subreason MUST NOT blocklist. The next
+    attempt could succeed against the same payload — disk
+    space frees up, network heals, permissions get fixed."""
+    indexer = await _make_indexer(async_session)
+    row = await auto_add_on_import_failure(
+        async_session,
+        result=_result(indexer_id=indexer.id, sha1="d" * 40),
+        reason=subreason,
+    )
+    assert row is None, f"{subreason} must NOT blocklist"
+
+    # And the table is genuinely untouched.
+    rows = (
+        await async_session.execute(select(Blocklist))
+    ).scalars().all()
+    assert rows == []
+
+
+@pytest.mark.asyncio
+async def test_unknown_subreason_does_not_blocklist(
+    async_session: AsyncSession,
+) -> None:
+    """A subreason not in either set is fail-safe — no blocklist
+    row. Better to miss an auto-blocklist than incorrectly
+    suppress a release on a code we haven't classified yet."""
+    indexer = await _make_indexer(async_session)
+    row = await auto_add_on_import_failure(
+        async_session,
+        result=_result(indexer_id=indexer.id, sha1="e" * 40),
+        reason="unknown-future-code",
+    )
+    assert row is None
+
+
+@pytest.mark.asyncio
+async def test_manual_add_works_for_any_subreason(
+    async_session: AsyncSession,
+) -> None:
+    """The taxonomy gate only applies to ``auto_add_on_import_failure``.
+    Manual ``add_entry`` calls (operator-driven) still work for
+    any reason — the operator is the authority."""
+    indexer = await _make_indexer(async_session)
+    row = await add_entry(
+        async_session,
+        indexer_id=indexer.id,
+        indexer_guid="manual-guid",
+        release_title="Operator-added release",
+        hash_sha1=None,
+        hash_crc32=None,
+        reason="operator decided this dump is wrong",
+        added_by="operator-1",
+    )
+    assert row.id is not None
+
+
+def test_auto_blocklist_taxonomy_is_disjoint() -> None:
+    """The two sets must be disjoint — a code can't be both
+    content-correctness AND transient. Catches a future
+    reviewer accidentally adding the same code to both lists."""
+    overlap = AUTO_BLOCKLIST_SUBREASONS & TRANSIENT_FAILURE_SUBREASONS
+    assert overlap == frozenset()
+
+
+def test_is_auto_blocklist_subreason_helper() -> None:
+    """Helper accepts both bare codes and full prefixed strings."""
+    assert is_auto_blocklist_subreason("hash-mismatch") is True
+    assert is_auto_blocklist_subreason("import-failed:hash-mismatch") is True
+    assert is_auto_blocklist_subreason("disk-full") is False
+    assert is_auto_blocklist_subreason("import-failed:disk-full") is False
+    assert is_auto_blocklist_subreason("totally-unknown") is False
 
 
 # ---------------------------------------------------------------------------

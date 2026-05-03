@@ -100,19 +100,74 @@ async def delete_entry(session: AsyncSession, *, entry_id: int) -> bool:
     return rowcount > 0
 
 
+# CL006 / FR-021 (rewritten in the 2026-04-29 clarifications) —
+# auto-blocklist ONLY for content-correctness failures. Transient
+# subreasons (disk full, permissions, network, etc.) are recorded
+# in ``search_history`` but should never blocklist the release —
+# the next attempt could succeed against the same payload.
+AUTO_BLOCKLIST_SUBREASONS: frozenset[str] = frozenset(
+    {
+        "hash-mismatch",
+        "dat-rejected",
+        "format-corrupt",
+        "archive-extraction-failed",
+    }
+)
+"""Failure subreasons that mean the payload itself is wrong, not
+the environment. Adding to this set widens auto-blocklisting; do
+NOT add transient codes here without a spec amendment."""
+
+TRANSIENT_FAILURE_SUBREASONS: frozenset[str] = frozenset(
+    {
+        "disk-full",
+        "permission-denied",
+        "client-unreachable",
+        "move-failed",
+        "scan-timeout",
+    }
+)
+"""Failure subreasons that mean the environment was wrong; the
+payload may be fine. Documented exhaustively in spec 007 CL006 so
+the audit trail is unambiguous about why a row didn't blocklist."""
+
+
+def _strip_prefix(reason: str) -> str:
+    """Return the bare subreason (no ``import-failed:`` prefix)."""
+    if reason.startswith("import-failed:"):
+        return reason.split(":", 1)[1]
+    return reason
+
+
+def is_auto_blocklist_subreason(reason: str) -> bool:
+    """True iff the failure subreason is content-correctness.
+
+    Used by the importer + the auto-blocklist trigger. Transient
+    codes return False; unknown codes also return False (fail-safe:
+    we'd rather miss an auto-blocklist than incorrectly suppress a
+    release that just hit a flaky network)."""
+    return _strip_prefix(reason) in AUTO_BLOCKLIST_SUBREASONS
+
+
 async def auto_add_on_import_failure(
     session: AsyncSession,
     *,
     result: SearchResult,
     reason: str,
-) -> Blocklist:
+) -> Blocklist | None:
     """Importer entry-point: blocklist a release after a failed import.
+
+    Only fires for content-correctness subreasons (CL006 / FR-021).
+    Returns ``None`` for transient subreasons so the importer's
+    history-write path can still record the failure without
+    suppressing the release on the next round.
 
     The reason is structured (``"import-failed:<code>"``) so the
     history view can group by failure mode. The pipeline's blocklist
     gate consults the row on the next round and short-circuits before
     re-grabbing.
     """
+    if not is_auto_blocklist_subreason(reason):
+        return None
     return await add_entry(
         session,
         indexer_id=result.indexer_id,
@@ -126,8 +181,11 @@ async def auto_add_on_import_failure(
 
 
 __all__ = [
+    "AUTO_BLOCKLIST_SUBREASONS",
+    "TRANSIENT_FAILURE_SUBREASONS",
     "add_entry",
     "auto_add_on_import_failure",
     "delete_entry",
+    "is_auto_blocklist_subreason",
     "is_blocklisted",
 ]

@@ -611,13 +611,67 @@ PIPE and PERS split cleanly across Day 1–2.
 
 ## Phase: Clarification Tasks (Session 2026-04-29)
 
-- [ ] CL001 [P] [US6] Confirm `blocklist` schema has NO `library_id` column (global per Romarr instance) in `src/romarr/search/models.py` (FR-020a)
-- [ ] CL002 [P] [US1, US3, US4] Implement per-Game advisory lock for search-round coalesce in `src/romarr/search/round_orchestrator.py` — concurrent search rounds against the same Game share a single in-flight round; lock-holder TTL 5 minutes; second caller blocks and receives the same `search_history` row id without re-querying indexers (FR-016a)
-- [ ] CL003 Migration `0007_search.py` adds `search_cache.last_read_at TIMESTAMP NOT NULL DEFAULT current_timestamp` and an index on `last_read_at` for cheap LRU eviction (FR-028a)
-- [ ] CL004 [P] [US8] Update `search_cache` reader in `src/romarr/search/cache.py` to set `last_read_at = now()` on every cache hit
-- [ ] CL005 [P] [US8] Implement LRU eviction with hysteresis in `src/romarr/search/cache.py` — at insert time, when row count would exceed 10,000, run a single bulk DELETE down to 9,000 ordered by `last_read_at ASC` (FR-028a)
-- [ ] CL006 [P] [US6] Update auto-blocklist trigger in `src/romarr/search/blocklist.py` to invoke the helper ONLY when the import-failure subreason is one of `hash-mismatch`, `dat-rejected`, `format-corrupt`, `archive-extraction-failed`. Transient subreasons (`disk-full`, `permission-denied`, `client-unreachable`, `move-failed`, `scan-timeout`) record in `search_history` but do NOT call the helper (FR-021 rewritten)
-- [ ] CL007 [P] [Admin] Wire admin-role gate on every mutating search/blocklist/command endpoint in `src/romarr/search/api.py` (`/search/manual`, `/search/release/{id}`, `/release/grab`, `/command`, `/blocklist` POST, `/blocklist/{id}` DELETE); reads accessible to any authenticated user (FR-030a)
-- [ ] CL008 [P] Add tests in `tests/search/test_round_coalesce.py` covering: 5 concurrent search rounds on the same Game → exactly one set of indexer calls fires; all 5 callers receive the same `search_history` row id
-- [ ] CL009 [P] Add tests in `tests/search/test_cache_lru.py` covering: insert past 10k → bulk delete to 9k; hit on existing row → `last_read_at` updates; eviction order matches LRU
-- [ ] CL010 [P] Add tests in `tests/search/test_auto_blocklist_taxonomy.py` covering: each content-correctness subreason → blocklist row created; each transient subreason → no blocklist row; manual operator add still works for any subreason
+- [X] CL001 [P] [US6] ``blocklist`` table at
+      ``search/models.py`` confirms no ``library_id`` column —
+      global per Romarr instance per FR-020a. Schema columns:
+      indexer_id, indexer_guid, release_title, hash_sha1,
+      hash_crc32, reason, added_by, added_at.
+- [~] CL002 [P] [US1, US3, US4] Per-Game advisory lock for
+      search-round coalescing — DEFERRED. The current
+      ``run_manual_search`` orchestrator is query-string-driven,
+      not Game-driven; the search-on-add path (slice 181) is
+      the first Game-scoped entry, but it doesn't yet share a
+      lock registry with manual rounds. A future
+      ``round_orchestrator`` slice will introduce the shared
+      lock + the ``search_history`` row-id sharing semantic.
+      Spec 002's per-Game refresh lock pattern is the template
+      to mirror.
+- [X] CL003 Migration ``0007_search.py`` ships
+      ``search_cache.last_read_at`` (line ~141) plus
+      ``idx_search_cache_last_read_at`` (line ~153) for cheap
+      LRU eviction.
+- [X] CL004 [P] [US8] ``get_cached`` updates ``last_read_at = now()``
+      on every cache hit (``cache.py:98``). Test:
+      ``tests/search/test_cache_lru.py::test_cache_hit_updates_last_read_at``.
+- [X] CL005 [P] [US8] LRU eviction with hysteresis shipped at
+      ``cache.py::_maybe_evict_lru`` — at insert time, if
+      ``count > CACHE_HARD_CAP`` (10_000), bulk-DELETE down to
+      ``CACHE_LOW_WATER`` (9_000) ordered by
+      ``last_read_at ASC``. Test:
+      ``tests/search/test_cache_lru.py::test_lru_eviction_trims_to_low_water``.
+- [X] CL006 [P] [US6] Auto-blocklist trigger taxonomy shipped
+      at ``search/blocklist.py`` (slice 184) — exposes
+      ``AUTO_BLOCKLIST_SUBREASONS`` (hash-mismatch,
+      dat-rejected, format-corrupt, archive-extraction-failed)
+      and ``TRANSIENT_FAILURE_SUBREASONS`` (disk-full,
+      permission-denied, client-unreachable, move-failed,
+      scan-timeout). ``auto_add_on_import_failure`` returns
+      ``None`` for transient codes — the importer's
+      history-write path can still record the failure without
+      suppressing the release on the next round. Helper
+      ``is_auto_blocklist_subreason`` accepts both bare codes
+      and full ``import-failed:<code>`` prefixed strings.
+      Disjoint sets pinned by
+      ``test_auto_blocklist_taxonomy_is_disjoint``.
+- [X] CL007 [P] [Admin] Admin gate via
+      ``Depends(require_admin)`` on every mutating endpoint in
+      ``search/api/{search,grab,history,blocklist}.py``.
+- [~] CL008 [P] Round-coalesce tests — DEFERRED with CL002.
+      Lands when the Game-keyed lock registry exists.
+- [X] CL009 [P] Cache-LRU tests shipped at
+      ``tests/search/test_cache_lru.py`` (slice 184) —
+      ``test_lru_eviction_trims_to_low_water`` (constants
+      monkey-patched to 10/7 for speed; the production 10k/9k
+      shape is preserved), ``test_cache_hit_updates_last_read_at``
+      (LRU not FIFO), ``test_cache_constants_match_spec_007``
+      (pins the documented values).
+- [X] CL010 [P] Auto-blocklist taxonomy tests shipped at
+      ``tests/search/test_blocklist.py`` (slice 184). Path
+      differs from the spec's
+      ``test_auto_blocklist_taxonomy.py`` — the existing
+      blocklist test file already had auto-blocklist coverage,
+      so the new taxonomy assertions live alongside. Coverage:
+      parametrised over every subreason in both sets, plus
+      unknown-code fail-safe, plus the manual-operator-add
+      path still working for any reason, plus the disjoint-sets
+      invariant.
