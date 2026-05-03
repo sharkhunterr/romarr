@@ -11,13 +11,13 @@
     "releases": "Releases"
   },
   "deferred": {
-    "games": "La recherche de jeux arrivera quand l'endpoint backend Game sera livré.",
     "releases": "La recherche de releases arrivera quand l'endpoint backend Release sera livré."
   },
   "empty": {
     "noResults": "Aucun résultat pour « {{query}} »",
-    "typeToSearch": "Tapez pour chercher dans les Paramètres. La recherche de jeux + releases arrivera avec les endpoints backend."
+    "typeToSearch": "Tapez pour chercher dans les Paramètres et la ludothèque. La recherche de releases arrivera avec l'endpoint backend."
   },
+  "loadingGames": "Recherche dans la ludothèque…",
   "clearRecent": "Effacer",
   "navigateHint": "↑↓ naviguer · ↵ ouvrir · Esc fermer"
 }

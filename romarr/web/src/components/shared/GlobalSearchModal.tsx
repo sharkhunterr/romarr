@@ -1,15 +1,19 @@
 /**
- * Global search modal (T110-T113).
+ * Global search modal (T110-T113, slice 150).
  *
  * Mounted once at the top of the AppLayout; visibility is
- * driven by `useSearchStore`. Three result groups today:
+ * driven by `useSearchStore`. Result groups:
  *
  *   * Recent searches — last five queries, restorable.
  *   * Settings — fuzzy-match against the documented sub-page
  *                catalogue (slug + label) so the operator can
  *                jump straight to /settings/<slug>.
- *   * Games / Releases — placeholder until the backend ships
- *                        /api/v3/game search.
+ *   * Games — debounced live search against
+ *             ``GET /api/v3/game?q=...`` (backed by the
+ *             slice 86 / 141 substring filter); each row
+ *             navigates to ``/game/{id}``.
+ *   * Releases — placeholder until the release search
+ *                endpoint surfaces.
  *
  * Keyboard navigation: arrow keys cycle the visible-result
  * list; Enter opens the highlighted entry; Esc closes the
@@ -27,12 +31,13 @@ import {
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { useGames } from "@/lib/api/queries/games";
 import { useSearchStore } from "@/lib/store/search";
 import { SETTINGS_NAV_ENTRIES } from "@/pages/Settings/SettingsNav";
 
 interface ResultRow {
   id: string;
-  group: "recent" | "settings";
+  group: "recent" | "settings" | "games";
   label: string;
   hint?: string;
   emoji?: string;
@@ -91,6 +96,7 @@ export function GlobalSearchModal(): ReactElement | null {
   const clearRecent = useSearchStore((s) => s.clearRecent);
 
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -98,11 +104,24 @@ export function GlobalSearchModal(): ReactElement | null {
   useEffect(() => {
     if (open) {
       setQuery("");
+      setDebouncedQuery("");
       setActiveIndex(0);
       // Defer focus so it lands after the modal mounts.
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [open]);
+
+  // Debounce the query → 200 ms before querying the backend.
+  // The Settings list is purely client-side so it stays in
+  // sync with each keystroke; only the network round trip is
+  // throttled.
+  useEffect(() => {
+    const handle = window.setTimeout(
+      () => setDebouncedQuery(query.trim()),
+      200,
+    );
+    return () => window.clearTimeout(handle);
+  }, [query]);
 
   const settingsResults = useMemo(
     () => matchesSettings(query, t),
@@ -112,9 +131,29 @@ export function GlobalSearchModal(): ReactElement | null {
     () => recentRows(recent, query),
     [recent, query],
   );
+
+  const games = useGames(
+    debouncedQuery.length > 0 ? { q: debouncedQuery, limit: 8 } : {},
+  );
+  // Fetching is gated on a real query — when the input is empty
+  // we don't want a list of every game in the library showing
+  // up under "Games".
+  const gamesEnabled = debouncedQuery.length > 0;
+  const gameResults = useMemo<ResultRow[]>(() => {
+    if (!gamesEnabled || !games.data) return [];
+    return games.data.map((g) => ({
+      id: `game-${g.id}`,
+      group: "games" as const,
+      label: g.title,
+      hint: `#${g.id}`,
+      emoji: "🎮",
+      to: `/game/${g.id}`,
+    }));
+  }, [games.data, gamesEnabled]);
+
   const allResults = useMemo<ResultRow[]>(
-    () => [...recentResults, ...settingsResults],
-    [recentResults, settingsResults],
+    () => [...recentResults, ...settingsResults, ...gameResults],
+    [recentResults, settingsResults, gameResults],
   );
 
   // Clamp active index whenever the result set changes.
@@ -258,7 +297,35 @@ export function GlobalSearchModal(): ReactElement | null {
             </ResultGroup>
           )}
 
-          {allResults.length === 0 && (
+          {gameResults.length > 0 && (
+            <ResultGroup heading={t("search:groups.games")}>
+              {gameResults.map((row) => (
+                <ResultRowButton
+                  key={row.id}
+                  row={row}
+                  active={
+                    activeIndex ===
+                    allResults.findIndex((r) => r.id === row.id)
+                  }
+                  onActivate={() => activate(row)}
+                  onHover={() =>
+                    setActiveIndex(
+                      allResults.findIndex((r) => r.id === row.id),
+                    )
+                  }
+                  index={0}
+                />
+              ))}
+            </ResultGroup>
+          )}
+
+          {gamesEnabled && games.isPending && (
+            <p className="px-3 py-1 text-[0.65rem] text-zinc-500">
+              {t("search:loadingGames")}
+            </p>
+          )}
+
+          {allResults.length === 0 && !games.isPending && (
             <div className="px-3 py-8 text-center">
               <p className="text-sm text-zinc-400">
                 {query.trim().length === 0
@@ -269,12 +336,6 @@ export function GlobalSearchModal(): ReactElement | null {
           )}
 
           <div className="mt-2 border-t border-zinc-800 pt-2">
-            <p className="px-3 py-1 text-[0.6rem] text-zinc-600">
-              {t("search:groups.games")} —{" "}
-              <span className="text-zinc-700">
-                {t("search:deferred.games")}
-              </span>
-            </p>
             <p className="px-3 py-1 text-[0.6rem] text-zinc-600">
               {t("search:groups.releases")} —{" "}
               <span className="text-zinc-700">
