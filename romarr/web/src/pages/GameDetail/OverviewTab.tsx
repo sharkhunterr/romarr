@@ -16,6 +16,7 @@ import {
   useToggleGameMonitor,
   type Game,
 } from "@/lib/api/queries/games";
+import { usePlatformsById } from "@/lib/api/queries/platforms";
 
 interface OverviewTabProps {
   game: Game;
@@ -145,6 +146,11 @@ function MonitorToggle(props: { game: Game }): ReactElement {
 export function OverviewTab(props: OverviewTabProps): ReactElement {
   const { t } = useTranslation("game");
   const { game } = props;
+  const byId = usePlatformsById();
+  const platform = byId.get(game.platform_id);
+  const platformLabel = platform
+    ? platform.name
+    : `#${game.platform_id}`;
 
   return (
     <div className="grid gap-4 md:grid-cols-[10rem_minmax(0,1fr)]">
@@ -189,7 +195,7 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
           />
           <FactRow
             label={t("overview.fields.platform")}
-            value={`#${game.platform_id}`}
+            value={platformLabel}
           />
           <FactRow
             label={t("overview.fields.rating")}

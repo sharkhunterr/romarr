@@ -1195,6 +1195,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/rom/platform": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List every platform in the catalogue (any authenticated user). Drives the Library / Wanted / AddNew filter dropdowns on the frontend. */
+        get: operations["list_platforms_api_v3_rom_platform_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/rom/platform-pack": {
         parameters: {
             query?: never;
@@ -3825,6 +3842,56 @@ export interface components {
             pack_version: string | null;
             /** Slug */
             slug: string;
+        };
+        /** PlatformRead */
+        PlatformRead: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Extra Meta */
+            extra_meta?: {
+                [key: string]: unknown;
+            };
+            /** Id */
+            id: number;
+            /** Igdb Id */
+            igdb_id?: number | null;
+            /** Launchbox Id */
+            launchbox_id?: number | null;
+            /** Manufacturer */
+            manufacturer?: string | null;
+            /** Mobygames Id */
+            mobygames_id?: number | null;
+            /** Name */
+            name: string;
+            /** Newznab Category Ids */
+            newznab_category_ids?: number[];
+            /**
+             * Pack Source
+             * @default builtin
+             */
+            pack_source: string;
+            /** Pack Version */
+            pack_version?: string | null;
+            /** Parent Platform Id */
+            parent_platform_id?: number | null;
+            /** Release Year */
+            release_year?: number | null;
+            /** Retroachievements Id */
+            retroachievements_id?: number | null;
+            /** Screenscraper Id */
+            screenscraper_id?: number | null;
+            /** Short Name */
+            short_name?: string | null;
+            /** Slug */
+            slug: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /** ProviderConfigRead */
         ProviderConfigRead: {
@@ -7390,6 +7457,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_platforms_api_v3_rom_platform_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformRead"][];
                 };
             };
         };

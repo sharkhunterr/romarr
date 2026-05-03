@@ -1,5 +1,6 @@
 """Platform override + format-CRUD endpoints — /api/v3/rom/platform/*.
 
+  - GET     /api/v3/rom/platform                       — list platforms
   - POST    /api/v3/rom/platform/{id}/override         — mark overridden
   - DELETE  /api/v3/rom/platform/{id}/override         — release override
   - GET     /api/v3/rom/platform/{id}/format           — list formats
@@ -7,9 +8,12 @@
   - PUT     /api/v3/rom/platform/{id}/format/{fmt_id}  — update format
   - DELETE  /api/v3/rom/platform/{id}/format/{fmt_id}  — delete format
 
-Mutating endpoints all require the ``admin`` role (FR-026a). Format
-mutation also requires the platform's ``pack_source = 'user'`` (FR-026)
-— enforced inside the override module.
+The bare ``GET`` is readonly: any authenticated user can pull the
+platform catalogue (it drives Library / Wanted / AddNew filters
+on the frontend). Mutating endpoints all require the ``admin``
+role (FR-026a). Format mutation also requires the platform's
+``pack_source = 'user'`` (FR-026) — enforced inside the override
+module.
 """
 
 from __future__ import annotations
@@ -21,9 +25,10 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from romarr.api.dependencies import get_db, require_admin
+from romarr.api.dependencies import get_db, require_admin, require_readonly
 from romarr.auth import Principal
 from romarr.domain.models import Platform, PlatformFormat
+from romarr.domain.schemas import PlatformRead
 from romarr.platform_packs import (
     OverrideRequiredError,
     add_format,
@@ -114,6 +119,32 @@ def _format_to_read(f: PlatformFormat) -> FormatRead:
         max_size_bytes=f.max_size_bytes,
         pack_source=f.pack_source,
     )
+
+
+# ---------------------------------------------------------------------------
+# List
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "",
+    response_model=list[PlatformRead],
+    summary=(
+        "List every platform in the catalogue (any authenticated "
+        "user). Drives the Library / Wanted / AddNew filter "
+        "dropdowns on the frontend."
+    ),
+)
+async def list_platforms(
+    _user: Annotated[Principal, Depends(require_readonly)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[PlatformRead]:
+    rows = (
+        await db.execute(select(Platform).order_by(Platform.name.asc()))
+    ).scalars().all()
+    return [
+        PlatformRead.model_validate(row, from_attributes=True) for row in rows
+    ]
 
 
 # ---------------------------------------------------------------------------

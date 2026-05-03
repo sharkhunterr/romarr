@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
 
 import { CoverImage } from "@/components/rom";
 import type { Game } from "@/lib/api/queries/games";
+import { usePlatformsById } from "@/lib/api/queries/platforms";
 
 interface GameCardProps {
   game: Game;
@@ -19,6 +20,15 @@ interface GameCardProps {
 
 export function GameCard(props: GameCardProps): ReactElement {
   const { game } = props;
+  const byId = usePlatformsById();
+  const platform = byId.get(game.platform_id);
+  // Prefer the short name when present (e.g. "MD" over
+  // "Mega Drive") since the card is space-constrained on mobile.
+  const platformLabel =
+    platform?.short_name?.trim() ||
+    platform?.name ||
+    `P#${game.platform_id}`;
+
   return (
     <Link
       to={`/game/${game.id}`}
@@ -39,11 +49,14 @@ export function GameCard(props: GameCardProps): ReactElement {
         <p className="line-clamp-2 text-xs font-medium text-zinc-100 group-hover:text-brand">
           {game.title}
         </p>
-        <div className="flex items-center justify-between font-mono text-[0.55rem] text-zinc-500">
-          <span className="rounded bg-zinc-800 px-1.5 py-0.5 uppercase tracking-wider">
-            P#{game.platform_id}
+        <div className="flex items-center justify-between gap-1 font-mono text-[0.55rem] text-zinc-500">
+          <span
+            className="truncate rounded bg-zinc-800 px-1.5 py-0.5 uppercase tracking-wider"
+            title={platform?.name ?? `P#${game.platform_id}`}
+          >
+            {platformLabel}
           </span>
-          <span>#{game.id}</span>
+          <span className="shrink-0">#{game.id}</span>
         </div>
       </div>
     </Link>

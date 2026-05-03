@@ -5293,6 +5293,174 @@
         "title": "PlatformOverrideResponse",
         "type": "object"
       },
+      "PlatformRead": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "extra_meta": {
+            "additionalProperties": true,
+            "title": "Extra Meta",
+            "type": "object"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "igdb_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Igdb Id"
+          },
+          "launchbox_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Launchbox Id"
+          },
+          "manufacturer": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manufacturer"
+          },
+          "mobygames_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mobygames Id"
+          },
+          "name": {
+            "maxLength": 128,
+            "title": "Name",
+            "type": "string"
+          },
+          "newznab_category_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Newznab Category Ids",
+            "type": "array"
+          },
+          "pack_source": {
+            "default": "builtin",
+            "title": "Pack Source",
+            "type": "string"
+          },
+          "pack_version": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pack Version"
+          },
+          "parent_platform_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Platform Id"
+          },
+          "release_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Year"
+          },
+          "retroachievements_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retroachievements Id"
+          },
+          "screenscraper_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Screenscraper Id"
+          },
+          "short_name": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Name"
+          },
+          "slug": {
+            "maxLength": 64,
+            "title": "Slug",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "id",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PlatformRead",
+        "type": "object"
+      },
       "ProviderConfigRead": {
         "additionalProperties": false,
         "properties": {
@@ -11213,6 +11381,31 @@
         "summary": "Update a namingprofile (admin only). Flips is_user_modified=true.",
         "tags": [
           "NamingProfiles"
+        ]
+      }
+    },
+    "/api/v3/rom/platform": {
+      "get": {
+        "operationId": "list_platforms_api_v3_rom_platform_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PlatformRead"
+                  },
+                  "title": "Response List Platforms Api V3 Rom Platform Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List every platform in the catalogue (any authenticated user). Drives the Library / Wanted / AddNew filter dropdowns on the frontend.",
+        "tags": [
+          "Platform Packs"
         ]
       }
     },

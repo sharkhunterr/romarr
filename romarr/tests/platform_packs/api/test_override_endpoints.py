@@ -184,3 +184,36 @@ async def test_format_endpoints_unauthenticated_401(
 ) -> None:
     response = await api_client.get("/api/v3/rom/platform/1/format")
     assert response.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# slice 99 — GET /api/v3/rom/platform list
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_list_platforms_returns_pack_contents_alphabetically(
+    api_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+    pack_yaml: Callable[[str], bytes],
+) -> None:
+    """The two-platform pack ships NES + SNES. Both surface,
+    sorted by `name` ascending."""
+    await seed_admin_and_login(api_engine, api_client)
+    await _seed_pack(api_client, pack_yaml)
+
+    resp = await api_client.get("/api/v3/rom/platform")
+    assert resp.status_code == 200
+    body = resp.json()
+    names = [row["name"] for row in body]
+    assert names == sorted(names)
+    assert any(row["slug"] == "nes" for row in body)
+    assert any(row["slug"] == "snes" for row in body)
+
+
+@pytest.mark.asyncio
+async def test_list_platforms_unauthenticated_401(
+    api_client: httpx.AsyncClient,
+) -> None:
+    resp = await api_client.get("/api/v3/rom/platform")
+    assert resp.status_code == 401
