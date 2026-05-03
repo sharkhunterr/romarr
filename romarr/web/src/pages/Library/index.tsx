@@ -62,6 +62,7 @@ export function LibraryPage(): ReactElement {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const platformFilter = parsePlatformParam(searchParams.get("platform"));
+  const monitoredOnly = searchParams.get("monitoredOnly") === "true";
   const sortKey = parseSortParam(searchParams.get("sort"));
   const sortDirection = parseDirectionParam(searchParams.get("direction"));
 
@@ -71,6 +72,18 @@ export function LibraryPage(): ReactElement {
         const params = new URLSearchParams(prev);
         if (next === ALL_PLATFORMS) params.delete("platform");
         else params.set("platform", String(next));
+        return params;
+      },
+      { replace: false },
+    );
+  };
+
+  const setMonitoredOnly = (next: boolean): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next) params.set("monitoredOnly", "true");
+        else params.delete("monitoredOnly");
         return params;
       },
       { replace: false },
@@ -120,13 +133,16 @@ export function LibraryPage(): ReactElement {
     };
     if (debouncedQuery.length > 0) out.q = debouncedQuery;
     if (platformFilter !== ALL_PLATFORMS) out.platformId = platformFilter;
+    if (monitoredOnly) out.monitored = true;
     return out;
-  }, [debouncedQuery, platformFilter, sortKey, sortDirection]);
+  }, [debouncedQuery, platformFilter, monitoredOnly, sortKey, sortDirection]);
 
   const games = useGames(params);
 
   const filtersActive =
-    debouncedQuery.length > 0 || platformFilter !== ALL_PLATFORMS;
+    debouncedQuery.length > 0 ||
+    platformFilter !== ALL_PLATFORMS ||
+    monitoredOnly;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-8">
@@ -225,6 +241,24 @@ export function LibraryPage(): ReactElement {
               {sortDirection === "asc" ? "↑" : "↓"}
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setMonitoredOnly(!monitoredOnly)}
+            aria-pressed={monitoredOnly}
+            className={[
+              "shrink-0 rounded-md px-3 py-2 text-xs font-medium ring-1 ring-inset",
+              "transition-colors",
+              monitoredOnly
+                ? "bg-brand/20 text-brand ring-brand/40 hover:bg-brand/30"
+                : "bg-zinc-950 text-zinc-400 ring-zinc-700 hover:bg-zinc-900",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+            ].join(" ")}
+          >
+            {monitoredOnly
+              ? t("filters.monitoredOnly.on")
+              : t("filters.monitoredOnly.off")}
+          </button>
         </div>
 
         {games.isSuccess && (

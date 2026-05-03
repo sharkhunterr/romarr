@@ -9,6 +9,10 @@
     "platform": {
       "label": "Filtrer par plateforme",
       "all": "Toutes les plateformes"
+    },
+    "monitoredOnly": {
+      "off": "Suivis uniquement",
+      "on": "✓ Suivis uniquement"
     }
   },
   "sort": {

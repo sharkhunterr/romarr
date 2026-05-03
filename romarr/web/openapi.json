@@ -8776,6 +8776,24 @@
             }
           },
           {
+            "description": "Filter on the `monitored` flag. `true` is the most common operator workflow (\"show me what I'm tracking\").",
+            "in": "query",
+            "name": "monitored",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter on the `monitored` flag. `true` is the most common operator workflow (\"show me what I'm tracking\").",
+              "title": "Monitored"
+            }
+          },
+          {
             "description": "Sort key \u2014 `title` (default), `added_at` (Game.created_at), `release_date`, or `rating`.",
             "in": "query",
             "name": "sort",

@@ -402,3 +402,57 @@ async def test_list_games_sort_unknown_key_rejected(
     """Literal-typed param rejects unknown sort keys."""
     response = await authed_client.get("/api/v3/game?sort=NotAColumn")
     assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# slice 127 — monitored filter
+# ---------------------------------------------------------------------------
+
+
+async def _seed_with_monitored(
+    api_engine: AsyncEngine, *, title: str, monitored: bool
+) -> int:
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        platform = Platform(
+            slug=f"mon-pl-{title}".lower(), name="Mega Drive"
+        )
+        session.add(platform)
+        await session.flush()
+        game = Game(
+            platform_id=platform.id,
+            slug=f"mon-{title}".lower(),
+            title=title,
+            monitored=monitored,
+        )
+        session.add(game)
+        await session.commit()
+        return game.id
+
+
+@pytest.mark.asyncio
+async def test_list_games_monitored_true_keeps_only_monitored(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    await _seed_with_monitored(api_engine, title="On", monitored=True)
+    await _seed_with_monitored(api_engine, title="Off", monitored=False)
+
+    response = await authed_client.get("/api/v3/game?monitored=true")
+    assert response.status_code == 200
+    titles = [row["title"] for row in response.json()]
+    assert "On" in titles
+    assert "Off" not in titles
+
+
+@pytest.mark.asyncio
+async def test_list_games_monitored_false_keeps_only_unmonitored(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    await _seed_with_monitored(api_engine, title="A", monitored=True)
+    await _seed_with_monitored(api_engine, title="B", monitored=False)
+
+    response = await authed_client.get("/api/v3/game?monitored=false")
+    assert response.status_code == 200
+    titles = [row["title"] for row in response.json()]
+    assert "B" in titles
+    assert "A" not in titles

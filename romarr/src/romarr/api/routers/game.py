@@ -89,6 +89,15 @@ async def list_games(
     platform_id: Annotated[
         int | None, Query(ge=1, description="Restrict to one platform.")
     ] = None,
+    monitored: Annotated[
+        bool | None,
+        Query(
+            description=(
+                "Filter on the `monitored` flag. `true` is the most "
+                "common operator workflow (\"show me what I'm tracking\")."
+            ),
+        ),
+    ] = None,
     sort: Annotated[
         GameSortKey,
         Query(
@@ -113,6 +122,8 @@ async def list_games(
     stmt = select(Game).order_by(column.is_(None).asc(), order, Game.id.asc())
     if platform_id is not None:
         stmt = stmt.where(Game.platform_id == platform_id)
+    if monitored is not None:
+        stmt = stmt.where(Game.monitored.is_(monitored))
     if q is not None and q.strip():
         # Case-insensitive substring match. SQLite + Postgres
         # both honor `lower(title) LIKE lower('%term%')` so this
