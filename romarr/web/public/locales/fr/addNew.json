@@ -13,6 +13,11 @@
   "noResults": "Aucun candidat pour « {{q}} ». Essayez une autre orthographe ou vérifiez la configuration des fournisseurs sous Paramètres > Sources de métadonnées.",
   "addButton": "Ajouter",
   "addHint": "Une fois ajouté, l'agrégateur de métadonnées enrichira automatiquement le reste des champs (résumé, jaquette, date de sortie, …) au prochain cycle de rafraîchissement. Les éditions par champ restent disponibles sur la page de détail.",
+  "recent": {
+    "title": "Ajouts récents",
+    "loading": "Chargement des ajouts récents…",
+    "refreshing": "métadonnées en cours"
+  },
   "add": {
     "modalTitle": "Ajouter « {{title}} » à la ludothèque",
     "providerSource": "Depuis {{provider}} (id {{id}})",

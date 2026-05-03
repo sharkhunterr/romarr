@@ -11,6 +11,8 @@
   "overview": {
     "noSummary": "No summary on file. Refresh metadata to populate.",
     "fields": {
+      "title": "Title",
+      "summary": "Summary",
       "developer": "Developer",
       "publisher": "Publisher",
       "releaseDate": "Released",
@@ -42,12 +44,17 @@
     },
     "lock": {
       "lockAria": "Lock {{field}} so the metadata aggregator stops overwriting it",
-      "unlockAria": "Unlock {{field}} so the metadata aggregator can update it again"
+      "unlockAria": "Unlock {{field}} so the metadata aggregator can update it again",
+      "lockedHint": "Locked — the aggregator skips this field on every refresh"
     },
     "edit": {
       "openAria": "Edit {{field}}",
       "inputAria": "New value for {{field}}",
+      "titleAria": "Edit title",
+      "summaryAria": "Edit summary",
+      "summaryHint": "Cmd/Ctrl+Enter to save • Esc to cancel",
       "save": "Save",
+      "saving": "Saving…",
       "cancel": "Cancel",
       "errorTitle": "Couldn't save the edit"
     },

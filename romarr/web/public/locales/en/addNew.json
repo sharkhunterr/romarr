@@ -13,6 +13,11 @@
   "noResults": "No candidates returned for \"{{q}}\". Try a different spelling or check that providers are configured under Settings > Metadata Sources.",
   "addButton": "Add",
   "addHint": "Once added the metadata aggregator enriches the rest of the fields (summary, cover, release date, …) on the next refresh cycle. Field-level edits stay editable on the Game Detail page.",
+  "recent": {
+    "title": "Recently added",
+    "loading": "Loading recent additions…",
+    "refreshing": "metadata refreshing"
+  },
   "add": {
     "modalTitle": "Add \"{{title}}\" to Library",
     "providerSource": "From {{provider}} (id {{id}})",

@@ -21,6 +21,7 @@ import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useGameLookup, type GameLookupRow } from "@/lib/api/queries/lookup";
 
 import { AddGameModal } from "./AddGameModal";
+import { RecentAdditions } from "./RecentAdditions";
 
 function ProviderPill(props: { name: string }): ReactElement {
   return (
@@ -181,6 +182,8 @@ export function AddNewPage(): ReactElement {
           </p>
         </>
       )}
+
+      <RecentAdditions />
 
       {pendingAdd !== null && (
         <AddGameModal

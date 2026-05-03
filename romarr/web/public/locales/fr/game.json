@@ -11,6 +11,8 @@
   "overview": {
     "noSummary": "Aucun résumé enregistré. Rafraîchissez les métadonnées pour le remplir.",
     "fields": {
+      "title": "Titre",
+      "summary": "Résumé",
       "developer": "Développeur",
       "publisher": "Éditeur",
       "releaseDate": "Sortie",
@@ -42,12 +44,17 @@
     },
     "lock": {
       "lockAria": "Verrouiller {{field}} pour que l'agrégateur de métadonnées cesse de l'écraser",
-      "unlockAria": "Déverrouiller {{field}} pour que l'agrégateur de métadonnées puisse le mettre à jour"
+      "unlockAria": "Déverrouiller {{field}} pour que l'agrégateur de métadonnées puisse le mettre à jour",
+      "lockedHint": "Verrouillé — l'agrégateur ignore ce champ à chaque rafraîchissement"
     },
     "edit": {
       "openAria": "Modifier {{field}}",
       "inputAria": "Nouvelle valeur pour {{field}}",
+      "titleAria": "Modifier le titre",
+      "summaryAria": "Modifier le résumé",
+      "summaryHint": "Cmd/Ctrl+Entrée pour enregistrer • Échap pour annuler",
       "save": "Enregistrer",
+      "saving": "Enregistrement…",
       "cancel": "Annuler",
       "errorTitle": "Impossible d'enregistrer la modification"
     },

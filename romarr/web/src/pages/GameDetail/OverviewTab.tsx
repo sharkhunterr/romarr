@@ -1,12 +1,13 @@
 /**
- * GameDetail > Overview tab (slices 89, 146, 147).
+ * GameDetail > Overview tab (slices 89, 146, 147, 148).
  *
  * Metadata view: cover (CoverImage with gradient fallback),
  * title, summary, key facts. Each FactRow with a known
  * :data:`ProviderField` carries a lock toggle — locking a
  * field tells the aggregator to skip it on every refresh.
  * Text-shaped FactRows (developer / publisher / age_rating)
- * are also click-to-edit; saving auto-locks the field so the
+ * are also click-to-edit, alongside the title heading and the
+ * summary paragraph; saving auto-locks the field so the
  * operator's edit survives the next refresh. Together these
  * are the constitutional anti-RomM-#1770 mechanism.
  */
@@ -243,6 +244,252 @@ function formatList(items: readonly string[] | undefined): string | null {
   return items.join(", ");
 }
 
+interface EditableHeadingProps {
+  game: Game;
+}
+
+/**
+ * Click-to-edit heading for the Game's title.
+ *
+ * Single-line input shaped like the surrounding ``<h2>``. The
+ * backend rejects clearing the title (NOT NULL); we mirror that
+ * by ignoring an empty submit. Auto-locks on save.
+ */
+function EditableTitle(props: EditableHeadingProps): ReactElement {
+  const { t } = useTranslation("game");
+  const pushToast = useToastStore((s) => s.push);
+  const edit = useEditGameField();
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(props.game.title);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const locked = (props.game.locked_fields ?? []).includes("title");
+
+  useEffect(() => {
+    if (isEditing) {
+      setDraft(props.game.title);
+      window.setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  }, [isEditing, props.game.title]);
+
+  function commit(): void {
+    const trimmed = draft.trim();
+    if (trimmed.length === 0) {
+      // Title is NOT NULL — silently treat empty as cancel.
+      setIsEditing(false);
+      return;
+    }
+    if (trimmed === props.game.title) {
+      setIsEditing(false);
+      return;
+    }
+    edit.mutate(
+      { gameId: props.game.id, field: "title", value: trimmed },
+      {
+        onSuccess: () => setIsEditing(false),
+        onError: (err) => {
+          pushToast({
+            kind: "error",
+            title: t("overview.edit.errorTitle"),
+            description: err.message,
+          });
+        },
+      },
+    );
+  }
+
+  if (isEditing) {
+    return (
+      <div className="flex flex-wrap items-start gap-1.5">
+        <input
+          ref={inputRef}
+          type="text"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit();
+            if (e.key === "Escape") setIsEditing(false);
+          }}
+          disabled={edit.isPending}
+          aria-label={t("overview.edit.titleAria")}
+          className="min-w-0 flex-1 rounded-md bg-zinc-950 px-2 py-1 text-lg font-semibold text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        />
+        <button
+          type="button"
+          onClick={commit}
+          disabled={edit.isPending}
+          aria-label={t("overview.edit.save")}
+          className="rounded p-1 text-emerald-400 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
+        >
+          <span aria-hidden="true">✓</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsEditing(false)}
+          disabled={edit.isPending}
+          aria-label={t("overview.edit.cancel")}
+          className="rounded p-1 text-zinc-400 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
+        >
+          <span aria-hidden="true">✕</span>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="group flex items-start gap-1.5">
+      <h2 className="min-w-0 flex-1 text-lg font-semibold text-zinc-100">
+        {props.game.title}
+      </h2>
+      {locked && (
+        <span
+          aria-hidden="true"
+          title={t("overview.lock.lockedHint")}
+          className="text-amber-400"
+        >
+          🔒
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={() => setIsEditing(true)}
+        aria-label={t("overview.edit.openAria", { field: t("overview.fields.title") })}
+        className="rounded p-0.5 text-zinc-600 opacity-0 transition-opacity hover:text-zinc-300 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      >
+        <span aria-hidden="true">✎</span>
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Click-to-edit summary paragraph.
+ *
+ * Multiline ``<textarea>`` swap. The empty case shows the
+ * placeholder summary string but the operator can still click
+ * to start writing one. Auto-locks on save; clearing wipes the
+ * field but keeps the lock so the aggregator stops trying.
+ */
+function EditableSummary(props: EditableHeadingProps): ReactElement {
+  const { t } = useTranslation("game");
+  const pushToast = useToastStore((s) => s.push);
+  const edit = useEditGameField();
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(props.game.summary ?? "");
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const locked = (props.game.locked_fields ?? []).includes("summary");
+
+  useEffect(() => {
+    if (isEditing) {
+      setDraft(props.game.summary ?? "");
+      window.setTimeout(() => textareaRef.current?.focus(), 0);
+    }
+  }, [isEditing, props.game.summary]);
+
+  function commit(): void {
+    const trimmed = draft.trim();
+    const next = trimmed.length === 0 ? null : trimmed;
+    if (next === (props.game.summary ?? null)) {
+      setIsEditing(false);
+      return;
+    }
+    edit.mutate(
+      { gameId: props.game.id, field: "summary", value: next },
+      {
+        onSuccess: () => setIsEditing(false),
+        onError: (err) => {
+          pushToast({
+            kind: "error",
+            title: t("overview.edit.errorTitle"),
+            description: err.message,
+          });
+        },
+      },
+    );
+  }
+
+  if (isEditing) {
+    return (
+      <div className="mt-2 space-y-1.5">
+        <textarea
+          ref={textareaRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            // Cmd/Ctrl+Enter submits — plain Enter inserts a
+            // newline so multi-paragraph summaries work.
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) commit();
+            if (e.key === "Escape") setIsEditing(false);
+          }}
+          disabled={edit.isPending}
+          rows={4}
+          aria-label={t("overview.edit.summaryAria")}
+          className="w-full rounded-md bg-zinc-950 px-2 py-1.5 text-sm text-zinc-200 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        />
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[0.6rem] text-zinc-500">
+            {t("overview.edit.summaryHint")}
+          </p>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              disabled={edit.isPending}
+              className="rounded-md border border-zinc-700 px-2 py-1 text-[0.65rem] font-medium text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
+            >
+              {t("overview.edit.cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={commit}
+              disabled={edit.isPending}
+              className="rounded-md bg-brand px-2 py-1 text-[0.65rem] font-medium text-zinc-900 hover:bg-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
+            >
+              {edit.isPending ? t("overview.edit.saving") : t("overview.edit.save")}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const hasSummary =
+    props.game.summary !== undefined &&
+    props.game.summary !== null &&
+    props.game.summary.trim().length > 0;
+
+  return (
+    <div className="group mt-2 flex items-start gap-1.5">
+      <p
+        className={[
+          "min-w-0 flex-1 whitespace-pre-line text-sm",
+          hasSummary ? "text-zinc-400" : "text-zinc-600 italic",
+        ].join(" ")}
+      >
+        {hasSummary ? props.game.summary : t("overview.noSummary")}
+      </p>
+      {locked && (
+        <span
+          aria-hidden="true"
+          title={t("overview.lock.lockedHint")}
+          className="shrink-0 text-amber-400"
+        >
+          🔒
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={() => setIsEditing(true)}
+        aria-label={t("overview.edit.openAria", {
+          field: t("overview.fields.summary"),
+        })}
+        className="shrink-0 rounded p-0.5 text-zinc-600 opacity-0 transition-opacity hover:text-zinc-300 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      >
+        <span aria-hidden="true">✎</span>
+      </button>
+    </div>
+  );
+}
+
 function RefreshMetadataButton(props: { game: Game }): ReactElement {
   const { t } = useTranslation("game");
   const { game } = props;
@@ -349,14 +596,8 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
       <div className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-semibold text-zinc-100">
-              {game.title}
-            </h2>
-            <p className="mt-2 text-sm text-zinc-400">
-              {game.summary && game.summary.trim().length > 0
-                ? game.summary
-                : t("overview.noSummary")}
-            </p>
+            <EditableTitle game={game} />
+            <EditableSummary game={game} />
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
             <RefreshMetadataButton game={game} />
