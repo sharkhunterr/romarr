@@ -21,6 +21,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
 from romarr.api.models import QueueEntry
+from romarr.domain.models import Game, Platform, Release
 from tests.api.test_auth_endpoints import _seed_admin_user
 
 # ---------------------------------------------------------------------------
@@ -189,3 +190,108 @@ async def test_empty_queue_returns_zero_records(
     body = resp.json()
     assert body["totalRecords"] == 0
     assert body["records"] == []
+
+
+# ---------------------------------------------------------------------------
+# slice 109 — gameId / releaseId filters
+# ---------------------------------------------------------------------------
+
+
+async def _seed_two_games_with_queue(
+    engine: AsyncEngine,
+) -> tuple[int, int, int]:
+    """Two games on the same platform; each gets one Release with
+    one queued download. Returns (target_game_id, other_game_id,
+    target_release_id) so the test can assert per-game filtering.
+
+    FKs are disabled for the seed (matches the pattern in
+    `_seed_queue_entries`) so we don't need a real download_client
+    row — the router doesn't read that table."""
+    sm = async_sessionmaker(engine, expire_on_commit=False)
+    async with sm() as session:
+        await session.execute(text("PRAGMA foreign_keys=OFF"))
+        platform = Platform(slug="md-q", name="Mega Drive")
+        session.add(platform)
+        await session.flush()
+        target = Game(
+            platform_id=platform.id, slug="target", title="Target"
+        )
+        other = Game(platform_id=platform.id, slug="other", title="Other")
+        session.add_all([target, other])
+        await session.flush()
+        r_target = Release(game_id=target.id, name="r-target")
+        r_other = Release(game_id=other.id, name="r-other")
+        session.add_all([r_target, r_other])
+        await session.flush()
+        # Queue rows: 2 against the target Release, 1 against other.
+        now = datetime.now(UTC)
+        session.add_all(
+            [
+                QueueEntry(
+                    release_id=r_target.id,
+                    download_client_id=1,
+                    download_client_native_id="t-1",
+                    state="downloading",
+                    progress=0.1,
+                    last_updated_at=now,
+                    attempt_count=0,
+                ),
+                QueueEntry(
+                    release_id=r_target.id,
+                    download_client_id=1,
+                    download_client_native_id="t-2",
+                    state="queued",
+                    progress=0.0,
+                    last_updated_at=now,
+                    attempt_count=0,
+                ),
+                QueueEntry(
+                    release_id=r_other.id,
+                    download_client_id=1,
+                    download_client_native_id="o-1",
+                    state="downloading",
+                    progress=0.5,
+                    last_updated_at=now,
+                    attempt_count=0,
+                ),
+            ]
+        )
+        await session.commit()
+        return target.id, other.id, r_target.id
+
+
+@pytest.mark.asyncio
+async def test_game_id_filter_keeps_only_target_game_entries(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    target, _, _ = await _seed_two_games_with_queue(api_engine)
+    resp = await authed_client.get(
+        f"/api/v3/queue?gameId={target}"
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["totalRecords"] == 2
+    native_ids = {r["downloadClientNativeId"] for r in body["records"]}
+    assert native_ids == {"t-1", "t-2"}
+
+
+@pytest.mark.asyncio
+async def test_release_id_filter_keeps_only_target_release_entries(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    _, _, release_id = await _seed_two_games_with_queue(api_engine)
+    resp = await authed_client.get(
+        f"/api/v3/queue?releaseId={release_id}"
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["totalRecords"] == 2
+    assert all(r["releaseId"] == release_id for r in body["records"])
+
+
+@pytest.mark.asyncio
+async def test_game_id_zero_rejected(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.get("/api/v3/queue?gameId=0")
+    assert resp.status_code == 422

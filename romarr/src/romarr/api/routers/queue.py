@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,6 +32,7 @@ from romarr.api.envelopes import PaginationEnvelope
 from romarr.api.models import QueueEntry
 from romarr.api.pagination import PageRequest, page_request, paginate
 from romarr.auth import Principal
+from romarr.domain.models import Release
 
 router = APIRouter(prefix="/api/v3/queue", tags=["Queue"])
 
@@ -99,15 +100,44 @@ async def list_queue(
     _principal: Annotated[Principal, Depends(require_readonly)],
     db: Annotated[AsyncSession, Depends(get_db)],
     page_req: Annotated[PageRequest, Depends(page_request)],
+    game_id: Annotated[
+        int | None,
+        Query(
+            alias="gameId",
+            ge=1,
+            description=(
+                "Filter to entries whose Release belongs to the given "
+                "Game (joined via release_id → release.game_id)."
+            ),
+        ),
+    ] = None,
+    release_id: Annotated[
+        int | None,
+        Query(
+            alias="releaseId",
+            ge=1,
+            description="Filter to a single Release.",
+        ),
+    ] = None,
 ) -> PaginationEnvelope[QueueEntryRead]:
     """Returns every queue_entry row matching the page request.
 
     Default sort is ``last_updated_at`` ascending; callers
     typically pass ``?sortKey=last_updated_at&sortDirection=desc``
-    to surface the freshest movement first."""
+    to surface the freshest movement first.
+
+    The optional ``gameId`` / ``releaseId`` filters drive the
+    GameDetail per-game queue indicator (slice 109)."""
+    base = select(QueueEntry)
+    if release_id is not None:
+        base = base.where(QueueEntry.release_id == release_id)
+    if game_id is not None:
+        base = base.join(
+            Release, Release.id == QueueEntry.release_id
+        ).where(Release.game_id == game_id)
     return await paginate(
         session=db,
-        base_query=select(QueueEntry),
+        base_query=base,
         page_request=page_req,
         sortable_keys=_SORTABLE_KEYS,
         record_adapter=_adapt,

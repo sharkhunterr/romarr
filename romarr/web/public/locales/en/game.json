@@ -77,6 +77,12 @@
     },
     "importedAt": "imported {{when}} via {{via}}"
   },
+  "pendingDownloads": {
+    "title_one": "{{count}} download in progress",
+    "title_other": "{{count}} downloads in progress",
+    "progress": "~{{percent}}% complete on average",
+    "openActivity": "Open Activity"
+  },
   "search": {
     "button": "Search",
     "title": "Manual search",

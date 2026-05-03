@@ -942,6 +942,9 @@ export interface paths {
          *     Default sort is ``last_updated_at`` ascending; callers
          *     typically pass ``?sortKey=last_updated_at&sortDirection=desc``
          *     to surface the freshest movement first.
+         *
+         *     The optional ``gameId`` / ``releaseId`` filters drive the
+         *     GameDetail per-game queue indicator (slice 109).
          */
         get: operations["list_queue_api_v3_queue_get"];
         put?: never;
@@ -6743,6 +6746,10 @@ export interface operations {
     list_queue_api_v3_queue_get: {
         parameters: {
             query?: {
+                /** @description Filter to entries whose Release belongs to the given Game (joined via release_id → release.game_id). */
+                gameId?: number | null;
+                /** @description Filter to a single Release. */
+                releaseId?: number | null;
                 page?: number;
                 pageSize?: number;
                 sortKey?: string | null;

@@ -18,6 +18,7 @@ import { useGame } from "@/lib/api/queries/games";
 import { FilesTab } from "./FilesTab";
 import { HistoryTab } from "./HistoryTab";
 import { OverviewTab } from "./OverviewTab";
+import { PendingDownloads } from "./PendingDownloads";
 import { ReleasesTab } from "./ReleasesTab";
 
 type Tab = "overview" | "releases" | "history" | "files";
@@ -78,6 +79,7 @@ export function GameDetailPage(): ReactElement {
 
       {game.isSuccess && (
         <>
+          <PendingDownloads gameId={gameId} />
           <div
             role="tablist"
             aria-label={t("tabs.ariaLabel")}

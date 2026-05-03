@@ -77,6 +77,12 @@
     },
     "importedAt": "importé le {{when}} via {{via}}"
   },
+  "pendingDownloads": {
+    "title_one": "{{count}} téléchargement en cours",
+    "title_other": "{{count}} téléchargements en cours",
+    "progress": "~{{percent}}% terminé en moyenne",
+    "openActivity": "Ouvrir l'activité"
+  },
   "search": {
     "button": "Rechercher",
     "title": "Recherche manuelle",

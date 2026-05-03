@@ -10325,9 +10325,47 @@
     },
     "/api/v3/queue": {
       "get": {
-        "description": "Returns every queue_entry row matching the page request.\n\nDefault sort is ``last_updated_at`` ascending; callers\ntypically pass ``?sortKey=last_updated_at&sortDirection=desc``\nto surface the freshest movement first.",
+        "description": "Returns every queue_entry row matching the page request.\n\nDefault sort is ``last_updated_at`` ascending; callers\ntypically pass ``?sortKey=last_updated_at&sortDirection=desc``\nto surface the freshest movement first.\n\nThe optional ``gameId`` / ``releaseId`` filters drive the\nGameDetail per-game queue indicator (slice 109).",
         "operationId": "list_queue_api_v3_queue_get",
         "parameters": [
+          {
+            "description": "Filter to entries whose Release belongs to the given Game (joined via release_id \u2192 release.game_id).",
+            "in": "query",
+            "name": "gameId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to entries whose Release belongs to the given Game (joined via release_id \u2192 release.game_id).",
+              "title": "Gameid"
+            }
+          },
+          {
+            "description": "Filter to a single Release.",
+            "in": "query",
+            "name": "releaseId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to a single Release.",
+              "title": "Releaseid"
+            }
+          },
           {
             "in": "query",
             "name": "page",

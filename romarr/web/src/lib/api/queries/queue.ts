@@ -33,6 +33,10 @@ export interface UseQueueParams {
   pageSize?: number;
   sortKey?: string;
   sortDirection?: "asc" | "desc";
+  /** Filter to one Game's queue (joined via Release). */
+  gameId?: number;
+  /** Filter to one Release's queue. */
+  releaseId?: number;
   /**
    * Refetch interval in ms. Defaults to 5000 — short enough
    * that a download's progress feels live without hammering
@@ -51,6 +55,9 @@ export function useQueue(
   if (params.sortKey !== undefined) search.set("sortKey", params.sortKey);
   if (params.sortDirection !== undefined)
     search.set("sortDirection", params.sortDirection);
+  if (params.gameId !== undefined) search.set("gameId", String(params.gameId));
+  if (params.releaseId !== undefined)
+    search.set("releaseId", String(params.releaseId));
   const qs = search.toString();
 
   return useQuery<QueueEnvelope, ApiError>({
