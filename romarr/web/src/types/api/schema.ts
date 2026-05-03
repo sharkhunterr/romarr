@@ -5589,6 +5589,8 @@ export interface operations {
     list_history_api_v3_history_get: {
         parameters: {
             query?: {
+                /** @description Filter to entries whose ``gameId`` matches. Job-run rows (which carry no game_id) are excluded when this is set. */
+                gameId?: number | null;
                 page?: number;
                 pageSize?: number;
                 sortKey?: string | null;

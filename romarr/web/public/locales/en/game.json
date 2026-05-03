@@ -39,8 +39,24 @@
       "body": "Releases land here after a successful import or a manual match."
     }
   },
+  "history": {
+    "loadError": "Couldn't load history",
+    "empty": {
+      "title": "No history yet",
+      "body": "Imports, manual searches, and grabs against this game land here as they happen."
+    },
+    "eventLabel": {
+      "import": "Import",
+      "search": "Search",
+      "job_run": "Job"
+    },
+    "subjectRelease": "release #{{id}}",
+    "subjectGame": "this game",
+    "statusOk": "OK",
+    "statusFailed": "FAIL",
+    "showingMost": "Showing the most recent {{count}}."
+  },
   "deferred": {
-    "history": "Per-game history filtering lands once /api/v3/history?game_id surfaces.",
     "files": "Per-dump file detail (hashes, DAT verify, size) lands once the dump-detail endpoint surfaces."
   }
 }

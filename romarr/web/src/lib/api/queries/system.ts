@@ -104,6 +104,11 @@ export interface UseHistoryParams {
   pageSize?: number;
   sortKey?: string;
   sortDirection?: "asc" | "desc";
+  /**
+   * Filter to a single game's audit trail. Job-run rows (which
+   * carry no `gameId`) are excluded server-side when this is set.
+   */
+  gameId?: number;
 }
 
 export function useHistory(
@@ -116,6 +121,7 @@ export function useHistory(
   if (params.sortKey !== undefined) search.set("sortKey", params.sortKey);
   if (params.sortDirection !== undefined)
     search.set("sortDirection", params.sortDirection);
+  if (params.gameId !== undefined) search.set("gameId", String(params.gameId));
   const qs = search.toString();
 
   return useQuery<HistoryEnvelope, ApiError>({

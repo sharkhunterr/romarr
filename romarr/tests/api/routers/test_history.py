@@ -18,10 +18,35 @@ import httpx
 import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
+from romarr.domain.models import Game, Platform
 from romarr.importer.models import ImportHistory
 from romarr.search.models import SearchHistory
 from romarr.tasks.models import Job, JobRun
 from tests.api.test_auth_endpoints import _seed_admin_user
+
+_history_seed_counter = 0
+
+
+async def _seed_game(api_engine: AsyncEngine) -> int:
+    """Seed Platform → Game. Returns game.id."""
+    global _history_seed_counter
+    _history_seed_counter += 1
+    suffix = _history_seed_counter
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        platform = Platform(
+            slug=f"history-pl-{suffix}", name="Mega Drive"
+        )
+        session.add(platform)
+        await session.flush()
+        game = Game(
+            platform_id=platform.id,
+            slug=f"history-g-{suffix}",
+            title=f"Game {suffix}",
+        )
+        session.add(game)
+        await session.commit()
+        return game.id
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -259,3 +284,88 @@ async def test_invalid_sort_key_returns_400(
     )
     assert resp.status_code == 400
     assert resp.json()["errorCode"] == "invalid_sort_key"
+
+
+# ---------------------------------------------------------------------------
+# slice 94 — gameId filter
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_game_id_filter_keeps_only_matching_rows(
+    authed_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+) -> None:
+    """Three import rows seeded against two games (target / other).
+    `?gameId={target}` returns only the two with that game_id;
+    job_run rows (which carry no game_id) are excluded."""
+    target = await _seed_game(api_engine)
+    other = await _seed_game(api_engine)
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    base = datetime(2026, 4, 30, 12, 0, 0, tzinfo=UTC)
+    async with sm() as session:
+        session.add(
+            Job(
+                id="MissingSearch",
+                name="Missing Search",
+                type="missing_search",
+                schedule_interval_seconds=3600,
+            )
+        )
+        await session.flush()
+        session.add(
+            ImportHistory(
+                source_path="/in/target-a.zip",
+                imported_via="manual",
+                success=True,
+                correlation_id=str(uuid4()),
+                started_at=base,
+                game_id=target,
+            )
+        )
+        session.add(
+            ImportHistory(
+                source_path="/in/target-b.zip",
+                imported_via="manual",
+                success=True,
+                correlation_id=str(uuid4()),
+                started_at=base + timedelta(minutes=5),
+                game_id=target,
+            )
+        )
+        session.add(
+            ImportHistory(
+                source_path="/in/other.zip",
+                imported_via="manual",
+                success=True,
+                correlation_id=str(uuid4()),
+                started_at=base + timedelta(minutes=10),
+                game_id=other,
+            )
+        )
+        # job_run row — no game_id, must be filtered out.
+        session.add(
+            JobRun(
+                job_id="MissingSearch",
+                started_at=base + timedelta(minutes=20),
+                status="success",
+                triggered_by="manual",
+            )
+        )
+        await session.commit()
+
+    resp = await authed_client.get(f"/api/v3/history?gameId={target}")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["totalRecords"] == 2
+    assert all(r["gameId"] == target for r in body["records"])
+    assert all(r["eventType"] == "import" for r in body["records"])
+
+
+@pytest.mark.asyncio
+async def test_game_id_filter_invalid_zero_rejected(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    """`gameId` is `ge=1`; ``0`` is rejected by FastAPI's validator."""
+    resp = await authed_client.get("/api/v3/history?gameId=0")
+    assert resp.status_code == 422

@@ -39,8 +39,24 @@
       "body": "Les releases apparaîtront ici après un import réussi ou une association manuelle."
     }
   },
+  "history": {
+    "loadError": "Impossible de charger l'historique",
+    "empty": {
+      "title": "Aucun historique",
+      "body": "Les imports, recherches manuelles et grabs sur ce jeu apparaîtront ici."
+    },
+    "eventLabel": {
+      "import": "Import",
+      "search": "Recherche",
+      "job_run": "Tâche"
+    },
+    "subjectRelease": "release #{{id}}",
+    "subjectGame": "ce jeu",
+    "statusOk": "OK",
+    "statusFailed": "ÉCHEC",
+    "showingMost": "Affichage des {{count}} entrées les plus récentes."
+  },
   "deferred": {
-    "history": "Le filtre par jeu de l'historique arrivera quand /api/v3/history?game_id sera shipé.",
     "files": "Le détail par dump (hashes, vérif DAT, taille) arrivera quand l'endpoint dump-detail sera shipé."
   }
 }

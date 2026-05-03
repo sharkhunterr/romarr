@@ -156,8 +156,23 @@ async def list_history(
     _principal: Annotated[Principal, Depends(require_readonly)],
     db: Annotated[AsyncSession, Depends(get_db)],
     page_req: Annotated[PageRequest, Depends(page_request)],
+    game_id: Annotated[
+        int | None,
+        Query(
+            alias="gameId",
+            ge=1,
+            description=(
+                "Filter to entries whose ``gameId`` matches. "
+                "Job-run rows (which carry no game_id) are excluded "
+                "when this is set."
+            ),
+        ),
+    ] = None,
 ) -> PaginationEnvelope[HistoryEvent]:
     sq = _build_union_subquery()
+    base_query = select(sq)
+    if game_id is not None:
+        base_query = base_query.where(sq.c.game_id == game_id)
     sortable_keys = {
         "date": sq.c.date,
         "event_type": sq.c.event_type,
@@ -165,7 +180,7 @@ async def list_history(
     }
     return await paginate(
         session=db,
-        base_query=select(sq),
+        base_query=base_query,
         page_request=page_req,
         sortable_keys=sortable_keys,
         record_adapter=_adapt,

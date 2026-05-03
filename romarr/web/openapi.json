@@ -8600,6 +8600,25 @@
         "operationId": "list_history_api_v3_history_get",
         "parameters": [
           {
+            "description": "Filter to entries whose ``gameId`` matches. Job-run rows (which carry no game_id) are excluded when this is set.",
+            "in": "query",
+            "name": "gameId",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to entries whose ``gameId`` matches. Job-run rows (which carry no game_id) are excluded when this is set.",
+              "title": "Gameid"
+            }
+          },
+          {
             "in": "query",
             "name": "page",
             "required": false,
