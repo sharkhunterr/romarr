@@ -60,6 +60,29 @@ export function ConnectPage(): ReactElement {
         <p className="mt-1 text-sm text-zinc-400">{t("connect.subtitle")}</p>
       </header>
 
+      <aside
+        className={[
+          "rounded-md border border-zinc-800 bg-zinc-900/40 p-3",
+          "text-[0.7rem] text-zinc-400",
+        ].join(" ")}
+      >
+        <p>
+          {t("connect.webhookDoc.body")}{" "}
+          <a
+            href="/api/v3/notification/webhook-payloads.md"
+            target="_blank"
+            rel="noreferrer"
+            className={[
+              "underline decoration-dotted underline-offset-2",
+              "text-brand hover:text-brand-300",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+            ].join(" ")}
+          >
+            {t("connect.webhookDoc.link")}
+          </a>
+        </p>
+      </aside>
+
       {notifications.isLoading && <ListSkeleton rows={3} />}
       {notifications.isError && (
         <EmptyState

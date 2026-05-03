@@ -33,6 +33,10 @@
   "connect": {
     "title": "Notifications",
     "subtitle": "Cibles de notification sortantes routées via Apprise. Chaque ligne porte ses abonnements aux événements et une URL caviardée — l'URL brute est chiffrée au repos.",
+    "webhookDoc": {
+      "body": "Vous intégrez Notifiarr / Recyclarr / Homepage ? Romarr publie une référence JSON par événement.",
+      "link": "Ouvrir la référence webhook payloads ↗"
+    },
     "search": {
       "label": "Chercher une notification",
       "placeholder": "Chercher par nom ou URL…",

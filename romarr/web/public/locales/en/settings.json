@@ -33,6 +33,10 @@
   "connect": {
     "title": "Notifications",
     "subtitle": "Outbound notification targets routed through Apprise. Each row carries event subscriptions and a redacted URL — the raw URL is encrypted at rest.",
+    "webhookDoc": {
+      "body": "Building a Notifiarr / Recyclarr / Homepage integration? Romarr ships a per-event JSON payload reference.",
+      "link": "Open the webhook payloads spec ↗"
+    },
     "search": {
       "label": "Search notifications",
       "placeholder": "Search by name or URL…",
