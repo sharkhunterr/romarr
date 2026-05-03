@@ -443,10 +443,19 @@ prevention holds.
       their documented paths. The setup router is mounted only when
       the `setup_token` row exists (otherwise the endpoint returns
       HTTP 404 to avoid a useless route).
-- [ ] T085 [API] Wire the `bootstrap_at_startup` lifespan handler
-      and the `HeartbeatLoop`-style session-store probe in startup
-      order: settings → DB → Redis probe → setup bootstrap → router
-      mount.
+- [X] T085 [API] Lifespan now invokes
+      ``maybe_bootstrap_setup_token`` after the spec 003 +
+      spec 006 seeders (slice 187). The setup-token plaintext
+      is logged at WARNING level so the operator can capture
+      it from container logs and complete ``/auth/setup``. The
+      Redis-probe step is documented as deferred — Redis is
+      optional today (in-memory rate limiter / idempotency
+      cache) so a probe-and-fail step would prevent boot in
+      the common SQLite-only deployment. Bootstrap as a whole
+      is gated on ``ROMARR_BOOTSTRAP_ENABLED=true``
+      (Settings.bootstrap_enabled) per the slice 187
+      factoring; tests preserve their per-instance escape
+      hatch via ``app.state._enable_bootstrap``.
 
 **Checkpoint**: a fresh boot prints the setup token; a populated
 boot does not; OIDC routes available when configured.

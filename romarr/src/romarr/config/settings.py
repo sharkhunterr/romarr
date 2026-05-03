@@ -201,6 +201,36 @@ class Settings(BaseSettings):
         "manage backup files for the operator UI.",
     )
 
+    # Lifespan toggles (slice 187 — make-it-run factoring)
+    bootstrap_enabled: bool = Field(
+        default=False,
+        description="When True, the FastAPI lifespan runs the "
+        "spec 003 + spec 006 seeders (default profiles + "
+        "built-in Platform Pack) plus spec 010's "
+        "maybe_bootstrap_setup_token. All seeders are idempotent "
+        "so re-runs are no-ops. Defaults to False so the test "
+        "suite (which builds the app many times per session) "
+        "doesn't pay the seeding cost. Production sets "
+        "ROMARR_BOOTSTRAP_ENABLED=true.",
+    )
+    scheduler_enabled: bool = Field(
+        default=False,
+        description="When True, the FastAPI lifespan starts the "
+        "spec 012 SchedulerService (APScheduler-backed). "
+        "Defaults to False for the same test-suite reasons as "
+        "bootstrap_enabled. Production sets "
+        "ROMARR_SCHEDULER_ENABLED=true.",
+    )
+    auto_migrate: bool = Field(
+        default=False,
+        description="When True, the FastAPI lifespan runs "
+        "``alembic upgrade head`` against the configured "
+        "database before any other startup step. Convenient for "
+        "containers that don't have a separate migrate-then-run "
+        "phase; operators with a CI/CD migration step should "
+        "leave this False and run migrations explicitly.",
+    )
+
     # CSRF protection (spec 013, FR-027)
     csrf_protect: bool = Field(
         default=False,

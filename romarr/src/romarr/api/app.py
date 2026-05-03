@@ -139,21 +139,41 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     the lifespan starts.
     """
     database_url = getattr(app.state, "_test_database_url", None)
+
+    # Slice 187 — settings-driven lifespan toggles. Tests can
+    # still override via ``app.state._enable_bootstrap`` /
+    # ``_enable_scheduler`` / ``_auto_migrate``; production
+    # operators flip ``ROMARR_*_ENABLED`` env vars.
+    from logging import getLogger
+
+    from romarr.config.settings import get_settings
+
+    settings = get_settings()
+    bootstrap_log = getLogger(__name__)
+
+    # Auto-migration happens BEFORE uvicorn boots — see
+    # ``romarr.cli.main._serve``. Alembic's env.py drives its
+    # own asyncio.run loop, which clashes with the lifespan's
+    # already-running loop. The CLI step keeps the migration
+    # idempotent + bounded by the same Settings.auto_migrate
+    # flag the lifespan would have honoured.
+
     engine = create_engine(database_url) if database_url else create_engine()
     app.state.db_engine = engine
     app.state.db_sessionmaker = create_sessionmaker(engine)
 
-    # Slice 173 — bootstrap seeders. Default OFF; production
-    # opts in via ``app.state._enable_bootstrap = True`` (or
-    # the eventual ``ROMARR_BOOTSTRAP_ENABLED`` settings flag).
-    enable_bootstrap = getattr(app.state, "_enable_bootstrap", False)
+    # Slice 173 / 187 — bootstrap seeders + setup-token mint.
+    # Defaults OFF for tests; production sets
+    # ``ROMARR_BOOTSTRAP_ENABLED=true``. Tests can still
+    # override per-instance via ``app.state._enable_bootstrap``.
+    enable_bootstrap = getattr(
+        app.state, "_enable_bootstrap", settings.bootstrap_enabled
+    )
     if enable_bootstrap:
-        from logging import getLogger
-
+        from romarr.auth.setup import maybe_bootstrap_setup_token
         from romarr.platform_packs.builtin import apply_builtin_pack
         from romarr.profiles.seeders.runner import seed_defaults
 
-        bootstrap_log = getLogger(__name__)
         sm = app.state.db_sessionmaker
         # Default profiles first (T055): the platform pack uses
         # them by reference, so they must exist before the pack
@@ -187,6 +207,35 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                 "lifespan.apply_builtin_pack_failed",
                 extra={"error": str(exc)},
             )
+        # Spec 010 T085 — setup-token bootstrap. Skips when an
+        # active human user already exists, otherwise mints a
+        # one-shot token and prints the plaintext to logs so the
+        # operator can complete /auth/setup.
+        try:
+            async with sm() as session:
+                token_result = await maybe_bootstrap_setup_token(session)
+                await session.commit()
+            if token_result.plaintext is not None:
+                bootstrap_log.warning(
+                    "lifespan.setup_token_minted",
+                    extra={
+                        "expires_at": token_result.expires_at.isoformat()
+                        if token_result.expires_at
+                        else None,
+                        "token": token_result.plaintext,
+                    },
+                )
+            else:
+                bootstrap_log.info(
+                    "lifespan.setup_token_skipped",
+                    extra={"reason": token_result.reason},
+                )
+        except Exception as exc:
+            bootstrap_log.warning(
+                "lifespan.setup_token_failed",
+                exc_info=True,
+                extra={"error": str(exc)},
+            )
 
     # Spec 012 — start the Tasks subsystem when explicitly
     # enabled. Default OFF so the test suite (which builds
@@ -195,7 +244,7 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     # ``app.state._enable_scheduler = True`` (or the
     # eventual ``ROMARR_SCHEDULER_ENABLED`` settings flag).
     enable_scheduler = getattr(
-        app.state, "_enable_scheduler", False
+        app.state, "_enable_scheduler", settings.scheduler_enabled
     )
     scheduler = None
     if enable_scheduler:
