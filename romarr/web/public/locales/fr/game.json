@@ -1,0 +1,46 @@
+{
+  "loadError": "Impossible de charger ce jeu",
+  "notFound": "Jeu introuvable",
+  "tabs": {
+    "overview": "Vue d'ensemble",
+    "releases": "Releases",
+    "history": "Historique",
+    "files": "Fichiers",
+    "ariaLabel": "Onglets Jeu"
+  },
+  "overview": {
+    "noSummary": "Aucun résumé enregistré. Rafraîchissez les métadonnées pour le remplir.",
+    "fields": {
+      "developer": "Développeur",
+      "publisher": "Éditeur",
+      "releaseDate": "Sortie",
+      "rating": "Note",
+      "ageRating": "Classification",
+      "players": "Joueurs",
+      "hltb": "HLTB (principal)",
+      "achievements": "Succès",
+      "genres": "Genres",
+      "themes": "Thèmes",
+      "franchises": "Franchises",
+      "platform": "Plateforme",
+      "monitored": "Suivi"
+    },
+    "yes": "Oui",
+    "no": "Non",
+    "playersRange": "{{min}}–{{max}}",
+    "playersSolo": "{{count}}",
+    "hltbHours": "{{hours}} h",
+    "noValue": "—"
+  },
+  "releases": {
+    "loadError": "Impossible de charger les releases",
+    "empty": {
+      "title": "Aucune release",
+      "body": "Les releases apparaîtront ici après un import réussi ou une association manuelle."
+    }
+  },
+  "deferred": {
+    "history": "Le filtre par jeu de l'historique arrivera quand /api/v3/history?game_id sera shipé.",
+    "files": "Le détail par dump (hashes, vérif DAT, taille) arrivera quand l'endpoint dump-detail sera shipé."
+  }
+}

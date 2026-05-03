@@ -1,0 +1,46 @@
+{
+  "loadError": "Couldn't load this game",
+  "notFound": "Game not found",
+  "tabs": {
+    "overview": "Overview",
+    "releases": "Releases",
+    "history": "History",
+    "files": "Files",
+    "ariaLabel": "Game tabs"
+  },
+  "overview": {
+    "noSummary": "No summary on file. Refresh metadata to populate.",
+    "fields": {
+      "developer": "Developer",
+      "publisher": "Publisher",
+      "releaseDate": "Released",
+      "rating": "Rating",
+      "ageRating": "Age rating",
+      "players": "Players",
+      "hltb": "HLTB (main)",
+      "achievements": "Achievements",
+      "genres": "Genres",
+      "themes": "Themes",
+      "franchises": "Franchises",
+      "platform": "Platform",
+      "monitored": "Monitored"
+    },
+    "yes": "Yes",
+    "no": "No",
+    "playersRange": "{{min}}–{{max}}",
+    "playersSolo": "{{count}}",
+    "hltbHours": "{{hours}} h",
+    "noValue": "—"
+  },
+  "releases": {
+    "loadError": "Couldn't load releases",
+    "empty": {
+      "title": "No releases yet",
+      "body": "Releases land here after a successful import or a manual match."
+    }
+  },
+  "deferred": {
+    "history": "Per-game history filtering lands once /api/v3/history?game_id surfaces.",
+    "files": "Per-dump file detail (hashes, DAT verify, size) lands once the dump-detail endpoint surfaces."
+  }
+}

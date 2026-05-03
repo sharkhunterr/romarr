@@ -26,11 +26,11 @@ import { QueryProvider } from "@/lib/api/QueryProvider";
 import { ActivityPage } from "@/pages/Activity";
 import { CalendarPage } from "@/pages/Calendar";
 import { DashboardPage } from "@/pages/Dashboard";
+import { GameDetailPage } from "@/pages/GameDetail";
 import { LibraryPage } from "@/pages/Library";
 import { LoginPage } from "@/pages/Login";
 import {
   AddNewPage,
-  GameDetailPage,
   NotFoundPage,
 } from "@/pages/placeholders";
 import { SetupPage } from "@/pages/Setup";

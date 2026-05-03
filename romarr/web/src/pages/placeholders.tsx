@@ -50,14 +50,9 @@ export function AddNewPage(): ReactElement {
   );
 }
 
-export function GameDetailPage(): ReactElement {
-  return (
-    <PageShell
-      titleKey="placeholder.gameDetail.title"
-      subtitleKey="placeholder.gameDetail.subtitle"
-    />
-  );
-}
+// GameDetailPage is shipped (slice 89) at @/pages/GameDetail/index.tsx —
+// 4-tab view with Overview + Releases real, History + Files placeholder.
+
 
 // WantedPage is the second real page implementation; lives at
 // @/pages/Wanted/index.tsx (slice 48, P-WANT).
