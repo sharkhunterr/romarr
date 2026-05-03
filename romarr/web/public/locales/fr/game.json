@@ -39,6 +39,9 @@
       "idle": "Rafraîchir les métadonnées",
       "pending": "Rafraîchissement…",
       "success": "Mis à jour ({{changed}} champs, {{skipped}} verrouillés)"
+    },
+    "tags": {
+      "label": "Étiquettes"
     }
   },
   "releases": {

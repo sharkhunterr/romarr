@@ -39,6 +39,9 @@
       "idle": "Refresh metadata",
       "pending": "Refreshing…",
       "success": "Refreshed ({{changed}} fields, {{skipped}} locked)"
+    },
+    "tags": {
+      "label": "Tags"
     }
   },
   "releases": {

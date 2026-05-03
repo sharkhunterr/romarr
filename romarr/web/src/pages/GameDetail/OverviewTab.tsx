@@ -17,6 +17,7 @@ import {
   type Game,
 } from "@/lib/api/queries/games";
 import { usePlatformsById } from "@/lib/api/queries/platforms";
+import { useTagsById } from "@/lib/api/queries/tags";
 
 interface OverviewTabProps {
   game: Game;
@@ -151,6 +152,10 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
   const platformLabel = platform
     ? platform.name
     : `#${game.platform_id}`;
+  const tagsById = useTagsById();
+  const tagPills = (game.tags ?? [])
+    .map((id) => tagsById.get(id))
+    .filter((tag): tag is NonNullable<typeof tag> => tag !== undefined);
 
   return (
     <div className="grid gap-4 md:grid-cols-[10rem_minmax(0,1fr)]">
@@ -243,6 +248,34 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
             value={formatList(game.franchises)}
           />
         </dl>
+
+        {tagPills.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-[0.65rem] uppercase tracking-wider text-zinc-500">
+              {t("overview.tags.label")}
+            </h3>
+            <ul className="flex flex-wrap gap-1.5">
+              {tagPills.map((tag) => (
+                <li key={tag.id}>
+                  <span
+                    className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[0.65rem] font-medium ring-1 ring-inset ring-zinc-700"
+                    style={{
+                      backgroundColor: `${tag.color}20`,
+                      color: tag.color,
+                    }}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="block h-2 w-2 rounded-full ring-1 ring-zinc-950/40"
+                      style={{ backgroundColor: tag.color }}
+                    />
+                    {tag.label}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );
