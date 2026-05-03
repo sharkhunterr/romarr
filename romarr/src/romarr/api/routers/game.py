@@ -1,5 +1,5 @@
 """Game + Release read + lock + per-field edit + notes + bulk
-endpoints (slices 86, 146, 147, 149, 151, 153, 154, 164).
+endpoints (slices 86, 146, 147, 149, 151, 153, 154, 164, 165).
 
 Foundation already ships the :class:`Game` + :class:`Release`
 ORM models; this router is the operator-facing read surface
@@ -395,6 +395,39 @@ async def bulk_delete(
     )
     found = {row.id for row in rows}
     missing = sorted(set(body.game_ids) - found)
+    if found:
+        # Slice 165: sweep ``tag_assignment`` rows for the
+        # deleted games AND for every cascaded Release. The
+        # polymorphic table has no FK on ``entity_id`` (the
+        # target table varies), so we have to clean up
+        # explicitly — otherwise the slice-135 ``usageCount``
+        # surface drifts and the future tag-detail drill-in
+        # surfaces references to ghost rows.
+        cascaded_release_ids = (
+            await db.execute(
+                select(Release.id).where(Release.game_id.in_(found))
+            )
+        ).scalars().all()
+        await db.execute(
+            delete(TagAssignment).where(
+                and_(
+                    TagAssignment.entity_type == "game",
+                    TagAssignment.entity_id.in_(found),
+                )
+            )
+        )
+        if cascaded_release_ids:
+            await db.execute(
+                delete(TagAssignment).where(
+                    and_(
+                        TagAssignment.entity_type == "release",
+                        TagAssignment.entity_id.in_(
+                            cascaded_release_ids
+                        ),
+                    )
+                )
+            )
+
     for row in rows:
         # Cascading delete-orphan on Game.releases handles the
         # downstream Release + Dump rows; the FK onDelete on

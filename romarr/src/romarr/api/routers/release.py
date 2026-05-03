@@ -1,4 +1,4 @@
-"""Release write endpoints (slices 98, 152, 155).
+"""Release write endpoints (slices 98, 152, 155, 165).
 
 The spec 014 GameDetail > Releases tab calls for per-release
 operator actions: monitor toggle, manual search, manual grab,
@@ -14,7 +14,8 @@ ships the operator-toggle / bulk surface:
     of releases (admin only). Per the constitution this never
     touches files on disk — only the database row + cascaded
     Dump rows go away. Per-library lifecycle policies own the
-    on-disk side.
+    on-disk side. Slice 165 also sweeps ``tag_assignment``
+    rows so the polymorphic m2m doesn't drift.
 """
 
 from __future__ import annotations
@@ -23,10 +24,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import and_, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from romarr.api.dependencies import get_db, require_admin
+from romarr.api.models import TagAssignment
 from romarr.auth import Principal
 from romarr.domain.models import Release
 from romarr.domain.schemas import ReleaseRead
@@ -156,6 +158,18 @@ async def bulk_delete_releases(
     )
     found = {row.id for row in rows}
     missing = sorted(set(body.release_ids) - found)
+    if found:
+        # Slice 165: sweep ``tag_assignment`` rows for the
+        # deleted releases. The polymorphic table has no FK on
+        # ``entity_id`` so we clean up explicitly.
+        await db.execute(
+            delete(TagAssignment).where(
+                and_(
+                    TagAssignment.entity_type == "release",
+                    TagAssignment.entity_id.in_(found),
+                )
+            )
+        )
     for row in rows:
         await db.delete(row)
     await db.commit()

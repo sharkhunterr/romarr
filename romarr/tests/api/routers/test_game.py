@@ -1181,6 +1181,92 @@ async def test_bulk_delete_unauthenticated_401(
 
 
 # ---------------------------------------------------------------------------
+# slice 165 — bulk-delete sweeps tag_assignment rows
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete_sweeps_tag_assignment_for_games(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Deleting a Game must drop its rows from the polymorphic
+    ``tag_assignment`` table; otherwise the slice-135
+    usage_count surface drifts."""
+    await _seed_tags(api_engine, ids=[1, 2])
+    _, a, _ = await _seed_chain(api_engine, title="DropMe")
+    _, b, _ = await _seed_chain(api_engine, title="Survivor")
+
+    # Tag both games via the bulk-tag surface so the
+    # tag_assignment rows are real.
+    await authed_client.post(
+        "/api/v3/game/bulk-tag",
+        json={"gameIds": [a, b], "tagIds": [1, 2], "action": "add"},
+    )
+
+    # Delete only one. The other should keep its assignments.
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-delete", json={"gameIds": [a]}
+    )
+    assert resp.status_code == 200, resp.json()
+
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        rows = (
+            await session.execute(
+                TagAssignment.__table__.select().where(
+                    TagAssignment.entity_type == "game",
+                )
+            )
+        ).all()
+    pairs = {(row.tag_id, row.entity_id) for row in rows}
+    assert pairs == {(1, b), (2, b)}
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete_sweeps_tag_assignment_for_cascaded_releases(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Releases are cascaded when the parent Game is deleted —
+    their tag_assignment rows must be swept too."""
+    await _seed_tags(api_engine, ids=[1])
+    _, a, release_ids = await _seed_chain(
+        api_engine, title="ReleaseTagged", release_count=2
+    )
+    assert len(release_ids) == 2
+
+    # Hand-insert tag_assignment rows for the releases (no
+    # bulk-tag surface ships for releases yet — slice 154 only
+    # covers games).
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        for rid in release_ids:
+            session.add(
+                TagAssignment(
+                    tag_id=1,
+                    entity_type="release",
+                    entity_id=rid,
+                )
+            )
+        await session.commit()
+
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-delete", json={"gameIds": [a]}
+    )
+    assert resp.status_code == 200
+
+    async with sm() as session:
+        rows = (
+            await session.execute(
+                TagAssignment.__table__.select().where(
+                    TagAssignment.entity_type == "release",
+                    TagAssignment.entity_id.in_(release_ids),
+                )
+            )
+        ).all()
+    assert rows == []
+
+
+# ---------------------------------------------------------------------------
 # slice 154 — POST /api/v3/game/bulk-tag
 # ---------------------------------------------------------------------------
 

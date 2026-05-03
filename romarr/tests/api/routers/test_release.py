@@ -6,6 +6,7 @@ import httpx
 import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
+from romarr.api.models import DEFAULT_TAG_COLOR, Tag, TagAssignment
 from romarr.domain.models import Game, Platform, Release
 from tests.api.test_auth_endpoints import _seed_admin_user
 
@@ -299,3 +300,57 @@ async def test_bulk_delete_releases_unauthenticated_401(
         json={"releaseIds": [1]},
     )
     assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# slice 165 — bulk-delete releases sweeps tag_assignment rows
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete_releases_sweeps_tag_assignment(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Deleting a Release must drop its rows from the polymorphic
+    ``tag_assignment`` table."""
+    a = await _seed_release(api_engine)
+    b = await _seed_release(api_engine)
+
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        # Seed Tag + TagAssignment rows (no bulk-tag surface ships
+        # for releases yet — slice 154 only covers games).
+        session.add(
+            Tag(
+                id=1,
+                name="release-tag-1",
+                label="Release Tag 1",
+                color=DEFAULT_TAG_COLOR,
+            )
+        )
+        await session.flush()
+        session.add(
+            TagAssignment(tag_id=1, entity_type="release", entity_id=a)
+        )
+        session.add(
+            TagAssignment(tag_id=1, entity_type="release", entity_id=b)
+        )
+        await session.commit()
+
+    resp = await authed_client.post(
+        "/api/v3/rom/release/bulk-delete",
+        json={"releaseIds": [a]},
+    )
+    assert resp.status_code == 200
+
+    async with sm() as session:
+        rows = (
+            await session.execute(
+                TagAssignment.__table__.select().where(
+                    TagAssignment.entity_type == "release",
+                )
+            )
+        ).all()
+    pairs = {(row.tag_id, row.entity_id) for row in rows}
+    # Only B's assignment survives.
+    assert pairs == {(1, b)}
