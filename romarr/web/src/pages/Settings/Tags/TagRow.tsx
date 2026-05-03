@@ -11,6 +11,7 @@
 
 import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 
 import {
   useDeleteTag,
@@ -158,6 +159,26 @@ export function TagRow(props: TagRowProps): ReactElement {
             </>
           ) : (
             <>
+              {tag.usageCount > 0 && (
+                <Link
+                  to={`/library?tag=${tag.id}`}
+                  aria-label={t("tags.row.viewGamesAria", {
+                    count: tag.usageCount,
+                    label: tag.label,
+                  })}
+                  title={t("tags.row.viewGames", {
+                    count: tag.usageCount,
+                  })}
+                  className={[
+                    "rounded-md border border-zinc-700 px-2 py-1",
+                    "text-xs font-medium text-brand hover:bg-zinc-800",
+                    "focus-visible:outline-none focus-visible:ring-2",
+                    "focus-visible:ring-brand",
+                  ].join(" ")}
+                >
+                  →
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={() => setEditing(true)}

@@ -92,7 +92,9 @@
       "errorTitle": "Impossible de mettre à jour la jaquette"
     },
     "tags": {
-      "label": "Étiquettes"
+      "label": "Étiquettes",
+      "drillAria": "Voir tous les jeux étiquetés « {{label}} »",
+      "drillTitle": "Voir tous les jeux « {{label}} »"
     }
   },
   "releases": {

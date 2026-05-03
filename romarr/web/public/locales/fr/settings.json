@@ -625,7 +625,11 @@
       "usageCount_one": "{{count}} usage",
       "usageCount_other": "{{count}} usages",
       "usageTooltip_one": "Cette étiquette est utilisée par {{count}} entité",
-      "usageTooltip_other": "Cette étiquette est utilisée par {{count}} entités"
+      "usageTooltip_other": "Cette étiquette est utilisée par {{count}} entités",
+      "viewGames_one": "Voir le {{count}} jeu dans la ludothèque",
+      "viewGames_other": "Voir les {{count}} jeux dans la ludothèque",
+      "viewGamesAria_one": "Voir le {{count}} jeu étiqueté « {{label}} » dans la ludothèque",
+      "viewGamesAria_other": "Voir les {{count}} jeux étiquetés « {{label}} » dans la ludothèque"
     }
   },
   "ui": {

@@ -625,7 +625,11 @@
       "usageCount_one": "{{count}} use",
       "usageCount_other": "{{count}} uses",
       "usageTooltip_one": "Tag is currently used by {{count}} entity",
-      "usageTooltip_other": "Tag is currently used by {{count}} entities"
+      "usageTooltip_other": "Tag is currently used by {{count}} entities",
+      "viewGames_one": "View {{count}} game in the Library",
+      "viewGames_other": "View {{count}} games in the Library",
+      "viewGamesAria_one": "View the {{count}} game tagged \"{{label}}\" in the Library",
+      "viewGamesAria_other": "View the {{count}} games tagged \"{{label}}\" in the Library"
     }
   },
   "ui": {

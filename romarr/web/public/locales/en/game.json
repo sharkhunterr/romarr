@@ -92,7 +92,9 @@
       "errorTitle": "Couldn't update the cover"
     },
     "tags": {
-      "label": "Tags"
+      "label": "Tags",
+      "drillAria": "View all games tagged \"{{label}}\"",
+      "drillTitle": "View all \"{{label}}\" games"
     }
   },
   "releases": {

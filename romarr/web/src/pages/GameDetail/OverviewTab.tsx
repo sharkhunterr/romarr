@@ -14,6 +14,7 @@
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 
 import { CoverImage } from "@/components/rom";
 import { CoverEditModal } from "./CoverEditModal";
@@ -746,8 +747,15 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
             <ul className="flex flex-wrap gap-1.5">
               {tagPills.map((tag) => (
                 <li key={tag.id}>
-                  <span
-                    className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[0.65rem] font-medium ring-1 ring-inset ring-zinc-700"
+                  <Link
+                    to={`/library?tag=${tag.id}`}
+                    aria-label={t("overview.tags.drillAria", {
+                      label: tag.label,
+                    })}
+                    title={t("overview.tags.drillTitle", {
+                      label: tag.label,
+                    })}
+                    className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[0.65rem] font-medium ring-1 ring-inset ring-zinc-700 transition hover:brightness-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                     style={{
                       backgroundColor: `${tag.color}20`,
                       color: tag.color,
@@ -759,7 +767,7 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
                       style={{ backgroundColor: tag.color }}
                     />
                     {tag.label}
-                  </span>
+                  </Link>
                 </li>
               ))}
             </ul>
