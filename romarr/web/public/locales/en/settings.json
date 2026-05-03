@@ -108,7 +108,11 @@
       "cancel": "Cancel"
     },
     "disabled": "Disabled",
-    "category": "Category"
+    "category": "Category",
+    "toggle": {
+      "enabled": "Enabled",
+      "errorFallback": "Toggle failed."
+    }
   },
   "profiles": {
     "title": "Profiles",

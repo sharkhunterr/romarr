@@ -69,3 +69,40 @@ export function useTestDownloadClient(): UseMutationResult<
       ),
   });
 }
+
+/**
+ * PUT /api/v3/downloadclient/{id} — narrow toggle subset (slice 123).
+ *
+ * The DownloadClientUpdate body is broad; this hook only exposes
+ * the three operator-level flags (enabled master + the two
+ * protocol-specific flags). Full edit (host/port/auth) lands in
+ * the multi-step editor slice.
+ */
+export interface ToggleDownloadClientVariables {
+  id: number;
+  enabled?: boolean;
+  enable_for_torrents?: boolean;
+  enable_for_usenet?: boolean;
+}
+
+export function useToggleDownloadClient(): UseMutationResult<
+  DownloadClient,
+  ApiError,
+  ToggleDownloadClientVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<
+    DownloadClient,
+    ApiError,
+    ToggleDownloadClientVariables
+  >({
+    mutationFn: ({ id, ...body }) =>
+      apiFetch<DownloadClient>(`/api/v3/downloadclient/${id}`, {
+        method: "PUT",
+        json: body,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: CLIENTS_KEY });
+    },
+  });
+}

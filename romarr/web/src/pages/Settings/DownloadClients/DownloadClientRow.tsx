@@ -15,8 +15,10 @@ import { useTranslation } from "react-i18next";
 import {
   useDeleteDownloadClient,
   useTestDownloadClient,
+  useToggleDownloadClient,
   type DownloadClient,
   type DownloadClientTestResult,
+  type ToggleDownloadClientVariables,
 } from "@/lib/api/queries/download-clients";
 
 type Health =
@@ -56,6 +58,17 @@ const HEALTH_DOT: Record<Health, string> = {
   internal: "bg-red-500",
 };
 
+type ToggleField =
+  | "enabled"
+  | "enable_for_torrents"
+  | "enable_for_usenet";
+
+const PROTOCOL_LABEL: Record<ToggleField, string> = {
+  enabled: "downloadClients.toggle.enabled",
+  enable_for_torrents: "downloadClients.protocol.torrent",
+  enable_for_usenet: "downloadClients.protocol.usenet",
+};
+
 interface DownloadClientRowProps {
   client: DownloadClient;
 }
@@ -65,6 +78,7 @@ export function DownloadClientRow(props: DownloadClientRowProps): ReactElement {
   const { t } = useTranslation("settings");
   const test = useTestDownloadClient();
   const del = useDeleteDownloadClient();
+  const toggle = useToggleDownloadClient();
 
   const [confirming, setConfirming] = useState(false);
   const [testResult, setTestResult] = useState<
@@ -74,6 +88,38 @@ export function DownloadClientRow(props: DownloadClientRowProps): ReactElement {
   const health = deriveHealth(client);
   const typeLabel =
     t(`downloadClients.type.${client.type}`, { defaultValue: client.type });
+
+  function flip(field: ToggleField): void {
+    const variables: ToggleDownloadClientVariables = {
+      id: client.id,
+      [field]: !client[field],
+    };
+    toggle.mutate(variables);
+  }
+
+  function ToggleChip({ field }: { field: ToggleField }): ReactElement {
+    const active = client[field];
+    return (
+      <button
+        type="button"
+        onClick={() => flip(field)}
+        disabled={toggle.isPending}
+        aria-pressed={active}
+        className={[
+          "rounded px-1.5 py-0.5 text-[0.6rem] font-medium uppercase tracking-wider",
+          "ring-1 ring-inset transition-colors",
+          active
+            ? "bg-brand/20 text-brand ring-brand/40 hover:bg-brand/30"
+            : "bg-zinc-800 text-zinc-500 ring-zinc-700 hover:bg-zinc-700 hover:text-zinc-300",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+          "disabled:cursor-not-allowed disabled:opacity-60",
+        ].join(" ")}
+      >
+        {active ? "✓ " : ""}
+        {t(PROTOCOL_LABEL[field])}
+      </button>
+    );
+  }
 
   function runTest(): void {
     setTestResult(null);
@@ -111,37 +157,31 @@ export function DownloadClientRow(props: DownloadClientRowProps): ReactElement {
             <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-zinc-400">
               {typeLabel}
             </span>
-            {!client.enabled && (
-              <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-zinc-500">
-                {t("downloadClients.disabled")}
-              </span>
-            )}
           </div>
           <p className="truncate font-mono text-xs text-zinc-500">
             {client.host}
             {client.port !== 0 && `:${client.port}`}
             {client.url_base && client.url_base !== "" && client.url_base}
           </p>
-          <div className="flex flex-wrap items-center gap-1.5 text-[0.6rem] uppercase tracking-wider">
-            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-400">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-zinc-400">
               {t(`downloadClients.health.${health}`)}
             </span>
-            {client.enable_for_torrents && (
-              <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-400">
-                {t("downloadClients.protocol.torrent")}
-              </span>
-            )}
-            {client.enable_for_usenet && (
-              <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-400">
-                {t("downloadClients.protocol.usenet")}
-              </span>
-            )}
+            <ToggleChip field="enabled" />
+            <ToggleChip field="enable_for_torrents" />
+            <ToggleChip field="enable_for_usenet" />
             {client.category_default !== "" && (
-              <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-400">
+              <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-zinc-400">
                 {t("downloadClients.category")}: {client.category_default}
               </span>
             )}
           </div>
+          {toggle.isError && (
+            <p className="text-[0.7rem] text-red-300">
+              {toggle.error?.message ??
+                t("downloadClients.toggle.errorFallback")}
+            </p>
+          )}
         </div>
       </div>
 

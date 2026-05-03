@@ -108,7 +108,11 @@
       "cancel": "Annuler"
     },
     "disabled": "Désactivé",
-    "category": "Catégorie"
+    "category": "Catégorie",
+    "toggle": {
+      "enabled": "Activé",
+      "errorFallback": "Bascule échouée."
+    }
   },
   "profiles": {
     "title": "Profils",
