@@ -89,7 +89,9 @@ export function GameCard(props: GameCardProps): ReactElement {
     <>
       <div className="relative">
         <CoverImage
+          gameId={game.id}
           src={game.cover_path ?? null}
+          cacheKey={game.updated_at ?? null}
           alt={game.title}
           sizeClassName="aspect-[3/4] w-full"
         />

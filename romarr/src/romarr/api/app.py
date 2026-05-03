@@ -31,6 +31,7 @@ from romarr.api.openapi import customize_openapi
 from romarr.api.routers.auth import router as auth_router
 from romarr.api.routers.backup import router as backup_router
 from romarr.api.routers.calendar import router as calendar_router
+from romarr.api.routers.cover import router as cover_router
 from romarr.api.routers.game import router as game_router
 from romarr.api.routers.history import router as history_router
 from romarr.api.routers.log import router as log_router
@@ -272,6 +273,10 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     # ``{game_id}`` catch-all on game_router.
     app.include_router(metadata_lookup_router)
     app.include_router(game_router)
+    # Spec 014 slice 159 — cover-art bytes endpoint, lives on
+    # its own /api/v3/cover prefix so the FileResponse pipeline
+    # stays out of the JSON-only game router.
+    app.include_router(cover_router)
     # Spec 014 (slice 98) — Release operator-toggle surface
     # (PATCH /api/v3/rom/release/{id} for the monitor flag).
     # Manual grab lives at the same prefix in spec 007's

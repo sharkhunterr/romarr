@@ -587,7 +587,9 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
     <div className="grid gap-4 md:grid-cols-[10rem_minmax(0,1fr)]">
       <div className="md:sticky md:top-20 md:self-start">
         <CoverImage
+          gameId={game.id}
           src={game.cover_path ?? null}
+          cacheKey={game.updated_at ?? null}
           alt={game.title}
           sizeClassName="aspect-[3/4] w-full md:w-40"
         />

@@ -8673,6 +8673,41 @@
         ]
       }
     },
+    "/api/v3/cover/{game_id}": {
+      "get": {
+        "operationId": "get_cover_api_v3_cover__game_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "game_id",
+            "required": true,
+            "schema": {
+              "title": "Game Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stream the cover for a Game (any authenticated user). Cached for 24h with the ``immutable`` directive; the frontend cache-busts via ``?v=<updated_at>``.",
+        "tags": [
+          "Cover"
+        ]
+      }
+    },
     "/api/v3/customformat": {
       "get": {
         "operationId": "list_rows_api_v3_customformat_get",
