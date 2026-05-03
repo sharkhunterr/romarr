@@ -313,11 +313,23 @@ work; double-event for upgrades works.
       ``test_second_cycle_with_no_change_emits_nothing`` and
       ``test_recovery_emits_exactly_one_recovered_event`` for
       FR-021a coverage.
-- [ ] T043 [P] [HEALTH] `tests/notifications/health/checks/test_indexer.py::test_caps_reachable`
-      *(deferred — needs cross-module wiring with spec 004's
-      Newznab caps client)*
-- [ ] T044 [P] [HEALTH] `tests/notifications/health/checks/test_download_client.py::test_connection_test`
-      *(deferred — needs spec 005's `test_connection` adapter)*
+- [X] T043 [P] [HEALTH] ``IndexerHealthCheck`` shipped at
+      ``src/romarr/notifications/health/checks/indexer.py``
+      (slice 186) — wraps a ``NewznabClient`` factory, calls
+      ``client.caps()``, maps reachable→ok / probe-failure→
+      warning / construction-failure→error. Always closes
+      the client (best-effort). Tests at
+      ``tests/notifications/health/checks/test_indexer.py``
+      cover all three branches.
+- [X] T044 [P] [HEALTH] ``DownloadClientHealthCheck`` shipped
+      at
+      ``src/romarr/notifications/health/checks/download_client.py``
+      (slice 186) — wraps spec 005's ``test_connection()``
+      adapter. ok message includes the version string the
+      adapter returns; warning carries the connection-test
+      exception class + message; error fires on construction
+      failure. Tests at
+      ``tests/notifications/health/checks/test_download_client.py``.
 - [X] T045 [P] [HEALTH] `tests/notifications/health/checks/test_dat_freshness.py`
       — DAT 31 days old → `warning`; 91 days old → `error`;
       29 days old → `ok`; exact 30-day boundary → `warning`
@@ -330,8 +342,19 @@ work; double-event for upgrades works.
       — fast round-trip → `ok`; slow round-trip (sleep 100 ms,
       threshold 50 ms) → `warning`; query exception propagates
       to the engine's ``run_check`` wrapper for error-mapping.
-- [ ] T048 [P] [HEALTH] `tests/notifications/health/checks/test_metadata_provider.py::test_each_provider_health_check`
-      *(deferred — needs spec 002's per-provider `health_check()`
+- [X] T048 [P] [HEALTH] ``MetadataProviderHealthCheck`` shipped
+      at
+      ``src/romarr/notifications/health/checks/metadata_provider.py``
+      (slice 186) — wraps a ``MetadataProvider``'s
+      ``health_check()`` method (every provider in
+      ``src/romarr/metadata/providers/`` already implements
+      it, no spec 002 follow-up needed). Tests at
+      ``tests/notifications/health/checks/test_metadata_provider.py``
+      cover ok / warning (provider returns False) / error
+      (provider raises) branches.
+
+      Original deferral note (preserved for context): *(was
+      deferred — needs spec 002's per-provider `health_check()`
       hook, which is itself deferred to a metadata follow-up)*
 - [X] T049 [P] [HEALTH] `tests/notifications/health/checks/test_library_path.py`
       — stat takes 200 ms (real `asyncio.sleep`), timeout 50 ms
