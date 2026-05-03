@@ -13,8 +13,9 @@
  * Strings resolve through the `wanted` namespace (slice 68).
  */
 
-import { useState, type ReactElement } from "react";
+import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
@@ -29,6 +30,16 @@ import { ReleaseRow } from "./ReleaseRow";
 
 const ALL_PLATFORMS = "all" as const;
 type PlatformFilter = number | typeof ALL_PLATFORMS;
+
+function parsePlatformParam(raw: string | null): PlatformFilter {
+  if (raw === null || raw === "") return ALL_PLATFORMS;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : ALL_PLATFORMS;
+}
+
+function parseTabParam(raw: string | null): Tab {
+  return raw === "cutoff" ? "cutoff" : "missing";
+}
 
 interface BulkSearchButtonProps {
   /** Sonarr-shape command name (MissingSearch / CutoffSearch). */
@@ -186,10 +197,34 @@ function CutoffTab(props: TabBodyProps): ReactElement {
 
 export function WantedPage(): ReactElement {
   const { t } = useTranslation("wanted");
-  const [tab, setTab] = useState<Tab>("missing");
-  const [platformFilter, setPlatformFilter] =
-    useState<PlatformFilter>(ALL_PLATFORMS);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = parseTabParam(searchParams.get("tab"));
+  const platformFilter = parsePlatformParam(searchParams.get("platform"));
   const platforms = usePlatforms();
+
+  const setTab = (next: Tab): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === "missing") params.delete("tab");
+        else params.set("tab", next);
+        return params;
+      },
+      { replace: false },
+    );
+  };
+
+  const setPlatformFilter = (next: PlatformFilter): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === ALL_PLATFORMS) params.delete("platform");
+        else params.set("platform", String(next));
+        return params;
+      },
+      { replace: false },
+    );
+  };
 
   const platformId =
     platformFilter === ALL_PLATFORMS ? undefined : platformFilter;
