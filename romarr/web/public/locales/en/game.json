@@ -78,6 +78,14 @@
     "failuresOnly": {
       "off": "Failures only",
       "on": "✓ Failures only"
+    },
+    "range": {
+      "ariaLabel": "Time range filter",
+      "all": "All time",
+      "1h": "Last hour",
+      "24h": "Last 24h",
+      "7d": "Last 7d",
+      "30d": "Last 30d"
     }
   },
   "files": {

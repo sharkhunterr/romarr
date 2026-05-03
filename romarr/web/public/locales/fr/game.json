@@ -78,6 +78,14 @@
     "failuresOnly": {
       "off": "Échecs uniquement",
       "on": "✓ Échecs uniquement"
+    },
+    "range": {
+      "ariaLabel": "Filtre de période",
+      "all": "Tout",
+      "1h": "Dernière h",
+      "24h": "24 dernières h",
+      "7d": "7 derniers j",
+      "30d": "30 derniers j"
     }
   },
   "files": {

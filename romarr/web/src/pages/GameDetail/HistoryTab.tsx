@@ -44,6 +44,38 @@ function parseFilterParam(raw: string | null): HistoryFilter {
     : "all";
 }
 
+type TimeRange = "all" | "1h" | "24h" | "7d" | "30d";
+
+const TIME_RANGE_VALUES: readonly TimeRange[] = [
+  "all",
+  "1h",
+  "24h",
+  "7d",
+  "30d",
+];
+
+const TIME_RANGE_SET: ReadonlySet<TimeRange> = new Set<TimeRange>(
+  TIME_RANGE_VALUES,
+);
+
+function parseRangeParam(raw: string | null): TimeRange {
+  return raw !== null && TIME_RANGE_SET.has(raw as TimeRange)
+    ? (raw as TimeRange)
+    : "all";
+}
+
+function rangeToSinceIso(range: TimeRange): string | undefined {
+  if (range === "all") return undefined;
+  const now = Date.now();
+  const ms = {
+    "1h": 60 * 60 * 1000,
+    "24h": 24 * 60 * 60 * 1000,
+    "7d": 7 * 24 * 60 * 60 * 1000,
+    "30d": 30 * 24 * 60 * 60 * 1000,
+  }[range];
+  return new Date(now - ms).toISOString();
+}
+
 interface HistoryTabProps {
   gameId: number;
 }
@@ -59,6 +91,7 @@ export function HistoryTab(props: HistoryTabProps): ReactElement {
   const [searchParams, setSearchParams] = useSearchParams();
   const filter = parseFilterParam(searchParams.get("historyFilter"));
   const failuresOnly = searchParams.get("failuresOnly") === "true";
+  const range = parseRangeParam(searchParams.get("range"));
 
   const setFilter = (next: HistoryFilter): void => {
     setSearchParams(
@@ -84,6 +117,18 @@ export function HistoryTab(props: HistoryTabProps): ReactElement {
     );
   };
 
+  const setRange = (next: TimeRange): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === "all") params.delete("range");
+        else params.set("range", next);
+        return params;
+      },
+      { replace: false },
+    );
+  };
+
   const eventType: HistoryEventType | undefined =
     filter === "all" ? undefined : filter;
 
@@ -94,9 +139,10 @@ export function HistoryTab(props: HistoryTabProps): ReactElement {
     sortDirection: "desc",
     eventType,
     successful: failuresOnly ? false : undefined,
+    since: rangeToSinceIso(range),
   });
 
-  const filtersActive = filter !== "all" || failuresOnly;
+  const filtersActive = filter !== "all" || failuresOnly || range !== "all";
 
   if (history.isPending) return <ListSkeleton rows={6} />;
   if (history.isError) {
@@ -120,6 +166,31 @@ export function HistoryTab(props: HistoryTabProps): ReactElement {
 
   return (
     <div className="space-y-2">
+      <div
+        role="tablist"
+        aria-label={t("history.range.ariaLabel")}
+        className="flex flex-wrap gap-1"
+      >
+        {TIME_RANGE_VALUES.map((value) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setRange(value)}
+            aria-pressed={range === value}
+            className={[
+              "rounded-md px-3 py-1 text-xs font-medium ring-1 ring-inset",
+              "transition-colors",
+              range === value
+                ? "bg-brand/20 text-brand ring-brand/40"
+                : "bg-zinc-900/40 text-zinc-400 ring-zinc-700 hover:bg-zinc-800",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+            ].join(" ")}
+          >
+            {t(`history.range.${value}`)}
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-wrap items-center gap-2">
         <div
           role="tablist"
