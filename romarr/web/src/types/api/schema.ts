@@ -9082,6 +9082,8 @@ export interface operations {
             query?: {
                 /** @description Restrict to one platform (joined via Game). */
                 platformId?: number | null;
+                /** @description Case-insensitive substring filter on Release.name. Trimmed; empty/whitespace-only ignored. */
+                q?: string | null;
                 page?: number;
                 pageSize?: number;
                 sortKey?: string | null;
@@ -9118,6 +9120,8 @@ export interface operations {
             query?: {
                 /** @description Restrict to one platform (joined via Game). */
                 platformId?: number | null;
+                /** @description Case-insensitive substring filter on Release.name. Trimmed; empty/whitespace-only ignored. */
+                q?: string | null;
                 page?: number;
                 pageSize?: number;
                 sortKey?: string | null;

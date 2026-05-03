@@ -21,7 +21,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from romarr.api.dependencies import get_db, require_readonly
@@ -140,6 +140,16 @@ async def list_missing(
             description="Restrict to one platform (joined via Game).",
         ),
     ] = None,
+    q: Annotated[
+        str | None,
+        Query(
+            description=(
+                "Case-insensitive substring filter on Release.name. "
+                "Trimmed; empty/whitespace-only ignored."
+            ),
+            max_length=255,
+        ),
+    ] = None,
 ) -> PaginationEnvelope[WantedReleaseRead]:
     base = (
         select(Release, Game.platform_id)
@@ -151,6 +161,9 @@ async def list_missing(
     )
     if platform_id is not None:
         base = base.where(Game.platform_id == platform_id)
+    if q is not None and q.strip():
+        needle = f"%{q.strip().lower()}%"
+        base = base.where(func.lower(Release.name).like(needle))
     return await paginate(
         session=db,
         base_query=base,
@@ -187,6 +200,16 @@ async def list_cutoff(
             description="Restrict to one platform (joined via Game).",
         ),
     ] = None,
+    q: Annotated[
+        str | None,
+        Query(
+            description=(
+                "Case-insensitive substring filter on Release.name. "
+                "Trimmed; empty/whitespace-only ignored."
+            ),
+            max_length=255,
+        ),
+    ] = None,
 ) -> PaginationEnvelope[WantedReleaseRead]:
     base = (
         select(Release, Game.platform_id)
@@ -199,6 +222,9 @@ async def list_cutoff(
     )
     if platform_id is not None:
         base = base.where(Game.platform_id == platform_id)
+    if q is not None and q.strip():
+        needle = f"%{q.strip().lower()}%"
+        base = base.where(func.lower(Release.name).like(needle))
     return await paginate(
         session=db,
         base_query=base,

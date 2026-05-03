@@ -144,6 +144,7 @@ interface TabBodyProps {
   platformId: number | undefined;
   sortKey: WantedSortKey;
   sortDirection: SortDirection;
+  q: string | undefined;
 }
 
 function MissingTab(props: TabBodyProps): ReactElement {
@@ -153,6 +154,7 @@ function MissingTab(props: TabBodyProps): ReactElement {
     sortKey: props.sortKey,
     sortDirection: props.sortDirection,
     platformId: props.platformId,
+    q: props.q,
   });
 
   if (isPending) return <ListSkeleton rows={6} />;
@@ -190,6 +192,7 @@ function CutoffTab(props: TabBodyProps): ReactElement {
     sortKey: props.sortKey,
     sortDirection: props.sortDirection,
     platformId: props.platformId,
+    q: props.q,
   });
 
   if (isPending) return <ListSkeleton rows={6} />;
@@ -227,6 +230,8 @@ export function WantedPage(): ReactElement {
   const platformFilter = parsePlatformParam(searchParams.get("platform"));
   const sortKey = parseSortParam(searchParams.get("sort"));
   const sortDirection = parseDirectionParam(searchParams.get("direction"));
+  const rawQuery = searchParams.get("q") ?? "";
+  const trimmedQuery = rawQuery.trim();
   const platforms = usePlatforms();
 
   const setTab = (next: Tab): void => {
@@ -278,6 +283,18 @@ export function WantedPage(): ReactElement {
     );
   };
 
+  const setQuery = (next: string): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next.trim() === "") params.delete("q");
+        else params.set("q", next);
+        return params;
+      },
+      { replace: true },
+    );
+  };
+
   const platformId =
     platformFilter === ALL_PLATFORMS ? undefined : platformFilter;
 
@@ -308,6 +325,22 @@ export function WantedPage(): ReactElement {
           onClick={setTab}
         />
       </div>
+
+      <label className="mb-3 block">
+        <span className="sr-only">{t("search.label")}</span>
+        <input
+          type="search"
+          value={rawQuery}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t("search.placeholder")}
+          aria-label={t("search.label")}
+          className={[
+            "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
+            "ring-1 ring-inset ring-zinc-700",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+          ].join(" ")}
+        />
+      </label>
 
       <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center">
         <label className="block md:max-w-xs md:flex-1">
@@ -403,12 +436,14 @@ export function WantedPage(): ReactElement {
           platformId={platformId}
           sortKey={sortKey}
           sortDirection={sortDirection}
+          q={trimmedQuery === "" ? undefined : trimmedQuery}
         />
       ) : (
         <CutoffTab
           platformId={platformId}
           sortKey={sortKey}
           sortDirection={sortDirection}
+          q={trimmedQuery === "" ? undefined : trimmedQuery}
         />
       )}
     </div>

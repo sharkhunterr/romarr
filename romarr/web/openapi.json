@@ -13888,6 +13888,25 @@
             }
           },
           {
+            "description": "Case-insensitive substring filter on Release.name. Trimmed; empty/whitespace-only ignored.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 255,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Case-insensitive substring filter on Release.name. Trimmed; empty/whitespace-only ignored.",
+              "title": "Q"
+            }
+          },
+          {
             "in": "query",
             "name": "page",
             "required": false,
@@ -13990,6 +14009,25 @@
               ],
               "description": "Restrict to one platform (joined via Game).",
               "title": "Platformid"
+            }
+          },
+          {
+            "description": "Case-insensitive substring filter on Release.name. Trimmed; empty/whitespace-only ignored.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 255,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Case-insensitive substring filter on Release.name. Trimmed; empty/whitespace-only ignored.",
+              "title": "Q"
             }
           },
           {

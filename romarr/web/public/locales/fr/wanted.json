@@ -9,6 +9,10 @@
     "missing": "Releases monitorées mais pas encore acquises.",
     "cutoff": "Releases importées sous le seuil d'upgrade."
   },
+  "search": {
+    "label": "Chercher",
+    "placeholder": "Chercher par nom de release…"
+  },
   "filters": {
     "platform": {
       "label": "Filtrer par plateforme",

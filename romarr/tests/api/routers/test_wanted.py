@@ -342,3 +342,42 @@ async def test_missing_platform_id_zero_rejected(
 ) -> None:
     resp = await authed_client.get("/api/v3/wanted/missing?platformId=0")
     assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# slice 141 — q substring filter on Release.name
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_missing_q_filter_substring_match(
+    authed_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+) -> None:
+    """Three wanted releases named Sonic / Streets / Mario.
+    `?q=so` keeps only Sonic (case-insensitive)."""
+    game_id = await _seed_platform_and_game(api_engine)
+    await _seed_release(api_engine, game_id=game_id, name="Sonic the Hedgehog")
+    await _seed_release(api_engine, game_id=game_id, name="Streets of Rage")
+    await _seed_release(api_engine, game_id=game_id, name="Mario Kart")
+
+    resp = await authed_client.get("/api/v3/wanted/missing?q=so")
+    assert resp.status_code == 200
+    body = resp.json()
+    names = [r["name"] for r in body["records"]]
+    assert names == ["Sonic the Hedgehog"]
+
+
+@pytest.mark.asyncio
+async def test_missing_q_empty_ignored(
+    authed_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+) -> None:
+    """Whitespace-only `q` is ignored — full list returned."""
+    game_id = await _seed_platform_and_game(api_engine)
+    await _seed_release(api_engine, game_id=game_id, name="A")
+    await _seed_release(api_engine, game_id=game_id, name="B")
+
+    resp = await authed_client.get("/api/v3/wanted/missing?q=%20%20")
+    assert resp.status_code == 200
+    assert resp.json()["totalRecords"] == 2
