@@ -29,9 +29,14 @@ export type Dump = components["schemas"]["DumpRead"];
 export type RefreshMetadataResponse =
   components["schemas"]["RefreshMetadataResponse"];
 
+export type GameSortKey = "title" | "added_at" | "release_date" | "rating";
+export type SortDirection = "asc" | "desc";
+
 export interface ListGamesParams {
   q?: string;
   platformId?: number;
+  sort?: GameSortKey;
+  direction?: SortDirection;
   limit?: number;
 }
 
@@ -45,6 +50,9 @@ export function useGames(
   if (params.platformId !== undefined) {
     search.set("platform_id", String(params.platformId));
   }
+  if (params.sort !== undefined) search.set("sort", params.sort);
+  if (params.direction !== undefined)
+    search.set("direction", params.direction);
   if (params.limit !== undefined) {
     search.set("limit", String(params.limit));
   }
@@ -52,7 +60,15 @@ export function useGames(
   const url = qs ? `/api/v3/game?${qs}` : "/api/v3/game";
 
   return useQuery<Game[], ApiError>({
-    queryKey: ["games", "list", params.q ?? "", params.platformId ?? null, params.limit ?? null],
+    queryKey: [
+      "games",
+      "list",
+      params.q ?? "",
+      params.platformId ?? null,
+      params.sort ?? null,
+      params.direction ?? null,
+      params.limit ?? null,
+    ],
     queryFn: () => apiFetch<Game[]>(url),
     staleTime: 30_000,
   });

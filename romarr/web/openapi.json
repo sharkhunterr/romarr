@@ -8776,6 +8776,40 @@
             }
           },
           {
+            "description": "Sort key \u2014 `title` (default), `added_at` (Game.created_at), `release_date`, or `rating`.",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "title",
+              "description": "Sort key \u2014 `title` (default), `added_at` (Game.created_at), `release_date`, or `rating`.",
+              "enum": [
+                "title",
+                "added_at",
+                "release_date",
+                "rating"
+              ],
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sort direction (asc default).",
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "default": "asc",
+              "description": "Sort direction (asc default).",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Direction",
+              "type": "string"
+            }
+          },
+          {
             "in": "query",
             "name": "limit",
             "required": false,

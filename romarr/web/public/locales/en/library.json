@@ -11,6 +11,19 @@
       "all": "All platforms"
     }
   },
+  "sort": {
+    "label": "Sort by",
+    "key": {
+      "title": "Title",
+      "added_at": "Recently added",
+      "release_date": "Release date",
+      "rating": "Rating"
+    },
+    "direction": {
+      "asc": "Sort ascending",
+      "desc": "Sort descending"
+    }
+  },
   "empty": {
     "title": "No games yet",
     "body": "Once Romarr ingests a ROM via Add New, scan, or manual match, the game lands here."

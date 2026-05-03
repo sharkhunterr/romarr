@@ -341,3 +341,64 @@ async def test_patch_game_unauthenticated_401(
         "/api/v3/game/1", json={"monitored": False}
     )
     assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# slice 125 — list sort + direction
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_list_games_sort_by_title_default_asc(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Default sort = title ascending. Seed three games out of
+    alphabetical order; the response is alphabetical."""
+    await _seed_chain(api_engine, title="Zelda")
+    await _seed_chain(api_engine, title="Mario")
+    await _seed_chain(api_engine, title="Bomberman")
+
+    response = await authed_client.get("/api/v3/game")
+    assert response.status_code == 200
+    titles = [row["title"] for row in response.json()]
+    assert titles == sorted(titles)
+
+
+@pytest.mark.asyncio
+async def test_list_games_sort_by_title_desc(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    await _seed_chain(api_engine, title="Aaa")
+    await _seed_chain(api_engine, title="Zzz")
+    response = await authed_client.get(
+        "/api/v3/game?sort=title&direction=desc"
+    )
+    assert response.status_code == 200
+    titles = [row["title"] for row in response.json()]
+    assert titles == sorted(titles, reverse=True)
+
+
+@pytest.mark.asyncio
+async def test_list_games_sort_by_added_at(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """`added_at` maps to `Game.created_at`. Seeding in order
+    A→B→C and sorting `added_at desc` returns C→B→A."""
+    _, first, _ = await _seed_chain(api_engine, title="First")
+    _, second, _ = await _seed_chain(api_engine, title="Second")
+    _, third, _ = await _seed_chain(api_engine, title="Third")
+    response = await authed_client.get(
+        "/api/v3/game?sort=added_at&direction=desc"
+    )
+    assert response.status_code == 200
+    ids = [row["id"] for row in response.json()]
+    assert ids == [third, second, first]
+
+
+@pytest.mark.asyncio
+async def test_list_games_sort_unknown_key_rejected(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    """Literal-typed param rejects unknown sort keys."""
+    response = await authed_client.get("/api/v3/game?sort=NotAColumn")
+    assert response.status_code == 422

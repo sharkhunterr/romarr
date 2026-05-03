@@ -11,6 +11,19 @@
       "all": "Toutes les plateformes"
     }
   },
+  "sort": {
+    "label": "Trier par",
+    "key": {
+      "title": "Titre",
+      "added_at": "Ajout récent",
+      "release_date": "Date de sortie",
+      "rating": "Note"
+    },
+    "direction": {
+      "asc": "Tri ascendant",
+      "desc": "Tri descendant"
+    }
+  },
   "empty": {
     "title": "Aucun jeu pour l'instant",
     "body": "Quand Romarr ingère une ROM via Ajouter, scan ou association manuelle, le jeu apparaîtra ici."

@@ -5670,6 +5670,10 @@ export interface operations {
                 q?: string | null;
                 /** @description Restrict to one platform. */
                 platform_id?: number | null;
+                /** @description Sort key — `title` (default), `added_at` (Game.created_at), `release_date`, or `rating`. */
+                sort?: "title" | "added_at" | "release_date" | "rating";
+                /** @description Sort direction (asc default). */
+                direction?: "asc" | "desc";
                 limit?: number;
                 offset?: number;
             };

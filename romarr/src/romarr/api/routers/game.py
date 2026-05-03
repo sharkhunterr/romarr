@@ -28,17 +28,28 @@ spec 010.
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import func, select
+from sqlalchemy import asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from romarr.api.dependencies import get_db, require_admin, require_readonly
 from romarr.auth import Principal
 from romarr.domain.models import Dump, Game, Release
 from romarr.domain.schemas import DumpRead, GameRead, ReleaseRead
+
+# Whitelist of sortable Game columns. Operator-facing names map
+# to ORM columns; anything else 422s at the FastAPI validator.
+_SORT_KEYS = {
+    "title": Game.title,
+    "added_at": Game.created_at,
+    "release_date": Game.release_date,
+    "rating": Game.rating,
+}
+GameSortKey = Literal["title", "added_at", "release_date", "rating"]
+SortDirection = Literal["asc", "desc"]
 
 
 class GameToggleRequest(BaseModel):
@@ -78,10 +89,28 @@ async def list_games(
     platform_id: Annotated[
         int | None, Query(ge=1, description="Restrict to one platform.")
     ] = None,
+    sort: Annotated[
+        GameSortKey,
+        Query(
+            description=(
+                "Sort key — `title` (default), `added_at` (Game.created_at), "
+                "`release_date`, or `rating`."
+            ),
+        ),
+    ] = "title",
+    direction: Annotated[
+        SortDirection,
+        Query(description="Sort direction (asc default)."),
+    ] = "asc",
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[GameRead]:
-    stmt = select(Game).order_by(Game.title.asc())
+    column = _SORT_KEYS[sort]
+    order = asc(column) if direction == "asc" else desc(column)
+    # NULLs last on `release_date` / `rating` so the operator
+    # gets meaningful rows first. SQLite + Postgres both honor
+    # the `IS NULL` ASC / DESC pattern via SQLAlchemy.
+    stmt = select(Game).order_by(column.is_(None).asc(), order, Game.id.asc())
     if platform_id is not None:
         stmt = stmt.where(Game.platform_id == platform_id)
     if q is not None and q.strip():

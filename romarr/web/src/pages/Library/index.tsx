@@ -19,12 +19,24 @@ import { useSearchParams } from "react-router-dom";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { CardGridSkeleton } from "@/components/shared/LoadingSkeleton";
-import { useGames, type ListGamesParams } from "@/lib/api/queries/games";
+import {
+  useGames,
+  type GameSortKey,
+  type ListGamesParams,
+  type SortDirection,
+} from "@/lib/api/queries/games";
 import { usePlatforms } from "@/lib/api/queries/platforms";
 
 import { GameCard } from "./GameCard";
 
 const ALL_PLATFORMS = "all" as const;
+const SORT_KEYS: readonly GameSortKey[] = [
+  "title",
+  "added_at",
+  "release_date",
+  "rating",
+];
+const SORT_KEY_SET: ReadonlySet<GameSortKey> = new Set<GameSortKey>(SORT_KEYS);
 
 type PlatformFilterValue = number | typeof ALL_PLATFORMS;
 
@@ -34,12 +46,24 @@ function parsePlatformParam(raw: string | null): PlatformFilterValue {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : ALL_PLATFORMS;
 }
 
+function parseSortParam(raw: string | null): GameSortKey {
+  return raw !== null && SORT_KEY_SET.has(raw as GameSortKey)
+    ? (raw as GameSortKey)
+    : "title";
+}
+
+function parseDirectionParam(raw: string | null): SortDirection {
+  return raw === "desc" ? "desc" : "asc";
+}
+
 export function LibraryPage(): ReactElement {
   const { t } = useTranslation("library");
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const platformFilter = parsePlatformParam(searchParams.get("platform"));
+  const sortKey = parseSortParam(searchParams.get("sort"));
+  const sortDirection = parseDirectionParam(searchParams.get("direction"));
 
   const setPlatformFilter = (next: PlatformFilterValue): void => {
     setSearchParams(
@@ -47,6 +71,31 @@ export function LibraryPage(): ReactElement {
         const params = new URLSearchParams(prev);
         if (next === ALL_PLATFORMS) params.delete("platform");
         else params.set("platform", String(next));
+        return params;
+      },
+      { replace: false },
+    );
+  };
+
+  const setSortKey = (next: GameSortKey): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === "title") params.delete("sort");
+        else params.set("sort", next);
+        return params;
+      },
+      { replace: false },
+    );
+  };
+
+  const toggleSortDirection = (): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        const next = sortDirection === "asc" ? "desc" : "asc";
+        if (next === "asc") params.delete("direction");
+        else params.set("direction", next);
         return params;
       },
       { replace: false },
@@ -64,11 +113,15 @@ export function LibraryPage(): ReactElement {
   const platforms = usePlatforms();
 
   const params: ListGamesParams = useMemo(() => {
-    const out: ListGamesParams = { limit: 200 };
+    const out: ListGamesParams = {
+      limit: 200,
+      sort: sortKey,
+      direction: sortDirection,
+    };
     if (debouncedQuery.length > 0) out.q = debouncedQuery;
     if (platformFilter !== ALL_PLATFORMS) out.platformId = platformFilter;
     return out;
-  }, [debouncedQuery, platformFilter]);
+  }, [debouncedQuery, platformFilter, sortKey, sortDirection]);
 
   const games = useGames(params);
 
@@ -129,6 +182,49 @@ export function LibraryPage(): ReactElement {
               ))}
             </select>
           </label>
+
+          <div className="flex items-stretch gap-1">
+            <label className="block md:w-44">
+              <span className="sr-only">{t("sort.label")}</span>
+              <select
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as GameSortKey)}
+                aria-label={t("sort.label")}
+                className={[
+                  "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
+                  "ring-1 ring-inset ring-zinc-700",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                ].join(" ")}
+              >
+                {SORT_KEYS.map((k) => (
+                  <option key={k} value={k}>
+                    {t(`sort.key.${k}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={toggleSortDirection}
+              aria-label={
+                sortDirection === "asc"
+                  ? t("sort.direction.asc")
+                  : t("sort.direction.desc")
+              }
+              title={
+                sortDirection === "asc"
+                  ? t("sort.direction.asc")
+                  : t("sort.direction.desc")
+              }
+              className={[
+                "rounded-md bg-zinc-950 px-3 text-sm text-zinc-100",
+                "ring-1 ring-inset ring-zinc-700 hover:bg-zinc-900",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+              ].join(" ")}
+            >
+              {sortDirection === "asc" ? "↑" : "↓"}
+            </button>
+          </div>
         </div>
 
         {games.isSuccess && (
