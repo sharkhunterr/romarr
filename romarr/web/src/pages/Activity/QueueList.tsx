@@ -16,10 +16,37 @@
 import { type ReactElement } from "react";
 import { type TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
-import { useQueue, type QueueEntry } from "@/lib/api/queries/queue";
+import {
+  useQueue,
+  type QueueEntry,
+  type QueueState,
+} from "@/lib/api/queries/queue";
+
+type StateFilter = "all" | QueueState;
+
+const FILTER_VALUES: readonly StateFilter[] = [
+  "all",
+  "downloading",
+  "queued",
+  "paused",
+  "stuck",
+  "failed",
+  "pending_retry",
+];
+
+const FILTER_SET: ReadonlySet<StateFilter> = new Set<StateFilter>(
+  FILTER_VALUES,
+);
+
+function parseFilterParam(raw: string | null): StateFilter {
+  return raw !== null && FILTER_SET.has(raw as StateFilter)
+    ? (raw as StateFilter)
+    : "all";
+}
 
 const STATE_BADGE: Record<string, string> = {
   queued: "bg-zinc-700/40 text-zinc-200 ring-zinc-500/40",
@@ -129,10 +156,29 @@ function QueueRow(props: { entry: QueueEntry }): ReactElement {
 
 export function QueueList(): ReactElement {
   const { t } = useTranslation("activity");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filter = parseFilterParam(searchParams.get("queueState"));
+
+  const setFilter = (next: StateFilter): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === "all") params.delete("queueState");
+        else params.set("queueState", next);
+        return params;
+      },
+      { replace: false },
+    );
+  };
+
+  const state: QueueState | undefined =
+    filter === "all" ? undefined : filter;
+
   const { data, isPending, isError, error } = useQueue({
     pageSize: 50,
     sortKey: "last_updated_at",
     sortDirection: "desc",
+    state,
   });
 
   if (isPending) return <ListSkeleton rows={5} />;
@@ -144,7 +190,7 @@ export function QueueList(): ReactElement {
       />
     );
   }
-  if (data.records.length === 0) {
+  if (data.records.length === 0 && filter === "all") {
     return (
       <EmptyState
         title={t("queue.empty.title")}
@@ -153,10 +199,43 @@ export function QueueList(): ReactElement {
     );
   }
   return (
-    <ul className="space-y-2">
-      {data.records.map((entry) => (
-        <QueueRow key={entry.id} entry={entry} />
-      ))}
-    </ul>
+    <div className="space-y-3">
+      <div
+        role="tablist"
+        aria-label={t("queue.filter.ariaLabel")}
+        className="flex flex-wrap gap-1"
+      >
+        {FILTER_VALUES.map((value) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setFilter(value)}
+            aria-pressed={filter === value}
+            className={[
+              "rounded-md px-3 py-1 text-xs font-medium ring-1 ring-inset",
+              "transition-colors",
+              filter === value
+                ? "bg-brand/20 text-brand ring-brand/40"
+                : "bg-zinc-900/40 text-zinc-400 ring-zinc-700 hover:bg-zinc-800",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+            ].join(" ")}
+          >
+            {t(`queue.filter.${value}`)}
+          </button>
+        ))}
+      </div>
+
+      {data.records.length === 0 && filter !== "all" && (
+        <p className="rounded-md border border-dashed border-zinc-800 bg-zinc-900/20 p-3 text-[0.7rem] text-zinc-500">
+          {t("queue.filter.noMatches")}
+        </p>
+      )}
+
+      <ul className="space-y-2">
+        {data.records.map((entry) => (
+          <QueueRow key={entry.id} entry={entry} />
+        ))}
+      </ul>
+    </div>
   );
 }

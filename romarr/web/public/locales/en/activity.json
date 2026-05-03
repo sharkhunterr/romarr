@@ -27,7 +27,18 @@
     "etaSeconds": "{{value}}s",
     "etaMinutes": "{{value}}m",
     "etaHoursMinutes": "{{hours}}h{{minutes}}m",
-    "progressLabel": "Download progress {{pct}}%"
+    "progressLabel": "Download progress {{pct}}%",
+    "filter": {
+      "ariaLabel": "Queue state filter",
+      "all": "All",
+      "downloading": "Downloading",
+      "queued": "Queued",
+      "paused": "Paused",
+      "stuck": "Stuck",
+      "failed": "Failed",
+      "pending_retry": "Pending retry",
+      "noMatches": "No queue rows match the active state filter."
+    }
   },
   "history": {
     "loadError": "Couldn't load history",

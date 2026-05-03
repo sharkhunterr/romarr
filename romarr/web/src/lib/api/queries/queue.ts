@@ -19,6 +19,15 @@ import type { components } from "@/types/api/schema";
 
 export type QueueEntry = components["schemas"]["QueueEntryRead"];
 
+export type QueueState =
+  | "queued"
+  | "downloading"
+  | "paused"
+  | "completed"
+  | "stuck"
+  | "failed"
+  | "pending_retry";
+
 interface QueueEnvelope {
   page: number;
   pageSize: number;
@@ -37,6 +46,8 @@ export interface UseQueueParams {
   gameId?: number;
   /** Filter to one Release's queue. */
   releaseId?: number;
+  /** Filter to one queue state. */
+  state?: QueueState;
   /**
    * Refetch interval in ms. Defaults to 5000 — short enough
    * that a download's progress feels live without hammering
@@ -58,6 +69,7 @@ export function useQueue(
   if (params.gameId !== undefined) search.set("gameId", String(params.gameId));
   if (params.releaseId !== undefined)
     search.set("releaseId", String(params.releaseId));
+  if (params.state !== undefined) search.set("state", params.state);
   const qs = search.toString();
 
   return useQuery<QueueEnvelope, ApiError>({

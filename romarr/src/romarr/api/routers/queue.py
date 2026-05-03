@@ -20,7 +20,7 @@ filtering flows.
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field
@@ -33,6 +33,20 @@ from romarr.api.models import QueueEntry
 from romarr.api.pagination import PageRequest, page_request, paginate
 from romarr.auth import Principal
 from romarr.domain.models import Release
+
+
+# Sync with the CHECK constraint in api/models.py — Literal-typed
+# query param so FastAPI rejects unknown states with 422 at the
+# router edge instead of letting them through to the WHERE clause.
+QueueState = Literal[
+    "queued",
+    "downloading",
+    "paused",
+    "completed",
+    "stuck",
+    "failed",
+    "pending_retry",
+]
 
 router = APIRouter(prefix="/api/v3/queue", tags=["Queue"])
 
@@ -119,6 +133,17 @@ async def list_queue(
             description="Filter to a single Release.",
         ),
     ] = None,
+    state: Annotated[
+        QueueState | None,
+        Query(
+            description=(
+                "Filter to one of the documented queue states "
+                "(queued / downloading / paused / completed / "
+                "stuck / failed / pending_retry). Drives the "
+                "Activity > Queue state-filter chips."
+            ),
+        ),
+    ] = None,
 ) -> PaginationEnvelope[QueueEntryRead]:
     """Returns every queue_entry row matching the page request.
 
@@ -127,7 +152,9 @@ async def list_queue(
     to surface the freshest movement first.
 
     The optional ``gameId`` / ``releaseId`` filters drive the
-    GameDetail per-game queue indicator (slice 109)."""
+    GameDetail per-game queue indicator (slice 109). The
+    ``state`` filter (slice 121) drives the Activity > Queue
+    state chips."""
     base = select(QueueEntry)
     if release_id is not None:
         base = base.where(QueueEntry.release_id == release_id)
@@ -135,6 +162,8 @@ async def list_queue(
         base = base.join(
             Release, Release.id == QueueEntry.release_id
         ).where(Release.game_id == game_id)
+    if state is not None:
+        base = base.where(QueueEntry.state == state)
     return await paginate(
         session=db,
         base_query=base,

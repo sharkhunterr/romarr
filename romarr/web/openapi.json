@@ -10366,7 +10366,7 @@
     },
     "/api/v3/queue": {
       "get": {
-        "description": "Returns every queue_entry row matching the page request.\n\nDefault sort is ``last_updated_at`` ascending; callers\ntypically pass ``?sortKey=last_updated_at&sortDirection=desc``\nto surface the freshest movement first.\n\nThe optional ``gameId`` / ``releaseId`` filters drive the\nGameDetail per-game queue indicator (slice 109).",
+        "description": "Returns every queue_entry row matching the page request.\n\nDefault sort is ``last_updated_at`` ascending; callers\ntypically pass ``?sortKey=last_updated_at&sortDirection=desc``\nto surface the freshest movement first.\n\nThe optional ``gameId`` / ``releaseId`` filters drive the\nGameDetail per-game queue indicator (slice 109). The\n``state`` filter (slice 121) drives the Activity > Queue\nstate chips.",
         "operationId": "list_queue_api_v3_queue_get",
         "parameters": [
           {
@@ -10405,6 +10405,33 @@
               ],
               "description": "Filter to a single Release.",
               "title": "Releaseid"
+            }
+          },
+          {
+            "description": "Filter to one of the documented queue states (queued / downloading / paused / completed / stuck / failed / pending_retry). Drives the Activity > Queue state-filter chips.",
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "queued",
+                    "downloading",
+                    "paused",
+                    "completed",
+                    "stuck",
+                    "failed",
+                    "pending_retry"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to one of the documented queue states (queued / downloading / paused / completed / stuck / failed / pending_retry). Drives the Activity > Queue state-filter chips.",
+              "title": "State"
             }
           },
           {

@@ -944,7 +944,9 @@ export interface paths {
          *     to surface the freshest movement first.
          *
          *     The optional ``gameId`` / ``releaseId`` filters drive the
-         *     GameDetail per-game queue indicator (slice 109).
+         *     GameDetail per-game queue indicator (slice 109). The
+         *     ``state`` filter (slice 121) drives the Activity > Queue
+         *     state chips.
          */
         get: operations["list_queue_api_v3_queue_get"];
         put?: never;
@@ -6754,6 +6756,8 @@ export interface operations {
                 gameId?: number | null;
                 /** @description Filter to a single Release. */
                 releaseId?: number | null;
+                /** @description Filter to one of the documented queue states (queued / downloading / paused / completed / stuck / failed / pending_retry). Drives the Activity > Queue state-filter chips. */
+                state?: ("queued" | "downloading" | "paused" | "completed" | "stuck" | "failed" | "pending_retry") | null;
                 page?: number;
                 pageSize?: number;
                 sortKey?: string | null;

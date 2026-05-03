@@ -27,7 +27,18 @@
     "etaSeconds": "{{value}}s",
     "etaMinutes": "{{value}}min",
     "etaHoursMinutes": "{{hours}}h{{minutes}}",
-    "progressLabel": "Progression du téléchargement {{pct}}%"
+    "progressLabel": "Progression du téléchargement {{pct}}%",
+    "filter": {
+      "ariaLabel": "Filtre d'état de la file",
+      "all": "Tous",
+      "downloading": "En cours",
+      "queued": "En file",
+      "paused": "En pause",
+      "stuck": "Bloqué",
+      "failed": "Échec",
+      "pending_retry": "Retry en attente",
+      "noMatches": "Aucune entrée ne correspond au filtre d'état actif."
+    }
   },
   "history": {
     "loadError": "Impossible de charger l'historique",

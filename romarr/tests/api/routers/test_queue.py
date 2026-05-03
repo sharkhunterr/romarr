@@ -295,3 +295,35 @@ async def test_game_id_zero_rejected(
 ) -> None:
     resp = await authed_client.get("/api/v3/queue?gameId=0")
     assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# slice 121 — state filter
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_state_filter_keeps_only_matching_state(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Three rows seeded across two states (alternating
+    downloading / queued via `_seed_queue_entries`).
+    `?state=downloading` keeps only the two downloading rows."""
+    await _seed_queue_entries(api_engine, count=3)
+    resp = await authed_client.get("/api/v3/queue?state=downloading")
+    assert resp.status_code == 200
+    body = resp.json()
+    # The helper alternates: i=0,2 → downloading, i=1 → queued.
+    assert body["totalRecords"] == 2
+    for record in body["records"]:
+        assert record["state"] == "downloading"
+
+
+@pytest.mark.asyncio
+async def test_state_filter_unknown_value_rejected(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    """The Literal-typed param rejects values outside the
+    documented state set."""
+    resp = await authed_client.get("/api/v3/queue?state=NotAState")
+    assert resp.status_code == 422
