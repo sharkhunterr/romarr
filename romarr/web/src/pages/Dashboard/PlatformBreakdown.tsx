@@ -10,6 +10,7 @@
 
 import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 
 import { useSystemStats } from "@/lib/api/queries/system";
 
@@ -58,9 +59,25 @@ export function PlatformBreakdown(): ReactElement | null {
           {rows.map((row) => (
             <tr
               key={row.platformId}
-              className="border-b border-zinc-800 last:border-b-0 text-zinc-200"
+              className={[
+                "border-b border-zinc-800 last:border-b-0 text-zinc-200",
+                "transition-colors hover:bg-zinc-800/40",
+              ].join(" ")}
             >
-              <td className="px-3 py-2 font-medium">{row.platformName}</td>
+              <td className="px-3 py-2 font-medium">
+                <Link
+                  to={`/library?platform=${row.platformId}`}
+                  className={[
+                    "block text-zinc-100 hover:text-brand",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                  ].join(" ")}
+                  aria-label={t("platforms.openInLibrary", {
+                    platform: row.platformName,
+                  })}
+                >
+                  {row.platformName}
+                </Link>
+              </td>
               <td className="px-3 py-2 text-right font-mono">
                 {row.totalGames}
               </td>

@@ -15,6 +15,7 @@
 
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { CardGridSkeleton } from "@/components/shared/LoadingSkeleton";
@@ -25,13 +26,32 @@ import { GameCard } from "./GameCard";
 
 const ALL_PLATFORMS = "all" as const;
 
+type PlatformFilterValue = number | typeof ALL_PLATFORMS;
+
+function parsePlatformParam(raw: string | null): PlatformFilterValue {
+  if (raw === null || raw === "") return ALL_PLATFORMS;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : ALL_PLATFORMS;
+}
+
 export function LibraryPage(): ReactElement {
   const { t } = useTranslation("library");
+  const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [platformFilter, setPlatformFilter] = useState<
-    number | typeof ALL_PLATFORMS
-  >(ALL_PLATFORMS);
+  const platformFilter = parsePlatformParam(searchParams.get("platform"));
+
+  const setPlatformFilter = (next: PlatformFilterValue): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === ALL_PLATFORMS) params.delete("platform");
+        else params.set("platform", String(next));
+        return params;
+      },
+      { replace: false },
+    );
+  };
 
   useEffect(() => {
     const handle = window.setTimeout(

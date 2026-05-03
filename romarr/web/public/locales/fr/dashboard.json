@@ -24,7 +24,8 @@
     "games": "Jeux",
     "releases": "Releases",
     "dumps": "Dumps",
-    "disk": "Disque"
+    "disk": "Disque",
+    "openInLibrary": "Ouvrir {{platform}} dans la ludothèque"
   },
   "library": {
     "totalGames": "Total jeux",
