@@ -368,6 +368,32 @@
         "confirm": "Révoquer",
         "cancel": "Annuler"
       }
+    },
+    "users": {
+      "section": "Utilisateurs",
+      "subtitle": "Tous les comptes qui peuvent se connecter. Les formulaires de création + édition arrivent dans un slice à venir ; la suppression est déjà câblée.",
+      "adminOnly": "admin",
+      "you": "vous",
+      "active": "Actif",
+      "inactive": "Inactif",
+      "never": "jamais",
+      "lastLogin": "Dernière connexion {{when}}",
+      "role": {
+        "admin": "Admin",
+        "user": "Utilisateur",
+        "service": "Service"
+      },
+      "empty": {
+        "title": "Aucun utilisateur",
+        "body": "Romarr crée toujours au moins un admin pendant la configuration. Si vous voyez ceci, la migration auth a un problème."
+      },
+      "delete": {
+        "button": "Supprimer",
+        "confirmTitle": "Supprimer cet utilisateur ?",
+        "confirmBody": "{{username}} perdra immédiatement l'accès. Ses clés API et notifications sont révoquées.",
+        "confirm": "Supprimer",
+        "cancel": "Annuler"
+      }
     }
   },
   "metadataSources": {

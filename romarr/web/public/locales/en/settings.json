@@ -368,6 +368,32 @@
         "confirm": "Revoke",
         "cancel": "Cancel"
       }
+    },
+    "users": {
+      "section": "Users",
+      "subtitle": "Every account that can sign in. Create + edit forms land in a follow-up slice; delete is wired today.",
+      "adminOnly": "admin",
+      "you": "you",
+      "active": "Active",
+      "inactive": "Inactive",
+      "never": "never",
+      "lastLogin": "Last login {{when}}",
+      "role": {
+        "admin": "Admin",
+        "user": "User",
+        "service": "Service"
+      },
+      "empty": {
+        "title": "No users",
+        "body": "Romarr always seeds at least one admin during setup. If you see this, something is wrong with the auth migration."
+      },
+      "delete": {
+        "button": "Delete",
+        "confirmTitle": "Delete this user?",
+        "confirmBody": "{{username}} will lose access immediately. Their API keys and notifications are revoked.",
+        "confirm": "Delete",
+        "cancel": "Cancel"
+      }
     }
   },
   "metadataSources": {
