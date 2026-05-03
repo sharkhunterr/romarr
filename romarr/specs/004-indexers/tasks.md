@@ -75,9 +75,13 @@ helpers, and the Alembic migration.
 - [X] T012 [PERS] Created `src/romarr/indexers/models.py` — `Indexer` +
       `Application` SQLAlchemy 2.0 models matching `data-model.md` with
       every CHECK constraint and the unique indexes.
-- [ ] T013 [P] [PERS] Pydantic `IndexerRead/Create/Update` +
-      `ApplicationRead/Create` + `IndexerSchema` schemas. **Deferred** to
-      the API slice — schemas are only consumed by the routers.
+- [X] T013 [P] [PERS] Pydantic schemas shipped at
+      ``src/romarr/indexers/schemas.py`` —
+      ``IndexerRead`` / ``IndexerCreate`` / ``IndexerUpdate``,
+      ``ApplicationRead`` / ``ApplicationCreate``, and
+      ``IndexerSchema``. Consumed by the spec-013 routers
+      (``indexers/api/indexers.py``,
+      ``indexers/api/applications.py``).
 - [X] T014 [P] [PERS] Created `src/romarr/indexers/tokens.py` — uses
       ``bcrypt`` directly (passlib's ``bcrypt_sha256`` backend has a
       known incompatibility with modern ``bcrypt>=4.0``); the

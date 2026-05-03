@@ -24,11 +24,15 @@ integration tests → command bus → Sonarr-shape probe → hardening.
 
 ## Phase 1: Scaffolding (`SCAF`)
 
-- [ ] T001 [SCAF] Update `pyproject.toml` — add runtime deps
-      `slowapi>=0.1.9` and `fastapi-csrf-protect>=0.3`; add dev dep
-      `openapi-spec-validator>=0.7`.
-- [ ] T002 [P] [SCAF] Create `src/romarr/api/__init__.py` exposing
-      `create_app`.
+- [~] T001 [SCAF] ``openapi-spec-validator>=0.7`` shipped as
+      a dev dep (slice 174 verification). ``slowapi`` and
+      ``fastapi-csrf-protect`` did NOT ship — the rate-limit
+      and CSRF middleware were implemented from scratch in
+      ``api/middleware/`` to keep the dep surface minimal.
+      Re-evaluate if external rate-limit primitives become
+      worthwhile (e.g., distributed Redis-backed limits).
+- [X] T002 [P] [SCAF] ``src/romarr/api/__init__.py`` exposes
+      ``create_app`` via re-export from ``romarr.api.app``.
 - [X] T003 [P] [SCAF] Create `src/romarr/api/models.py` — `Tag`,
       `TagAssignment`, `QueueEntry`, `IdempotencyCache` SQLAlchemy
       2.0 models matching the inline data-model in `plan.md`. Brand
@@ -44,9 +48,15 @@ integration tests → command bus → Sonarr-shape probe → hardening.
       via `tests/api/test_migration_0013.py` (table creation,
       reversibility, documented columns, composite PK on
       `idempotency_cache`, brand-default `tag.color`).
-- [ ] T006 [SCAF] Extend `tests/conftest.py` with `app_client`
-      (TestClient) and `ws_client` (websockets test helper);
-      create `tests/api/conftest.py` for module-local fixtures.
+- [X] T006 [SCAF] ``tests/conftest.py`` ships
+      ``api_engine`` + ``api_client`` (httpx ASGI fixture);
+      ``tests/api/conftest.py`` exists for module-local
+      fixtures; ``tests/api/ws/conftest.py`` provides the
+      WebSocket-specific TestClient seeded with an admin
+      user + API key. Naming differs from the spec
+      (``app_client`` → ``api_client``,
+      ``ws_client`` → in-test TestClient) but the shape is
+      shipped and consumed across the test suite.
 
 **Checkpoint**: imports work; lint+types green; migration applies.
 

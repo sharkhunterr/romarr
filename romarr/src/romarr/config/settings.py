@@ -68,6 +68,76 @@ class Settings(BaseSettings):
         "for credentials at rest. MUST be set in production.",
     )
 
+    # Spec 010 auth knobs (T005). The dedicated
+    # ``src/romarr/auth/settings.py`` the spec called for
+    # never materialised — auth settings colocate here so
+    # there's a single Settings surface across the project
+    # (mirroring the spec-002 / 003 / 004 / 014 pattern).
+    auth_session_ttl_seconds: int = Field(
+        default=86_400,
+        ge=60,
+        description=(
+            "Spec 010 — server-side session TTL. Sessions older "
+            "than this are revoked on the next request. Default "
+            "24h."
+        ),
+    )
+    bcrypt_cost: int = Field(
+        default=12,
+        ge=4,
+        le=20,
+        description=(
+            "Spec 010 — bcrypt hashing cost factor. Default 12 "
+            "balances login latency and brute-force resistance "
+            "on contemporary hardware."
+        ),
+    )
+    trust_proxy_auth: bool = Field(
+        default=False,
+        description=(
+            "Spec 010 — when true, the auth chain consults "
+            "``trusted_proxy_headers`` (e.g., "
+            "``X-Forwarded-User``) for an upstream-proxy "
+            "identity. Off by default to avoid header-spoof "
+            "vectors when the deployment isn't behind a "
+            "trusted reverse proxy."
+        ),
+    )
+    trusted_proxy_headers: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Spec 010 — JSON-encoded list of header names "
+            "(e.g., [\"X-Forwarded-User\", \"X-Auth-User\"]) "
+            "the auth chain treats as authoritative when "
+            "``trust_proxy_auth`` is on."
+        ),
+    )
+    oidc_issuer_url: str = Field(
+        default="",
+        description=(
+            "Spec 010 — OIDC issuer (.well-known/openid-"
+            "configuration is fetched from "
+            "``<issuer>/.well-known/openid-configuration``). "
+            "Empty disables OIDC."
+        ),
+    )
+    oidc_client_id: str = Field(
+        default="",
+        description="Spec 010 — OIDC client id.",
+    )
+    oidc_client_secret: str = Field(
+        default="",
+        description="Spec 010 — OIDC client secret.",
+    )
+    redis_url: str = Field(
+        default="",
+        description=(
+            "Spec 010 — Redis URL for the optional session "
+            "cache. Empty falls back to the DB-backed session "
+            "store (the FR-013 default)."
+        ),
+    )
+
     # Importer webhook
     importer_webhook_token: str = Field(
         default="",

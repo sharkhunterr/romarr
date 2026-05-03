@@ -36,11 +36,19 @@ session → forms → API keys → OIDC → trusted proxy → chained dependency
       `SetupAlreadyCompleted`.
 - [X] T004 [P] [SCAF] Create `src/romarr/auth/types.py` — `Role`,
       `ROLE_HIERARCHY`, `AuthMethod`, `AuthContext`.
-- [ ] T005 [P] [SCAF] Create `src/romarr/auth/settings.py` — Pydantic
-      `BaseSettings` for `ROMARR_OIDC_*`, `ROMARR_TRUST_PROXY_AUTH`,
-      `ROMARR_TRUSTED_PROXY_HEADERS`, `ROMARR_BCRYPT_COST` (default
-      12), `ROMARR_REDIS_URL`, `ROMARR_AUTH_SESSION_TTL_SECONDS`
-      (default 86400).
+- [~] T005 [P] [SCAF] Auth Pydantic Settings fields shipped
+      (slice 175) but colocated in the shared
+      ``romarr.config.settings.Settings`` rather than the
+      dedicated ``src/romarr/auth/settings.py`` the spec
+      originally called for — mirrors the spec-002 / 003 /
+      004 pattern of one Settings surface per project.
+      Fields: ``oidc_issuer_url``, ``oidc_client_id``,
+      ``oidc_client_secret``, ``trust_proxy_auth``,
+      ``trusted_proxy_headers``, ``bcrypt_cost`` (default 12,
+      bounded 4-20), ``redis_url``,
+      ``auth_session_ttl_seconds`` (default 86400, min 60).
+      Loaded via the ``ROMARR_`` env prefix; covered by 4
+      tests in ``tests/config/test_auth_settings.py``.
 - [X] T006 [SCAF] Extend `tests/conftest.py` with a
       `mock_oidc_provider` fixture (respx + a fixture id_token
       JSON); create `tests/auth/conftest.py` with module-local
