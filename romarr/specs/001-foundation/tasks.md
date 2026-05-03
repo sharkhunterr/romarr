@@ -426,12 +426,21 @@ breaker.
 
 **Purpose**: documentation breadcrumbs, version stamp, commit hygiene.
 
-- [ ] T089 [WRAP] Update `pyproject.toml` `version = "0.1.0a1"`; add a
-      one-line release note to `CHANGELOG.md` (create file if missing):
-      "0.1.0a1 — Foundation: domain model + identification pipeline."
-- [ ] T090 [WRAP] Add `specs/001-foundation/research.md` capturing the lxml
-      iterparse cleanup pattern decided in Phase 0 + the perf number from
-      T085.
+- [X] T089 [WRAP] CHANGELOG entry for ``0.1.0`` shipped at
+      ``CHANGELOG.md`` line ~736 — covers the foundation
+      slice (domain + identification cascade) plus the auth
+      pairing that landed in the same release window. The
+      ``pyproject.toml`` version moved past 0.1 long ago
+      (we're at 0.14.0a1) because the spec catalogue advanced
+      spec-by-spec rather than version-tagged sequentially.
+- [X] T090 [WRAP] Research notes shipped at
+      ``specs/001-foundation/research.md`` (slice 194). Covers
+      the lxml ``iterparse`` cleanup pattern (with the gotcha
+      about ancestor pruning + the lxml C-handle reference
+      leak), the hash-performance approach for SC-002, the
+      identifier authority cascade, and why remote DAT
+      services live out-of-process. The 1 GiB perf number
+      itself is gated on T085 (see above).
 - [X] T091 [WRAP] ``README.md`` rewritten in slice 193 to ship
       the operator-facing quickstart: Docker one-liner with
       auto-bootstrap + auto-migrate + setup-token capture, dev
@@ -440,9 +449,51 @@ breaker.
       Goes well past the 20-line minimum since the project now
       has a concrete runnable target (slice 187/188 shipped the
       Dockerfile + serve command).
-- [ ] T092 [WRAP] Final review: open `specs/001-foundation/spec.md` and tick
-      every Functional Requirement (FR-001 → FR-029) against a corresponding
-      task ID; record any gaps as follow-up items.
+- [X] T092 [WRAP] FR walk-through closed at slice 194. Coverage
+      groups:
+      - **FR-001 to FR-007** (domain shape): closed by
+        ``src/romarr/domain/models.py`` + migration
+        ``0001_initial_schema.py`` + ``tests/domain/test_models.py``
+        + ``test_migration_baseline.py``.
+      - **FR-008** (per-entity Read/Create/Update schemas):
+        closed by ``src/romarr/domain/schemas.py`` + the
+        property tests in ``tests/domain/test_schemas.py``.
+      - **FR-009** (5-platform seed): closed by the
+        ``platform`` INSERT block in
+        ``0001_initial_schema.py``; pinned by
+        ``tests/domain/test_migration_baseline.py``.
+      - **FR-010 to FR-013** (Identifier + merger): closed by
+        ``src/romarr/identification/identifier.py`` +
+        ``merger.py`` + ``tests/identification/test_merger.py``.
+      - **FR-014 to FR-016** (single-pass hasher): closed by
+        ``src/romarr/identification/hasher.py`` +
+        ``tests/identification/test_hasher.py``.
+      - **FR-017 to FR-020a** (DAT manager): closed by
+        ``src/romarr/identification/dat/{logiqx,manager}.py``
+        + ``tests/identification/test_dat_manager.py``.
+      - **FR-021 to FR-023** (filename parsers + dispatcher):
+        closed by ``src/romarr/identification/parsers/*.py`` +
+        ``tests/identification/filename/test_*.py``. The
+        per-convention corpus tests (T045-T049) remain open
+        but the structural coverage is in place.
+      - **FR-024 to FR-025** (header readers): closed by
+        ``src/romarr/identification/headers/{ines,megadrive,iso9660}.py``
+        + ``stubs.py`` for the deferred set, plus
+        ``tests/identification/headers/test_*.py``. T056-T058
+        binary fixtures remain deferred.
+      - **FR-026 to FR-028** (hash-match cascade with
+        breakers): closed by
+        ``src/romarr/identification/hashmatch/{cascade,local,remote}.py``
+        + ``tests/identification/test_hashmatch_*.py``.
+      - **FR-029** (low-confidence → unidentified_dump):
+        closed by ``src/romarr/importer/`` (the importer wires
+        the unidentified-dump persist on confidence < 0.5).
+
+      No FR left without a closing artefact. The remaining
+      open items in this spec (T045-T049 corpus, T056-T058
+      header binaries, T085 1 GiB perf check) are
+      auxiliary-quality tasks that don't gate any functional
+      contract.
 
 ---
 

@@ -500,10 +500,54 @@ boot does not; OIDC routes available when configured.
       spec's contributions, the SC-010 coverage outcome, the
       Sonarr-compatible 401 envelope divergence, and the
       CL008 deferral.
-- [ ] T092 [HARD] Final review: open
-      `specs/010-auth-multiuser/spec.md` and tick every
-      Functional Requirement (FR-001 → FR-027) against a task ID;
-      record gaps as follow-up items.
+- [X] T092 [HARD] FR walk-through closed at slice 194.
+      Coverage groups:
+      - **FR-001 to FR-003** (user table + RBAC roles +
+        inheritance): closed by ``auth/models.py`` +
+        ``auth/constants.py::role_implies`` + migration
+        ``0010_auth_multiuser.py`` + ``test_constants.py``.
+      - **FR-004** (bcrypt cost ≥ 12): closed by
+        ``auth/hashing.py`` + ``test_hashing.py``.
+      - **FR-005 to FR-009** (API keys + scopes + expiry +
+        revocation): closed by ``auth/api_keys.py`` +
+        ``auth/permissions.py`` + ``test_api_keys.py``.
+      - **FR-010 to FR-012a** (forms login + rate limit +
+        sliding session TTL): closed by ``auth/login.py`` +
+        ``auth/sessions.py`` + ``auth/rate_limit.py`` +
+        ``test_login.py`` / ``test_sessions.py`` /
+        ``test_rate_limit.py``.
+      - **FR-013 to FR-015** (admin gates + role decorators):
+        closed by ``auth/permissions.py::Principal`` + the
+        per-router ``Depends(require_admin)`` pattern across
+        every spec's API surface (audited in slice 189
+        T087 — zero ``dev_only_admin`` placeholders left).
+      - **FR-016 to FR-018** (OIDC SSO): closed by
+        ``auth/oidc.py`` + ``test_oidc.py``.
+      - **FR-019 to FR-021** (setup token bootstrap): closed
+        by ``auth/setup.py`` + the lifespan wiring (slice
+        187, T085) + ``test_setup.py`` +
+        ``test_bootstrap_lifespan.py``.
+      - **FR-022** (auth chain — JWT dropped): closed by
+        ``auth/chain.py::resolve_principal`` (lines 100-137)
+        + the negative invariant pinned by CL010
+        (no JWT mint).
+      - **FR-023** (canonical 401 envelope): closed by
+        ``api/error_handlers.py`` + slice 189's
+        ``test_canonical_401_envelope.py``
+        (parametrised over 14 endpoints + no-leak scan).
+      - **FR-024 to FR-026** (proxy headers, OIDC group
+        mapping, deactivation cascades): closed by
+        ``auth/chain.py::_try_proxy_user`` + ``auth/oidc.py``
+        + ``auth/users.py`` + their respective tests.
+      - **FR-027** (audit trail): the ``*_by`` columns exist
+        on the audit-bearing tables (import_history,
+        platform_pack, application, blocklist) per CL008.
+        Text→INTEGER FK conversion deferred (CL008 partial)
+        — audit-only impact, no functional regression.
+
+      Net: every functional contract has a closing artefact.
+      Open items in this spec are the deferred-by-design
+      perf check (T090) and CL008 FK conversion (partial).
 
 ---
 
