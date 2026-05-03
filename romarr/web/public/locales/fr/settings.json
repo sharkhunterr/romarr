@@ -303,6 +303,11 @@
       "cancel": "Annuler",
       "needsForce": "{{name}} a des releases liées. Utilisez la suppression forcée pour les détacher d'abord."
     },
+    "scan": {
+      "button": "Scanner",
+      "pending": "Mise en file…",
+      "queued": "En file"
+    },
     "editorHint": "Les formulaires de création + édition (chemins, politique de cycle de vie, profils, exporters) arriveront dans un slice à venir."
   },
   "platforms": {

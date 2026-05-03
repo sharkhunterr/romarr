@@ -15,6 +15,7 @@ import {
   useDeleteLibrary,
   type Library,
 } from "@/lib/api/queries/libraries";
+import { useTriggerCommand } from "@/lib/api/queries/system";
 
 interface LibraryRowProps {
   library: Library;
@@ -47,6 +48,7 @@ export function LibraryRow(props: LibraryRowProps): ReactElement {
   const { library } = props;
   const { t } = useTranslation("settings");
   const del = useDeleteLibrary();
+  const scan = useTriggerCommand();
   const [confirming, setConfirming] = useState(false);
   const [needsForce, setNeedsForce] = useState(false);
 
@@ -152,7 +154,29 @@ export function LibraryRow(props: LibraryRowProps): ReactElement {
         )}
       </div>
 
-      <div className="mt-3">
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() =>
+            scan.mutate({ name: "RescanLibrary", libraryId: library.id })
+          }
+          disabled={scan.isPending}
+          className={[
+            "min-h-[36px] rounded-md border border-zinc-700 px-3 text-xs font-medium",
+            "text-zinc-200 hover:bg-zinc-800",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+            "disabled:cursor-not-allowed disabled:opacity-60",
+          ].join(" ")}
+          title={
+            scan.isError && scan.error?.message ? scan.error.message : undefined
+          }
+        >
+          {scan.isPending
+            ? t("mediaManagement.scan.pending")
+            : scan.isSuccess && scan.variables?.libraryId === library.id
+              ? t("mediaManagement.scan.queued")
+              : t("mediaManagement.scan.button")}
+        </button>
         <button
           type="button"
           onClick={() => setConfirming(true)}

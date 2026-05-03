@@ -303,6 +303,11 @@
       "cancel": "Cancel",
       "needsForce": "{{name}} has bound Releases. Use force-delete to detach them first."
     },
+    "scan": {
+      "button": "Scan now",
+      "pending": "Queuing…",
+      "queued": "Queued"
+    },
     "editorHint": "Library create + edit forms (paths, lifecycle policy, profile bindings, exporter wiring) land in a follow-up slice."
   },
   "platforms": {
