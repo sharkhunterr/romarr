@@ -15,6 +15,18 @@
       "all": "Toutes les plateformes"
     }
   },
+  "bulk": {
+    "missingSearch": {
+      "idle": "Rechercher tous les manquants",
+      "pending": "Mise en file…",
+      "success": "En file"
+    },
+    "cutoffSearch": {
+      "idle": "Rechercher tous les cutoff",
+      "pending": "Mise en file…",
+      "success": "En file"
+    }
+  },
   "missing": {
     "loadError": "Impossible de charger les releases manquantes",
     "empty": {

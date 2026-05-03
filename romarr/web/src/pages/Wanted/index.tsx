@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { usePlatforms } from "@/lib/api/queries/platforms";
+import { useTriggerCommand } from "@/lib/api/queries/system";
 import {
   useWantedCutoff,
   useWantedMissing,
@@ -28,6 +29,51 @@ import { ReleaseRow } from "./ReleaseRow";
 
 const ALL_PLATFORMS = "all" as const;
 type PlatformFilter = number | typeof ALL_PLATFORMS;
+
+interface BulkSearchButtonProps {
+  /** Sonarr-shape command name (MissingSearch / CutoffSearch). */
+  command: "MissingSearch" | "CutoffSearch";
+  label: string;
+  pendingLabel: string;
+  successLabel: string;
+}
+
+function BulkSearchButton(props: BulkSearchButtonProps): ReactElement {
+  const trigger = useTriggerCommand();
+  const onClick = (): void => {
+    trigger.mutate({ name: props.command });
+  };
+  const label = trigger.isPending
+    ? props.pendingLabel
+    : trigger.isSuccess
+      ? props.successLabel
+      : props.label;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={trigger.isPending}
+      className={[
+        "inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5",
+        "text-xs font-medium ring-1 ring-inset",
+        "bg-brand/20 text-brand ring-brand/40",
+        "transition-colors hover:bg-brand/30",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+        "disabled:cursor-not-allowed disabled:opacity-60",
+      ].join(" ")}
+      title={
+        trigger.isError && trigger.error?.message
+          ? trigger.error.message
+          : undefined
+      }
+    >
+      <span aria-hidden="true">
+        {trigger.isPending ? "⏳" : trigger.isSuccess ? "✓" : "🔎"}
+      </span>
+      <span>{label}</span>
+    </button>
+  );
+}
 
 type Tab = "missing" | "cutoff";
 
@@ -176,33 +222,51 @@ export function WantedPage(): ReactElement {
         />
       </div>
 
-      <label className="mb-4 block md:max-w-xs">
-        <span className="sr-only">{t("filters.platform.label")}</span>
-        <select
-          value={platformFilter === ALL_PLATFORMS ? "" : String(platformFilter)}
-          onChange={(e) => {
-            const v = e.target.value;
-            setPlatformFilter(
-              v === "" ? ALL_PLATFORMS : Number.parseInt(v, 10),
-            );
-          }}
-          aria-label={t("filters.platform.label")}
-          disabled={!platforms.isSuccess}
-          className={[
-            "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
-            "ring-1 ring-inset ring-zinc-700",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-            "disabled:cursor-not-allowed disabled:opacity-60",
-          ].join(" ")}
-        >
-          <option value="">{t("filters.platform.all")}</option>
-          {platforms.data?.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center">
+        <label className="block md:max-w-xs md:flex-1">
+          <span className="sr-only">{t("filters.platform.label")}</span>
+          <select
+            value={platformFilter === ALL_PLATFORMS ? "" : String(platformFilter)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setPlatformFilter(
+                v === "" ? ALL_PLATFORMS : Number.parseInt(v, 10),
+              );
+            }}
+            aria-label={t("filters.platform.label")}
+            disabled={!platforms.isSuccess}
+            className={[
+              "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
+              "ring-1 ring-inset ring-zinc-700",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+              "disabled:cursor-not-allowed disabled:opacity-60",
+            ].join(" ")}
+          >
+            <option value="">{t("filters.platform.all")}</option>
+            {platforms.data?.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {tab === "missing" ? (
+          <BulkSearchButton
+            command="MissingSearch"
+            label={t("bulk.missingSearch.idle")}
+            pendingLabel={t("bulk.missingSearch.pending")}
+            successLabel={t("bulk.missingSearch.success")}
+          />
+        ) : (
+          <BulkSearchButton
+            command="CutoffSearch"
+            label={t("bulk.cutoffSearch.idle")}
+            pendingLabel={t("bulk.cutoffSearch.pending")}
+            successLabel={t("bulk.cutoffSearch.success")}
+          />
+        )}
+      </div>
 
       {tab === "missing" ? (
         <MissingTab platformId={platformId} />

@@ -15,6 +15,18 @@
       "all": "All platforms"
     }
   },
+  "bulk": {
+    "missingSearch": {
+      "idle": "Search all missing",
+      "pending": "Queuing…",
+      "success": "Queued"
+    },
+    "cutoffSearch": {
+      "idle": "Search all cutoff",
+      "pending": "Queuing…",
+      "success": "Queued"
+    }
+  },
   "missing": {
     "loadError": "Couldn't load missing releases",
     "empty": {
