@@ -36,6 +36,7 @@ export const SETTINGS_NAV_ENTRIES: readonly SettingsNavEntry[] = [
   { to: "/settings/platforms", slug: "platforms", emoji: "🎮" },
   { to: "/settings/connect", slug: "connect", emoji: "🔔", shipped: true },
   { to: "/settings/tags", slug: "tags", emoji: "🏷️", shipped: true },
+  { to: "/settings/unidentified", slug: "unidentified", emoji: "❓", shipped: true },
   { to: "/settings/ui", slug: "ui", emoji: "🎨", shipped: true },
   { to: "/settings/general", slug: "general", emoji: "⚙️" },
 ];

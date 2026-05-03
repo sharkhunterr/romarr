@@ -14,6 +14,7 @@
     "platforms": "Plateformes",
     "connect": "Notifications",
     "tags": "Étiquettes",
+    "unidentified": "Non identifiés",
     "ui": "Interface",
     "general": "Général"
   },
@@ -251,6 +252,43 @@
     "rss": "RSS",
     "auto": "Auto",
     "interactive": "Interactif"
+  },
+  "unidentified": {
+    "title": "Non identifiés",
+    "subtitle": "Fichiers que l'importer n'a pas pu identifier automatiquement. Associez chacun à un Jeu + Release, ou supprimez la ligne (le fichier sur disque est préservé).",
+    "empty": {
+      "title": "Aucun fichier non identifié",
+      "body": "Quand l'importer échoue à identifier un fichier avec confiance, il atterrit ici pour le triage opérateur."
+    },
+    "rejection": {
+      "label": "Raison"
+    },
+    "size": "{{value}}",
+    "attempts_one": "{{count}} tentative",
+    "attempts_other": "{{count}} tentatives",
+    "actions": {
+      "match": "Associer…",
+      "delete": "Supprimer",
+      "deleteConfirmTitle": "Supprimer cette entrée ?",
+      "deleteConfirmBody": "Le fichier source sur disque n'est PAS touché. Seule la ligne de file d'attente est supprimée.",
+      "deleteConfirm": "Supprimer",
+      "deleteCancel": "Annuler"
+    },
+    "match": {
+      "modalTitle": "Associer {{filename}}",
+      "step1": "Choisir un jeu",
+      "step2": "Choisir une release",
+      "searchPlaceholder": "Chercher un jeu par titre…",
+      "noResults": "Aucun jeu pour « {{q}} »",
+      "typeToSearch": "Tapez au moins un caractère pour rechercher.",
+      "noReleases": "Ce jeu n'a aucune Release. Créez-en une via la page Détail Jeu (bientôt).",
+      "submit": "Importer cette association",
+      "submitting": "Import en cours…",
+      "cancel": "Annuler",
+      "back": "Retour",
+      "successTitle": "Importé",
+      "successBody": "{{filename}} est désormais enregistré sous {{game}} ({{release}})."
+    }
   },
   "tags": {
     "title": "Étiquettes",

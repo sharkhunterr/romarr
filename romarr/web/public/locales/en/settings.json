@@ -14,6 +14,7 @@
     "platforms": "Platforms",
     "connect": "Connect",
     "tags": "Tags",
+    "unidentified": "Unidentified",
     "ui": "UI",
     "general": "General"
   },
@@ -251,6 +252,43 @@
     "rss": "RSS",
     "auto": "Auto",
     "interactive": "Interactive"
+  },
+  "unidentified": {
+    "title": "Unidentified",
+    "subtitle": "Files the importer couldn't auto-identify. Match each one to a Game + Release, or delete the row (the file on disk is preserved).",
+    "empty": {
+      "title": "No unidentified dumps",
+      "body": "When the importer fails to identify a file with confidence, it lands here for operator triage."
+    },
+    "rejection": {
+      "label": "Reason"
+    },
+    "size": "{{value}}",
+    "attempts_one": "{{count}} attempt",
+    "attempts_other": "{{count}} attempts",
+    "actions": {
+      "match": "Match…",
+      "delete": "Delete",
+      "deleteConfirmTitle": "Remove this entry?",
+      "deleteConfirmBody": "The source file on disk is NOT touched. Only the queue row is removed.",
+      "deleteConfirm": "Remove",
+      "deleteCancel": "Cancel"
+    },
+    "match": {
+      "modalTitle": "Match {{filename}}",
+      "step1": "Pick a game",
+      "step2": "Pick a release",
+      "searchPlaceholder": "Search games by title…",
+      "noResults": "No games match \"{{q}}\"",
+      "typeToSearch": "Type at least one character to search.",
+      "noReleases": "This game has no Releases yet. Create one first via the Game Detail page (coming soon).",
+      "submit": "Import as match",
+      "submitting": "Importing…",
+      "cancel": "Cancel",
+      "back": "Back",
+      "successTitle": "Imported",
+      "successBody": "{{filename}} is now registered against {{game}} ({{release}})."
+    }
   },
   "tags": {
     "title": "Tags",

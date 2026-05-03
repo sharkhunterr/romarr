@@ -44,6 +44,7 @@ import { SettingsLayout } from "@/pages/Settings/SettingsLayout";
 import { SettingsPlaceholder } from "@/pages/Settings/SettingsPlaceholder";
 import { TagsPage } from "@/pages/Settings/Tags";
 import { SettingsUiPage } from "@/pages/Settings/Ui";
+import { UnidentifiedPage } from "@/pages/Settings/Unidentified";
 import { SystemPage } from "@/pages/System";
 import { WantedPage } from "@/pages/Wanted";
 
@@ -89,6 +90,7 @@ const router = createBrowserRouter([
                 element: <MetadataSourcesPage />,
               },
               { path: "profiles", element: <ProfilesPage /> },
+              { path: "unidentified", element: <UnidentifiedPage /> },
               { path: ":sub", element: <SettingsPlaceholder /> },
             ],
           },
