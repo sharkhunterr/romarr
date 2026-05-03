@@ -8,6 +8,7 @@
  */
 
 import { type ReactElement } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { CoverImage } from "@/components/rom";
@@ -19,6 +20,7 @@ interface GameCardProps {
 }
 
 export function GameCard(props: GameCardProps): ReactElement {
+  const { t } = useTranslation("library");
   const { game } = props;
   const byId = usePlatformsById();
   const platform = byId.get(game.platform_id);
@@ -33,20 +35,46 @@ export function GameCard(props: GameCardProps): ReactElement {
     <Link
       to={`/game/${game.id}`}
       className={[
-        "group flex flex-col gap-2 rounded-md border border-zinc-800",
+        "group relative flex flex-col gap-2 rounded-md border border-zinc-800",
         "bg-zinc-900/40 p-2",
         "hover:border-brand/40 hover:bg-zinc-900",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
         "transition-colors",
       ].join(" ")}
+      aria-label={
+        game.monitored
+          ? game.title
+          : t("card.unmonitoredAria", { title: game.title })
+      }
     >
-      <CoverImage
-        src={game.cover_path ?? null}
-        alt={game.title}
-        sizeClassName="aspect-[3/4] w-full"
-      />
+      <div className="relative">
+        <CoverImage
+          src={game.cover_path ?? null}
+          alt={game.title}
+          sizeClassName="aspect-[3/4] w-full"
+        />
+        {!game.monitored && (
+          <span
+            aria-hidden="true"
+            title={t("card.unmonitoredTooltip")}
+            className={[
+              "absolute right-1 top-1 flex h-5 w-5 items-center justify-center",
+              "rounded-full bg-zinc-950/80 text-[0.7rem] ring-1 ring-inset ring-zinc-700",
+              "backdrop-blur-sm",
+            ].join(" ")}
+          >
+            💤
+          </span>
+        )}
+      </div>
       <div className="min-w-0 space-y-1">
-        <p className="line-clamp-2 text-xs font-medium text-zinc-100 group-hover:text-brand">
+        <p
+          className={[
+            "line-clamp-2 text-xs font-medium",
+            "group-hover:text-brand",
+            game.monitored ? "text-zinc-100" : "text-zinc-400",
+          ].join(" ")}
+        >
           {game.title}
         </p>
         <div className="flex items-center justify-between gap-1 font-mono text-[0.55rem] text-zinc-500">

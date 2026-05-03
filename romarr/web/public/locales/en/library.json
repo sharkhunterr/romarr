@@ -39,5 +39,9 @@
   "loadError": "Couldn't load games",
   "platformBadgeFallback": "?",
   "count_one": "{{count}} game",
-  "count_other": "{{count}} games"
+  "count_other": "{{count}} games",
+  "card": {
+    "unmonitoredTooltip": "Not monitored — Romarr won't search for upgrades",
+    "unmonitoredAria": "{{title}} (not monitored)"
+  }
 }

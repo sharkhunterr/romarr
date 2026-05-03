@@ -39,5 +39,9 @@
   "loadError": "Impossible de charger les jeux",
   "platformBadgeFallback": "?",
   "count_one": "{{count}} jeu",
-  "count_other": "{{count}} jeux"
+  "count_other": "{{count}} jeux",
+  "card": {
+    "unmonitoredTooltip": "Non suivi — Romarr ne cherchera pas d'upgrade",
+    "unmonitoredAria": "{{title}} (non suivi)"
+  }
 }
