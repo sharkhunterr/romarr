@@ -156,6 +156,135 @@ async def test_list_games_platform_filter(
     assert "Sonic B" not in titles
 
 
+async def _seed_game_with_metadata(
+    api_engine: AsyncEngine,
+    *,
+    title: str,
+    genres: list[str] | None = None,
+    regions: list[str] | None = None,
+    release_year: int | None = None,
+) -> int:
+    """Seed a Platform + Game (+ a single Release if regions are
+    provided) with optional genre / region / release_date
+    metadata (slice 265 — genre/region/year filter tests).
+    Region lives on Release, not Game — a single Release with
+    the requested regions is created when ``regions`` is
+    non-empty. Returns the new ``game_id``."""
+    from datetime import datetime, timezone
+
+    global _seed_counter
+    _seed_counter += 1
+    suffix = _seed_counter
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        platform = Platform(
+            slug=f"megadrive-meta-{suffix}", name="Mega Drive"
+        )
+        session.add(platform)
+        await session.flush()
+        game = Game(
+            platform_id=platform.id,
+            slug=f"meta-{suffix}",
+            title=title,
+            genres=genres or [],
+            release_date=(
+                datetime(release_year, 6, 1, tzinfo=timezone.utc)
+                if release_year is not None
+                else None
+            ),
+        )
+        session.add(game)
+        await session.flush()
+        if regions:
+            release = Release(
+                game_id=game.id,
+                name=f"{title} ({'/'.join(regions)})",
+                regions=regions,
+            )
+            session.add(release)
+        await session.commit()
+        return int(game.id)
+
+
+@pytest.mark.asyncio
+async def test_list_games_genre_filter(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Genre filter matches case-insensitive substring against
+    ``Game.genres`` (slice 265)."""
+    await _seed_game_with_metadata(
+        api_engine, title="Sonic Plat", genres=["Platformer", "Action"]
+    )
+    await _seed_game_with_metadata(
+        api_engine, title="Streets RPG", genres=["RPG"]
+    )
+
+    response = await authed_client.get("/api/v3/game?genre=Platformer")
+    assert response.status_code == 200
+    titles = {row["title"] for row in response.json()}
+    assert "Sonic Plat" in titles
+    assert "Streets RPG" not in titles
+
+
+@pytest.mark.asyncio
+async def test_list_games_genre_filter_case_insensitive(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    await _seed_game_with_metadata(
+        api_engine, title="Sonic Plat", genres=["Platformer"]
+    )
+    response = await authed_client.get("/api/v3/game?genre=platformer")
+    assert response.status_code == 200
+    titles = {row["title"] for row in response.json()}
+    assert "Sonic Plat" in titles
+
+
+@pytest.mark.asyncio
+async def test_list_games_region_filter(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    await _seed_game_with_metadata(
+        api_engine, title="Sonic USA", regions=["US", "EU"]
+    )
+    await _seed_game_with_metadata(
+        api_engine, title="Sonic JPN", regions=["JP"]
+    )
+
+    response = await authed_client.get("/api/v3/game?region=US")
+    assert response.status_code == 200
+    titles = {row["title"] for row in response.json()}
+    assert "Sonic USA" in titles
+    assert "Sonic JPN" not in titles
+
+
+@pytest.mark.asyncio
+async def test_list_games_year_filter(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    await _seed_game_with_metadata(
+        api_engine, title="Sonic 91", release_year=1991
+    )
+    await _seed_game_with_metadata(
+        api_engine, title="Sonic 92", release_year=1992
+    )
+
+    response = await authed_client.get("/api/v3/game?year=1991")
+    assert response.status_code == 200
+    titles = {row["title"] for row in response.json()}
+    assert "Sonic 91" in titles
+    assert "Sonic 92" not in titles
+
+
+@pytest.mark.asyncio
+async def test_list_games_year_filter_rejects_out_of_range(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    response = await authed_client.get("/api/v3/game?year=1899")
+    assert response.status_code == 422
+    response = await authed_client.get("/api/v3/game?year=2200")
+    assert response.status_code == 422
+
+
 @pytest.mark.asyncio
 async def test_read_game_404_when_missing(
     authed_client: httpx.AsyncClient,

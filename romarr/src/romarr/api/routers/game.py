@@ -289,6 +289,41 @@ async def list_games(
             ),
         ),
     ] = None,
+    genre: Annotated[
+        str | None,
+        Query(
+            description=(
+                "Restrict to games carrying this genre tag in "
+                "``Game.genres`` (case-insensitive exact match against "
+                "any element of the JSON list)."
+            ),
+            max_length=64,
+        ),
+    ] = None,
+    region: Annotated[
+        str | None,
+        Query(
+            description=(
+                "Restrict to games carrying this region code in "
+                "``Game.regions`` (case-insensitive exact match against "
+                "any element of the JSON list — e.g. ``US``, ``EU``, "
+                "``JP``)."
+            ),
+            max_length=8,
+        ),
+    ] = None,
+    year: Annotated[
+        int | None,
+        Query(
+            ge=1970,
+            le=2100,
+            description=(
+                "Restrict to games whose ``release_date`` falls in "
+                "this calendar year. Year-bounded between 1970 (the "
+                "oldest plausible commercial release) and 2100."
+            ),
+        ),
+    ] = None,
     sort: Annotated[
         GameSortKey,
         Query(
@@ -349,6 +384,74 @@ async def list_games(
         stmt = stmt.where(normalised.like(f"%,{tag_id},%"))
     if monitored is not None:
         stmt = stmt.where(Game.monitored.is_(monitored))
+    if genre is not None and genre.strip():
+        # Game.genres is a JSON list of strings. Same normalisation
+        # trick as ``tag_id``: cast to text, drop quotes /
+        # brackets / whitespace, then look for ``,<value>,`` with
+        # case-insensitive comparison.
+        normalised = func.replace(
+            func.replace(
+                func.replace(
+                    func.replace(
+                        func.lower(cast(Game.genres, String)),
+                        " ",
+                        "",
+                    ),
+                    '"',
+                    "",
+                ),
+                "[",
+                ",",
+            ),
+            "]",
+            ",",
+        )
+        stmt = stmt.where(normalised.like(f"%,{genre.strip().lower()},%"))
+    if region is not None and region.strip():
+        # ``Region`` lives on Release, not Game (a Game can have a
+        # USA + EUR + JPN trio of releases). Match against the
+        # JSON list on any Release via a correlated EXISTS clause,
+        # using the same delimiter normalisation the tag filter
+        # uses.
+        normalised_regions = func.replace(
+            func.replace(
+                func.replace(
+                    func.replace(
+                        func.upper(cast(Release.regions, String)),
+                        " ",
+                        "",
+                    ),
+                    '"',
+                    "",
+                ),
+                "[",
+                ",",
+            ),
+            "]",
+            ",",
+        )
+        release_has_region = (
+            select(Release.id)
+            .where(
+                Release.game_id == Game.id,
+                normalised_regions.like(f"%,{region.strip().upper()},%"),
+            )
+            .exists()
+        )
+        stmt = stmt.where(release_has_region)
+    if year is not None:
+        # Game.release_date is timezone-aware DateTime; bound the
+        # filter as a half-open interval [year-01-01, (year+1)-01-01)
+        # so the predicate stays index-friendly on Postgres.
+        from datetime import datetime as _dt
+        from datetime import timezone as _tz
+        year_start = _dt(year, 1, 1, tzinfo=_tz.utc)
+        year_end = _dt(year + 1, 1, 1, tzinfo=_tz.utc)
+        stmt = stmt.where(
+            Game.release_date.is_not(None),
+            Game.release_date >= year_start,
+            Game.release_date < year_end,
+        )
     if q is not None and q.strip():
         # Case-insensitive substring match. SQLite + Postgres
         # both honor `lower(title) LIKE lower('%term%')` so this

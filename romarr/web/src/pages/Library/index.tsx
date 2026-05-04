@@ -80,6 +80,15 @@ function parseDirectionParam(raw: string | null): SortDirection {
   return raw === "desc" ? "desc" : "asc";
 }
 
+function parseYearParam(raw: string | null): number | null {
+  if (raw === null || raw === "") return null;
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed < 1970 || parsed > 2100) {
+    return null;
+  }
+  return parsed;
+}
+
 export function LibraryPage(): ReactElement {
   const { t } = useTranslation("library");
   const [searchParams, setSearchParams] = useSearchParams();
@@ -92,6 +101,9 @@ export function LibraryPage(): ReactElement {
   const tagFilter = parseTagParam(searchParams.get("tag"));
   const libraryFilter = parseLibraryParam(searchParams.get("library"));
   const monitoredOnly = searchParams.get("monitoredOnly") === "true";
+  const genreFilter = searchParams.get("genre") ?? "";
+  const regionFilter = searchParams.get("region") ?? "";
+  const yearFilter = parseYearParam(searchParams.get("year"));
   const sortKey = parseSortParam(searchParams.get("sort"));
   const sortDirection = parseDirectionParam(searchParams.get("direction"));
 
@@ -137,6 +149,52 @@ export function LibraryPage(): ReactElement {
         const params = new URLSearchParams(prev);
         if (next) params.set("monitoredOnly", "true");
         else params.delete("monitoredOnly");
+        return params;
+      },
+      { replace: false },
+    );
+  };
+
+  const setGenreFilter = (next: string): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        const trimmed = next.trim();
+        if (trimmed === "") params.delete("genre");
+        else params.set("genre", trimmed);
+        return params;
+      },
+      { replace: false },
+    );
+  };
+
+  const setRegionFilter = (next: string): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        const trimmed = next.trim().toUpperCase();
+        if (trimmed === "") params.delete("region");
+        else params.set("region", trimmed);
+        return params;
+      },
+      { replace: false },
+    );
+  };
+
+  const setYearFilter = (next: string): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === "") {
+          params.delete("year");
+        } else {
+          const parsed = Number.parseInt(next, 10);
+          if (Number.isFinite(parsed) && parsed >= 1970 && parsed <= 2100) {
+            params.set("year", String(parsed));
+          } else {
+            params.delete("year");
+          }
+        }
         return params;
       },
       { replace: false },
@@ -203,6 +261,9 @@ export function LibraryPage(): ReactElement {
     if (tagFilter !== ALL_TAGS) out.tagId = tagFilter;
     if (libraryFilter !== ALL_LIBRARIES) out.libraryId = libraryFilter;
     if (monitoredOnly) out.monitored = true;
+    if (genreFilter !== "") out.genre = genreFilter;
+    if (regionFilter !== "") out.region = regionFilter;
+    if (yearFilter !== null) out.year = yearFilter;
     return out;
   }, [
     urlQuery,
@@ -210,6 +271,9 @@ export function LibraryPage(): ReactElement {
     tagFilter,
     libraryFilter,
     monitoredOnly,
+    genreFilter,
+    regionFilter,
+    yearFilter,
     sortKey,
     sortDirection,
   ]);
@@ -221,7 +285,10 @@ export function LibraryPage(): ReactElement {
     platformFilter !== ALL_PLATFORMS ||
     tagFilter !== ALL_TAGS ||
     libraryFilter !== ALL_LIBRARIES ||
-    monitoredOnly;
+    monitoredOnly ||
+    genreFilter !== "" ||
+    regionFilter !== "" ||
+    yearFilter !== null;
 
   const resetFilters = (): void => {
     // Clear the local query input so the debounced URL writer
@@ -237,6 +304,9 @@ export function LibraryPage(): ReactElement {
         params.delete("tag");
         params.delete("library");
         params.delete("monitoredOnly");
+        params.delete("genre");
+        params.delete("region");
+        params.delete("year");
         return params;
       },
       { replace: false },
@@ -462,6 +532,72 @@ export function LibraryPage(): ReactElement {
               {sortDirection === "asc" ? "↑" : "↓"}
             </button>
           </div>
+
+          <label className="block md:w-32">
+            <span className="sr-only">{t("filters.genre.label")}</span>
+            <input
+              type="text"
+              defaultValue={genreFilter}
+              onBlur={(e) => setGenreFilter(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setGenreFilter((e.target as HTMLInputElement).value);
+                }
+              }}
+              placeholder={t("filters.genre.placeholder")}
+              aria-label={t("filters.genre.label")}
+              className={[
+                "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
+                "ring-1 ring-inset ring-zinc-700",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+              ].join(" ")}
+            />
+          </label>
+
+          <label className="block md:w-24">
+            <span className="sr-only">{t("filters.region.label")}</span>
+            <input
+              type="text"
+              defaultValue={regionFilter}
+              onBlur={(e) => setRegionFilter(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setRegionFilter((e.target as HTMLInputElement).value);
+                }
+              }}
+              placeholder={t("filters.region.placeholder")}
+              aria-label={t("filters.region.label")}
+              maxLength={4}
+              className={[
+                "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm uppercase text-zinc-100",
+                "ring-1 ring-inset ring-zinc-700",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+              ].join(" ")}
+            />
+          </label>
+
+          <label className="block md:w-24">
+            <span className="sr-only">{t("filters.year.label")}</span>
+            <input
+              type="number"
+              defaultValue={yearFilter ?? ""}
+              onBlur={(e) => setYearFilter(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setYearFilter((e.target as HTMLInputElement).value);
+                }
+              }}
+              placeholder={t("filters.year.placeholder")}
+              aria-label={t("filters.year.label")}
+              min={1970}
+              max={2100}
+              className={[
+                "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
+                "ring-1 ring-inset ring-zinc-700",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+              ].join(" ")}
+            />
+          </label>
 
           <button
             type="button"

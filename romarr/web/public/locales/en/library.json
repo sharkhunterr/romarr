@@ -22,9 +22,21 @@
       "off": "Monitored only",
       "on": "✓ Monitored only"
     },
+    "genre": {
+      "label": "Filter by genre",
+      "placeholder": "Genre"
+    },
+    "region": {
+      "label": "Filter by region (US / EU / JP)",
+      "placeholder": "Region"
+    },
+    "year": {
+      "label": "Filter by release year",
+      "placeholder": "Year"
+    },
     "reset": {
       "label": "✕ Clear filters",
-      "aria": "Clear every active filter (search, platform, library, tag, monitored)"
+      "aria": "Clear every active filter (search, platform, library, tag, monitored, genre, region, year)"
     }
   },
   "fab": {

@@ -629,13 +629,27 @@ invalidations.
       gameId/cacheKey props (slice 159), tag dots, monitor
       sleep badge, platform pill. Selection state added in
       slice 151; long-press wired in slice 158.
-- [~] T070 [P] [P-LIB] Filter row shipped inline in
-      ``Library/index.tsx`` (slice 100, 156, 166). Debounced
-      search + platform + library + tag + monitored toggle
-      with URL persistence. Genre / year / region filters
-      remain unwired — they need richer Game queries the
-      backend doesn't expose yet (no genre / year / region
-      indices on /api/v3/game).
+- [X] T070 [P] [P-LIB] **Slice 265.** All 8 documented filters
+      shipped: q (debounced) + platform + library + tag +
+      monitored + genre + region + year. Backend
+      ``/api/v3/game`` accepts ``genre`` (case-insensitive
+      substring against ``Game.genres``), ``region``
+      (case-insensitive against ``Release.regions`` via
+      correlated EXISTS — region lives on Release, not Game,
+      because one Game can have USA + EUR + JPN trios), and
+      ``year`` (half-open ``[year-01-01, (year+1)-01-01)``
+      bound on ``Game.release_date``, validated 1970-2100).
+      Library page exposes the three new fields as inline
+      inputs (text + uppercase region + numeric year), all
+      URL-persisted alongside the existing five and cleared by
+      ``filters.reset``. Backend tests:
+      ``test_list_games_genre_filter``,
+      ``test_list_games_genre_filter_case_insensitive``,
+      ``test_list_games_region_filter``,
+      ``test_list_games_year_filter``,
+      ``test_list_games_year_filter_rejects_out_of_range``
+      (5 new ``test_game.py`` tests, 100 game-router tests
+      passing).
 - [~] T071 [P-LIB] useGames wired (slice 88) with limit=200.
       TanStack Virtual NOT integrated yet — would be needed
       for the SC-002 60 fps on 10 000 items target. The

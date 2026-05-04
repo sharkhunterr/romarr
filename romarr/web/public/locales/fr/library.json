@@ -22,9 +22,21 @@
       "off": "Suivis uniquement",
       "on": "✓ Suivis uniquement"
     },
+    "genre": {
+      "label": "Filtrer par genre",
+      "placeholder": "Genre"
+    },
+    "region": {
+      "label": "Filtrer par région (US / EU / JP)",
+      "placeholder": "Région"
+    },
+    "year": {
+      "label": "Filtrer par année de sortie",
+      "placeholder": "Année"
+    },
     "reset": {
       "label": "✕ Effacer les filtres",
-      "aria": "Effacer tous les filtres actifs (recherche, plateforme, bibliothèque, étiquette, suivi)"
+      "aria": "Effacer tous les filtres actifs (recherche, plateforme, bibliothèque, étiquette, suivi, genre, région, année)"
     }
   },
   "fab": {

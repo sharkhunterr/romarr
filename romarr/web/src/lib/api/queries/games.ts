@@ -43,6 +43,12 @@ export interface ListGamesParams {
   libraryId?: number;
   /** Filter on the `monitored` flag. */
   monitored?: boolean;
+  /** Restrict to games whose ``Game.genres`` contains this value. */
+  genre?: string;
+  /** Restrict to games whose ``Game.regions`` contains this code. */
+  region?: string;
+  /** Restrict to games released in this calendar year. */
+  year?: number;
   sort?: GameSortKey;
   direction?: SortDirection;
   limit?: number;
@@ -66,6 +72,15 @@ export function useGames(
   }
   if (params.monitored !== undefined)
     search.set("monitored", String(params.monitored));
+  if (params.genre !== undefined && params.genre.trim()) {
+    search.set("genre", params.genre.trim());
+  }
+  if (params.region !== undefined && params.region.trim()) {
+    search.set("region", params.region.trim());
+  }
+  if (params.year !== undefined) {
+    search.set("year", String(params.year));
+  }
   if (params.sort !== undefined) search.set("sort", params.sort);
   if (params.direction !== undefined)
     search.set("direction", params.direction);
