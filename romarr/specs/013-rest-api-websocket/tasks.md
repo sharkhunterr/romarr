@@ -24,13 +24,15 @@ integration tests → command bus → Sonarr-shape probe → hardening.
 
 ## Phase 1: Scaffolding (`SCAF`)
 
-- [~] T001 [SCAF] ``openapi-spec-validator>=0.7`` shipped as
-      a dev dep (slice 174 verification). ``slowapi`` and
-      ``fastapi-csrf-protect`` did NOT ship — the rate-limit
-      and CSRF middleware were implemented from scratch in
+- [X] T001 [SCAF] ``openapi-spec-validator>=0.7`` shipped as
+      a dev dep (slice 174 verification). Closed as path-
+      divergence: ``slowapi`` and ``fastapi-csrf-protect``
+      were deliberately omitted — the rate-limit and CSRF
+      middleware shipped from scratch in
       ``api/middleware/`` to keep the dep surface minimal.
-      Re-evaluate if external rate-limit primitives become
-      worthwhile (e.g., distributed Redis-backed limits).
+      Functional equivalents are in place; re-evaluate if
+      external rate-limit primitives become worthwhile
+      (e.g., distributed Redis-backed limits).
 - [X] T002 [P] [SCAF] ``src/romarr/api/__init__.py`` exposes
       ``create_app`` via re-export from ``romarr.api.app``.
 - [X] T003 [P] [SCAF] Create `src/romarr/api/models.py` — `Tag`,
@@ -1137,14 +1139,14 @@ contributors, ROUTERS and WS split cleanly across them on Day 3.
       asserts each documented field exists; the
       "Sonarr-side fixture vs Romarr response" deltas are
       not tracked in CI.
-- [~] CL011 [P] **Disagree-by-design** with the spec.
-      ``api/openapi.py`` retains the BearerJwt security scheme
-      because Romarr's auth chain accepts upstream-issued
-      OIDC tokens for SSO — the OpenAPI doc has to advertise
-      that capability. Romarr never MINTS a JWT (CL010 of
-      spec 010 confirmed by grep), but it can VALIDATE one
-      from a configured OIDC provider. Dropping BearerJwt
-      from the doc would mislead callers.
+- [X] CL011 [P] Closed as **disagree-by-design** with the
+      spec. ``api/openapi.py`` retains the BearerJwt security
+      scheme because Romarr's auth chain accepts upstream-
+      issued OIDC tokens for SSO — the OpenAPI doc has to
+      advertise that capability. Romarr never MINTS a JWT
+      (CL010 of spec 010 confirmed by grep), but it can
+      VALIDATE one from a configured OIDC provider.
+      Dropping BearerJwt from the doc would mislead callers.
 - [X] CL012 [P] Login rate-limit aligned with spec 010
       FR-010a — ``api/middleware/rate_limit.py`` keys by IP
       for ``/auth/login``, ``/auth/setup``,

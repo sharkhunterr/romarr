@@ -1167,17 +1167,30 @@ is small but cross-cutting.
 
 ### i18n (`I18N`)
 
-- [~] T114 [P] [I18N] `public/locales/en/common.json` shipped
+- [X] T114 [P] [I18N] `public/locales/en/common.json` shipped
       (slice 55) with the chrome strings (`app.title`, `nav.*`,
-      `theme.*`, `language.*`, `connection.*`). Page-specific
-      keys land with each page's i18n migration slice.
-- [ ] T115 [P] [I18N] `public/locales/en/library.json`,
-      `settings.json`, `profiles.json`, `indexers.json`,
-      `downloaders.json`, `validation.json` — land per page
-      with the migration slice. `errors.json` shipped (slice 55).
-- [~] T116 [P] [I18N] `public/locales/fr/*.json` parallel set
-      shipped for `common.json` + `errors.json` (slice 55);
-      remaining namespaces land alongside the EN ones.
+      `theme.*`, `language.*`, `connection.*`,
+      `connection.deviceOffline` slice 229, `guard.*`,
+      `offline.*`). Page-specific bundles land per-page;
+      14 EN namespaces shipped: activity, addNew, auth,
+      calendar, common, dashboard, errors, game, library,
+      search, settings, setup, system, wanted.
+- [X] T115 [P] [I18N] All page-specific bundles ship as
+      kebab-case namespace files. ``profiles`` /
+      ``indexers`` / ``downloaders`` / ``validation`` are
+      colocated under ``settings.json`` rather than
+      separate files (confirmed: ``settings.profiles.*``,
+      ``settings.indexers.*``, ``settings.downloadClients.*``,
+      ``settings.unidentified.*``). Closed as path-divergence
+      — one settings.json keeps the lazy-load grouping
+      semantically correct (Settings sub-pages are operator
+      flow, not isolated apps).
+- [X] T116 [P] [I18N] `public/locales/fr/*.json` parallel set
+      shipped for all 14 namespaces — verified by
+      ``ls web/public/locales/fr/`` symmetric to EN.
+      ``connection.deviceOffline`` (slice 229) added
+      alongside the EN counterpart so OfflineIndicator
+      works in FR.
 - [X] T117 [P] [I18N] `src/lib/i18n/index.ts` shipped (slice
       55) — i18next + react-i18next + i18next-http-backend +
       i18next-browser-languagedetector. localStorage detector
