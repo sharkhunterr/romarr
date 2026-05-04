@@ -35,6 +35,7 @@ import { LoginPage } from "@/pages/Login";
 import { NotFoundPage } from "@/pages/placeholders";
 import { SetupPage } from "@/pages/Setup";
 import { ConnectPage } from "@/pages/Settings/Connect";
+import { DatSourcesPage } from "@/pages/Settings/DatSources";
 import { DownloadClientsPage } from "@/pages/Settings/DownloadClients";
 import { GeneralPage } from "@/pages/Settings/General";
 import { IndexersPage } from "@/pages/Settings/Indexers";
@@ -105,6 +106,7 @@ const router = createBrowserRouter([
                 path: "quality-definitions",
                 element: <QualityDefinitionsPage />,
               },
+              { path: "dat-sources", element: <DatSourcesPage /> },
               {
                 path: "media-management",
                 element: <MediaManagementPage />,

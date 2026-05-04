@@ -132,6 +132,22 @@
       "errorFallback": "Bascule échouée."
     }
   },
+  "datSources": {
+    "title": "Sources DAT",
+    "subtitle": "Bases DAT autoritaires chargées dans le cache de hash de Romarr. Les correspondances par hash contre ces entrées sont le signal d'identification le plus fiable.",
+    "loadError": "Impossible de charger les sources DAT",
+    "empty": {
+      "title": "Aucune source DAT chargée",
+      "body": "Déclenchez la tâche dat-update via Système > Tâches pour charger le premier bundle."
+    },
+    "refreshHint": "Relancez la tâche dat-update via Système > Tâches pour rafraîchir.",
+    "cols": {
+      "source": "Source",
+      "entries": "Entrées",
+      "platforms": "Plateformes",
+      "latestUpdate": "Dernière mise à jour"
+    }
+  },
   "qualityDefinitions": {
     "title": "Définitions de qualité",
     "subtitle": "Bornes de taille de fichier par plateforme. Les tailles min/max alimentent le filtre qualité du moteur de recherche et le plancher de l'importeur — les ré-encodages hors plage sont rejetés.",

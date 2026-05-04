@@ -36,6 +36,7 @@ from romarr.api.routers.cover import router as cover_router
 from romarr.api.routers.game import router as game_router
 from romarr.api.routers.history import router as history_router
 from romarr.api.routers.log import router as log_router
+from romarr.api.routers.dat_sources import router as dat_sources_router
 from romarr.api.routers.quality_definitions import (
     router as quality_definitions_router,
 )
@@ -428,6 +429,10 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     # read-only summary. Aggregates Platform → PlatformFormat
     # rows server-side so the UI doesn't fan out N+1 fetches.
     app.include_router(quality_definitions_router)
+    # Spec 014 T106 (slice 267) — Settings > DAT Sources read-only
+    # summary. Groups DatEntry rows by source so the operator can
+    # see which authoritative DAT databases are loaded.
+    app.include_router(dat_sources_router)
     # Spec 008 + 014 (slice 86) — Game/Release reads. Drives
     # the Frontend's manual-match Game picker (slice 84's
     # POST /unidentified/{id}/match needs a way to pick the

@@ -1052,18 +1052,17 @@ manageable; each ships ≥ 1 test + an implementation.
       (the `:sub` route) renders an EmptyState pointing at the
       slice that will wire each sub-page up. Tags (shipped slice
       51) lives under the same shell.
-- [~] T106 [P] [P-SET] The 12 sub-pages under
-      `src/pages/Settings/`. Shipped: Tags (slice 51), UI
-      (slice 56), Indexers (slice 60), Download Clients
-      (slice 61), Connect (slices 122-143), General, Media
-      Management, Metadata Sources, Platforms, Profiles,
-      QualityDefinitions (slice 266 — read-only summary backed
-      by new ``GET /api/v3/quality-definition`` aggregation
-      endpoint), Unidentified — 12 of 13 (Unidentified is a
-      bonus, not one of the 12 spec'd). Remaining: ``dat-sources``
-      still resolves through SettingsPlaceholder; needs its own
-      backend ``DatSourceConfig`` REST surface to ship as a full
-      page.
+- [X] T106 [P] [P-SET] **Slice 267 — every spec'd Settings
+      sub-page now resolves to a real page (no SettingsPlaceholder
+      left).** Tags (slice 51), UI (slice 56), Indexers (slice 60),
+      Download Clients (slice 61), Connect (slices 122-143),
+      General, Media Management, Metadata Sources, Platforms,
+      Profiles, QualityDefinitions (slice 266 — read-only summary
+      backed by ``GET /api/v3/quality-definition`` aggregation),
+      DatSources (slice 267 — DAT cache summary grouped by source
+      via ``GET /api/v3/dat-source``), plus the bonus Unidentified
+      page. The 12 spec'd surfaces + 1 bonus all wired in
+      ``App.tsx``.
 
       `src/pages/Settings/Indexers/index.tsx` shipped with
       `useIndexers` (list) + `useDeleteIndexer` + `useTestIndexer`

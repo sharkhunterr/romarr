@@ -132,6 +132,22 @@
       "errorFallback": "Toggle failed."
     }
   },
+  "datSources": {
+    "title": "DAT Sources",
+    "subtitle": "Authoritative DAT databases loaded into Romarr's hash cache. Hash matches against these entries are the highest-authority identification signal.",
+    "loadError": "Couldn't load DAT sources",
+    "empty": {
+      "title": "No DAT sources loaded yet",
+      "body": "Trigger the dat-update task under System > Tasks to ingest the first DAT bundle."
+    },
+    "refreshHint": "Re-run the dat-update task under System > Tasks to refresh.",
+    "cols": {
+      "source": "Source",
+      "entries": "Entries",
+      "platforms": "Platforms",
+      "latestUpdate": "Last updated"
+    }
+  },
   "qualityDefinitions": {
     "title": "Quality Definitions",
     "subtitle": "Per-platform file size bounds. Min/max bytes drive the search-engine quality gate and the importer's reject-too-small floor — re-encodes outside this range are dropped.",
