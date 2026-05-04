@@ -155,12 +155,19 @@ async def test_refresh_game_metadata_no_kwargs_means_all_games() -> None:
 
 @pytest.mark.asyncio
 async def test_library_scan_kwargs_select_target_library() -> None:
+    """Slice 209 wired LibraryScanAdapter to the real
+    ``full_scan``. Without a sessionmaker on the JobContext,
+    the adapter falls back to the documented stub-success
+    shape; with one, it walks the configured Libraries (covered
+    by the dedicated integration suite at
+    ``test_library_scan_adapter.py``)."""
     adapter = LibraryScanAdapter()
     context = _make_context(
         job_id="LibraryScan", parameters={"libraryId": 7}
     )
     result = await adapter.run(context)
-    assert "library_id=7" in result.summary["scope"]
+    assert result.summary["stub"] is True
+    assert result.summary["reason"] == "no sessionmaker"
 
 
 # ---------------------------------------------------------------------------

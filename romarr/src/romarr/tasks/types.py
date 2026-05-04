@@ -77,6 +77,13 @@ class JobContext(BaseModel):
     progress_callback: Callable[[int, int, str], None]
     cancellation_event: asyncio.Event
     parameters: dict[str, Any] = Field(default_factory=dict)
+    # Slice 210 — adapters that need to do real DB work (the
+    # scheduler-wired ones in ``adapters.py``) read this off
+    # the context with ``getattr(context, "sessionmaker",
+    # None)``; the scheduler threads its session_factory
+    # through here. Stays optional so existing tests that
+    # build a JobContext without the field keep working.
+    sessionmaker: Any = None
 
 
 class JobResult(BaseModel):

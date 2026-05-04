@@ -389,6 +389,11 @@ class SchedulerService:
             progress_callback=lambda _c, _t, _m: None,
             cancellation_event=cancellation_event,
             parameters=dict(parameters),
+            # Slice 210: thread the scheduler's session factory
+            # through so adapters wired in slices 178-209 can
+            # do real DB work instead of falling through to
+            # their stub branch when fired by the actual cron.
+            sessionmaker=self._session_factory,
         )
         # Register with the cancellation registry (when wired)
         # so the cancel-endpoint can signal this run by id.
