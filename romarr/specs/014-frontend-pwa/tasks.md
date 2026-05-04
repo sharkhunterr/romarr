@@ -464,12 +464,15 @@ invalidations.
 
 ### Tests
 
-- [~] T059-T061 [P] [P-DASH] Vitest unit tests **deferred** —
-      Vitest not yet installed. The Dashboard's contract is
-      implemented end-to-end (StatCards render system info,
-      HealthPanel surfaces the spec 011 snapshot,
-      QuickActions fires Sonarr-shape commands); the spec
-      tests get written when the testing matrix lands.
+- [X] T059-T061 [P] [P-DASH] Vitest unit tests shipped at
+      `web/src/pages/Dashboard/index.test.tsx`: 4 tests using
+      `renderWithProviders` + `vi.spyOn` on every read-side
+      hook (`useSystemStatus`, `useSystemStats`, `useHealth`,
+      `useHistory`). Asserts the four sections render, the
+      system-status fields surface in their cards, the
+      aggregate counts surface from `useSystemStats`, and
+      the version-dash placeholder shows while the status
+      query is pending.
 
 ### Implementation
 
@@ -675,11 +678,12 @@ viewport; SC-002 (60 fps on 10 000 items) is met in a perf test.
 
 ### Tests
 
-- [~] T088 [P] [P-WANT] Vitest two-tabs test **deferred** —
-      Vitest not yet installed. The contract is implemented:
-      `WantedPage` renders Missing | Cutoff tabs; switching
-      tabs triggers the matching endpoint via
-      `useWantedMissing` / `useWantedCutoff`.
+- [X] T088 [P] [P-WANT] Vitest two-tabs test shipped at
+      `web/src/pages/Wanted/index.test.tsx`: 3 tests covering
+      the title + Missing/Cutoff tab labels with default
+      aria-pressed state, the Missing empty-state copy when
+      records=0, and the user-event tab switch from Missing →
+      Cutoff with the matching empty-state body.
 - [~] T089 [P] [P-WANT] Bulk-search test **deferred** — bulk
       select + bulk-search trigger need the spec 013 T043
       bulk-search endpoint (which depends on spec 007's
@@ -713,10 +717,13 @@ viewport; SC-002 (60 fps on 10 000 items) is met in a perf test.
 
 ### Tests
 
-- [~] T091 [P] [P-ACT] `test_queue_live_updates` **deferred**
-      — Vitest not yet installed. Plus the WS path needs the
-      spec 013 T072 bridge slice to forward `queueUpdated`
-      events. Today's QueueList polls every 5s instead.
+- [~] T091 [P] [P-ACT] `test_queue_live_updates` **partial**
+      — `web/src/pages/Activity/index.test.tsx` ships 3
+      tests covering tab routing (Queue active by default,
+      Queue empty-state, Cutoff…er, History switch) but the
+      live-updates path itself stays deferred until the
+      spec 013 T072 WS bridge forwards `queueUpdated` events.
+      Today's QueueList still polls every 5s instead.
 - [~] T092 [P] [P-ACT] Swipe-to-remove **deferred** — needs
       `@use-gesture/react` plus the spec 013 queue DELETE
       endpoint (T045).
