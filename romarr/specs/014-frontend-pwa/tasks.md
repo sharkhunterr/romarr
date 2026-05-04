@@ -665,9 +665,17 @@ viewport; SC-002 (60 fps on 10 000 items) is met in a perf test.
       MSW-style fetch assertion (the literal `GET …?term=`
       call shape) is covered by the openapi-typescript types
       that wrap `useGameLookup`.
-- [ ] T074 [P] [P-ADD] `tests/unit/pages/test_Add.tsx::test_add_modal`
-      — click Add; modal opens; submit; assert
-      `POST /api/v3/game` payload shape.
+- [X] T074 [P] [P-ADD] `web/src/pages/AddNew/AddGameModal.test.tsx`
+      ships 4 tests (slice 258): the candidate's title
+      lands in the modal header (with provider source pill);
+      Submit fires ``useAddGameFromLookup.mutate`` with the
+      candidate-derived payload + the default platform pick
+      (first platform via the default-pick useEffect) +
+      monitored=true; the Submit button is disabled with
+      "Adding…" copy while the mutation is pending; Cancel
+      calls onClose. The endpoint shape (POST /api/v3/game/lookup/add)
+      is structurally pinned by the openapi-typescript types
+      that wrap ``useAddGameFromLookup``.
 
 ### Implementation
 
