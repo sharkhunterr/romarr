@@ -383,15 +383,18 @@ shuts down cleanly.
       `test_cutoff_returns_imported_below_ceiling` returns rows
       with `status='imported' AND cutoff_met=false AND
       monitored=true`.
-- [~] T043 [P] [ROUTERS] Bulk-search endpoint —
-      **deferred-by-design**. The read paths (GET
-      ``/wanted/missing`` + ``/wanted/cutoff``) ship with
-      canonical pagination (T042 + slice 198's
-      uniform-conformance test). The bulk-search mutation
-      lands when the spec 007 search-on-add infrastructure
-      surfaces a single-game ``run_search_on_add`` entry the
-      router can fan-out over (slice 181 shipped the runner;
-      the per-Game endpoint adapter is the missing piece).
+- [X] T043 [P] [ROUTERS] Bulk-search endpoint shipped as
+      POST ``/api/v3/wanted/missing/search`` (slice 233).
+      Admin-only via ``require_admin``; ``?limit=`` query
+      param caps how many oldest-wanted Releases are probed
+      (default 50, max 500). The round delegates to spec 007's
+      ``run_missing_search`` (which fans out to
+      ``run_manual_search`` per Release internally); the
+      endpoint surfaces the aggregate counters
+      (``total`` / ``succeeded`` / ``grabbed``) as
+      ``BulkMissingSearchResponse``. 3 router tests cover the
+      401 unauthenticated path, the empty-table happy path
+      (returns 0/0/0), and the 422 invalid-limit path.
 - [X] T044 [P] [ROUTERS] `tests/api/routers/test_queue.py::test_lists_in_flight_with_canonical_envelope`
       — seed `queue_entry` rows; GET returns the canonical
       pagination envelope with the documented camelCase record

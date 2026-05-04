@@ -26,11 +26,12 @@ from sqlalchemy import String, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
 
-from romarr.api.dependencies import get_db, require_readonly
+from romarr.api.dependencies import get_db, require_admin, require_readonly
 from romarr.api.envelopes import PaginationEnvelope
 from romarr.api.pagination import PageRequest, page_request, paginate
 from romarr.auth import Principal
 from romarr.domain.models import Game, Release
+from romarr.search.rounds import run_missing_search
 
 
 def _apply_tag_filter(stmt: Select[Any], tag_id: int) -> Select[Any]:
@@ -310,6 +311,63 @@ async def list_cutoff(
         sortable_keys=_SORTABLE_KEYS,
         record_adapter=_adapt,
         scalars=False,
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST /api/v3/wanted/missing/search — bulk search trigger (T043)
+# ---------------------------------------------------------------------------
+
+
+class BulkMissingSearchResponse(BaseModel):
+    """Aggregate counters returned by the round.
+
+    Mirrors :class:`MissingSearchResult` but with the camelCase
+    Sonarr-shape JSON the rest of the API uses."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    total: int = Field(description="Releases inspected this round.")
+    succeeded: int = Field(
+        description="Releases whose search round produced ≥ 1 candidate."
+    )
+    grabbed: int = Field(
+        description="Releases for which at least one grab was dispatched."
+    )
+
+
+@router.post(
+    "/missing/search",
+    response_model=BulkMissingSearchResponse,
+    response_model_by_alias=True,
+    summary=(
+        "Trigger a missing-search round (admin only). Probes up "
+        "to ``limit`` wanted Releases, oldest-first; manual-search "
+        "is invoked per Release and grab dispatch is left to the "
+        "scheduler tick or operator action."
+    ),
+)
+async def trigger_missing_search(
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    limit: Annotated[
+        int,
+        Query(
+            ge=1,
+            le=500,
+            description=(
+                "Maximum number of wanted Releases to probe in this "
+                "invocation. Defaults to 50; capped at 500 so a "
+                "single operator click can't lock the indexer fleet."
+            ),
+        ),
+    ] = 50,
+) -> BulkMissingSearchResponse:
+    result = await run_missing_search(db, limit=limit)
+    return BulkMissingSearchResponse(
+        total=result.total,
+        succeeded=result.succeeded,
+        grabbed=result.grabbed,
     )
 
 

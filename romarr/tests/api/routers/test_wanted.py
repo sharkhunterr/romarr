@@ -641,3 +641,43 @@ async def test_missing_library_id_stacks_with_platform_and_tag(
     assert resp.status_code == 200
     names = [row["name"] for row in resp.json()["records"]]
     assert names == ["Match"]
+
+
+# ---------------------------------------------------------------------------
+# T043 — POST /wanted/missing/search bulk-trigger endpoint
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_missing_search_unauthenticated_returns_401(
+    api_client: httpx.AsyncClient,
+) -> None:
+    resp = await api_client.post("/api/v3/wanted/missing/search")
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_missing_search_with_no_releases_returns_zero_counters(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    """Empty Release table → ``run_missing_search`` returns 0/0/0
+    counters and the endpoint surfaces them in the response.
+    Confirms the wiring: admin gate clears, the round runs to
+    completion without indexer calls, the result is projected
+    to the camelCase JSON shape."""
+    resp = await authed_client.post("/api/v3/wanted/missing/search")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body == {"total": 0, "succeeded": 0, "grabbed": 0}
+
+
+@pytest.mark.asyncio
+async def test_missing_search_invalid_limit_returns_422(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    """``limit=0`` is below the documented ``ge=1`` floor and
+    fails FastAPI's body validator before the round fires."""
+    resp = await authed_client.post(
+        "/api/v3/wanted/missing/search?limit=0"
+    )
+    assert resp.status_code == 422
