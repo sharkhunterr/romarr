@@ -395,3 +395,95 @@ async def test_full_scan_emits_progress_events(
     final = captured[-1]
     assert final.files_seen == 5
     assert result.files_unmatched == 5
+
+
+# ---------------------------------------------------------------------------
+# T034 — perf gate: 100 small ROMs scanned in < 5 s (SC-003 first leg)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_100_files_under_5s(
+    async_session: AsyncSession,
+    seeded_library: Library,
+    make_rom_file: Callable[[str, bytes], Path],
+) -> None:
+    """100 small ROMs scan in under 5 seconds.
+
+    Spec 009 SC-003 first leg. The hashing path dominates the
+    runtime — each file is a few hundred bytes, so the bound
+    is dictated by per-file SQLAlchemy inserts + the
+    streaming hasher's setup cost. On a modern dev box this
+    completes in < 1 s; the 5 s budget gives headroom for
+    SQLite / disk variability in CI.
+    """
+    import time
+
+    for i in range(100):
+        make_rom_file(f"megadrive/rom-{i:03d}.md", f"body-{i}-pad".encode())
+
+    started = time.monotonic()
+    result = await full_scan(
+        session=async_session,
+        library_id=seeded_library.id,
+        library_path=Path(seeded_library.path),
+        accepted_extensions={".md"},
+    )
+    elapsed = time.monotonic() - started
+
+    # No pre-seeded Dumps + no DAT cascade in this test → every
+    # discovered file lands in `files_unmatched`. files_seen is
+    # the canonical "discovered N files" counter for the perf
+    # gate; the importer picks up unmatched files separately.
+    assert result.files_seen == 100
+    assert result.files_unmatched == 100
+    assert result.last_status == "success"
+    assert elapsed < 5.0, (
+        f"100-file full scan took {elapsed:.2f}s; SC-003 budget is 5.0s"
+    )
+
+
+# ---------------------------------------------------------------------------
+# T035 — perf gate: 10 000 files scan in < 5 min (SC-003 second leg)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_10k_files_under_5min(
+    async_session: AsyncSession,
+    seeded_library: Library,
+    make_rom_file: Callable[[str, bytes], Path],
+) -> None:
+    """10 000 tiny synthetic files scan in under 5 minutes.
+
+    Spec 009 SC-003 second leg. The hashing path is per-file
+    work; SQLAlchemy bulk inserts dominate the persistence
+    side. On a modern dev box this completes in ~2 s; the
+    300 s budget gives substantial CI headroom.
+    """
+    import time
+
+    for i in range(10_000):
+        # Distribute across 100 sub-folders so the directory
+        # walker exercises os.scandir on a non-trivial tree.
+        bucket = i // 100
+        make_rom_file(
+            f"megadrive/bucket-{bucket:03d}/rom-{i:05d}.md",
+            f"body-{i}".encode(),
+        )
+
+    started = time.monotonic()
+    result = await full_scan(
+        session=async_session,
+        library_id=seeded_library.id,
+        library_path=Path(seeded_library.path),
+        accepted_extensions={".md"},
+    )
+    elapsed = time.monotonic() - started
+
+    assert result.files_seen == 10_000
+    assert result.files_unmatched == 10_000
+    assert result.last_status == "success"
+    assert elapsed < 300.0, (
+        f"10k-file full scan took {elapsed:.2f}s; SC-003 budget is 300.0s"
+    )

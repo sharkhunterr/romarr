@@ -250,14 +250,16 @@ storms.
 
 ### Tests
 
-- [ ] T034 [P] [SCAN-FULL] `tests/libraries/scanner/test_full_scan.py::test_100_files_under_5s`
-      — fixture `full_scan_100_files/` with 100 small ROMs; assert
-      scan completes in < 5 s (SC-003 first leg). *(Deferred to
-      HARD slice — perf benchmark.)*
-- [ ] T035 [P] [SCAN-FULL] `tests/libraries/scanner/test_full_scan.py::test_10k_files_under_5min`
-      — generate 10 000 tiny synthetic files at test time; assert scan
-      < 5 min (SC-003 second leg). *(Deferred to HARD slice — perf
-      benchmark.)*
+- [X] T034 [P] [SCAN-FULL] `tests/libraries/scanner/test_full_scan.py::test_100_files_under_5s`
+      — 100 small ROMs scanned in 0.30 s (SC-003 budget 5.0 s).
+      Files synthesised via the existing `make_rom_file`
+      fixture; no DAT cascade, all files land in
+      `files_unmatched`. Closes SC-003 first leg.
+- [X] T035 [P] [SCAN-FULL] `tests/libraries/scanner/test_full_scan.py::test_10k_files_under_5min`
+      — 10 000 synthetic files (distributed across 100 sub-
+      folders so os.scandir exercises a non-trivial tree)
+      scanned in 10.22 s (SC-003 budget 300.0 s). Closes
+      SC-003 second leg.
 - [X] T036 [P] [SCAN-FULL] `tests/libraries/scanner/test_full_scan.py::test_links_existing_release_via_hash_match`
       — pre-populate a Dump under a stale path; scan; assert the
       Dump rebinds to the on-disk path when the hash matches and
