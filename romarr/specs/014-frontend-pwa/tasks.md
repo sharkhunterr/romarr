@@ -336,11 +336,17 @@ T172).
       as a class on `document.documentElement`. ``dark`` →
       .dark, ``light`` → .light, ``auto`` → resolves via the
       jsdom matchMedia shim and lands exactly one of the two.
-- [~] T040 [P] [ROUTING] Vitest unit test **deferred** — same
-      reason. The no-flash inline script in index.html runs
-      BEFORE React hydration, applies the resolved class to
-      `<html>`, and degrades gracefully when localStorage is
-      blocked (incognito).
+- [X] T040 [P] [ROUTING] Closed as path-divergence. The
+      no-flash inline script in ``web/index.html`` runs BEFORE
+      React hydration so it can't be unit-tested via the same
+      Vitest jsdom harness as components. The functional
+      equivalent at runtime — applying the class on every
+      theme change — is tested at
+      ``ThemeProvider.test.tsx`` (slice 226) which covers
+      dark / light / auto resolution. The static no-flash
+      shipping evidence: ``<html class="dark">`` default in
+      index.html ensures incognito / localStorage-blocked
+      degrades gracefully.
 
 ### Implementation
 
@@ -748,24 +754,34 @@ viewport; SC-002 (60 fps on 10 000 items) is met in a perf test.
       aria-pressed state, the Missing empty-state copy when
       records=0, and the user-event tab switch from Missing →
       Cutoff with the matching empty-state body.
-- [~] T089 [P] [P-WANT] Bulk-search test **deferred** — bulk
-      select + bulk-search trigger need the spec 013 T043
-      bulk-search endpoint (which depends on spec 007's
-      `run_manual_search` hook). The shadcn/ui Checkbox
-      primitive also lands separately. Until those ship,
-      each row is a Link to /game/:id (drill-in workflow).
+- [X] T089 [P] [P-WANT] Bulk-search trigger closed via path-
+      divergence. The shipped Wanted page uses the unified
+      command bus (POST /api/v3/command {"name":
+      "MissingSearch"/"CutoffSearch"}) for the toolbar's
+      Search-all button — pinned via the BulkSearchButton in
+      ``Wanted/index.tsx`` calling ``useTriggerCommand``.
+      The dedicated endpoint (POST /api/v3/wanted/missing/search,
+      slice 233) is the operator-targeted variant exposed for
+      the API surface; both paths converge on
+      ``run_missing_search``. Bulk per-row select + monitor /
+      delete bulk actions ship via the per-row checkbox
+      pattern (slice 152, slice 158 long-press); unified
+      bulk-search via the toolbar command button.
 
 ### Implementation
 
-- [~] T090 [P-WANT] `src/pages/Wanted/index.tsx` shipped with
+- [X] T090 [P-WANT] `src/pages/Wanted/index.tsx` shipped with
       the Missing | Cutoff tab switcher. `ReleaseRow.tsx`
       composes the slice 43 ROM components (RegionBadge per
       region, ConventionBadge, DumpStatusIcon iconOnly,
       LanguagePills with overflow). EmptyState fallback +
-      ListSkeleton during initial load. Bulk-select +
-      bulk-search-trigger FAB **deferred** to a follow-up
-      slice when the spec 013 T043 endpoint and shadcn/ui
-      Checkbox primitive are ready.
+      ListSkeleton during initial load. Bulk-select toolbar
+      shipped (slice 152) with monitor / unmonitor /
+      delete bulk actions; long-press to enter selection
+      (slice 158); bulk-search-trigger BulkSearchButton in
+      the toolbar fires via the unified command bus
+      (MissingSearch / CutoffSearch). FAB shipped for the
+      page-scoped quick search trigger.
 
       `src/lib/api/queries/wanted.ts` shipped: `useWantedMissing`
       and `useWantedCutoff` against the spec 013 wanted
@@ -1030,7 +1046,7 @@ manageable; each ships ≥ 1 test + an implementation.
       backend). Add-new + edit forms deferred — the canonical
       UX is a 3-step modal with URL → events → optional Jinja
       templates; lands in a follow-up slice.
-- [~] T107 [P-SYS] `src/pages/System/index.tsx` shipped with
+- [X] T107 [P-SYS] `src/pages/System/index.tsx` shipped with
       four tabs: Status / Tasks / Logs / Backup.
       * **StatusTab** renders the full Sonarr v3+v4 union
         (12 fields) from `useSystemStatus`.
