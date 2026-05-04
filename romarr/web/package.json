@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.7",
+    "@tanstack/react-virtual": "^3.13.24",
     "date-fns": "^4.1.0",
     "i18next": "^23.16.8",
     "i18next-browser-languagedetector": "^8.2.1",

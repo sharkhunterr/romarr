@@ -19,6 +19,7 @@ import { useSearchParams } from "react-router-dom";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { CardGridSkeleton } from "@/components/shared/LoadingSkeleton";
+import { VirtualGrid } from "@/components/shared/VirtualGrid";
 import {
   useBulkMonitorGames,
   useGames,
@@ -746,19 +747,20 @@ export function LibraryPage(): ReactElement {
       )}
 
       {games.isSuccess && games.data.length > 0 && (
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-          {games.data.map((game) => (
-            <li key={game.id}>
-              <GameCard
-                game={game}
-                selectionActive={selectionActive}
-                selected={selectedIds.has(game.id)}
-                onToggleSelect={toggleSelect}
-                onLongPress={beginSelectionFromLongPress}
-              />
-            </li>
-          ))}
-        </ul>
+        <VirtualGrid
+          items={games.data}
+          itemKey={(game) => game.id}
+          ariaLabel={t("title")}
+          renderItem={(game) => (
+            <GameCard
+              game={game}
+              selectionActive={selectionActive}
+              selected={selectedIds.has(game.id)}
+              onToggleSelect={toggleSelect}
+              onLongPress={beginSelectionFromLongPress}
+            />
+          )}
+        />
       )}
 
       {deleteOpen && games.data && (
