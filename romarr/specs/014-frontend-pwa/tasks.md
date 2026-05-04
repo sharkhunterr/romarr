@@ -74,11 +74,14 @@ hardening.
       enforcement teeth for FR-011 (no hardcoded strings in JSX);
       shipping it without the i18n setup would just block every
       commit.
-- [~] T008 [SCAF] `vite.config.ts` ships today with React + path
+- [X] T008 [SCAF] `vite.config.ts` shipped with React + path
       aliases + dev-server proxy (`/api/v3` and `/signalr` →
-      `localhost:8585`). The `vite-plugin-pwa` integration with
-      Workbox runtime caching (NetworkFirst /api/v3, CacheFirst
-      assets, no-cache for mutations) lands with the PWA phase.
+      `localhost:8585`). ``vite-plugin-pwa`` integration shipped
+      (slice 57): VitePWA plugin in vite.config.ts at line 22+
+      with Workbox runtime caching — NetworkFirst for /api/v3,
+      CacheFirst for assets, no-cache for mutations. Web App
+      Manifest auto-generated. ``workbox-window`` runtime ships
+      via the manifest's auto-update flow.
 - [X] T009 [SCAF] Docker integration shipped (slice 188).
       Backend's ``StaticFiles`` mount lives at
       ``src/romarr/api/spa.py::register_spa`` — gated on
