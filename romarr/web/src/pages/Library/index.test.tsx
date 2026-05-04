@@ -128,4 +128,38 @@ describe("LibraryPage", () => {
     expect(screen.getByText("Library unavailable")).toBeInTheDocument();
     expect(screen.getByText("library db down")).toBeInTheDocument();
   });
+
+  it("threads the URL filter params through useGames (T064)", () => {
+    const useGamesSpy = vi
+      .spyOn(gamesQuery, "useGames")
+      .mockReturnValue({
+        data: [],
+        isSuccess: true,
+        isLoading: false,
+        isPending: false,
+        isError: false,
+        error: null,
+      } as unknown as ReturnType<typeof gamesQuery.useGames>);
+    _stubFilters();
+
+    renderWithProviders(<LibraryPage />, {
+      i18nResources: I18N_BUNDLE,
+      // ?platform=42&tag=7&library=3&q=sonic — every documented
+      // filter knob present so we can verify the page passes
+      // each through to useGames.
+      routerEntries: ["/?platform=42&tag=7&library=3&q=sonic"],
+    });
+
+    // useGames is called with the parsed-and-coerced filter
+    // params. The Library page only invokes useGames once per
+    // render so checking the last call is the canonical way
+    // to read the threaded params.
+    const lastCall = useGamesSpy.mock.calls.at(-1);
+    expect(lastCall).toBeDefined();
+    const params = lastCall![0] as gamesQuery.ListGamesParams;
+    expect(params.platformId).toBe(42);
+    expect(params.tagId).toBe(7);
+    expect(params.libraryId).toBe(3);
+    expect(params.q).toBe("sonic");
+  });
 });

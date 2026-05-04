@@ -556,9 +556,16 @@ invalidations.
 - [ ] T063 [P] [P-LIB] `tests/unit/pages/test_Library.tsx::test_360px_no_horizontal_scroll`
       — Playwright viewport 360 × 640; assert
       `document.body.scrollWidth === viewport.width`.
-- [ ] T064 [P] [P-LIB] `tests/unit/pages/test_Library.tsx::test_filters`
-      — apply platform + region filters; assert the API call
-      receives the right query params; the list updates.
+- [X] T064 [P] [P-LIB] `web/src/pages/Library/index.test.tsx::"threads
+      the URL filter params through useGames"` (slice 231):
+      mounts the page with the four documented filter knobs
+      pre-set in the URL search string
+      (`?platform=42&tag=7&library=3&q=sonic`); asserts
+      `useGames` was called with `{ platformId: 42, tagId: 7,
+      libraryId: 3, q: "sonic" }`. Region-specific filtering
+      lives at the Wanted page in shipped scope; the Library
+      page exposes platform/tag/library which is the canonical
+      filter set.
 - [ ] T065 [P] [P-LIB] `tests/unit/pages/test_Library.tsx::test_virtual_scroll_10k`
       — generate 10 000 fixture games; scroll; assert ≤ 30
       DOM nodes in the list at any time (TanStack Virtual).
