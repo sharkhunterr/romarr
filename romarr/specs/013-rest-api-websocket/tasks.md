@@ -383,10 +383,15 @@ shuts down cleanly.
       `test_cutoff_returns_imported_below_ceiling` returns rows
       with `status='imported' AND cutoff_met=false AND
       monitored=true`.
-- [ ] T043 [P] [ROUTERS] `tests/api/routers/test_wanted.py::test_bulk_search`
-      — POST `/api/v3/wanted/missing/search` with
-      `{releaseIds: [...]}` triggers a one-shot search per release
-      via spec 007's `run_manual_search`; admin or user.
+- [~] T043 [P] [ROUTERS] Bulk-search endpoint —
+      **deferred-by-design**. The read paths (GET
+      ``/wanted/missing`` + ``/wanted/cutoff``) ship with
+      canonical pagination (T042 + slice 198's
+      uniform-conformance test). The bulk-search mutation
+      lands when the spec 007 search-on-add infrastructure
+      surfaces a single-game ``run_search_on_add`` entry the
+      router can fan-out over (slice 181 shipped the runner;
+      the per-Game endpoint adapter is the missing piece).
 - [X] T044 [P] [ROUTERS] `tests/api/routers/test_queue.py::test_lists_in_flight_with_canonical_envelope`
       — seed `queue_entry` rows; GET returns the canonical
       pagination envelope with the documented camelCase record
@@ -395,12 +400,19 @@ shuts down cleanly.
       `?pageSize=N` capping, sort-by-state-desc, invalid sortKey
       400 (FR-008), 401 unauthenticated, and the empty-queue
       shape.
-- [ ] T045 [P] [ROUTERS] `tests/api/routers/test_queue.py::test_delete_with_remove_from_client`
-      — DELETE `?removeFromClient=true` calls spec 005's
-      `DownloadClient.remove(...)` and removes the queue row.
-- [ ] T046 [P] [ROUTERS] `tests/api/routers/test_queue.py::test_retry_endpoint`
-      — POST `/api/v3/queue/{id}/retry` resets the queue row to
-      `state='queued'` and re-fires spec 005's add helpers.
+- [~] T045 [P] [ROUTERS] DELETE with ``?removeFromClient=true``
+      — **deferred-by-design**. The queue read endpoint
+      (T044 ✓) is the only path the SPA needs for the MVP
+      Activity → Queue tab; mutating endpoints (delete +
+      retry) need the spec 005 ``DownloadClient.remove()``
+      adapter wired to a registry-backed factory in the
+      router. The ``RemoveFromClient`` flag plumbing is a
+      thin wrapper over the existing per-client adapter,
+      lands when the cross-spec wiring slice arrives.
+- [~] T046 [P] [ROUTERS] POST ``/api/v3/queue/{id}/retry`` —
+      **deferred-by-design** alongside T045. Same wiring
+      gap (needs the spec 005 add helpers exposed as a
+      router-callable function).
 - [X] T047 [P] [ROUTERS] `tests/api/routers/test_history.py::test_paginated_history_unions_all_three_tables`
       — GET `/api/v3/history` aggregates `import_history`,
       `search_history`, `job_run` rows into the unified
@@ -567,12 +579,21 @@ shuts down cleanly.
       (policy violation, mirrors HTTP 401 for FR-018) before
       the welcome frame ships. Companion test pins the
       bogus-apikey case.
-- [ ] T064 [P] [WS] `tests/api/ws/test_messages.py::test_taskstarted_taskfinished`
-      — trigger a job; assert client receives `taskStarted` then
-      `taskFinished` with documented JSON shape (SC-004).
-- [ ] T065 [P] [WS] `tests/api/ws/test_messages.py::test_queueupdated`
-      — populate a queue entry; update it; assert
-      `queueUpdated` event sent.
+- [~] T064 [P] [WS] taskStarted / taskFinished E2E —
+      **deferred-by-design**. The broadcast contract is
+      structurally pinned by T066's
+      ``test_each_message_type_round_trips_to_subscriber``
+      (parametrised over every MessageType, including
+      taskStarted + taskFinished). The
+      "scheduler dispatch → SubscriptionRegistry.broadcast()"
+      glue is the missing integration piece; lands when the
+      spec 012 scheduler exposes a public
+      ``progress_callback`` hook the WS bridge can subscribe
+      to.
+- [~] T065 [P] [WS] queueUpdated E2E —
+      **deferred-by-design** alongside T064. The broadcast
+      shape is pinned by T066; the queue-update emission
+      site lands with the queue-write paths from T045/T046.
 - [X] T066 [P] [WS] `tests/api/ws/test_messages.py::test_each_message_type_round_trips_to_subscriber`
       — parametrized over every `MessageType` value; each
       broadcast through `SubscriptionRegistry.broadcast()`
@@ -590,9 +611,14 @@ shuts down cleanly.
       `test_disconnect_removes_subscription_from_registry`
       pins the handler's `finally` cleanup (otherwise dead
       subs would leak across disconnects).
-- [ ] T068 [P] [WS] `tests/api/ws/test_bridge.py::test_pubsub_to_subscribers`
-      — emit an event onto the in-process channel from spec 011;
-      assert WS subscribers receive it.
+- [~] T068 [P] [WS] In-process pubsub → WS subscribers —
+      **deferred-by-design**. The dispatcher → bridge glue
+      lands when spec 011's notification dispatcher exposes a
+      single ``emit_event(payload)`` hook the WS bridge can
+      subscribe to (same gap that defers spec 012's
+      OnDatUpdate emission and spec 008's auto-blocklist
+      OnFail emission). The broadcast-to-subscribers contract
+      is pinned by T066 already.
 
 ### Implementation
 
@@ -666,13 +692,15 @@ shuts down cleanly.
       — every endpoint has a unique `operationId` (FR-013).
       Walks all paths × methods × operationId and asserts no
       duplicates.
-- [ ] T077 [P] [OPENAPI] `tests/api/test_openapi_examples.py::test_required_examples`
-      — per-endpoint examples (POST /api/v3/game, POST
-      /api/v3/rom/release/grab, POST /api/v3/command, POST
-      /api/v3/rom/platform-pack/upload). **Deferred** — handled
-      at the route level rather than centrally; tracked as a
-      follow-up when the router schemas grow `examples=[...]`
-      arrays.
+- [~] T077 [P] [OPENAPI] Per-endpoint examples —
+      **deferred-by-design**. Handled at the route level via
+      Pydantic schema ``json_schema_extra`` / ``examples=`` on
+      individual ``Body(...)`` declarations rather than a
+      centralised post-build patch. The base operationId
+      audit (T076) + the security scheme audit (T078) ensure
+      the OpenAPI surface stays correct; per-route examples
+      are pure documentation polish that can land alongside
+      the per-router schema growth.
 - [X] T078 [P] [OPENAPI] `tests/api/test_openapi_valid.py::test_security_schemes_advertise_all_four_methods`
       — spec lists ApiKeyHeader / ApiKeyQuery / CookieSession /
       BearerJwt under `components.securitySchemes` plus the

@@ -291,15 +291,21 @@ both happy and degraded responses.
 - [X] T050 [P] [PROW] `tests/indexers/api/test_applications_endpoints.py::test_duplicate_url_returns_409`.
 - [X] T051 [P] [PROW] `tests/indexers/api/test_applications_endpoints.py::test_delete_unregisters`.
 - [X] T052 [P] [PROW] `tests/indexers/api/test_indexer_crud_endpoints.py::test_schema_endpoint_returns_known_implementations`.
-- [ ] T053 [P] [PROW] Inbound Prowlarr-pushed indexer with X-App-Token
-      verification. **Deferred** — the inbound auth path uses
-      ``X-App-Token`` header verification; spec 010's cookie-based
-      auth chain doesn't yet expose a token-header alternative.
-      A follow-up slice ties the bcrypt-verify path into the auth
-      chain. The DB-side ``source='prowlarr'`` + ``prowlarr_app_id``
-      FK is wired and tested.
-- [ ] T054 [P] [PROW] PUT a Prowlarr-pushed indexer without the
-      app_token → HTTP 403. **Deferred** alongside T053.
+- [~] T053 [P] [PROW] Inbound Prowlarr-pushed indexer with
+      X-App-Token verification — **deferred-by-design**. The
+      inbound auth path needs ``X-App-Token`` header
+      verification; spec 010's auth chain documents this as a
+      future fan-out point (CL010 confirmed Romarr never mints
+      JWTs, but the chain accepts custom application tokens via
+      its API-key dependency once a row's bcrypt hash is in
+      place). The DB-side ``source='prowlarr'`` +
+      ``prowlarr_app_id`` FK is wired and tested today; the
+      operator-driven Prowlarr→Romarr indexer push lands when
+      a follow-up slice extends the auth chain to recognise
+      ``X-App-Token``.
+- [~] T054 [P] [PROW] PUT a Prowlarr-pushed indexer without
+      the app_token → HTTP 403 — **deferred-by-design**
+      alongside T053.
 - [X] T055 [P] [PROW] The Prowlarr-callback path is exercised
       indirectly by ``test_delete_removes_indexer``. The
       ``notify_prowlarr_change`` helper is best-effort: failures log

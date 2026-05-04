@@ -179,11 +179,13 @@ upsert from FR-014, and the audit-log entries from FR-023, FR-024.
       no platform / platform_pack rows persist (SC-006, FR-007, FR-024).
       The audit table FK to `platform_pack.pack_version` was dropped to
       satisfy FR-024 (failed rows must outlive the rolled-back data).
-- [ ] T029 [P] [INGEST] `tests/platform_packs/test_ingestor_diff.py` — diff
-      content covered indirectly by the per-platform-rules + idempotency
-      tests above (each asserts the returned `PackUploadResult.diff`
-      shape). A standalone diff-spotlight test is **deferred** to the
-      OVR slice where override-aware diffs land.
+- [~] T029 [P] [INGEST] Standalone diff-spotlight test —
+      **deferred** to the OVR slice where override-aware
+      diffs land. Diff content already covered indirectly by
+      ``test_ingestor_per_platform_rules.py`` +
+      ``test_ingestor_idempotency.py`` (each asserts the
+      returned ``PackUploadResult.diff`` shape across the
+      apply/no-op/diff paths).
 
 ### Implementation
 
