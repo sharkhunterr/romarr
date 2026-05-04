@@ -131,18 +131,66 @@ class RssSyncAdapter(_AdapterBase):
 
 
 class CutoffSearchAdapter(_AdapterBase):
-    """Wraps spec 007's cutoff search — returns stub until the
-    search module exposes a ``run_cutoff_search()``."""
+    """Wraps spec 007's cutoff search (slice 203 wires the
+    real round). When the JobContext supplies a sessionmaker,
+    the adapter calls :func:`run_cutoff_search` directly and
+    returns the per-Release counts in the summary; without a
+    sessionmaker it falls back to the legacy stub."""
 
     def __init__(self) -> None:
         super().__init__(job_id="CutoffSearch")
 
+    async def _run(self, context: JobContext) -> JobResult:
+        from romarr.search.rounds.cutoff import run_cutoff_search
+
+        sessionmaker = getattr(context, "sessionmaker", None)
+        if sessionmaker is None:
+            return JobResult(
+                status=JobStatus.SUCCESS,
+                summary={"stub": True, "reason": "no sessionmaker"},
+            )
+
+        limit = int(context.parameters.get("limit", 50))
+        async with sessionmaker() as session:
+            result = await run_cutoff_search(session, limit=limit)
+        return JobResult(
+            status=JobStatus.SUCCESS,
+            summary={
+                "total": result.total,
+                "succeeded": result.succeeded,
+                "grabbed": result.grabbed,
+            },
+        )
+
 
 class MissingSearchAdapter(_AdapterBase):
-    """Wraps spec 007's missing search."""
+    """Wraps spec 007's missing search (slice 203 wires the
+    real round). Symmetric shape with ``CutoffSearchAdapter``."""
 
     def __init__(self) -> None:
         super().__init__(job_id="MissingSearch")
+
+    async def _run(self, context: JobContext) -> JobResult:
+        from romarr.search.rounds.missing import run_missing_search
+
+        sessionmaker = getattr(context, "sessionmaker", None)
+        if sessionmaker is None:
+            return JobResult(
+                status=JobStatus.SUCCESS,
+                summary={"stub": True, "reason": "no sessionmaker"},
+            )
+
+        limit = int(context.parameters.get("limit", 50))
+        async with sessionmaker() as session:
+            result = await run_missing_search(session, limit=limit)
+        return JobResult(
+            status=JobStatus.SUCCESS,
+            summary={
+                "total": result.total,
+                "succeeded": result.succeeded,
+                "grabbed": result.grabbed,
+            },
+        )
 
 
 class RefreshGameMetadataAdapter(_AdapterBase):
