@@ -864,12 +864,15 @@ manageable; each ships ≥ 1 test + an implementation.
       OR-grouped conditions (T097's primary goal) deferred —
       hint surfaced on the page pointing at the deferred
       slice.
-- [~] T098 [P] [P-SET] `tests/unit/pages/Settings/test_Indexers.tsx::test_test_button`
-      **deferred** — Vitest not yet installed. Contract is
-      implemented (`pages/Settings/Indexers/IndexerRow.tsx`):
-      Test button fires POST /api/v3/indexer/{id}/test and
-      surfaces ok/category/message inline. Error path renders
-      a red role=alert below the row.
+- [X] T098 [P] [P-SET] `web/src/pages/Settings/Indexers/IndexerRow.test.tsx`
+      ships 3 tests (slice 245): Test button fires
+      ``useTestIndexer.mutate`` with the row's id; test
+      failure surfaces in a role="alert" paragraph carrying
+      the API error message; Delete button opens the
+      confirm panel and Confirm fires
+      ``useDeleteIndexer.mutate`` with the row's id. Mocks
+      the three mutation hooks; row data is a synthetic
+      ``Indexer`` literal so no DB seeding is needed.
 - [X] T098.5 [P] [P-SET] **Tags sub-page** (slice 51) — spec
       013 introduced polymorphic tags (slice 24) with a
       complete /api/v3/tag* CRUD surface; the Settings >
