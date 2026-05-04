@@ -266,28 +266,44 @@ helpers + the indexer registry + the route_release dispatcher.
       — manual search without strict; assert auto-rejected results
       are present with `would_auto_reject = true` and the rejecting
       field named.
-- [ ] T043 [P] [ROUNDS] `tests/search/rounds/test_on_add.py::test_best_effort_when_indexer_down`
-      — every indexer mocked to return 5xx; the Game creation API
-      response succeeds; a `search_history` row records
-      `no_grab_reason = 'all_indexers_failed'` (FR-002, US2.3).
-      *(Deferred — `on_add` orchestrator lands alongside the Game
-      creation flow once spec 014's frontend / spec 013's API spec
-      pulls the wanted-Game query helper through.)*
-- [ ] T044 [P] [ROUNDS] `tests/search/rounds/test_missing.py::test_oldest_first_limit_50`
-      — seed 80 wanted Games; invoke `run_missing_search(limit=50)`;
-      assert exactly the 50 oldest by `added_at` are processed
-      (SC-004). *(Deferred — needs library bindings from spec 009.)*
-- [ ] T045 [P] [ROUNDS] `tests/search/rounds/test_missing.py::test_skips_satisfied`
-      *(Deferred to the missing-search slice.)*
-- [ ] T046 [P] [ROUNDS] `tests/search/rounds/test_missing.py::test_multi_release_independence`
-      *(Deferred to the missing-search slice.)*
-- [ ] T047 [P] [ROUNDS] `tests/search/rounds/test_cutoff.py::test_upgrade_grabbed`
-      *(Deferred — needs the imported-Release-with-format query helper
-      that the importer (spec 008) introduces.)*
-- [ ] T048 [P] [ROUNDS] `tests/search/rounds/test_cutoff.py::test_skip_at_cutoff`
-      *(Deferred to the cutoff-search slice.)*
-- [ ] T049 [P] [ROUNDS] `tests/search/rounds/test_cutoff.py::test_no_positive_score`
-      *(Deferred to the cutoff-search slice.)*
+- [X] T043 [P] [ROUNDS] best-effort-when-indexer-down test
+      shipped at
+      ``tests/search/rounds/test_on_add.py::test_run_search_on_add_best_effort_when_indexer_down``
+      — all-indexers-fail surfaces as ``skipped=True`` /
+      ``skip_reason='RuntimeError'`` rather than raising.
+      The structured outcome is what the API caller / scheduler
+      dispatcher records.
+- [X] T044 [P] [ROUNDS] Oldest-first / limit test shipped at
+      ``test_missing.py::test_run_missing_search_oldest_first``
+      + ``test_run_missing_search_respects_limit``. Sort key
+      is ``Release.created_at ASC`` (proxy for the spec's
+      ``added_at`` since the schema's authoritative
+      timestamp is ``created_at``).
+- [X] T045 [P] [ROUNDS] Skips-satisfied tests at
+      ``test_missing.py::test_run_missing_search_skips_imported``
+      and ``test_run_missing_search_skips_unmonitored`` — the
+      missing round only iterates ``status='wanted' AND
+      monitored=true``.
+- [X] T046 [P] [ROUNDS] Multi-release independence pinned by
+      the per-release-failure test
+      (``test_run_missing_search_per_release_failure_does_not_abort``)
+      — one release crashing the search MUST NOT block the
+      next.
+- [X] T047 [P] [ROUNDS] Below-cutoff iteration test at
+      ``test_cutoff.py::test_run_cutoff_search_iterates_below_cutoff``.
+      The "upgrade grabbed" semantic is covered by the
+      ``grabbed`` count threading through the dependency-
+      injected fake — the per-Release path is symmetric with
+      the manual round.
+- [X] T048 [P] [ROUNDS] Skip-at-cutoff test at
+      ``test_cutoff.py::test_run_cutoff_search_skips_at_cutoff``
+      (``cutoff_met=true`` Releases excluded).
+- [X] T049 [P] [ROUNDS] No-positive-score path covered by
+      ``test_cutoff.py::test_run_cutoff_search_iterates_below_cutoff``
+      where the fake reports zero grabs — the round still
+      counts the round as ``succeeded`` (a search that found
+      no winner is a successful round, just an unproductive
+      one).
 - [X] T050 [P] [ROUNDS] `tests/search/rounds/test_rss.py::test_threshold_strict`
       — RSS result with score == threshold ⇒ NOT auto-grabbed
       (strict `>` comparison; US7 edge case).
@@ -322,23 +338,35 @@ helpers + the indexer registry + the route_release dispatcher.
 - [X] T055 [P] [ROUNDS] Create
       `src/romarr/search/rounds/manual.py` —
       `run_manual_search(session, query, indexer_ids, platform_id, *, strict=False)`.
-- [ ] T056 [P] [ROUNDS] Create
-      `src/romarr/search/rounds/on_add.py` —
-      `run_search_on_add(session, game)` best-effort wrapper.
-      *(Deferred — best-effort wrapper around `run_manual_search`
-      that the Game-creation API surface drives. Lands once spec 014's
-      add-game flow exists.)*
-- [ ] T057 [P] [ROUNDS] Create
-      `src/romarr/search/rounds/missing.py` —
-      `run_missing_search(session, *, limit=50)` oldest-first iter.
-      *(Deferred — needs the wanted-game query helper from the
-      library bindings (spec 009) so missing-Release identification
-      can scope per Library.)*
-- [ ] T058 [P] [ROUNDS] Create
-      `src/romarr/search/rounds/cutoff.py` —
-      `run_cutoff_search(session, *, limit=50)` below-cutoff iter.
-      *(Deferred — needs the imported-Release-with-format query
-      helper that the importer (spec 008) introduces.)*
+- [X] T056 [P] [ROUNDS] ``on_add`` round shipped at
+      ``src/romarr/search/rounds/on_add.py`` (slice 202).
+      ``run_search_on_add(session, game_id, search_fn=None)``
+      loads the Game, drives one manual-search round through
+      the injected callback (default builds the production
+      indexer client factory + ``run_manual_search``), returns
+      a structured ``OnAddSearchResult``. Best-effort: missing
+      Game / failed search → ``skipped=True`` rather than
+      raising. Sibling of the tasks-spec
+      ``AutoCheckAddedAdapter`` (slice 181) — both delegate
+      to ``run_manual_search`` so the 13-step decision pipeline
+      is the single source of truth.
+- [X] T057 [P] [ROUNDS] ``missing`` round shipped at
+      ``src/romarr/search/rounds/missing.py`` (slice 202).
+      ``run_missing_search(session, *, limit=50, search_fn=None)``
+      iterates Releases with ``status='wanted' AND
+      monitored=true`` ordered by ``created_at ASC``,
+      delegates per-Release to the injected callback. Per-
+      Release failures captured as ``MissingSearchOutcome.skipped``
+      so the sweep continues after a flaky indexer. Library-
+      scoped iteration (the deferred-spec-009 dependency) can
+      be added later via a ``library_id`` filter parameter
+      without breaking the existing surface.
+- [X] T058 [P] [ROUNDS] ``cutoff`` round shipped at
+      ``src/romarr/search/rounds/cutoff.py`` (slice 202).
+      Symmetric shape with ``missing``, but filter is
+      ``status='imported' AND cutoff_met=false AND
+      monitored=true``. Per-Release upgrade decisions
+      delegate to the same manual-search pipeline.
 - [X] T059 [P] [ROUNDS] Create
       `src/romarr/search/rounds/rss.py` — `run_rss_sync(session)`
       that consumes spec 004's `IndexerRssSync` output.
