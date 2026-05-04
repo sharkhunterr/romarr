@@ -966,10 +966,13 @@ manageable; each ships ≥ 1 test + an implementation.
       Welcome→Admin transition, mutate.call with trimmed
       token + credentials, wrong-token error alert, isPending
       → disabled+submitting button copy.
-- [ ] T103 [P] [P-SETUP] `tests/unit/pages/test_Setup.tsx::test_skip_indexer`
-      — Skip button advances to Done without creating an
-      indexer. **Deferred** — the 3-step flow no longer has
-      an Indexer step; superseded by /settings/indexers.
+- [X] T103 [P] [P-SETUP] Closed as path-divergence — the
+      shipped Setup wizard is a 3-step flow (Welcome → Admin
+      → Done) rather than the original 5-step plan. Indexer
+      configuration is no longer part of the wizard; it
+      lives at /settings/indexers post-login. The
+      "skip indexer" button doesn't exist in the shipped
+      flow, so the test target is not applicable.
 
 ### Implementation
 
