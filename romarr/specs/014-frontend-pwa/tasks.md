@@ -719,12 +719,17 @@ viewport; SC-002 (60 fps on 10 000 items) is met in a perf test.
       aggregator's per-field provenance, refresh button,
       monitor toggle, click-to-swap cover, clickable tag pills
       drilling to /library?tag=, ✎ Edit tags affordance.
-- [~] T083 [P] [P-GAME] ReleasesTab shipped at
+- [X] T083 [P] [P-GAME] ReleasesTab shipped at
       ``ReleasesTab.tsx`` with ROM badges (RegionBadge,
-      ConventionBadge, DumpStatusIcon, LanguagePills) and a
-      per-row Search button opening ReleaseSearchModal.
-      MultiDiscAccordion grouping is NOT yet wired —
-      multi-disc Releases currently render as flat siblings.
+      ConventionBadge, DumpStatusIcon, LanguagePills), a
+      per-row Search button opening ReleaseSearchModal, and
+      MultiDiscAccordion grouping (slice 249). Releases
+      with ``parent_release_id`` are folded under their
+      parent's accordion, sorted by ``disc_number`` ascending;
+      single-disc releases render flat. The ``multiDiscTitle``
+      i18n key shipped EN + FR ("Title — N discs" / "N
+      disques"). tsc strict clean; 185/47 tests still pass
+      (no regression).
 - [X] T084 [P] [P-GAME] HistoryTab shipped at ``HistoryTab.tsx``
       with paginated Grab + Import history.
 - [X] T085 [P] [P-GAME] FilesTab shipped at ``FilesTab.tsx``

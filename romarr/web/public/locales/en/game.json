@@ -112,7 +112,8 @@
     "monitor": {
       "on": "Monitored",
       "off": "Paused"
-    }
+    },
+    "multiDiscTitle": "{{title}} — {{total}} discs"
   },
   "history": {
     "loadError": "Couldn't load history",

@@ -112,7 +112,8 @@
     "monitor": {
       "on": "Suivie",
       "off": "Pause"
-    }
+    },
+    "multiDiscTitle": "{{title}} — {{total}} disques"
   },
   "history": {
     "loadError": "Impossible de charger l'historique",

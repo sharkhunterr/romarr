@@ -15,6 +15,7 @@ import {
   ConventionBadge,
   DumpStatusIcon,
   LanguagePills,
+  MultiDiscAccordion,
   RegionBadge,
   type DumpStatus,
   type NamingConvention,
@@ -210,16 +211,81 @@ export function ReleasesTab(props: ReleasesTabProps): ReactElement {
       />
     );
   }
+
+  // Multi-disc grouping (T083): build a parent → children map
+  // for releases that carry parent_release_id. The Disc 1
+  // parent's own row IS the accordion header; children are
+  // discs 2..N. Non-multi-disc releases (parent_release_id =
+  // null AND no children pointing back) render as flat rows.
+  const allReleases = releases.data ?? [];
+  const childrenByParent = new Map<number, Release[]>();
+  for (const r of allReleases) {
+    if (r.parent_release_id !== null && r.parent_release_id !== undefined) {
+      const list = childrenByParent.get(r.parent_release_id) ?? [];
+      list.push(r);
+      childrenByParent.set(r.parent_release_id, list);
+    }
+  }
+  // Sort children by disc_number ascending so the accordion
+  // body reads disc 2, 3, 4, ...
+  for (const list of childrenByParent.values()) {
+    list.sort((a, b) => a.disc_number - b.disc_number);
+  }
+  // Top-level releases = parent_release_id is null. Children
+  // are folded under their parent and skipped at the top level.
+  const topLevel = allReleases.filter(
+    (r) => r.parent_release_id === null || r.parent_release_id === undefined,
+  );
+
   return (
     <ul className="space-y-2">
-      {releases.data?.map((release) => (
-        <ReleaseRow
-          key={release.id}
-          release={release}
-          gameId={props.gameId}
-          platformId={props.platformId}
-        />
-      ))}
+      {topLevel.map((release) => {
+        const children = childrenByParent.get(release.id) ?? [];
+        if (children.length === 0) {
+          return (
+            <li key={release.id}>
+              <ReleaseRow
+                release={release}
+                gameId={props.gameId}
+                platformId={props.platformId}
+              />
+            </li>
+          );
+        }
+        // Multi-disc: header row + accordion grouping the children.
+        const totalDiscs = release.disc_total || children.length + 1;
+        return (
+          <li key={release.id}>
+            <MultiDiscAccordion
+              parentTitle={t("releases.multiDiscTitle", {
+                title: release.name,
+                total: totalDiscs,
+              })}
+              totalDiscs={totalDiscs}
+              defaultOpen={false}
+            >
+              <ul className="space-y-2 p-2">
+                <li>
+                  <ReleaseRow
+                    release={release}
+                    gameId={props.gameId}
+                    platformId={props.platformId}
+                  />
+                </li>
+                {children.map((child) => (
+                  <li key={child.id}>
+                    <ReleaseRow
+                      release={child}
+                      gameId={props.gameId}
+                      platformId={props.platformId}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </MultiDiscAccordion>
+          </li>
+        );
+      })}
     </ul>
   );
 }
