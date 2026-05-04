@@ -20,7 +20,7 @@ import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
-import { CoverImage } from "@/components/rom";
+import { CoverImage, PlatformIcon } from "@/components/rom";
 import type { Game } from "@/lib/api/queries/games";
 import { usePlatformsById } from "@/lib/api/queries/platforms";
 import { useTagsById } from "@/lib/api/queries/tags";
@@ -163,12 +163,22 @@ export function GameCard(props: GameCardProps): ReactElement {
           {game.title}
         </p>
         <div className="flex items-center justify-between gap-1 font-mono text-[0.55rem] text-zinc-500">
-          <span
-            className="truncate rounded bg-zinc-800 px-1.5 py-0.5 uppercase tracking-wider"
-            title={platform?.name ?? `P#${game.platform_id}`}
-          >
-            {platformLabel}
-          </span>
+          <div className="flex min-w-0 items-center gap-1">
+            {platform?.slug && (
+              <PlatformIcon
+                slug={platform.slug}
+                name={platform.name}
+                manufacturer={platform.manufacturer ?? undefined}
+                className="h-4 w-4 text-[0.5rem]"
+              />
+            )}
+            <span
+              className="truncate rounded bg-zinc-800 px-1.5 py-0.5 uppercase tracking-wider"
+              title={platform?.name ?? `P#${game.platform_id}`}
+            >
+              {platformLabel}
+            </span>
+          </div>
           <span className="shrink-0">#{game.id}</span>
         </div>
       </div>

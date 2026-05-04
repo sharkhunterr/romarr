@@ -15,6 +15,7 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
+import { ScoreBadge } from "@/components/rom";
 import { useIndexersById } from "@/lib/api/queries/indexers";
 import {
   useManualGrab,
@@ -132,7 +133,7 @@ function CandidateRow(props: {
         {score !== null && (
           <>
             <span>·</span>
-            <span className="font-mono text-zinc-300">score {score}</span>
+            <ScoreBadge score={score} />
           </>
         )}
         {candidate.pre_grab_dat_match !== "skipped" && (

@@ -24,6 +24,7 @@ import {
   ConventionBadge,
   DumpStatusIcon,
   LanguagePills,
+  PlatformIcon,
   RegionBadge,
   type DumpStatus,
   type NamingConvention,
@@ -128,12 +129,22 @@ export function ReleaseRow(props: ReleaseRowProps): ReactElement {
           </p>
         </div>
         {platformLabel && (
-          <span
-            className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[0.6rem] uppercase tracking-wider text-zinc-300"
-            title={platform?.name ?? undefined}
-          >
-            {platformLabel}
-          </span>
+          <div className="flex shrink-0 items-center gap-1">
+            {platform?.slug && (
+              <PlatformIcon
+                slug={platform.slug}
+                name={platform.name}
+                manufacturer={platform.manufacturer ?? undefined}
+                className="h-5 w-5 text-[0.55rem]"
+              />
+            )}
+            <span
+              className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[0.6rem] uppercase tracking-wider text-zinc-300"
+              title={platform?.name ?? undefined}
+            >
+              {platformLabel}
+            </span>
+          </div>
         )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
