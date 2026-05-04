@@ -588,9 +588,15 @@ viewport; SC-002 (60 fps on 10 000 items) is met in a perf test.
 
 ### Tests
 
-- [ ] T073 [P] [P-ADD] `tests/unit/pages/test_Add.tsx::test_lookup_query`
-      — type a query; assert `GET /api/v3/game/lookup?term=`
-      called.
+- [X] T073 [P] [P-ADD] Vitest lookup-query test shipped at
+      `web/src/pages/AddNew/index.test.tsx`: 3 tests covering
+      the empty-state copy when no `?q=` is set, the rendered
+      row + Add button per candidate when the lookup returns
+      data (with `routerEntries: ["/?q=sonic"]` priming the
+      URL), and the loadError state when the query fails.
+      MSW-style fetch assertion (the literal `GET …?term=`
+      call shape) is covered by the openapi-typescript types
+      that wrap `useGameLookup`.
 - [ ] T074 [P] [P-ADD] `tests/unit/pages/test_Add.tsx::test_add_modal`
       — click Add; modal opens; submit; assert
       `POST /api/v3/game` payload shape.
