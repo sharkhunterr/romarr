@@ -373,14 +373,21 @@ helpers + the indexer registry + the route_release dispatcher.
       *(Standalone implementation that consumes `client.rss()`
       directly rather than the IndexerRssSync helper; same end-state
       guarantee with one less indirection.)*
-- [ ] T060 [ROUNDS] Each round, after `select_winners`, calls
+- [X] T060 [ROUNDS] Each round, after `select_winners`, calls
       `dispatch.dispatch_winner(winner)` (Phase 7).
-      *(Manual search never auto-dispatches by design — the operator
-      reviews the report and triggers `/api/v3/rom/release/grab`
-      explicitly. The RSS round currently surfaces eligible winners
-      on the report; auto-dispatch from RSS lands with the scheduler
-      tick (spec 013). The dispatch module itself shipped in slice 5
-      and is exercised end-to-end via the grab endpoint.)*
+      Shipped in slice 224: ``RssSyncAdapter`` (the scheduler-side
+      cron entry point) now calls ``run_rss_sync`` for the full
+      pipeline (feed pull → identification → scoring → grab
+      filter), then dispatches every ``report.grabs`` candidate
+      via ``dispatch_winner`` so RSS auto-grabs actually land in
+      the configured download client. ``grabs_dispatched`` /
+      ``grabs_failed`` surface in the JobResult summary alongside
+      the existing ``indexers_succeeded`` / ``items_total`` keys.
+      Manual search remains operator-driven by design (the
+      ``/api/v3/rom/release/grab`` endpoint already calls
+      ``dispatch_winner`` directly). MissingSearch / CutoffSearch
+      use the manual-search workflow (per-Release ``run_manual_search``
+      → operator picks → grab endpoint), so they don't auto-dispatch.
 
 **Checkpoint**: every ROUNDS test green; the five entry points
 behave per FR-001 through FR-005.

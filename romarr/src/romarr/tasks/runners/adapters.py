@@ -123,18 +123,35 @@ class HealthCheckAdapter(_AdapterBase):
 
 
 class RssSyncAdapter(_AdapterBase):
-    """Wraps spec 004's RSS sync (slice 204 wires the real
-    façade). When the JobContext supplies a sessionmaker, the
-    adapter calls
-    :meth:`IndexerRssSync.sync_all_enabled_indexers` directly
-    and reports per-indexer counts in the summary; without a
-    sessionmaker it falls back to the legacy stub."""
+    """Wraps spec 007's RSS round + spec 005's dispatch (T060).
+
+    When the JobContext supplies a sessionmaker, the adapter
+    calls :func:`run_rss_sync` (full pipeline: feed pull →
+    identification → scoring → grabs filter), then dispatches
+    every grab via :func:`dispatch_winner` so RSS auto-grabs
+    actually land in the configured download client. Without a
+    sessionmaker it falls back to the legacy stub.
+
+    Summary keys preserve the slice-204 names
+    (``indexers_succeeded`` / ``items_total``) for backward
+    compat with operator dashboards; new keys
+    (``grabs_dispatched`` / ``grabs_failed``) reflect the
+    auto-dispatch wiring."""
 
     def __init__(self) -> None:
         super().__init__(job_id="RssSync")
 
     async def _run(self, context: JobContext) -> JobResult:
-        from romarr.indexers.rss import IndexerRssSync
+        from sqlalchemy import select
+
+        from romarr.downloaders.models import DownloadClient
+        from romarr.downloaders.routing import RoutingCandidate
+        from romarr.search._clients import (
+            make_download_client_factory,
+            make_indexer_client_factory,
+        )
+        from romarr.search.dispatch import DispatchStatus, dispatch_winner
+        from romarr.search.rounds import run_rss_sync
 
         sessionmaker = getattr(context, "sessionmaker", None)
         if sessionmaker is None:
@@ -143,21 +160,57 @@ class RssSyncAdapter(_AdapterBase):
                 summary={"stub": True, "reason": "no sessionmaker"},
             )
 
-        sync = IndexerRssSync()
         async with sessionmaker() as session:
-            results = await sync.sync_all_enabled_indexers(session)
+            indexer_factory = make_indexer_client_factory(session)
+            download_factory = make_download_client_factory(session)
 
-        # ``sync_all_enabled_indexers`` filters out failures
-        # (per-indexer health rows are persisted separately);
-        # the returned list is every successful RssResult. The
-        # summary surfaces per-tick item counts so the operator
-        # audit reflects what RSS pulled in.
-        total_items = sum(len(r.items) for r in results)
+            # Preload the routing candidate slice once so the
+            # per-grab dispatcher doesn't re-query the table.
+            client_rows = (
+                (await session.execute(select(DownloadClient))).scalars().all()
+            )
+            routing_candidates = [
+                RoutingCandidate(
+                    id=r.id,
+                    priority=r.priority,
+                    enabled=r.enabled,
+                    enable_for_torrents=r.enable_for_torrents,
+                    enable_for_usenet=r.enable_for_usenet,
+                )
+                for r in client_rows
+            ]
+
+            report = await run_rss_sync(
+                session=session, client_factory=indexer_factory
+            )
+
+            # T060: dispatch every grab the RSS round produced.
+            # `report.grabs` is already filtered to indexers with
+            # `rss_auto_grab=True` and pipeline-clean candidates
+            # with score>0 (FR-027), so we can dispatch unconditionally.
+            grabs_dispatched = 0
+            grabs_failed = 0
+            for grab in report.grabs:
+                outcome = await dispatch_winner(
+                    candidate=grab,
+                    candidates=routing_candidates,
+                    client_factory=download_factory,
+                )
+                if outcome.status is DispatchStatus.GRABBED:
+                    grabs_dispatched += 1
+                else:
+                    grabs_failed += 1
+
+        indexers_succeeded = sum(
+            1 for v in report.indexer_outcomes.values() if v == "ok"
+        )
         return JobResult(
             status=JobStatus.SUCCESS,
             summary={
-                "indexers_succeeded": len(results),
-                "items_total": total_items,
+                "indexers_succeeded": indexers_succeeded,
+                "items_total": len(report.candidates),
+                "grabs_dispatched": grabs_dispatched,
+                "grabs_failed": grabs_failed,
             },
         )
 
