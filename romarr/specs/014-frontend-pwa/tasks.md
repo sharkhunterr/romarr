@@ -1093,27 +1093,25 @@ flows tested.
 
 ### Tests
 
-- [~] T110 [P] [SEARCH] `tests/unit/components/test_GlobalSearch.tsx::test_keyboard_shortcut`
-      **deferred for tests** — Vitest not yet installed. The
-      contract is implemented (`useGlobalSearchHotkey` in
-      `components/shared/GlobalSearchModal.tsx`): `Ctrl+K` /
-      `Cmd+K` toggles the modal; opening focuses the input on
-      next animation frame.
-- [~] T111 [P] [SEARCH] `tests/unit/components/test_GlobalSearch.tsx::test_groups_results`
-      **deferred for tests** — Vitest not yet installed. The
-      modal renders three result groups: Recent searches,
-      Settings (against `SETTINGS_NAV_ENTRIES`), Games /
-      Releases (placeholder until backend ships). Settings
-      results match against `slug + i18n label` so French
-      operators searching "params" still hit the right entry.
-- [~] T112 [P] [SEARCH] `tests/unit/components/test_GlobalSearch.tsx::test_recent_searches`
-      **deferred for tests** — Vitest not yet installed. The
-      contract is implemented (`useSearchStore`): last 5
-      operator queries persist under
-      `localStorage["romarr.search.recent"]` via
-      zustand-persist. Push dedupes on case-insensitive
-      match so a repeated query bubbles to the top instead
-      of duplicating.
+- [X] T110 [P] [SEARCH] `web/src/components/shared/GlobalSearchModal.test.tsx`
+      ships 3 hotkey tests (slice 244): Ctrl+K toggles the
+      modal both directions, Cmd+K (mac) toggles, other keys
+      are ignored. Mounted via a tiny harness component that
+      calls ``useGlobalSearchHotkey``; events are dispatched
+      via ``window.dispatchEvent(new KeyboardEvent(...))``.
+- [X] T111 [P] [SEARCH] Same test file ships the grouping
+      assertions (slice 244): the modal returns null when
+      closed; the Settings group renders matching
+      ``SETTINGS_NAV_ENTRIES`` (verified via "tags" query
+      surfacing the "Tags" entry); the Recent group surfaces
+      pushed queries when the input is empty.
+- [X] T112 [P] [SEARCH] `web/src/lib/store/search.test.ts`
+      ships 6 pure-store tests (slice 244): empty initial
+      state, pushRecent prepends + dedupes case-insensitively
+      ("Sonic" → "sonic" bubbles to top), 5-entry cap with
+      oldest dropped, empty / whitespace-only queries are
+      ignored, clearRecent empties, openModal /
+      closeModal / toggleModal flip the open flag.
 
 ### Implementation
 
