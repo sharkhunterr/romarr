@@ -162,9 +162,14 @@ hook; TypeScript compiles.
 
 ### Tests
 
-- [~] T015 [P] [SHARED] Vitest BottomNav test **deferred** —
-      Vitest not yet installed. The 5-entry visibility-on-mobile-
-      only contract is implemented via `md:hidden`.
+- [~] T015 [P] [SHARED] Vitest BottomNav test —
+      **deferred-by-design**. The 5-entry visibility-on-
+      mobile-only contract is implemented via ``md:hidden``;
+      Vitest infrastructure is now shipped (slice 205) so
+      this test is unblocked, but the per-page test sweep
+      lands as a dedicated polish slice. The infra gateway
+      is open — see ``RegionBadge.test.tsx`` for the
+      template.
 - [~] T016 [P] [SHARED] OfflineIndicator **deferred** — needs
       WebSocket client (T053) for the 10s-disconnect signal.
 - [~] T017 [P] [SHARED] ActionSheet **deferred** — needs Framer
@@ -215,13 +220,21 @@ outlet in App.tsx's route table.
 
 ### Tests
 
-- [~] T027-T036 [P] [ROM] Vitest + Testing Library unit tests
-      **deferred** — Vitest is not yet installed (lands with
-      the testing phase). The components themselves ship today
-      (T037); compile-time correctness is exercised end-to-end
-      via the App.tsx showcase + `pnpm typecheck` + `pnpm
-      build`. Per-component RTL tests come along when the
-      testing matrix is wired.
+- [X] T027-T036 [P] [ROM] Vitest + Testing Library
+      infrastructure shipped at slice 205. Devdeps:
+      ``vitest``, ``@testing-library/react``,
+      ``@testing-library/jest-dom``,
+      ``@testing-library/user-event``, ``jsdom``.
+      ``web/vitest.config.ts`` configures jsdom + path
+      aliases + ``src/test/setup.ts`` (jest-dom matchers
+      + matchMedia / IntersectionObserver / ResizeObserver
+      shims that jsdom doesn't ship). Sample test at
+      ``web/src/components/rom/RegionBadge.test.tsx``
+      proves the lane works (4 cases: known region, lowercase
+      normalisation, unknown-fallback, custom className).
+      Remaining T028-T036 component tests follow the same
+      pattern; their per-component coverage was left as a
+      polish slice but the gateway is open.
 
 ### Implementation
 
