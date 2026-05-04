@@ -74,12 +74,22 @@ def make_crud_router(
     schema_read: type[BaseModel],
     schema_create: type[BaseModel],
     schema_update: type[BaseModel],
+    library_fk_column: str | None = None,
 ) -> APIRouter:
     """Build a CRUD router for one profile type.
 
     ``label`` flows into the not-found / duplicate error envelopes;
     keep it kebab-case (``quality-profile``, etc.) so error codes
     stay consistent with the URL slug.
+
+    ``library_fk_column`` names the ``library.*_profile_id`` column
+    that pins this profile type — e.g. ``"quality_profile_id"`` for
+    QualityProfile. The DELETE handler walks the column to detect
+    bound libraries and surfaces a 409 when ``?force=false``. When
+    the column is not set (CustomFormat, today), the m2m
+    ``library_custom_format.custom_format_id`` cascade rule on the
+    spec 009 migration handles the bind automatically (FK
+    ``ondelete=CASCADE``), so the DELETE just works.
     """
     router = APIRouter(prefix=base_path, tags=[tag])
 
@@ -210,28 +220,100 @@ def make_crud_router(
         "/{row_id}",
         status_code=status.HTTP_204_NO_CONTENT,
         summary=(
-            f"Delete a {label} (admin only). ``?force=true`` unbinds "
-            "from libraries first."
+            f"Delete a {label} (admin only). ``?force=true`` is a "
+            "future-extension knob: today the cascade detection "
+            "still 409s when the profile is bound, because the "
+            "library.*_profile_id columns are NOT NULL — a force-"
+            "unbind would require either a schema change to allow "
+            "NULL or a 'substitute with factory default' rebind."
         ),
+        responses={
+            204: {"description": "Deleted."},
+            404: {"description": "No row with this id."},
+            409: {
+                "description": (
+                    "Profile is bound by one or more libraries. "
+                    "Detail carries the blocking library names so "
+                    "the operator can rebind manually."
+                )
+            },
+        },
     )
     async def delete_row(
         row_id: int,
         _admin: Annotated[Principal, Depends(require_admin)],
         db: Annotated[AsyncSession, Depends(get_db)],
-        force: Annotated[bool, Query(description="Unbind from libraries first")] = False,
+        force: Annotated[
+            bool,
+            Query(
+                description=(
+                    "Future-extension flag. The current cascade "
+                    "implementation still 409s when bound (NOT NULL "
+                    "FKs prevent NULL-out)."
+                ),
+            ),
+        ] = False,
     ) -> Response:
         row = (
             await db.execute(select(model_cls).where(model_cls.id == row_id))
         ).scalar_one_or_none()
         if row is None:
             raise _not_found(label)
-        # Spec 009 introduces the Library FK columns; today the gate
-        # is a no-op because no library row can yet pin a profile.
-        # ``force`` is accepted on the surface so spec 009 lights it
-        # up without a breaking API change.
-        del force  # surface contract — used once spec 009 lands
-        await db.delete(row)
-        await db.commit()
+
+        # Cascade detection (T077). Walk the matching
+        # library.*_profile_id column when one is configured.
+        # CustomFormat is bound via the m2m library_custom_format
+        # which has ondelete=CASCADE on the FK, so the DELETE just
+        # works there without an explicit detection pass.
+        if library_fk_column is not None:
+            from romarr.libraries.models import Library
+
+            fk_col = getattr(Library, library_fk_column)
+            blocking_rows = (
+                await db.execute(
+                    select(Library.id, Library.name).where(fk_col == row_id)
+                )
+            ).all()
+            if blocking_rows:
+                blocking_names = [r[1] for r in blocking_rows]
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail={
+                        "errorMessage": f"{label}_in_use",
+                        "errorCode": "in_use",
+                        "details": (
+                            f"{label} is bound by "
+                            f"{len(blocking_rows)} library/libraries: "
+                            f"{', '.join(blocking_names)}. Rebind "
+                            "those libraries before deleting."
+                        ),
+                        "blocking_libraries": blocking_names,
+                    },
+                )
+
+        # ``force`` is accepted on the surface for forward-
+        # compatibility once a substitute-rebind semantic ships;
+        # today it's a no-op because the NOT NULL FK schema
+        # leaves the safe path identical to ``force=false``.
+        del force
+
+        try:
+            await db.delete(row)
+            await db.commit()
+        except IntegrityError as exc:
+            # Defence-in-depth: if a Library row was inserted
+            # between the detection query and the commit (race),
+            # the FK RESTRICT will raise here. Surface the same
+            # 409 the detection branch would have.
+            await db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "errorMessage": f"{label}_in_use",
+                    "errorCode": "in_use",
+                    "details": "concurrent library binding prevents delete",
+                },
+            ) from exc
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     return router

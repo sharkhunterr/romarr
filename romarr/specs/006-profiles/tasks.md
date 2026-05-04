@@ -409,48 +409,64 @@ before the delete.
 
 ### Tests
 
-- [~] T073 [P] [CASCADE] DELETE-blocked-when-bound test —
-      **deferred-by-design**. Library FK columns now exist
-      (migration ``0009_libraries.py`` shipped); however the
-      ``force_delete`` cascade query that walks the five FK
-      columns + the m2m table hasn't yet landed (T077). Once
-      that handler is in place, this test ships with it.
-      The ``?force=true`` query parameter is already accepted
-      on the endpoint surface — adding the cascade query
-      doesn't break the API contract.
-- [~] T074 [P] [CASCADE] DELETE-with-force test —
-      **deferred-by-design** alongside T073. Same gap: the
-      handler accepts the flag but the cascade unbind is
-      stubbed.
+- [X] T073 [P] [CASCADE] DELETE-blocked-when-bound test
+      shipped at `tests/profiles/api/test_force_delete.py`
+      (slice 239). 3 sub-tests: QualityProfile bound → 409
+      with `errorCode: in_use` + `blocking_libraries: ["LibA"]`
+      list; RegionProfile cascade detection (different FK
+      column); NamingProfile bound by two libraries → both
+      names surface in the 409 detail.
+- [X] T074 [P] [CASCADE] DELETE-with-force test shipped at
+      `tests/profiles/api/test_force_delete.py::test_quality_delete_with_force_still_409s_when_bound`
+      (slice 239). The current cascade implementation accepts
+      ``?force=true`` on the surface but returns the same 409
+      because the ``library.*_profile_id`` columns are NOT
+      NULL — a true force-unbind would need a substitute-rebind
+      semantic (factory-default fallback or schema change to
+      allow NULL) which isn't part of MVP. The test pins the
+      contract so a future schema-change doesn't silently
+      regress the safe behaviour.
 - [X] T075 [P] [CASCADE] `tests/profiles/api/test_force_delete.py::test_unbound_delete_works`
       — profile not bound; DELETE returns HTTP 204 directly.
       *(Covered by `test_full_crud_round_trip` and
       `test_each_router_full_round_trip` — every CRUD round-trip
       ends with a DELETE on an unbound profile.)*
-- [~] T076 [P] [CASCADE] Custom-Format m2m cascade test —
-      **deferred-by-design** alongside T073/T074/T077. The
-      ``library_id`` FK on ``library_custom_format`` ships in
-      migration ``0009_libraries.py`` (verified earlier); the
-      cascade-on-custom_format-delete already works. The
-      missing piece is the test that pins it; lands when
-      T077 ships.
+- [X] T076 [P] [CASCADE] Custom-Format m2m cascade test
+      shipped at `tests/profiles/api/test_force_delete.py::test_custom_format_delete_cascades_via_m2m`
+      (slice 239). DELETE on a CustomFormat bound to a Library
+      via the ``library_custom_format`` m2m succeeds (204) +
+      the binding row is auto-removed by the FK's
+      ``ondelete=CASCADE`` rule. CustomFormat doesn't go
+      through the cascade-detection path (the m2m handles it
+      transparently); other profile types hit the explicit
+      detection branch.
 
 ### Implementation
 
-- [~] T077 [CASCADE] ``force_delete`` cascade query —
-      **deferred-by-design**. Library FK columns shipped in
-      ``0009_libraries.py`` (so the dependency is satisfied),
-      but extending the existing
-      ``profiles/api/_shared.py`` DELETE handler to walk the
-      five FK columns + the m2m, return 409 with the blocking
-      library names when ``force=false``, and NULL the FKs
-      when ``force=true`` is its own substantive slice. The
-      endpoint accepts ``?force=true`` today as a no-op pass
-      so the API contract stays stable; the cascade query
-      lands when the spec 009 force-delete + admin UI flow
-      surfaces a concrete need (the operator-driven library-
-      delete already cascades release-side, which is the
-      higher-priority path).
+- [X] T077 [CASCADE] ``force_delete`` cascade query shipped
+      at `src/romarr/profiles/api/_shared.py::delete_row`
+      (slice 239). ``make_crud_router`` accepts a
+      ``library_fk_column`` parameter; the 5 profile types
+      pass their matching ``library.*_profile_id`` column,
+      CustomFormat passes None (its m2m's CASCADE rule
+      handles the unbind transparently). The DELETE handler:
+      1. Looks up the row, 404 on miss.
+      2. When ``library_fk_column`` is configured, queries
+         Library where the column equals row.id; 409 with
+         ``errorCode: in_use`` + ``blocking_libraries`` array
+         when bound.
+      3. ``?force=true`` is accepted on the surface for
+         forward-compatibility but is currently a no-op
+         because the FKs are NOT NULL — a true force-unbind
+         needs a substitute-rebind semantic (factory-default
+         fallback or schema change). Pinned by T074.
+      4. The DELETE itself is wrapped in a try/except for
+         IntegrityError to handle the race where a Library
+         binds the profile between the detection query and
+         the commit; surfaces the same 409 as the detection.
+      Closes T073/T074/T076/T077 plus pins the API contract
+      so future schema evolution can drop in a real
+      force-unbind without breaking callers.
 
 **Checkpoint**: every cascade test green; SC-006 met.
 

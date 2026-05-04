@@ -48,6 +48,7 @@ router: APIRouter = make_crud_router(
     schema_read=NamingProfileRead,
     schema_create=NamingProfileCreate,
     schema_update=NamingProfileUpdate,
+    library_fk_column="naming_profile_id",
 )
 
 

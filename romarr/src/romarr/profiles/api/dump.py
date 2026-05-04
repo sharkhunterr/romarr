@@ -18,4 +18,5 @@ router = make_crud_router(
     schema_read=DumpProfileRead,
     schema_create=DumpProfileCreate,
     schema_update=DumpProfileUpdate,
+    library_fk_column="dump_profile_id",
 )

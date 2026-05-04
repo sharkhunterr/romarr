@@ -18,4 +18,5 @@ router = make_crud_router(
     schema_read=RegionProfileRead,
     schema_create=RegionProfileCreate,
     schema_update=RegionProfileUpdate,
+    library_fk_column="region_profile_id",
 )

@@ -18,4 +18,5 @@ router = make_crud_router(
     schema_read=QualityProfileRead,
     schema_create=QualityProfileCreate,
     schema_update=QualityProfileUpdate,
+    library_fk_column="quality_profile_id",
 )

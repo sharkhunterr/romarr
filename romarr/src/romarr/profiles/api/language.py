@@ -18,4 +18,5 @@ router = make_crud_router(
     schema_read=LanguageProfileRead,
     schema_create=LanguageProfileCreate,
     schema_update=LanguageProfileUpdate,
+    library_fk_column="language_profile_id",
 )
