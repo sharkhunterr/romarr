@@ -464,9 +464,16 @@ invalidations.
 
 ### Tests
 
-- [ ] T051 [P] [PWA] `tests/unit/pwa/test_install_prompt.test.tsx`
-      — `beforeinstallprompt` handler captured; the Install button
-      appears.
+- [X] T051 [P] [PWA] `web/src/lib/pwa/install.test.ts`
+      ships 6 tests (slice 259) covering the documented
+      install-prompt lifecycle: initial state with no
+      deferred event → canInstall=false; setEvent →
+      canInstall=true; setInstalled=true overrides canInstall
+      back to false even with an event present;
+      promptInstall() with no event returns "unavailable";
+      promptInstall() forwards the user's "accepted" /
+      "dismissed" choice and clears the deferred event from
+      the store after resolution.
 - [ ] T052 [P] [PWA] `tests/unit/pwa/test_offline_reads.test.tsx`
       — simulate offline; the Library page renders from cache.
 - [ ] T053 [P] [PWA] Lighthouse CI gate in
