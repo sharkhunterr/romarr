@@ -123,11 +123,43 @@ class HealthCheckAdapter(_AdapterBase):
 
 
 class RssSyncAdapter(_AdapterBase):
-    """Wraps spec 004's RSS sync — returns stub until the
-    indexer module exposes a ``sync_all_enabled_indexers()``."""
+    """Wraps spec 004's RSS sync (slice 204 wires the real
+    façade). When the JobContext supplies a sessionmaker, the
+    adapter calls
+    :meth:`IndexerRssSync.sync_all_enabled_indexers` directly
+    and reports per-indexer counts in the summary; without a
+    sessionmaker it falls back to the legacy stub."""
 
     def __init__(self) -> None:
         super().__init__(job_id="RssSync")
+
+    async def _run(self, context: JobContext) -> JobResult:
+        from romarr.indexers.rss import IndexerRssSync
+
+        sessionmaker = getattr(context, "sessionmaker", None)
+        if sessionmaker is None:
+            return JobResult(
+                status=JobStatus.SUCCESS,
+                summary={"stub": True, "reason": "no sessionmaker"},
+            )
+
+        sync = IndexerRssSync()
+        async with sessionmaker() as session:
+            results = await sync.sync_all_enabled_indexers(session)
+
+        # ``sync_all_enabled_indexers`` filters out failures
+        # (per-indexer health rows are persisted separately);
+        # the returned list is every successful RssResult. The
+        # summary surfaces per-tick item counts so the operator
+        # audit reflects what RSS pulled in.
+        total_items = sum(len(r.items) for r in results)
+        return JobResult(
+            status=JobStatus.SUCCESS,
+            summary={
+                "indexers_succeeded": len(results),
+                "items_total": total_items,
+            },
+        )
 
 
 class CutoffSearchAdapter(_AdapterBase):
