@@ -790,16 +790,15 @@ manageable; each ships ≥ 1 test + an implementation.
       coming-soon entries render in their list section
       WITHOUT being links (Quality definitions / DAT sources
       verified).
-- [~] T096 [P] [P-SET] `tests/unit/pages/Settings/test_Profiles.tsx::test_six_subtabs`
-      **partial / deferred for tests** — Vitest not yet
-      installed. Contract: `pages/Settings/Profiles/index.tsx`
-      shipped (slice 64) with a six-tab bar — Quality / Region
-      / Dump / Language / Naming / Custom Formats. Each tab
-      button is rendered and switchable; only Custom Formats
-      has a real implementation today (the rest render the
-      "coming soon" EmptyState pointing at the deferral).
-      Live-preview Naming tab lands once the backend Naming
-      endpoint is shipped.
+- [X] T096 [P] [P-SET] `web/src/pages/Settings/Profiles/index.test.tsx`
+      ships the six-subtabs page-level test: title + all six
+      tab buttons render, Quality is active by default
+      (aria-pressed="true"), the remaining five (Region /
+      Dump / Language / Naming / Custom Formats) start
+      un-pressed. Per-tab body coverage is left to per-tab
+      test files (each tab pulls its own query, so the
+      page-level test mocks only `useQualityProfiles` since
+      Quality is the default).
 - [~] T097 [P] [P-SET] `tests/unit/pages/Settings/test_CustomFormats.tsx::test_visual_builder`
       **partial / deferred for builder** — Vitest not
       installed. Read path is implemented:
