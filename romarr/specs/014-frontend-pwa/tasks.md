@@ -176,8 +176,15 @@ hook; TypeScript compiles.
       the mobile-only ``md:hidden`` class on the nav element,
       and the search-button → ``useSearchStore.openModal``
       wiring asserted via vi.spyOn on the Zustand store.
-- [~] T016 [P] [SHARED] OfflineIndicator **deferred** — needs
-      WebSocket client (T053) for the 10s-disconnect signal.
+- [X] T016 [P] [SHARED] Closed as path-divergence. The WS-10s-
+      disconnect signal lands at the chrome via
+      ``ConnectionIndicator`` (slice 227 ships its 4-state
+      test against the ``connection.offline`` mapping). The
+      device-level offline banner (slice 229's
+      ``OfflineIndicator``) uses navigator.onLine which is a
+      complementary signal — together they cover the two
+      "we're not reaching the network" conditions the
+      operator sees.
 - [~] T017 [P] [SHARED] ActionSheet **deferred** — needs Framer
       Motion + shadcn Dialog primitive.
 - [~] T018 [P] [SHARED] PullToRefresh **deferred** — needs
