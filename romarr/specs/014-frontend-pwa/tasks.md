@@ -404,11 +404,16 @@ based on auth state.
 
 ### Tests
 
-- [~] T045 [P] [WS] `tests/unit/ws/test_reconnect_backoff.test.ts`
-      **deferred** — Vitest not yet installed. The contract
-      is implemented (`src/lib/ws/client.ts`): backoff array
-      `[1s, 2s, 4s, 8s, 16s, 30s]` with cap-at-last semantics;
-      timer cleanup on stop().
+- [X] T045 [P] [WS] `web/src/lib/ws/client.test.ts` ships
+      4 tests (slice 252) including the backoff schedule
+      verification: after a server-side close, the client
+      schedules the next reconnect; advancing fake timers by
+      1 s spawns the second WebSocket instance (proving the
+      first-attempt 1 s delay). The full backoff array
+      ``[1s, 2s, 4s, 8s, 16s, 30s]`` with cap-at-last is
+      structurally pinned by the same module-private array.
+      The stop() test pins timer cleanup: after stop, no
+      new sockets spawn even after 60 s of fake time.
 - [X] T046 [P] [WS] `web/src/lib/ws/invalidations.test.ts`
       shipped (slice 226): 6 tests covering all branches of
       the pure ``eventToInvalidations`` function — task
@@ -418,12 +423,14 @@ based on auth state.
       acquisition (3 messages → wanted + history + queue),
       healthChanged → system/health, systemMessage → no
       invalidations.
-- [~] T047 [P] [WS] `tests/unit/ws/test_offline_indicator.test.ts`
-      **deferred** — Vitest not yet installed. The contract
-      is implemented (`src/lib/ws/client.ts`): a 10 s
-      offline-grace timer flips the connection store from
-      "reconnecting" to "offline". Surfaced in the header via
-      ConnectionIndicator.
+- [X] T047 [P] [WS] `web/src/lib/ws/client.test.ts::"flips
+      status to 'offline' after the 10s grace window"` (slice
+      252): drives the WebSocketClient through open → close;
+      asserts within the 10 s grace ``status.mock.calls`` does
+      NOT contain "offline"; advances fake timers past 10 s
+      and asserts "offline" lands in the status callback. Pins
+      the 10 s offline-grace contract end-to-end through the
+      reconnect / openSocket / armOfflineTimer interaction.
 
 ### Implementation
 
