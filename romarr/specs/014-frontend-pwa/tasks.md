@@ -188,8 +188,19 @@ hook; TypeScript compiles.
       Settings / Search). `md:hidden` so the desktop UX uses
       the sidebar. 44 × 44 px hit targets per FR-002.
       `pb-[env(safe-area-inset-bottom)]` for iOS PWA.
-- [~] T021 [P] [SHARED] OfflineIndicator **deferred** — lands
-      with the WebSocket client slice (T053).
+- [X] T021 [P] [SHARED] OfflineIndicator shipped at
+      `web/src/components/shared/OfflineIndicator.tsx` (slice
+      229). Subscribes to ``navigator.onLine`` +
+      ``window.online`` / ``offline`` events; renders a top-of-
+      app sticky amber banner when the device itself is
+      offline (distinct from the WS health that
+      ConnectionIndicator owns at the chrome). i18n key
+      ``connection.deviceOffline`` shipped EN + FR. Mounted
+      from AppLayout above the Header so it's the first
+      thing the operator sees on a flap-down. Test ships at
+      ``OfflineIndicator.test.tsx`` covering null-when-online,
+      banner-when-mounted-offline, and online↔offline event
+      transitions.
 - [X] T022 [P] [SHARED] `src/components/shared/EmptyState.tsx`
       — composable empty-state with optional icon + title +
       description + CTA slot.
@@ -320,10 +331,17 @@ T172).
 
 ### Implementation
 
-- [~] T041 [ROUTING] `src/App.tsx` wires `<QueryProvider>` →
-      `<ThemeProvider>` → `<RouterProvider>` (slice 46).
-      `<I18nextProvider>` and `<Toaster>` slot in when their
-      runtime deps ship in their respective phases.
+- [X] T041 [ROUTING] `web/src/App.tsx` wires
+      ``<QueryProvider>`` → ``<ThemeProvider>`` →
+      ``<Suspense>`` → ``<RouterProvider>`` (slice 46). i18next
+      is bootstrapped via the side-effect import in ``main.tsx``
+      (``import "@/lib/i18n"``) — react-i18next's
+      ``initReactI18next`` plugin provides the ``useTranslation``
+      context globally so an explicit ``<I18nextProvider>``
+      wrapper is unnecessary. The Toaster is mounted from
+      ``AppLayout`` via ``<ToastViewport />`` so it's scoped to
+      the protected-routes subtree (login + setup don't surface
+      toasts today). NotFoundPage covers the catch-all route.
 - [X] T042 [ROUTING] `src/components/shared/AuthGuard.tsx` —
       drives off the real `useCurrentPrincipal` TanStack
       Query (slice 46). `isPending` → `<LoadingSurface />`;

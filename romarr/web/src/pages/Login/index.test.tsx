@@ -81,7 +81,7 @@ describe("LoginPage", () => {
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
     expect(mutate).toHaveBeenCalledTimes(1);
-    expect(mutate.mock.calls[0][0]).toEqual({
+    expect(mutate.mock.calls[0]?.[0]).toEqual({
       username: "alice",
       password: "horse battery staple",
     });

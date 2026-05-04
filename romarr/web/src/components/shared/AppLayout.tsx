@@ -20,6 +20,7 @@ import {
   useGlobalSearchHotkey,
 } from "@/components/shared/GlobalSearchModal";
 import { Header } from "@/components/shared/Header";
+import { OfflineIndicator } from "@/components/shared/OfflineIndicator";
 import { ToastViewport } from "@/components/shared/ToastViewport";
 import { useWebSocketBridge } from "@/lib/ws/useWebSocketBridge";
 
@@ -29,6 +30,7 @@ export function AppLayout(): ReactElement {
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950 text-zinc-50">
+      <OfflineIndicator />
       <Header />
       <div className="flex-1 pb-16 md:pb-0">
         <Outlet />

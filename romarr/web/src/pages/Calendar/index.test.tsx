@@ -57,7 +57,7 @@ describe("CalendarPage", () => {
       isError: false,
       isSuccess: true,
       data: [],
-    } as ReturnType<typeof calendarQuery.useCalendar>);
+    } as unknown as ReturnType<typeof calendarQuery.useCalendar>);
 
     renderWithProviders(<CalendarPage />, { i18nResources: I18N_BUNDLE });
 

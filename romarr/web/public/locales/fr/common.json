@@ -28,7 +28,8 @@
     "connecting": "Connexion…",
     "connected": "En direct",
     "reconnecting": "Reconnexion…",
-    "offline": "Hors ligne"
+    "offline": "Hors ligne",
+    "deviceOffline": "Appareil hors ligne — données du cache."
   },
   "offline": {
     "title": "Vous êtes hors ligne",

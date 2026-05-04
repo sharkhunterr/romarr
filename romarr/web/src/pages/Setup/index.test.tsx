@@ -114,7 +114,7 @@ describe("SetupPage", () => {
     await user.click(screen.getByRole("button", { name: "Create admin" }));
 
     expect(mutate).toHaveBeenCalledTimes(1);
-    expect(mutate.mock.calls[0][0]).toEqual({
+    expect(mutate.mock.calls[0]?.[0]).toEqual({
       token: "TOK-123",
       username: "admin",
       password: "horse-battery-staple",
