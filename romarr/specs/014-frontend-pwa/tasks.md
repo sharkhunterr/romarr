@@ -139,8 +139,14 @@ hardening.
       regenerates `web/openapi.json` from `create_app().openapi()`
       — committing the snapshot keeps frontend builds
       reproducible (no running backend required).
-- [~] T012 [CODEGEN] `orval.config.ts` **deferred** until the
-      TanStack Query runtime dep ships.
+- [X] T012 [CODEGEN] `orval.config.ts` superseded — the
+      project chose ``openapi-typescript`` (T013) over orval.
+      Both serve the same purpose (typed OpenAPI client);
+      ``openapi-typescript`` is leaner (zero runtime, just
+      types — every consumer pairs with hand-written
+      TanStack Query hooks per ``lib/api/queries/*.ts``)
+      and the codegen has been driving the typecheck for
+      every page test in this spec since slice 13.
 - [X] T013 [CODEGEN] `pnpm codegen` ran once against the
       committed `web/openapi.json`; `web/src/types/api/schema.ts`
       committed. 12,581-line OpenAPI snapshot, 8,383-line

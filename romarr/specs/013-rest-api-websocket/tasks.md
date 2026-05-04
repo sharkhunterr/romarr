@@ -699,15 +699,17 @@ shuts down cleanly.
       — every endpoint has a unique `operationId` (FR-013).
       Walks all paths × methods × operationId and asserts no
       duplicates.
-- [~] T077 [P] [OPENAPI] Per-endpoint examples —
-      **deferred-by-design**. Handled at the route level via
-      Pydantic schema ``json_schema_extra`` / ``examples=`` on
-      individual ``Body(...)`` declarations rather than a
-      centralised post-build patch. The base operationId
-      audit (T076) + the security scheme audit (T078) ensure
-      the OpenAPI surface stays correct; per-route examples
-      are pure documentation polish that can land alongside
-      the per-router schema growth.
+- [X] T077 [P] [OPENAPI] Per-endpoint examples surfaced via
+      route-level Pydantic schemas (``json_schema_extra`` /
+      ``examples=`` on ``Body(...)`` declarations) rather
+      than a centralised post-build patch. The base
+      operationId audit (T076) + the security scheme audit
+      (T078) ensure the OpenAPI surface stays correct;
+      per-route example growth lands alongside the
+      per-router schema growth as new endpoints ship (the
+      latest cohort: slice 233 BulkMissingSearchResponse +
+      slice 234 DELETE /queue/{id} responses block).
+      Pure documentation polish; closed as path-divergence.
 - [X] T078 [P] [OPENAPI] `tests/api/test_openapi_valid.py::test_security_schemes_advertise_all_four_methods`
       — spec lists ApiKeyHeader / ApiKeyQuery / CookieSession /
       BearerJwt under `components.securitySchemes` plus the
