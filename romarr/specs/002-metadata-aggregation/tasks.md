@@ -88,15 +88,15 @@ encryption helper.
       `src/romarr/domain/models/metadata.py`) — `MetadataProviderConfig`,
       `MetadataCache`, `FieldPriority` SQLAlchemy 2.0 models matching
       `data-model.md`.
-- [~] T014 [P] [PERS] Pydantic schemas for the metadata
+- [X] T014 [P] [PERS] Pydantic schemas for the metadata
       entities ship inline alongside their FastAPI routers
       (``metadata/api/providers.py`` exposes
       ``ProviderConfigRead``; ``metadata/api/field_priority.py``
       exposes the field-priority shapes; ``metadata/api/lookup.py``
-      exposes the lookup row shape). The dedicated
-      ``metadata/schemas.py`` module the spec called for never
-      materialised because every consumer is in
-      ``metadata/api/`` — colocating kept the schemas next
+      exposes the lookup row shape). Closed as path-divergence —
+      the dedicated ``metadata/schemas.py`` module the spec
+      called for never materialised because every consumer is
+      in ``metadata/api/``; colocating kept the schemas next
       to the routers that use them.
 - [X] T015 [PERS] Extend `src/romarr/domain/models/game.py` with
       `needs_metadata_refresh: Mapped[bool]` (default false). (Already shipped

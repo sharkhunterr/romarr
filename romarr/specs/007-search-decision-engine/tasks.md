@@ -43,11 +43,17 @@ download-clients dispatch → hardening.
       Value Type" section: `RejectionCode`, `Rejection`,
       `ScoreContribution`, `ScoreBreakdown`, `Candidate`,
       `SearchRoundReport`.
-- [ ] T005 [SCAF] Extend `tests/conftest.py` with a
-      `mock_newznab_client(name)` fixture; create
-      `tests/search/conftest.py` for module-local fixtures.
-      *(Deferred to the pipeline slice — fixture lands alongside the
-      first tests that need a mocked indexer client.)*
+- [X] T005 [SCAF] Closed as path-divergence. The
+      `mock_newznab_client` equivalent ships as
+      ``_FakeNewznabClient`` + ``fake_client_factory``
+      fixture in ``tests/search/rounds/conftest.py`` (the
+      rounds tests are the only consumers, so colocating
+      with them is more direct than a top-level fixture).
+      ``tests/search/conftest.py`` exists with module-local
+      profile / library-state fixtures. The fake's surface
+      is exactly what the orchestrators read (``search`` /
+      ``rss`` / ``aclose``); other test modules build
+      task-specific stubs via ``MagicMock(spec=...)``.
 
 **Checkpoint**: imports work; lint+types green; no behaviour added.
 

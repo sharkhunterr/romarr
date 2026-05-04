@@ -72,16 +72,17 @@ first-boot → user overrides → API → hardening.
       `pack_source`, `action`, `status`. FK on
       `platform_pack_application_log.pack_version` →
       `platform_pack.pack_version`.
-- [~] T010 [P] [PERS] Pydantic schemas for the
+- [X] T010 [P] [PERS] Pydantic schemas for the
       platform-pack entities ship inline alongside their
       FastAPI routers (``platform_packs/api/platforms.py``
       exposes ``FormatRead`` / ``FormatCreate``;
       ``platform_packs/api/packs.py`` exposes the
-      pack-upload shapes). The dedicated
-      ``platform_packs/schemas.py`` module the spec called
-      for never materialised — colocating with the routers
-      mirrors the spec-002 metadata pattern and keeps
-      schemas next to their only consumer.
+      pack-upload shapes). Closed as path-divergence — the
+      dedicated ``platform_packs/schemas.py`` module the
+      spec called for never materialised because every
+      consumer is in ``platform_packs/api/``; colocating
+      with routers mirrors the spec-002 metadata pattern
+      and keeps schemas next to their only consumer.
 - [X] T011 [PERS] Authored `src/romarr/db/alembic/versions/0003_platform_packs.py`
       — DDL for the two tables. The defensive
       `ADD COLUMN IF NOT EXISTS contents_hash` was unnecessary —

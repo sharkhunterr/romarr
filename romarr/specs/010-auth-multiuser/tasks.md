@@ -96,8 +96,8 @@ session → forms → API keys → OIDC → trusted proxy → chained dependency
       `hash_api_key(plaintext: str) -> bytes` (BLAKE2b 32-byte),
       `verify_api_key(plaintext: str, stored_hash: bytes) -> bool`
       (constant-time via `secrets.compare_digest`).
-- [~] T016 [PERS] Token generation helpers —
-      **path-divergence**. The token-generation responsibilities
+- [X] T016 [PERS] Token generation helpers — closed as
+      path-divergence. The token-generation responsibilities
       ended up co-located with their consumers rather than in a
       shared ``tokens.py``: API-key generation lives at
       ``auth/api_keys.py::create_api_key`` (which mints
@@ -105,11 +105,13 @@ session → forms → API keys → OIDC → trusted proxy → chained dependency
       setup-token generation lives at
       ``auth/setup.py::maybe_bootstrap_setup_token``. Both
       paths are tested
-      (``test_api_keys.py``, ``test_setup.py``).
+      (``test_api_keys.py``, ``test_setup.py``). Tokens.py
+      file never materialised because it would have been a
+      pass-through with no shared logic.
 - [X] T017 [P] [PERS] Create `src/romarr/auth/models.py` — `User`,
       `ApiKey`, `Session`, `SetupToken` SQLAlchemy 2.0 models.
-- [~] T018 [P] [PERS] Auth schemas —
-      **path-divergence**. The Pydantic schemas live at
+- [X] T018 [P] [PERS] Auth schemas — closed as path-
+      divergence. The Pydantic schemas live at
       ``src/romarr/api/routers/auth_schemas.py`` (co-located
       with the router that consumes them) rather than at
       ``src/romarr/auth/schemas.py``. The shipped surface is
