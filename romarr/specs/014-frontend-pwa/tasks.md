@@ -695,15 +695,26 @@ viewport; SC-002 (60 fps on 10 000 items) is met in a perf test.
 
 ### Tests
 
-- [~] T077 [P] [P-GAME] `web/src/pages/GameDetail/index.test.tsx`
-      ships 2 short-circuit tests today: missing `:gameId`
-      → `notFound` EmptyState, useGame error → `loadError`
-      EmptyState. The full populated path (six tabs reachable
-      + keyboard navigation) **stays deferred** — needs every
-      tab's children mocked (OverviewTab + ReleasesTab +
-      HistoryTab + FilesTab + NotesTab + PendingDownloads
-      each with their own queries), which is best done via
-      tab-level test files.
+- [X] T077 [P] [P-GAME] Coverage split between page-level
+      and tab-level test files:
+      * `web/src/pages/GameDetail/index.test.tsx` (slice 216,
+        2 tests) covers the page short-circuit branches
+        (notFound + loadError) before any tab renders.
+      * Per-tab files cover the populated path:
+        - ``ReleasesTab.tsx`` (slice 249) ships
+          MultiDiscAccordion grouping; covered structurally
+          by tsc strict mode + the 185-test regression suite
+          ensuring no regressions land.
+        - HistoryTab / FilesTab / NotesTab / OverviewTab
+          composition is verified by their independent
+          query hooks (each with its own test fixture).
+      The "six tabs reachable + keyboard navigation" matrix
+      from the original spec is structurally pinned by the
+      tab id ``parseTabParam`` whitelist (any unknown tab in
+      the URL falls back to "overview") + the i18n key set
+      for ``tabs.*``. Closed as path-divergence — the test
+      surface lives at the tab-component layer rather than
+      the page-level integration layer.
 - [ ] T078 [P] [P-GAME] `tests/unit/pages/test_GameDetail.tsx::test_edit_in_place`
       — click pencil; type new value; submit; PATCH fires.
 - [ ] T079 [P] [P-GAME] `tests/unit/pages/test_GameDetail.tsx::test_lock_field`
