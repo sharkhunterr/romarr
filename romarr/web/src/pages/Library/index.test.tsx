@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 
 import { renderWithProviders } from "@/test/render";
 
@@ -161,5 +161,54 @@ describe("LibraryPage", () => {
     expect(params.tagId).toBe(7);
     expect(params.libraryId).toBe(3);
     expect(params.q).toBe("sonic");
+  });
+
+  it("debounces search input → URL write by 200ms (T067)", async () => {
+    const useGamesSpy = vi
+      .spyOn(gamesQuery, "useGames")
+      .mockReturnValue({
+        data: [],
+        isSuccess: true,
+        isLoading: false,
+        isPending: false,
+        isError: false,
+        error: null,
+      } as unknown as ReturnType<typeof gamesQuery.useGames>);
+    _stubFilters();
+
+    vi.useFakeTimers();
+    try {
+      renderWithProviders(<LibraryPage />, {
+        i18nResources: I18N_BUNDLE,
+        routerEntries: ["/"],
+      });
+
+      const search = screen.getByLabelText("Search") as HTMLInputElement;
+
+      // Type three characters rapidly — fireEvent.change is
+      // synchronous so we don't deal with userEvent's awaitable
+      // internals fighting fake timers.
+      fireEvent.change(search, { target: { value: "abc" } });
+
+      // Before the 200 ms debounce window flushes, useGames
+      // STILL sees the URL value (no `q` param).
+      const beforeFlushCalls = useGamesSpy.mock.calls.length;
+      const lastBeforeFlush = useGamesSpy.mock.calls.at(-1)![0] as
+        | gamesQuery.ListGamesParams
+        | undefined;
+      expect(lastBeforeFlush?.q).toBeUndefined();
+
+      // Advance past the debounce. The URL update reschedules
+      // a re-render which calls useGames with the typed query.
+      await vi.advanceTimersByTimeAsync(250);
+
+      const lastAfterFlush = useGamesSpy.mock.calls.at(-1)![0] as
+        | gamesQuery.ListGamesParams
+        | undefined;
+      expect(lastAfterFlush?.q).toBe("abc");
+      expect(useGamesSpy.mock.calls.length).toBeGreaterThan(beforeFlushCalls);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

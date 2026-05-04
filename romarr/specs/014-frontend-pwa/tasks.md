@@ -572,9 +572,13 @@ invalidations.
 - [ ] T066 [P] [P-LIB] `tests/unit/pages/test_Library.tsx::test_long_press_bulk_select`
       — long-press a card on touch emulation; assert bulk-select
       mode opens; ActionSheet appears with bulk actions.
-- [ ] T067 [P] [P-LIB] `tests/unit/pages/test_Library.tsx::test_search_debounce`
-      — type fast; assert one network call for the final query
-      (debounced ≤ 200 ms).
+- [X] T067 [P] [P-LIB] `web/src/pages/Library/index.test.tsx::"debounces
+      search input → URL write by 200ms"` (slice 232):
+      uses ``vi.useFakeTimers`` + ``fireEvent.change`` to type
+      "abc" synchronously; asserts ``useGames`` keeps seeing
+      ``q: undefined`` until the timers advance past 200 ms,
+      then sees ``q: "abc"`` after the URL settles. Verifies
+      the documented debounce contract end-to-end.
 
 ### Implementation
 
