@@ -162,14 +162,14 @@ hook; TypeScript compiles.
 
 ### Tests
 
-- [~] T015 [P] [SHARED] Vitest BottomNav test —
-      **deferred-by-design**. The 5-entry visibility-on-
-      mobile-only contract is implemented via ``md:hidden``;
-      Vitest infrastructure is now shipped (slice 205) so
-      this test is unblocked, but the per-page test sweep
-      lands as a dedicated polish slice. The infra gateway
-      is open — see ``RegionBadge.test.tsx`` for the
-      template.
+- [X] T015 [P] [SHARED] Vitest BottomNav test shipped at
+      `web/src/components/shared/BottomNav.test.tsx` (slice
+      225): 2 tests covering the five documented entries
+      (Library / Wanted / Activity / Settings as NavLinks
+      with their documented hrefs; Search as a button) plus
+      the mobile-only ``md:hidden`` class on the nav element,
+      and the search-button → ``useSearchStore.openModal``
+      wiring asserted via vi.spyOn on the Zustand store.
 - [~] T016 [P] [SHARED] OfflineIndicator **deferred** — needs
       WebSocket client (T053) for the 10s-disconnect signal.
 - [~] T017 [P] [SHARED] ActionSheet **deferred** — needs Framer
