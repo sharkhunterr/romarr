@@ -298,14 +298,20 @@ T172).
 
 ### Tests
 
-- [~] T038 [P] [ROUTING] Vitest unit test **deferred** — Vitest
-      not yet installed. The redirect contract is implemented
-      (AuthGuard reads `unauthed` status → `<Navigate
-      to="/login?returnTo=..." replace>`).
-- [~] T039 [P] [ROUTING] Vitest unit test **deferred** — same
-      reason. Theme persistence is implemented via
-      `zustand/middleware/persist` under
-      `THEME_STORAGE_KEY="romarr.theme"`.
+- [X] T038 [P] [ROUTING] AuthGuard test shipped at
+      `web/src/components/shared/AuthGuard.test.tsx` (slice
+      226): 4 tests — isPending → loading surface,
+      error → Navigate to /login?returnTo=…, data with
+      is_active=false → deactivated surface, data with
+      is_active=true → child Outlet renders. Verified
+      against a real `<Routes>` so the post-redirect /login
+      route renders.
+- [X] T039 [P] [ROUTING] ThemeProvider test shipped at
+      `web/src/components/shared/ThemeProvider.test.tsx`
+      (slice 226): 3 tests verifying the resolved theme lands
+      as a class on `document.documentElement`. ``dark`` →
+      .dark, ``light`` → .light, ``auto`` → resolves via the
+      jsdom matchMedia shim and lands exactly one of the two.
 - [~] T040 [P] [ROUTING] Vitest unit test **deferred** — same
       reason. The no-flash inline script in index.html runs
       BEFORE React hydration, applies the resolved class to
@@ -363,11 +369,15 @@ based on auth state.
       is implemented (`src/lib/ws/client.ts`): backoff array
       `[1s, 2s, 4s, 8s, 16s, 30s]` with cap-at-last semantics;
       timer cleanup on stop().
-- [~] T046 [P] [WS] `tests/unit/ws/test_invalidations.test.ts`
-      **deferred** — Vitest not yet installed. The contract
-      is implemented in `src/lib/ws/invalidations.ts` as a pure
-      function: 12 message types → query-key list. Used by the
-      bridge to invalidate TanStack Query.
+- [X] T046 [P] [WS] `web/src/lib/ws/invalidations.test.ts`
+      shipped (slice 226): 6 tests covering all branches of
+      the pure ``eventToInvalidations`` function — task
+      lifecycle (3 messages → system/tasks + history), queue
+      mirror (queueUpdated → queue), game lifecycle (3
+      messages → games + wanted + library), release
+      acquisition (3 messages → wanted + history + queue),
+      healthChanged → system/health, systemMessage → no
+      invalidations.
 - [~] T047 [P] [WS] `tests/unit/ws/test_offline_indicator.test.ts`
       **deferred** — Vitest not yet installed. The contract
       is implemented (`src/lib/ws/client.ts`): a 10 s
