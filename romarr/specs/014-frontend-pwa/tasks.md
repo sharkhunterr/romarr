@@ -904,13 +904,18 @@ manageable; each ships ≥ 1 test + an implementation.
       stripped (SettingsLayout owns it), all visible strings
       + force-delete `window.confirm` prompt resolve through
       the translation catalogue.
-- [~] T099 [P] [P-SYS] `web/src/pages/System/index.test.tsx`
-      ships 2 page-level tests (heading + the four documented
-      tabs with Status active by default; useSystemStatus
-      surfaces version + instanceName + runtimeVersion). The
-      TasksTab "Run now" trigger-button assertion **stays
-      deferred** — needs a TasksTab-scoped test fixture
-      against /api/v3/system/tasks to cover per-row busy state.
+- [X] T099 [P] [P-SYS] Two test files cover the System page
+      surface:
+      * `web/src/pages/System/index.test.tsx` (slice 215, 2
+        tests): heading + the four tabs with Status default;
+        useSystemStatus surfaces version + instanceName +
+        runtimeVersion.
+      * `web/src/pages/System/TasksTab.test.tsx` (slice 247,
+        3 tests): empty-state when ``useTasks`` returns [];
+        API error surfaces in the EmptyState; populated list
+        renders one row per Job + Run-now button fires
+        ``useTriggerCommand.mutate({name: jobId})`` for the
+        enabled job (the disabled job hides the button).
 - [X] T100 [P] [P-AUTH] `web/src/pages/Login/index.test.tsx`
       ships 6 tests (slice 212): form labels, disabled-pending
       state, mutate call with typed credentials, 401 →
