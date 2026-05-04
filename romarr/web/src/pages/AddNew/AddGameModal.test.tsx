@@ -45,6 +45,7 @@ const SAMPLE: GameLookupRow = {
   providerGameId: "1234",
   title: "Sonic the Hedgehog",
   confidence: 0.95,
+  rank: 0,
 };
 
 function _stubPlatforms(): void {

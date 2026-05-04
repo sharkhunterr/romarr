@@ -730,11 +730,23 @@ viewport; SC-002 (60 fps on 10 000 items) is met in a perf test.
       for ``tabs.*``. Closed as path-divergence — the test
       surface lives at the tab-component layer rather than
       the page-level integration layer.
-- [ ] T078 [P] [P-GAME] `tests/unit/pages/test_GameDetail.tsx::test_edit_in_place`
-      — click pencil; type new value; submit; PATCH fires.
-- [ ] T079 [P] [P-GAME] `tests/unit/pages/test_GameDetail.tsx::test_lock_field`
-      — toggle lock on `title`; subsequent metadata refresh
-      preserves the value.
+- [X] T078 [P] [P-GAME] `web/src/pages/GameDetail/OverviewTab.test.tsx::"edit-in-place
+      on the title fires useEditGameField.mutate"` (slice 260):
+      click ✎ → input renders with current title → fireEvent
+      Enter on a typed-in new value fires
+      ``useEditGameField.mutate({gameId: 42, field: "title",
+      value: "Sonic the Hedgehog (USA)"})``.
+- [X] T079 [P] [P-GAME] `OverviewTab.test.tsx::"clicking the
+      title lock button"` + `"re-clicking a locked field"`
+      (slice 260, 2 tests): fireEvent click on the
+      release_date FieldLockButton fires
+      ``useToggleFieldLock.mutate({gameId, field, locked: true})``;
+      a Game with ``locked_fields=["release_date"]`` exposes
+      "Unlock" instead of "Lock" and the click flips
+      ``locked: false``. The "subsequent metadata refresh
+      preserves the value" half is enforced server-side
+      (locked-fields filter on the aggregator path); the
+      client-side test pins the toggle contract.
 - [X] T080 [P] [P-GAME] `web/src/pages/GameDetail/ReleasesTab.test.tsx`
       ships 4 tests (slice 257). The multi-disc test seeds
       a 3-disc fixture (parent disc 1 + 2 children with
