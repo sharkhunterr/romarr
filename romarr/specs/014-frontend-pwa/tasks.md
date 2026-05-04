@@ -767,16 +767,23 @@ manageable; each ships ≥ 1 test + an implementation.
 
 ### Tests
 
-- [ ] T094 [P] [P-CAL] `tests/unit/pages/test_Calendar.tsx::test_empty_state`
-      — no calendar source configured; EmptyState renders
-      gracefully. **Note**: Calendar is implemented but
+- [X] T094 [P] [P-CAL] `web/src/pages/Calendar/index.test.tsx`
+      ships 4 Vitest tests (slice 211): loading skeleton,
+      empty-state, error banner, populated month view with
+      monitored marker. **Note**: Calendar is implemented but
       intentionally NOT surfaced in the primary nav per
       operator feedback (Romarr targets decades-old ROMs;
       no upcoming-release calendar to display). The page
       stays reachable by direct URL for tooling parity with
       the spec 013 /api/v3/calendar endpoint.
-- [ ] T095 [P] [P-SET] `tests/unit/pages/test_Settings.tsx::test_sidebar_nav`
-      — every documented sub-route is reachable from the sidebar.
+- [X] T095 [P] [P-SET] `web/src/pages/Settings/SettingsHome.test.tsx`
+      ships 3 tests covering the Settings landing panel:
+      welcome heading + both section headings, shipped
+      entries link to their documented `/settings/<slug>`
+      route (Profiles / Tags / Platforms verified), and
+      coming-soon entries render in their list section
+      WITHOUT being links (Quality definitions / DAT sources
+      verified).
 - [~] T096 [P] [P-SET] `tests/unit/pages/Settings/test_Profiles.tsx::test_six_subtabs`
       **partial / deferred for tests** — Vitest not yet
       installed. Contract: `pages/Settings/Profiles/index.tsx`
@@ -821,23 +828,36 @@ manageable; each ships ≥ 1 test + an implementation.
       stripped (SettingsLayout owns it), all visible strings
       + force-delete `window.confirm` prompt resolve through
       the translation catalogue.
-- [~] T099 [P] [P-SYS] Vitest test_trigger_button **deferred**
-      — Vitest not yet installed. The contract is implemented:
-      TasksTab's "Run now" button POSTs to /api/v3/command via
-      `useTriggerCommand` keyed by the job id, with per-row
-      busy state.
-- [ ] T100 [P] [P-AUTH] `tests/unit/pages/test_Login.tsx::test_forms_login`
-      — submit credentials; cookie set; redirect to `returnTo`.
+- [~] T099 [P] [P-SYS] `web/src/pages/System/index.test.tsx`
+      ships 2 page-level tests (heading + the four documented
+      tabs with Status active by default; useSystemStatus
+      surfaces version + instanceName + runtimeVersion). The
+      TasksTab "Run now" trigger-button assertion **stays
+      deferred** — needs a TasksTab-scoped test fixture
+      against /api/v3/system/tasks to cover per-row busy state.
+- [X] T100 [P] [P-AUTH] `web/src/pages/Login/index.test.tsx`
+      ships 6 tests (slice 212): form labels, disabled-pending
+      state, mutate call with typed credentials, 401 →
+      unauthenticated copy, 429 → rate-limited copy, setup
+      link href. Cookie/redirect-to-returnTo path is covered
+      by the auth slice integration tests; this test focuses
+      on the Login PAGE contract.
 - [ ] T101 [P] [P-AUTH] `tests/unit/pages/test_Login.tsx::test_oidc_button`
       — OIDC enabled; "Sign in with SSO" button visible and
       redirects to `/api/v3/auth/oidc/start`.
-- [ ] T102 [P] [P-SETUP] `tests/unit/pages/test_Setup.tsx::test_five_steps`
-      — Welcome → CreateAdmin → Library → DownloadClient →
-      Indexer → Done; navigation is one-way; back is allowed
-      within step n only.
+- [X] T102 [P] [P-SETUP] `web/src/pages/Setup/index.test.tsx`
+      ships 5 tests (slice 212) covering the actual 3-step
+      flow shipped (Welcome → Admin → Done; the spec's
+      original 5-step plan was reduced to 3 because Library /
+      DownloadClient / Indexer setup happens via
+      /settings/* after first login): Welcome step labels,
+      Welcome→Admin transition, mutate.call with trimmed
+      token + credentials, wrong-token error alert, isPending
+      → disabled+submitting button copy.
 - [ ] T103 [P] [P-SETUP] `tests/unit/pages/test_Setup.tsx::test_skip_indexer`
       — Skip button advances to Done without creating an
-      indexer.
+      indexer. **Deferred** — the 3-step flow no longer has
+      an Indexer step; superseded by /settings/indexers.
 
 ### Implementation
 
