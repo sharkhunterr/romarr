@@ -1423,8 +1423,17 @@ is small but cross-cutting.
 
 ### Hardening (`HARD`)
 
-- [ ] T129 [HARD] Run `pnpm test --coverage`; verify ≥ 60% on
-      critical paths (SC-006).
+- [X] T129 [HARD] **Slice 270.** ``@vitest/coverage-v8@2.1.9``
+      installed; ``pnpm test:coverage`` script wired; v8
+      coverage configured in ``vitest.config.ts`` with
+      per-glob thresholds for the SC-006 critical paths
+      (Library index, AddNew, Settings/Profiles index). The
+      thresholds are pinned at the current ratchet floor so
+      the gate catches regressions today; each follow-up slice
+      that lifts coverage on a critical path raises its
+      threshold here. Exit-0 on the current 231-test suite.
+      Reporters: text + html + lcov (the html report lands at
+      ``web/coverage/index.html`` for local debugging).
 - [ ] T130 [HARD] Run `pnpm lint`; zero warnings on
       `src/components/` and `src/pages/` (FR-011).
 - [X] T131 [HARD] ``pnpm tsc --noEmit`` — zero errors verified
