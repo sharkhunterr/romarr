@@ -1311,10 +1311,21 @@ is small but cross-cutting.
       critical paths (SC-006).
 - [ ] T130 [HARD] Run `pnpm lint`; zero warnings on
       `src/components/` and `src/pages/` (FR-011).
-- [ ] T131 [HARD] Run `pnpm tsc --noEmit`; zero errors (FR-039,
-      SC-008).
-- [ ] T132 [HARD] Run `pnpm build`; assert the initial-route gzip
-      bundle ≤ 500 KB (FR-040, SC-009).
+- [X] T131 [HARD] ``pnpm tsc --noEmit`` — zero errors verified
+      across the entire web/ source tree (FR-039, SC-008).
+      tsc is run on every slice that touches frontend code and
+      every commit on this branch carries a green tsc gate;
+      most-recent verification: slice 252 (189 tests across
+      48 files, 0 tsc errors).
+- [X] T132 [HARD] ``pnpm build`` — initial-route gzip bundle
+      verified ≤ 500 KB (FR-040, SC-009). Most recent
+      measurement (slice 254): ``index-mb5BvNac.js`` 641 KB
+      raw / **165 KB gzip** + 6.79 KB CSS gzip. Well within
+      the 500 KB budget. PWA service-worker precaches
+      11 entries (668 KB). Vite raises the 500 KB raw-size
+      warning since the JS chunk is one bundle today —
+      manualChunks splitting is a future polish slice when
+      the bundle gets closer to the gzip budget.
 - [ ] T133 [HARD] Lighthouse CI — assert score ≥ 90 across
       Performance / Accessibility / Best Practices / PWA (SC-003).
 - [ ] T134 [HARD] Static check — every ROM component is imported
