@@ -236,12 +236,12 @@ shutdown → command alias → API → hardening.
       adapter's result summary so the audit captures the
       scope (single-game vs all-games, per-library vs all
       libraries).
-- [~] T027 [P] [RUNNER] Progress-callback throttle test —
-      **deferred-by-design** to the EXEC slice. The
-      throttling logic lives at
+- [X] T027 [P] [RUNNER] Closed as path-divergence. The
+      progress-callback throttling logic lives at
       ``tasks/execution/progress.py`` and is unit-tested
-      there (``test_progress.py``); the per-runner dispatch
-      contract (T026) doesn't touch the throttle.
+      there (``tests/tasks/execution/test_progress.py``);
+      the per-runner dispatch contract (T026) doesn't touch
+      the throttle.
 
 ### Implementation
 
