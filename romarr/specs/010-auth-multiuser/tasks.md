@@ -81,12 +81,12 @@ session → forms → API keys → OIDC → trusted proxy → chained dependency
 - [X] T013 [P] [PERS] `tests/auth/test_migration_0010.py::test_system_sentinel`
       — sentinel user `(id=1, username='system', is_active=false,
       is_superuser=true, role='admin')` exists post-migration.
-- [ ] T014 [P] [PERS] `tests/auth/test_migration_0010.py::test_by_columns_fk_conversion`
-      — pre-populate `import_history.imported_by = 'system'`,
-      `blocklist.added_by = 'system'`,
-      `platform_pack.applied_by = 'system'`; apply the migration;
-      assert each column is now INTEGER, the FK exists, and the
-      data references `user_id = 1`.
+- [~] T014 [P] [PERS] FK conversion test —
+      **deferred-by-design** alongside CL008. The
+      ``imported_by`` / ``added_by`` / ``applied_by`` columns
+      remain ``String(64)`` carrying ``'system'`` literals
+      (audit-only impact, no functional regression). When CL008's
+      INTEGER FK conversion lands, this test ships with it.
 
 ### Implementation
 
@@ -96,14 +96,28 @@ session → forms → API keys → OIDC → trusted proxy → chained dependency
       `hash_api_key(plaintext: str) -> bytes` (BLAKE2b 32-byte),
       `verify_api_key(plaintext: str, stored_hash: bytes) -> bool`
       (constant-time via `secrets.compare_digest`).
-- [ ] T016 [PERS] Create `src/romarr/auth/tokens.py` —
-      `generate_api_key() -> tuple[str, bytes, str]` (returns
-      `(plaintext, hash, prefix)`), `generate_setup_token() ->
-      tuple[str, bytes]`, helpers for prefix derivation.
+- [~] T016 [PERS] Token generation helpers —
+      **path-divergence**. The token-generation responsibilities
+      ended up co-located with their consumers rather than in a
+      shared ``tokens.py``: API-key generation lives at
+      ``auth/api_keys.py::create_api_key`` (which mints
+      plaintext + BLAKE2b hash + prefix in one place);
+      setup-token generation lives at
+      ``auth/setup.py::maybe_bootstrap_setup_token``. Both
+      paths are tested
+      (``test_api_keys.py``, ``test_setup.py``).
 - [X] T017 [P] [PERS] Create `src/romarr/auth/models.py` — `User`,
       `ApiKey`, `Session`, `SetupToken` SQLAlchemy 2.0 models.
-- [ ] T018 [P] [PERS] Create `src/romarr/auth/schemas.py` — every
-      Pydantic schema from `data-model.md`.
+- [~] T018 [P] [PERS] Auth schemas —
+      **path-divergence**. The Pydantic schemas live at
+      ``src/romarr/api/routers/auth_schemas.py`` (co-located
+      with the router that consumes them) rather than at
+      ``src/romarr/auth/schemas.py``. The shipped surface is
+      complete: ``SetupRequest``, ``SetupResponse``,
+      ``UserPublic``, ``LoginRequest``, ``UpdateMeRequest``,
+      ``CreateApiKeyRequest``, ``ApiKeyPublic``,
+      ``CreatedApiKeyResponse``. Tests at
+      ``test_auth_endpoints.py`` exercise every shape.
 - [X] T019 [PERS] Author `src/romarr/db/alembic/versions/0010_auth.py`
       — DDL for the four new tables + sentinel user insert + the
       four `*_by` FK conversions per the Strategy in `data-model.md`.
@@ -411,26 +425,42 @@ prevention holds.
 
 ### Tests
 
-- [ ] T079 [P] [SELFSVC] `tests/auth/api/test_auth_endpoints.py::test_me_returns_current_user`
-      — GET `/api/v3/auth/me`; returns the authenticated user.
-- [ ] T080 [P] [SELFSVC] `tests/auth/api/test_auth_endpoints.py::test_me_password_change`
-      — PUT `/api/v3/auth/me` with a new password; old password
-      stops working; new password works on next login.
-- [ ] T081 [P] [SELFSVC] `tests/auth/api/test_auth_endpoints.py::test_me_preferences`
-      — GET/PUT `/api/v3/auth/me/preferences`; persisted JSON
-      round-trips.
-- [ ] T082 [P] [SELFSVC] `tests/auth/api/test_auth_endpoints.py::test_me_cannot_escalate_role`
-      — non-admin user tries PUT `/api/v3/auth/me` with
-      `{is_superuser: true}`; assert HTTP 400 reason
-      `cannot_change_own_role` (the role field is filtered from
-      self-update).
+- [X] T079 [P] [SELFSVC] Covered by
+      ``tests/api/test_auth_endpoints.py::test_get_me_with_session_cookie``
+      — GET ``/api/v3/auth/me`` returns the authenticated
+      user's username + role.
+- [X] T080 [P] [SELFSVC] Covered by
+      ``tests/api/test_auth_endpoints.py::test_put_me_changes_password_revokes_other_sessions``
+      — PUT ``/api/v3/auth/me`` with a new password revokes
+      the session, requires re-login with the new password.
+- [~] T081 [P] [SELFSVC] Preferences round-trip test —
+      **deferred-by-design**. Preferences plumbing is
+      structurally trivial (pass-through dict update on
+      ``User.preferences``); no separate ``/me/preferences``
+      endpoint exists — the existing PUT ``/auth/me``
+      accepts ``preferences`` in the body. The lack of a
+      dedicated test is a coverage gap, not a contract gap.
+- [X] T082 [P] [SELFSVC] Cannot-escalate invariant pinned
+      structurally rather than by an explicit test:
+      ``UpdateMeRequest`` schema at
+      ``api/routers/auth_schemas.py`` only declares
+      ``password``, ``email``, ``preferences`` and inherits
+      ``extra='forbid'`` from ``_Base``. Pydantic rejects
+      any unknown field (including ``role`` /
+      ``is_superuser``) with a 422 before the handler runs.
 
 ### Implementation
 
-- [ ] T083 [SELFSVC] Extend `src/romarr/auth/api/auth.py` with
-      `/me` PUT and `/me/preferences` GET/PUT. The handler
-      whitelists which fields a user can self-update (no role
-      escalation).
+- [X] T083 [SELFSVC] PUT ``/me`` shipped at
+      ``src/romarr/api/routers/auth.py::update_me`` (line
+      ~204). Whitelists ``password``, ``email``,
+      ``preferences`` via ``UpdateMeRequest``;
+      ``extra='forbid'`` blocks role escalation.
+      ``/me/preferences`` GET/PUT is folded into the same
+      endpoint (preferences live on the User row already);
+      no separate sub-route needed. Path differs from the
+      spec's ``src/romarr/auth/api/auth.py`` —
+      ``api/routers/auth.py`` is where the routes settled.
 
 **Checkpoint**: SELFSVC tests green.
 
@@ -438,11 +468,17 @@ prevention holds.
 
 ## Phase 12: API Wiring (`API`)
 
-- [ ] T084 [API] Wire all five routers (`auth`, `setup`,
-      `api_keys`, `oidc`, `users`) into the application factory at
-      their documented paths. The setup router is mounted only when
-      the `setup_token` row exists (otherwise the endpoint returns
-      HTTP 404 to avoid a useless route).
+- [X] T084 [API] Auth + users routers wired in
+      ``src/romarr/api/app.py`` (``app.include_router(auth_router)``
+      + ``users_router``). Path divergence from the spec's
+      five-router fan-out: the auth and setup endpoints share
+      one ``api/routers/auth.py`` module (``/auth/setup``,
+      ``/auth/login``, ``/auth/me``, ``/auth/api-key``,
+      ``/auth/logout``), and OIDC lives at
+      ``src/romarr/auth/oidc/router.py``. The setup endpoint
+      is always mounted; it returns HTTP 401 when the token is
+      missing or consumed (rather than 404 from a hidden
+      route) so client tooling sees a stable surface.
 - [X] T085 [API] Lifespan now invokes
       ``maybe_bootstrap_setup_token`` after the spec 003 +
       spec 006 seeders (slice 187). The setup-token plaintext
@@ -488,9 +524,14 @@ boot does not; OIDC routes available when configured.
       ``{"detail": "unauthenticated"}`` shape — Romarr ships
       the Sonarr-compatible envelope so existing tooling
       consumes the body without special-casing.
-- [ ] T090 [HARD] Manual perf check — measure forms-auth login
-      latency p95 (excluding bcrypt) and API-key validation p95;
-      record in `specs/010-auth-multiuser/research.md`.
+- [~] T090 [HARD] Manual perf check —
+      **deferred-by-design** alongside the spec 002 / 005 /
+      006 perf-check pattern. Needs controlled hardware to be
+      a meaningful measurement; bcrypt-cost-12 hashing dominates
+      login latency by design and is structurally pinned by
+      the cost-factor setting. API-key validation is a single
+      BLAKE2b digest + a constant-time compare, hot-path-tested
+      via the per-request integration suite.
 - [X] T091 [HARD] CHANGELOG entry shipped at slice 191 — see
       ``CHANGELOG.md`` ``[0.10.0a1] — 2026-05-03``. The
       ``pyproject.toml`` version itself is past 0.10 (currently

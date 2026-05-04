@@ -236,11 +236,12 @@ shutdown → command alias → API → hardening.
       adapter's result summary so the audit captures the
       scope (single-game vs all-games, per-library vs all
       libraries).
-- [ ] T027 [P] [RUNNER] `tests/tasks/test_runner_protocol.py::test_progress_callback_throttled`
-      — *deferred to EXEC slice* — the throttling logic is
-      a separate concern from runner dispatch; the EXEC layer
-      wraps the `progress_callback` before handing it to the
-      runner.
+- [~] T027 [P] [RUNNER] Progress-callback throttle test —
+      **deferred-by-design** to the EXEC slice. The
+      throttling logic lives at
+      ``tasks/execution/progress.py`` and is unit-tested
+      there (``test_progress.py``); the per-runner dispatch
+      contract (T026) doesn't touch the throttle.
 
 ### Implementation
 
@@ -404,10 +405,18 @@ this one.
       ``tests/tasks/runners/test_backup.py::test_run_backup_keeps_last_30``.
       Seeds 32 dummy archive pairs, runs one real backup, asserts
       exactly ``DEFAULT_RETENTION`` sqlite files survive.
-- [ ] T046 [P] [NEWRUN] `tests/tasks/runners/test_refresh_all_metadata.py::test_paginated`
-      — 200 Games; runner processes them in batches of 25 to
-      respect provider rate limits; respx asserts at most one
-      provider call per Game.
+- [X] T046 [P] [NEWRUN] Paginated metadata-refresh test
+      shipped at
+      ``tests/tasks/runners/test_refresh_all_metadata.py::test_paginated_visits_every_game``
+      (slice 178). Seeds 250 Games, runner processes them
+      with ``page_size=50`` (5 round trips), asserts every
+      Game is visited exactly once via the injected
+      ``_fake_refresh`` callback. Numbers diverge from the
+      spec's "200 Games / batches of 25 / respx assertion"
+      — the dependency-injected refresh function pattern
+      tests the same contract (one provider call per Game)
+      without wiring respx for every provider's HTTP
+      surface.
 - [~] T047 [P] [NEWRUN] Download + ingest covered by slice 180 —
       ``tests/tasks/runners/test_dat_update.py::test_run_dat_update_downloads_and_ingests``
       uses a fetcher fake (cleaner than respx for our case) to

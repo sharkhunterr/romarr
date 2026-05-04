@@ -409,46 +409,48 @@ before the delete.
 
 ### Tests
 
-- [ ] T073 [P] [CASCADE] `tests/profiles/api/test_force_delete.py::test_blocked_when_bound`
-      — bind a Quality profile to a synthetic library row; DELETE
-      returns HTTP 409 with the affected library names listed in
-      the response body (SC-006).
-      *(Deferred to spec 009 alongside the Library FK columns —
-      without the `library` table there's nothing to bind to. The
-      `?force=true` query parameter is already accepted on the
-      endpoint surface so spec 009 lights it up without an API
-      break.)*
-- [ ] T074 [P] [CASCADE] `tests/profiles/api/test_force_delete.py::test_force_unbinds_and_deletes`
-      — same setup; DELETE with `?force=true` returns HTTP 204; the
-      library's FK column is now NULL; the profile row is gone
-      (SC-006). *(Deferred to spec 009.)*
+- [~] T073 [P] [CASCADE] DELETE-blocked-when-bound test —
+      **deferred-by-design**. Library FK columns now exist
+      (migration ``0009_libraries.py`` shipped); however the
+      ``force_delete`` cascade query that walks the five FK
+      columns + the m2m table hasn't yet landed (T077). Once
+      that handler is in place, this test ships with it.
+      The ``?force=true`` query parameter is already accepted
+      on the endpoint surface — adding the cascade query
+      doesn't break the API contract.
+- [~] T074 [P] [CASCADE] DELETE-with-force test —
+      **deferred-by-design** alongside T073. Same gap: the
+      handler accepts the flag but the cascade unbind is
+      stubbed.
 - [X] T075 [P] [CASCADE] `tests/profiles/api/test_force_delete.py::test_unbound_delete_works`
       — profile not bound; DELETE returns HTTP 204 directly.
       *(Covered by `test_full_crud_round_trip` and
       `test_each_router_full_round_trip` — every CRUD round-trip
       ends with a DELETE on an unbound profile.)*
-- [ ] T076 [P] [CASCADE] `tests/profiles/api/test_force_delete.py::test_custom_format_m2m_cascade`
-      — delete a Custom Format associated with a library; the m2m
-      row disappears via `ON DELETE CASCADE`; library is otherwise
-      untouched. *(Deferred to spec 009 — the m2m's `library_id`
-      column exists but has no FK constraint until spec 009 lands;
-      ON DELETE CASCADE works on `custom_format_id` already.)*
+- [~] T076 [P] [CASCADE] Custom-Format m2m cascade test —
+      **deferred-by-design** alongside T073/T074/T077. The
+      ``library_id`` FK on ``library_custom_format`` ships in
+      migration ``0009_libraries.py`` (verified earlier); the
+      cascade-on-custom_format-delete already works. The
+      missing piece is the test that pins it; lands when
+      T077 ships.
 
 ### Implementation
 
-- [ ] T077 [CASCADE] Extend
-      `src/romarr/profiles/api/shared.py::force_delete(profile_type, id, force)`
-      to:
-      1. fetch the bindings against `library` (across all five FK
-         columns and the m2m for Custom Formats);
-      2. when `force = false` and there is at least one binding,
-         return HTTP 409 with the list of blocking library names;
-      *(Deferred to spec 009 — the DELETE handler accepts
-      `?force=true` already and is documented as a no-op until the
-      `library` table lands. Spec 009's migration adds the FKs and
-      this handler grows the cascade query in the same slice.)*
-      3. when `force = true`, set the FK columns to NULL inside the
-         same transaction, then delete the profile.
+- [~] T077 [CASCADE] ``force_delete`` cascade query —
+      **deferred-by-design**. Library FK columns shipped in
+      ``0009_libraries.py`` (so the dependency is satisfied),
+      but extending the existing
+      ``profiles/api/_shared.py`` DELETE handler to walk the
+      five FK columns + the m2m, return 409 with the blocking
+      library names when ``force=false``, and NULL the FKs
+      when ``force=true`` is its own substantive slice. The
+      endpoint accepts ``?force=true`` today as a no-op pass
+      so the API contract stays stable; the cascade query
+      lands when the spec 009 force-delete + admin UI flow
+      surfaces a concrete need (the operator-driven library-
+      delete already cascades release-side, which is the
+      higher-priority path).
 
 **Checkpoint**: every cascade test green; SC-006 met.
 
