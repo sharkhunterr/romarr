@@ -22,11 +22,13 @@ import {
 import { Header } from "@/components/shared/Header";
 import { OfflineIndicator } from "@/components/shared/OfflineIndicator";
 import { ToastViewport } from "@/components/shared/ToastViewport";
+import { usePreferencesHydration } from "@/lib/preferences";
 import { useWebSocketBridge } from "@/lib/ws/useWebSocketBridge";
 
 export function AppLayout(): ReactElement {
   useWebSocketBridge();
   useGlobalSearchHotkey();
+  usePreferencesHydration();
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-950 text-zinc-50">

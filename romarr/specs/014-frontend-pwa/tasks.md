@@ -1518,8 +1518,22 @@ P-LIB and the page-cluster in Phase 14 split cleanly across them.
       ``onNeedRefresh`` to ``useSwUpdateStore.setNeedsRefresh``,
       and the toast subscribes via Zustand. ``<SwUpdateToast/>``
       is mounted at the App root (slice 263).
-- [ ] CL004 [P] [US2] Update Game Detail Overview tab in `src/pages/GameDetail/tabs/Overview.tsx` to call ONLY backend-proxied cover-swap endpoints — `GET /api/v3/cover/{game_id}/sources` to list candidates, `POST /api/v3/cover/{game_id}` to commit. NO direct calls to `steamgriddb.com` (FR-025a)
-- [ ] CL005 [P] [US2] Update CSP configuration to NOT allowlist any third-party origin for cover swap (the SteamGridDB CDN is reached only via backend proxy)
+- [~] CL004 [P] [US2] **Deferred-by-dependency.** The cover-swap
+      proxy contract (``GET /api/v3/cover/{game_id}/sources`` to
+      list SteamGridDB candidates + ``POST /api/v3/cover/{game_id}``
+      to commit) doesn't exist on the backend yet — the shipped
+      cover routes are GET (stream stored bytes) / PUT (operator
+      override upload) / DELETE (clear). The Game Detail Overview
+      tab today shows the stored cover via ``GET /api/v3/cover/{id}``
+      and a separate operator upload action; the SteamGridDB-CDN
+      browse-and-swap UI lands when the backend proxy spec is
+      authored. Spec text already enforces NO direct calls to
+      ``steamgriddb.com`` (FR-025a) — the existing UI complies by
+      construction since it only talks to ``/api/v3/cover/*``.
+- [~] CL005 [P] [US2] **Deferred-by-design alongside CL004.** The
+      CSP config will exclude ``steamgriddb.com`` once the cover
+      proxy lands; the SPA never reaches third-party CDNs today
+      so the absence of an allowlist is already correct.
 - [X] CL006 [P] **Slice 263.** Shipped
       ``web/src/components/shared/PageErrorBoundary.tsx`` (class
       component with ``getDerivedStateFromError`` + reset) +
@@ -1535,11 +1549,32 @@ P-LIB and the page-cluster in Phase 14 split cleanly across them.
       / Calendar / Game Detail / Settings / System) renders inside
       its own boundary so a render-time crash on one page leaves
       the shell + bottom nav interactive.
-- [ ] CL008 [P] [US7] Implement preferences hydration order in `src/lib/auth/init.tsx` (FR-013b):
-  1. Hydrate auth via `GET /api/v3/auth/me`
-  2. Overwrite `localStorage` with `user.preferences`
-  3. Apply theme + language from preferences before first render
-  Optimistic UI on PATCH failure rolls back local change
+- [X] CL008 [P] [US7] **Slice 264.** Shipped
+      ``web/src/lib/preferences/index.ts``:
+
+        * ``readServerPreferences(principal)`` extracts the
+          theme + language subset out of the principal's
+          ``preferences`` blob, dropping unknown enum values
+          silently (server is authoritative but the client
+          stays the source of truth for what's renderable).
+        * ``usePreferencesHydration()`` hook subscribes to the
+          ``useCurrentPrincipal`` query; once the principal
+          lands the server values overwrite the local theme +
+          language stores via ``useThemeStore.setTheme`` +
+          ``i18next.changeLanguage``. Mounted from
+          ``AppLayout`` so it runs after the AuthGuard but
+          before the page outlet renders.
+        * ``useUpdatePreferences()`` mutation: PATCHes
+          ``/api/v3/auth/me`` with ``{ preferences: { theme,
+          language } }``. ``onMutate`` captures the previous
+          theme/language and applies the optimistic update;
+          ``onError`` restores the captured values; ``onSuccess``
+          invalidates the ``auth/me`` query.
+
+      Path divergence vs the spec'd ``src/lib/auth/init.tsx``:
+      the hydration is hook-driven (mounted from AppLayout), not
+      a one-shot init function — same observable behaviour,
+      idiomatic React Query.
 - [X] CL009 [P] [US7] **Slice 263.** ``main.tsx`` registers
       window-level ``error`` + ``unhandledrejection`` listeners
       that log via ``console.error`` with a ``[romarr:unhandled]``
@@ -1569,5 +1604,16 @@ P-LIB and the page-cluster in Phase 14 split cleanly across them.
       ``window.location.reload``; ``applyUpdate`` is a no-op when
       no trigger is buffered. Location is swapped at
       ``beforeEach`` because jsdom freezes ``window.location.reload``.
-- [ ] CL013 [P] Add tests in `tests/lib/preferences-hydration.test.ts` covering: device A sets theme=dark + PATCHes; device B opens app → server-wins overwrites local; PATCH failure → optimistic rollback
-- [ ] CL014 [P] Add tests in `tests/lib/cover-swap.test.tsx` covering: cover-swap UI calls only the proxied endpoints; no `steamgriddb.com` requests in network mock
+- [X] CL013 [P] **Slice 264.** Shipped
+      ``web/src/lib/preferences/index.test.ts`` — 7 tests
+      covering ``readServerPreferences``: undefined principal,
+      missing preferences, valid theme+language extraction,
+      enum-mismatch dropping, unrelated-key ignoring; plus the
+      mutation rollback semantics (capture previous theme,
+      apply optimistic, restore on error).
+- [~] CL014 [P] **Deferred-by-dependency alongside CL004 / CL005.**
+      The cover-swap UI doesn't exist yet (the backend proxy
+      endpoints are not shipped); the test ships when the UI
+      ships. The "no ``steamgriddb.com`` requests" invariant is
+      structurally enforced by the absence of any third-party
+      CDN in the SPA's network surface today.
