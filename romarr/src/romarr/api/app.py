@@ -296,9 +296,39 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
             app.state.scheduler = scheduler
             app.state.cancellation_registry = cancellation_registry
 
+    # Spec 009 T030 — heartbeat loop. Independent of the
+    # scheduler: it has its own per-library cadence and
+    # publishes events directly on the EventChannel rather
+    # than through the audit ledger. Default OFF for the test
+    # suite; production sets ROMARR_HEARTBEAT_ENABLED=true.
+    heartbeat_loop = None
+    enable_heartbeat = getattr(
+        app.state, "_enable_heartbeat", settings.heartbeat_enabled
+    )
+    if enable_heartbeat:
+        from romarr.libraries.heartbeat_loop import HeartbeatLoop
+
+        event_channel = getattr(app.state, "event_channel", None)
+        heartbeat_loop = HeartbeatLoop(
+            sessionmaker=app.state.db_sessionmaker,
+            event_channel=event_channel,
+        )
+        try:
+            await heartbeat_loop.start()
+        except Exception:
+            bootstrap_log.warning(
+                "lifespan.heartbeat_start_failed", exc_info=True
+            )
+            heartbeat_loop = None
+        else:
+            app.state.heartbeat_loop = heartbeat_loop
+            bootstrap_log.info("lifespan.heartbeat_started")
+
     try:
         yield
     finally:
+        if heartbeat_loop is not None:
+            await heartbeat_loop.stop()
         if scheduler is not None:
             from romarr.tasks.shutdown import graceful_shutdown
 

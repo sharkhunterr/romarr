@@ -230,6 +230,16 @@ class Settings(BaseSettings):
         "phase; operators with a CI/CD migration step should "
         "leave this False and run migrations explicitly.",
     )
+    heartbeat_enabled: bool = Field(
+        default=False,
+        description="Spec 009 T030. When True, the FastAPI "
+        "lifespan starts the HeartbeatLoop background task that "
+        "stat()s every library.path on its configured cadence "
+        "(default 30 s) and persists transitions to "
+        "library.status. Defaults to False so the test suite "
+        "doesn't pay the loop bootstrap cost. Production sets "
+        "ROMARR_HEARTBEAT_ENABLED=true.",
+    )
     spa_enabled: bool = Field(
         default=False,
         description="Spec 014 T009. When True, the app serves "

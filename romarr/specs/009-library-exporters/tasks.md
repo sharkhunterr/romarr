@@ -197,13 +197,21 @@ on recovery, debounce events.
       011's RomM-failure debounce. The lifespan-integrated async
       loop that persists ``library.status`` and forwards events on
       the notification bus lands once spec 011 provides the bus.
-- [ ] T030 [HEART] Wire `HeartbeatLoop.start()` into the application
+- [X] T030 [HEART] Wire `HeartbeatLoop.start()` into the application
       lifespan startup so the loop runs as a background task; cancel
       on shutdown.
-      *(Deferred to spec 011 — needs the notification bus to
-      forward events. The pure primitives shipped here are
-      consumable by the lifespan task today — only the wiring
-      waits.)*
+      Shipped in slice 223: ``src/romarr/libraries/heartbeat_loop.py``
+      ships the lifespan-integrated loop. Construction takes the
+      ``async_sessionmaker`` + an optional ``EventChannel`` (spec
+      011's notification bus). Tick cadence is fixed to 5 s as a
+      floor; ``run_heartbeat_pass`` enforces each library's
+      ``heartbeat_seconds``. ``api/app.py`` lifespan starts the loop
+      after the scheduler block when ``ROMARR_HEARTBEAT_ENABLED=true``
+      (default OFF for the test suite). ``Settings.heartbeat_enabled``
+      added in ``config/settings.py``. ``persist_transitions`` uses
+      ``sqlalchemy.update(Library)`` so the new status lands; the
+      :class:`EventChannel` publishes the event for any subscribed
+      Apprise targets when the channel is wired onto ``app.state``.
 
 **Checkpoint**: heartbeat tests green; debouncing prevents event
 storms.
