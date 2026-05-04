@@ -720,9 +720,18 @@ viewport; SC-002 (60 fps on 10 000 items) is met in a perf test.
 - [ ] T079 [P] [P-GAME] `tests/unit/pages/test_GameDetail.tsx::test_lock_field`
       — toggle lock on `title`; subsequent metadata refresh
       preserves the value.
-- [ ] T080 [P] [P-GAME] `tests/unit/pages/test_GameDetail.tsx::test_multi_disc_accordion`
-      — fixture 3-disc Game; the Releases tab groups them in a
-      MultiDiscAccordion.
+- [X] T080 [P] [P-GAME] `web/src/pages/GameDetail/ReleasesTab.test.tsx`
+      ships 4 tests (slice 257). The multi-disc test seeds
+      a 3-disc fixture (parent disc 1 + 2 children with
+      ``parent_release_id``) in shuffled order; asserts the
+      accordion summary lands as ``"Final Fantasy IX (USA) — 3
+      discs"``. Companion tests pin the empty-state, error
+      state, and single-disc-flat-row branches. ReleasesTab
+      DOM structure was also fixed in this slice — single-disc
+      releases pass through directly (ReleaseRow returns its
+      own ``<li>``); multi-disc parents wrap the
+      MultiDiscAccordion in a ``<div role="listitem">`` so the
+      outer ``<ul>`` doesn't carry nested ``<li>``.
 
 ### Implementation
 

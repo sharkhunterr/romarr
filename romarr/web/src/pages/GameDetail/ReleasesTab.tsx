@@ -237,25 +237,29 @@ export function ReleasesTab(props: ReleasesTabProps): ReactElement {
     (r) => r.parent_release_id === null || r.parent_release_id === undefined,
   );
 
+  // ReleaseRow itself renders the outer <li>. Single-disc
+  // releases pass through directly; multi-disc parents wrap
+  // a MultiDiscAccordion in a `<div role="listitem">` so the
+  // outer `<ul>` doesn't end up with an `<li>` containing
+  // another `<li>` (invalid DOM).
   return (
     <ul className="space-y-2">
       {topLevel.map((release) => {
         const children = childrenByParent.get(release.id) ?? [];
         if (children.length === 0) {
           return (
-            <li key={release.id}>
-              <ReleaseRow
-                release={release}
-                gameId={props.gameId}
-                platformId={props.platformId}
-              />
-            </li>
+            <ReleaseRow
+              key={release.id}
+              release={release}
+              gameId={props.gameId}
+              platformId={props.platformId}
+            />
           );
         }
         // Multi-disc: header row + accordion grouping the children.
         const totalDiscs = release.disc_total || children.length + 1;
         return (
-          <li key={release.id}>
+          <div key={release.id} role="listitem">
             <MultiDiscAccordion
               parentTitle={t("releases.multiDiscTitle", {
                 title: release.name,
@@ -265,25 +269,22 @@ export function ReleasesTab(props: ReleasesTabProps): ReactElement {
               defaultOpen={false}
             >
               <ul className="space-y-2 p-2">
-                <li>
+                <ReleaseRow
+                  release={release}
+                  gameId={props.gameId}
+                  platformId={props.platformId}
+                />
+                {children.map((child) => (
                   <ReleaseRow
-                    release={release}
+                    key={child.id}
+                    release={child}
                     gameId={props.gameId}
                     platformId={props.platformId}
                   />
-                </li>
-                {children.map((child) => (
-                  <li key={child.id}>
-                    <ReleaseRow
-                      release={child}
-                      gameId={props.gameId}
-                      platformId={props.platformId}
-                    />
-                  </li>
                 ))}
               </ul>
             </MultiDiscAccordion>
-          </li>
+          </div>
         );
       })}
     </ul>
