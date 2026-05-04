@@ -22,12 +22,12 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from romarr.api.dependencies import get_db, require_readonly
+from romarr.api.dependencies import get_db, require_admin, require_readonly
 from romarr.api.envelopes import PaginationEnvelope
 from romarr.api.models import QueueEntry
 from romarr.api.pagination import PageRequest, page_request, paginate
@@ -171,6 +171,119 @@ async def list_queue(
         sortable_keys=_SORTABLE_KEYS,
         record_adapter=_adapt,
     )
+
+
+# ---------------------------------------------------------------------------
+# DELETE /api/v3/queue/{id} — remove the entry, optionally tell the client to drop it
+# ---------------------------------------------------------------------------
+
+
+@router.delete(
+    "/{entry_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary=(
+        "Remove a queue entry (admin only). "
+        "``?removeFromClient=true`` also asks the originating "
+        "download client to drop the underlying download + its "
+        "files; default false leaves the client untouched and "
+        "only deletes the Romarr-side row."
+    ),
+    responses={
+        204: {"description": "Removed."},
+        404: {"description": "No queue entry with this id."},
+        502: {
+            "description": (
+                "Download client refused the remove request "
+                "(connection / auth / version error). The Romarr "
+                "row is preserved so a retry is meaningful."
+            )
+        },
+    },
+)
+async def delete_queue_entry(
+    entry_id: int,
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    remove_from_client: Annotated[
+        bool,
+        Query(
+            alias="removeFromClient",
+            description=(
+                "When true, also call ``DownloadClient.remove`` on "
+                "the originating client so the download + its on-"
+                "disk files are dropped. Default false: only the "
+                "Romarr-side mirror is cleared."
+            ),
+        ),
+    ] = False,
+) -> Response:
+    entry = (
+        await db.execute(
+            select(QueueEntry).where(QueueEntry.id == entry_id)
+        )
+    ).scalar_one_or_none()
+    if entry is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "errorMessage": "queue_entry_not_found",
+                "errorCode": "queue_entry_not_found",
+            },
+        )
+
+    if remove_from_client:
+        # Build the spec 005 DownloadClient via the same factory
+        # the manual-grab endpoint uses so the auth / TLS /
+        # category-ensure plumbing is shared.
+        from romarr.downloaders.errors import (
+            AuthError,
+            VersionError,
+        )
+        from romarr.downloaders.errors import (
+            ConnectionError as DownloaderConnError,
+        )
+        from romarr.search._clients import make_download_client_factory
+
+        factory = make_download_client_factory(db)
+        try:
+            client = await factory(entry.download_client_id)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail={
+                    "errorMessage": "download_client_unreachable",
+                    "errorCode": "download_client_unreachable",
+                    "details": f"client construction failed: {exc}",
+                },
+            ) from exc
+
+        try:
+            await client.remove(
+                entry.download_client_native_id,
+                delete_files=True,
+            )
+        except (DownloaderConnError, AuthError, VersionError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail={
+                    "errorMessage": "download_client_remove_failed",
+                    "errorCode": "download_client_remove_failed",
+                    "details": str(exc),
+                },
+            ) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail={
+                    "errorMessage": "download_client_remove_failed",
+                    "errorCode": "download_client_remove_failed",
+                    "details": f"unexpected: {exc}",
+                },
+            ) from exc
+
+    await db.delete(entry)
+    await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 __all__ = ["router"]

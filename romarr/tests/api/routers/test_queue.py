@@ -327,3 +327,49 @@ async def test_state_filter_unknown_value_rejected(
     documented state set."""
     resp = await authed_client.get("/api/v3/queue?state=NotAState")
     assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# T045 — DELETE /api/v3/queue/{id} removes the entry
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_delete_removes_entry_when_remove_from_client_false(
+    authed_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+) -> None:
+    """Default ``removeFromClient=false`` only deletes the
+    Romarr-side row; no download-client call is made (the
+    test fixture has no real client wired)."""
+    ids = await _seed_queue_entries(api_engine, count=2)
+    target = ids[0]
+
+    resp = await authed_client.delete(f"/api/v3/queue/{target}")
+    assert resp.status_code == 204
+
+    # Row gone — list endpoint reports the survivor only.
+    listing = await authed_client.get("/api/v3/queue")
+    assert listing.status_code == 200
+    record_ids = [r["id"] for r in listing.json()["records"]]
+    assert target not in record_ids
+    assert ids[1] in record_ids
+
+
+@pytest.mark.asyncio
+async def test_delete_returns_404_when_entry_missing(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.delete("/api/v3/queue/99999")
+    assert resp.status_code == 404
+    assert resp.json()["errorCode"] == "queue_entry_not_found"
+
+
+@pytest.mark.asyncio
+async def test_delete_unauthenticated_returns_401(
+    api_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+) -> None:
+    ids = await _seed_queue_entries(api_engine, count=1)
+    resp = await api_client.delete(f"/api/v3/queue/{ids[0]}")
+    assert resp.status_code == 401

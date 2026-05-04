@@ -403,15 +403,19 @@ shuts down cleanly.
       `?pageSize=N` capping, sort-by-state-desc, invalid sortKey
       400 (FR-008), 401 unauthenticated, and the empty-queue
       shape.
-- [~] T045 [P] [ROUTERS] DELETE with ``?removeFromClient=true``
-      — **deferred-by-design**. The queue read endpoint
-      (T044 ✓) is the only path the SPA needs for the MVP
-      Activity → Queue tab; mutating endpoints (delete +
-      retry) need the spec 005 ``DownloadClient.remove()``
-      adapter wired to a registry-backed factory in the
-      router. The ``RemoveFromClient`` flag plumbing is a
-      thin wrapper over the existing per-client adapter,
-      lands when the cross-spec wiring slice arrives.
+- [X] T045 [P] [ROUTERS] DELETE ``/api/v3/queue/{id}`` shipped
+      with ``?removeFromClient=`` boolean (slice 234). Admin-
+      only via ``require_admin``; default ``false`` only
+      deletes the Romarr-side mirror, ``true`` additionally
+      calls ``DownloadClient.remove(delete_files=True)`` via
+      spec 005 so the on-disk download is dropped too. Errors:
+      404 ``queue_entry_not_found`` when no row matches;
+      502 ``download_client_unreachable`` when the client
+      factory fails; 502 ``download_client_remove_failed``
+      when the spec 005 ``remove()`` raises (Auth / Version /
+      Connection / unexpected). 3 router tests cover the
+      happy path (entry deleted, list endpoint reports the
+      survivor only), 404 missing entry, 401 unauthenticated.
 - [~] T046 [P] [ROUTERS] POST ``/api/v3/queue/{id}/retry`` —
       **deferred-by-design** alongside T045. Same wiring
       gap (needs the spec 005 add helpers exposed as a
