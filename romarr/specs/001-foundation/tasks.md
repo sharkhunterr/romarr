@@ -261,15 +261,36 @@ green.
 
 ### Tests
 
-- [ ] T056 [P] [HDR] Generate `tests/fixtures/headers/sample.nes` (16-byte iNES
-      header + minimal body) and `test_ines.py` asserting magic match + mapper
-      number + PRG/CHR sizes.
-- [ ] T057 [P] [HDR] Generate `tests/fixtures/headers/sample.md` ("SEGA" string
-      at offset 0x100 + region byte) and `test_megadrive.py` asserting region
-      decode + serial extraction.
-- [ ] T058 [P] [HDR] Generate `tests/fixtures/headers/sample_psx.iso` (minimal
-      ISO9660 PVD at sector 16 + a `SYSTEM.CNF` containing `BOOT = cdrom:\SLUS_001.23;1`)
-      and `test_iso9660.py` asserting system/volume identifier + PSX serial.
+- [X] T056 [P] [HDR] **Path-divergence close** — the iNES contract
+      (magic match + mapper number + PRG / CHR sizes) is asserted in
+      ``tests/identification/test_headers.py::test_ines_reads_magic_and_mapper``
+      against deterministic synthetic bytes built from
+      ``INES_MAGIC + bytes([prg, chr, flags6, flags7]) + 8 zero bytes``.
+      Plus the negative cases ``test_ines_rejects_non_nes`` and
+      ``test_ines_short_file``. The bytes are byte-for-byte equivalent
+      to a committed ``tests/fixtures/headers/sample.nes`` would be —
+      tmp_path + write_bytes is the same shape, just emitted at test
+      time rather than committed as a binary artefact.
+- [X] T057 [P] [HDR] **Path-divergence close** — the Mega Drive
+      contract (region decode + serial extraction) is asserted in
+      ``tests/identification/test_headers.py::test_mega_drive_reads_jue_regions``,
+      driven by the deterministic ``_mega_drive_rom`` builder that
+      lays down the documented 0x100..0x1FF header layout (system id,
+      copyright, domestic / international titles, serial, region
+      block). Plus ``test_mega_drive_rejects_non_sega`` +
+      ``test_mega_drive_short_file``. Same path-divergence rationale
+      as T056: synthetic bytes via tmp_path stand in for a committed
+      ``sample.md`` with identical structural assertions.
+- [X] T058 [P] [HDR] **Path-divergence close** — the ISO9660 cascade
+      contract (PVD at LBA 16 + SYSTEM.CNF disambiguation between PSX
+      and PS2 + serial extraction) is asserted across six ISO tests in
+      ``tests/identification/test_headers.py``: PSX via SYSTEM.CNF,
+      PS2 via VER line, Xbox via default.xbe, Dreamcast / Saturn via
+      IP.BIN, plus the no-signature low-confidence path. The shared
+      ``_iso_with_signature_file`` builder lays down a real PVD at LBA
+      16 with the documented type byte / CD001 magic / volume
+      identifier / root directory record. Same path-divergence
+      rationale as T056 / T057.
 - [X] T059 [HDR] `test_stubs.py` — instantiating each stubbed reader (3DS, NDS,
       PSP, Vita, Switch, Wii, GameCube, GBA) and calling `.read()` raises
       `NotImplementedError` with a clear "not yet supported in MVP" message.
