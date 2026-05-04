@@ -396,27 +396,138 @@ class BackupAdapter(_AdapterBase):
 
 
 class LibraryScanAdapter(_AdapterBase):
-    """Wraps spec 009's library scanners.
+    """Wraps spec 009's library full-scan (slice 209 wires the
+    real scanner). When the JobContext supplies a sessionmaker
+    + an optional ``libraryId`` parameter, the adapter:
 
-    The library_id parameter selects per-library scanning;
-    without it, every library is scanned. Cross-spec wiring
-    lands when spec 009 exposes a ``scan_full(library_id=None)``
-    entry that the adapter can call directly."""
+      1. Loads the targeted Library rows (one if ``libraryId``
+         is given, all of them otherwise).
+      2. Resolves the accepted-extensions set per Library — the
+         platforms_restricted m2m if set, otherwise every
+         configured PlatformFormat.
+      3. Calls ``full_scan`` per Library.
+      4. Aggregates per-Library counts in the JobResult summary.
+
+    Without a sessionmaker, falls back to the legacy stub so
+    the scheduler dispatch path stays exercised end-to-end."""
 
     def __init__(self) -> None:
         super().__init__(job_id="LibraryScan")
 
     async def _run(self, context: JobContext) -> JobResult:
-        library_id = context.parameters.get("libraryId")
+        from pathlib import Path
+
+        from sqlalchemy import select
+
+        from romarr.domain.models import PlatformFormat
+        from romarr.libraries.models import Library, LibraryPlatform
+        from romarr.libraries.scanner.full import full_scan
+
+        sessionmaker = getattr(context, "sessionmaker", None)
+        if sessionmaker is None:
+            return JobResult(
+                status=JobStatus.SUCCESS,
+                summary={"stub": True, "reason": "no sessionmaker"},
+            )
+
+        library_id_param = context.parameters.get("libraryId")
+        per_library: list[dict[str, Any]] = []
+        scanned = 0
+        skipped = 0
+
+        async with sessionmaker() as session:
+            stmt = select(Library)
+            if library_id_param is not None:
+                stmt = stmt.where(Library.id == int(library_id_param))
+            libraries = (await session.execute(stmt)).scalars().all()
+
+            for library in libraries:
+                library_path = Path(library.path)
+                if not library_path.exists():
+                    skipped += 1
+                    per_library.append(
+                        {
+                            "library_id": library.id,
+                            "skipped": True,
+                            "reason": "path_missing",
+                        }
+                    )
+                    continue
+
+                # Resolve accepted extensions: per-library
+                # allowlist if platforms_restricted, else every
+                # known PlatformFormat extension.
+                if library.platforms_restricted:
+                    allowed_platform_ids = (
+                        await session.execute(
+                            select(LibraryPlatform.platform_id).where(
+                                LibraryPlatform.library_id == library.id
+                            )
+                        )
+                    ).scalars().all()
+                    if not allowed_platform_ids:
+                        skipped += 1
+                        per_library.append(
+                            {
+                                "library_id": library.id,
+                                "skipped": True,
+                                "reason": "empty_allowlist",
+                            }
+                        )
+                        continue
+                    formats = (
+                        await session.execute(
+                            select(PlatformFormat.extension).where(
+                                PlatformFormat.platform_id.in_(
+                                    allowed_platform_ids
+                                )
+                            )
+                        )
+                    ).scalars().all()
+                else:
+                    formats = (
+                        await session.execute(
+                            select(PlatformFormat.extension)
+                        )
+                    ).scalars().all()
+
+                accepted = {ext.lstrip(".").lower() for ext in formats}
+                if not accepted:
+                    skipped += 1
+                    per_library.append(
+                        {
+                            "library_id": library.id,
+                            "skipped": True,
+                            "reason": "no_known_extensions",
+                        }
+                    )
+                    continue
+
+                result = await full_scan(
+                    session=session,
+                    library_id=library.id,
+                    library_path=library_path,
+                    accepted_extensions=accepted,
+                )
+                scanned += 1
+                per_library.append(
+                    {
+                        "library_id": library.id,
+                        "files_seen": result.files_seen,
+                        "files_processed": result.files_processed,
+                        "files_skipped": result.files_skipped,
+                        "files_linked": result.files_linked,
+                        "files_orphaned": result.files_orphaned,
+                        "files_unmatched": result.files_unmatched,
+                    }
+                )
+
         return JobResult(
             status=JobStatus.SUCCESS,
             summary={
-                "stub": True,
-                "scope": (
-                    f"library_id={library_id}"
-                    if library_id
-                    else "all-libraries"
-                ),
+                "libraries_scanned": scanned,
+                "libraries_skipped": skipped,
+                "per_library": per_library,
             },
         )
 
