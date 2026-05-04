@@ -39,14 +39,14 @@ protection → hardening.
       `Decision` enum, `EvaluationReason`, `EvaluationResult`,
       `NamingPreviewRequest/Response`, `ForceDeleteResult` Pydantic
       models from `data-model.md`.
-- [~] T005 [SCAF] ``parsed_filename(name)`` fixture loader —
-      **deferred-by-design**. The profile test surface (regions,
-      languages, dump status) doesn't actually consume parsed
-      filenames; the evaluators take a ``ReleaseFacts`` value
-      type assembled inline. The fixture was scaffolded for a
-      pattern that subsequent slices didn't end up using.
-      ``tests/profiles/conftest.py`` exists with module-local
-      fixtures (e.g., ``seeded_profile_ids``).
+- [X] T005 [SCAF] Closed as path-divergence. The
+      ``parsed_filename(name)`` fixture loader was scaffolded
+      but the profile test surface (regions, languages,
+      dump status) doesn't actually consume parsed filenames
+      — the evaluators take a ``ReleaseFacts`` value type
+      assembled inline. ``tests/profiles/conftest.py`` ships
+      with the module-local fixtures the tests actually use
+      (``seeded_profile_ids`` etc).
 
 **Checkpoint**: imports work; lint+types green; no behaviour added.
 

@@ -26,13 +26,14 @@ provider framework, and hardening sit around them.
 **Purpose**: extend the project with the metadata-layer skeleton, dependencies, and
 test harness — no provider logic yet.
 
-- [~] T001 [SCAF] Runtime deps: ``cryptography>=42.0`` and
+- [X] T001 [SCAF] Runtime deps: ``cryptography>=42.0`` and
       ``python-multipart>=0.0.27`` shipped via the
       auth/foundation baseline; verified in pyproject.toml.
-      ``Pillow`` deliberately deferred — cover validation
+      ``Pillow`` deliberately omitted — cover validation
       currently checks content-type at the HTTP layer
-      (slice 160) which is sufficient until pixel-level
-      validation becomes a real requirement.
+      (slice 160) which is sufficient. Pixel-level validation
+      can be added if a real attack surface materialises;
+      not needed for MVP. Closed as path-divergence.
 - [X] T002 [P] [SCAF] Create `src/romarr/metadata/__init__.py` exposing
       `refresh_game_metadata`, `Aggregator`, and the provider registry.
 - [X] T003 [P] [SCAF] Create `src/romarr/metadata/errors.py` — `ProviderError`,
