@@ -28,6 +28,11 @@
     "etaMinutes": "{{value}}m",
     "etaHoursMinutes": "{{hours}}h{{minutes}}m",
     "progressLabel": "Download progress {{pct}}%",
+    "remove": "Remove",
+    "removing": "Removing…",
+    "removeAria": "Remove download {{id}} (also drops files)",
+    "removeConfirm": "Remove this download AND delete its on-disk files?",
+    "removeFailedFallback": "Failed to remove",
     "filter": {
       "ariaLabel": "Queue state filter",
       "all": "All",

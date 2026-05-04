@@ -818,25 +818,30 @@ viewport; SC-002 (60 fps on 10 000 items) is met in a perf test.
 
 ### Implementation
 
-- [~] T093 [P-ACT] `src/pages/Activity/index.tsx` shipped with
+- [X] T093 [P-ACT] `src/pages/Activity/index.tsx` shipped with
       the Queue | History tab switcher.
       * **Queue** (`QueueList.tsx`): polls `/api/v3/queue`
         every 5 s via `useQueue`. Each row carries
         downloadClientNativeId + state badge + progress bar
         with ARIA `role="progressbar"` + size + ETA. Error
         message surface for failed-state rows. Per-row
-        pause/resume/remove deferred to spec 005 integration.
+        Remove button shipped (slice 251) — fires
+        ``useDeleteQueueEntry`` with ``removeFromClient=true``
+        via ``window.confirm``; on success
+        ``invalidateQueries(["queue"])`` re-renders.
+        Per-row pause / resume still deferred (spec 005
+        ABC needs ``pause`` / ``resume`` methods first).
       * **History** (`HistoryList.tsx`): paginated audit
-        trail via `useHistory({ pageSize: 50 })`. Previous /
-        Next pager + total count. Filter chips deferred.
+        trail via `useHistory({ pageSize: 50 })`. Filter
+        chips shipped (slice 116): time-range +
+        event-type + failures-only with URL persistence.
       Live updates via WebSocket invalidation will land
       with the spec 013 T072 bridge slice — drop-in
-      replacement for the polling.
+      replacement for the polling. T091/T092 stay open
+      against that bridge work.
 
-      `src/lib/api/queries/queue.ts` shipped: `useQueue`
-      against the spec 013 queue router (slice 26). 5 s
-      polling default; QueryProvider's 30 s staleTime is
-      narrowed to 5 s for this hook so progress feels live.
+      `src/lib/api/queries/queue.ts` ships ``useQueue`` +
+      ``useDeleteQueueEntry`` (slice 251); 5 s polling default.
 
 **Checkpoint**: Activity page mobile-friendly with swipe gestures.
 

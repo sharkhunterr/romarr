@@ -28,6 +28,11 @@
     "etaMinutes": "{{value}}min",
     "etaHoursMinutes": "{{hours}}h{{minutes}}",
     "progressLabel": "Progression du téléchargement {{pct}}%",
+    "remove": "Retirer",
+    "removing": "Suppression…",
+    "removeAria": "Retirer le téléchargement {{id}} (supprime aussi les fichiers)",
+    "removeConfirm": "Retirer ce téléchargement ET supprimer ses fichiers sur disque ?",
+    "removeFailedFallback": "Échec de la suppression",
     "filter": {
       "ariaLabel": "Filtre d'état de la file",
       "all": "Tous",

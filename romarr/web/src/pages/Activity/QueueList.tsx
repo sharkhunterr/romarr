@@ -22,6 +22,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useDownloadClientsById } from "@/lib/api/queries/download-clients";
 import {
+  useDeleteQueueEntry,
   useQueue,
   type QueueEntry,
   type QueueState,
@@ -93,10 +94,21 @@ function QueueRow(props: {
 }): ReactElement {
   const { t } = useTranslation("activity");
   const { entry, clientName } = props;
+  const remove = useDeleteQueueEntry();
   const stateClass =
     STATE_BADGE[entry.state] ??
     "bg-zinc-800 text-zinc-300 ring-zinc-700";
   const progressPct = Math.round(Math.min(1, entry.progress) * 100);
+
+  function onRemove(): void {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(t("queue.removeConfirm"))
+    ) {
+      return;
+    }
+    remove.mutate({ id: entry.id, removeFromClient: true });
+  }
 
   return (
     <li className="rounded-md border border-zinc-800 bg-zinc-900/40 p-3">
@@ -152,6 +164,31 @@ function QueueRow(props: {
       {entry.errorMsg && (
         <p className="mt-2 text-[0.7rem] text-red-300">
           {entry.errorMsg}
+        </p>
+      )}
+
+      <div className="mt-2 flex justify-end">
+        <button
+          type="button"
+          onClick={onRemove}
+          disabled={remove.isPending}
+          className={[
+            "rounded-md border border-red-900/50 px-2.5 py-1",
+            "text-[0.65rem] font-medium text-red-400",
+            "hover:bg-red-950/40",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500",
+            "disabled:cursor-not-allowed disabled:opacity-60",
+          ].join(" ")}
+          aria-label={t("queue.removeAria", {
+            id: entry.downloadClientNativeId,
+          })}
+        >
+          {remove.isPending ? t("queue.removing") : t("queue.remove")}
+        </button>
+      </div>
+      {remove.isError && (
+        <p role="alert" className="mt-1 text-right text-[0.65rem] text-red-300">
+          {remove.error?.message ?? t("queue.removeFailedFallback")}
         </p>
       )}
     </li>

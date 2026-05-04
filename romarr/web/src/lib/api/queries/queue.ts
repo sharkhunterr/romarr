@@ -12,7 +12,13 @@
  * `queueUpdated` event handler.
  */
 
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseMutationResult,
+  type UseQueryResult,
+} from "@tanstack/react-query";
 
 import { ApiError, apiFetch } from "@/lib/api/client";
 import type { components } from "@/types/api/schema";
@@ -78,5 +84,41 @@ export function useQueue(
       apiFetch<QueueEnvelope>(`/api/v3/queue${qs ? `?${qs}` : ""}`),
     staleTime: 5_000,
     refetchInterval: params.refetchInterval ?? 5_000,
+  });
+}
+
+
+/**
+ * Drop a queue entry — delegates to spec 013 slice 234's
+ * DELETE ``/api/v3/queue/{id}``. ``removeFromClient`` defaults
+ * to ``false`` (delete only the Romarr-side mirror); set to
+ * ``true`` to also call ``DownloadClient.remove(delete_files=True)``
+ * via the spec 005 factory so the on-disk download is dropped.
+ *
+ * On success the [["queue"]] cache is invalidated so the
+ * Activity page re-renders without the dropped entry.
+ */
+export interface DeleteQueueEntryVariables {
+  id: number;
+  removeFromClient?: boolean;
+}
+
+export function useDeleteQueueEntry(): UseMutationResult<
+  void,
+  ApiError,
+  DeleteQueueEntryVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<void, ApiError, DeleteQueueEntryVariables>({
+    mutationFn: async ({ id, removeFromClient }) => {
+      const qs =
+        removeFromClient === true ? "?removeFromClient=true" : "";
+      await apiFetch<void>(`/api/v3/queue/${id}${qs}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["queue"] });
+    },
   });
 }
