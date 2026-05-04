@@ -132,6 +132,24 @@
       "errorFallback": "Toggle failed."
     }
   },
+  "qualityDefinitions": {
+    "title": "Quality Definitions",
+    "subtitle": "Per-platform file size bounds. Min/max bytes drive the search-engine quality gate and the importer's reject-too-small floor — re-encodes outside this range are dropped.",
+    "loadError": "Couldn't load quality definitions",
+    "empty": {
+      "title": "No platforms configured",
+      "body": "Apply a Platform Pack first under Settings > Platforms."
+    },
+    "platformNoFormats": "No formats defined for this platform yet — apply a Platform Pack to populate them.",
+    "unbounded": "—",
+    "cols": {
+      "extension": "Extension",
+      "formatType": "Type",
+      "minSize": "Min size",
+      "maxSize": "Max size",
+      "source": "Source"
+    }
+  },
   "profiles": {
     "title": "Profiles",
     "subtitle": "Six profile types drive every grab / upgrade / import decision. Each library carries one profile of each type; profiles are reusable across libraries.",

@@ -42,6 +42,7 @@ import { MediaManagementPage } from "@/pages/Settings/MediaManagement";
 import { MetadataSourcesPage } from "@/pages/Settings/MetadataSources";
 import { PlatformsPage } from "@/pages/Settings/Platforms";
 import { ProfilesPage } from "@/pages/Settings/Profiles";
+import { QualityDefinitionsPage } from "@/pages/Settings/QualityDefinitions";
 import { SettingsHome } from "@/pages/Settings/SettingsHome";
 import { SettingsLayout } from "@/pages/Settings/SettingsLayout";
 import { SettingsPlaceholder } from "@/pages/Settings/SettingsPlaceholder";
@@ -100,6 +101,10 @@ const router = createBrowserRouter([
                 element: <MetadataSourcesPage />,
               },
               { path: "profiles", element: <ProfilesPage /> },
+              {
+                path: "quality-definitions",
+                element: <QualityDefinitionsPage />,
+              },
               {
                 path: "media-management",
                 element: <MediaManagementPage />,

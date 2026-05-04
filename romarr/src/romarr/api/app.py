@@ -36,6 +36,9 @@ from romarr.api.routers.cover import router as cover_router
 from romarr.api.routers.game import router as game_router
 from romarr.api.routers.history import router as history_router
 from romarr.api.routers.log import router as log_router
+from romarr.api.routers.quality_definitions import (
+    router as quality_definitions_router,
+)
 from romarr.api.routers.queue import router as queue_router
 from romarr.api.routers.release import router as release_router
 from romarr.api.routers.status import router as system_status_router
@@ -421,6 +424,10 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     # Spec 013 — Calendar (T059): MVP empty list. The schema is
     # pinned so the frontend can wire the month view now.
     app.include_router(calendar_router)
+    # Spec 014 T106 (slice 266) — Settings > Quality Definitions
+    # read-only summary. Aggregates Platform → PlatformFormat
+    # rows server-side so the UI doesn't fan out N+1 fetches.
+    app.include_router(quality_definitions_router)
     # Spec 008 + 014 (slice 86) — Game/Release reads. Drives
     # the Frontend's manual-match Game picker (slice 84's
     # POST /unidentified/{id}/match needs a way to pick the

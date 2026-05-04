@@ -132,6 +132,24 @@
       "errorFallback": "Bascule échouée."
     }
   },
+  "qualityDefinitions": {
+    "title": "Définitions de qualité",
+    "subtitle": "Bornes de taille de fichier par plateforme. Les tailles min/max alimentent le filtre qualité du moteur de recherche et le plancher de l'importeur — les ré-encodages hors plage sont rejetés.",
+    "loadError": "Impossible de charger les définitions de qualité",
+    "empty": {
+      "title": "Aucune plateforme configurée",
+      "body": "Appliquez un Platform Pack via Paramètres > Plateformes."
+    },
+    "platformNoFormats": "Aucun format défini pour cette plateforme — appliquez un Platform Pack pour les renseigner.",
+    "unbounded": "—",
+    "cols": {
+      "extension": "Extension",
+      "formatType": "Type",
+      "minSize": "Taille min",
+      "maxSize": "Taille max",
+      "source": "Source"
+    }
+  },
   "profiles": {
     "title": "Profils",
     "subtitle": "Six types de profils pilotent toutes les décisions de grab / upgrade / import. Chaque ludothèque porte un profil de chaque type ; les profils sont réutilisables entre ludothèques.",

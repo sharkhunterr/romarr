@@ -1057,11 +1057,13 @@ manageable; each ships ≥ 1 test + an implementation.
       (slice 56), Indexers (slice 60), Download Clients
       (slice 61), Connect (slices 122-143), General, Media
       Management, Metadata Sources, Platforms, Profiles,
-      Unidentified — 11 of 13 (Unidentified is a bonus, not
-      one of the 12 spec'd). Remaining: ``quality-definitions``
-      and ``dat-sources`` still resolve through
-      SettingsPlaceholder; they need their own dedicated REST
-      surfaces to ship as full pages.
+      QualityDefinitions (slice 266 — read-only summary backed
+      by new ``GET /api/v3/quality-definition`` aggregation
+      endpoint), Unidentified — 12 of 13 (Unidentified is a
+      bonus, not one of the 12 spec'd). Remaining: ``dat-sources``
+      still resolves through SettingsPlaceholder; needs its own
+      backend ``DatSourceConfig`` REST surface to ship as a full
+      page.
 
       `src/pages/Settings/Indexers/index.tsx` shipped with
       `useIndexers` (list) + `useDeleteIndexer` + `useTestIndexer`
