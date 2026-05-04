@@ -36,8 +36,9 @@ session → forms → API keys → OIDC → trusted proxy → chained dependency
       `SetupAlreadyCompleted`.
 - [X] T004 [P] [SCAF] Create `src/romarr/auth/types.py` — `Role`,
       `ROLE_HIERARCHY`, `AuthMethod`, `AuthContext`.
-- [~] T005 [P] [SCAF] Auth Pydantic Settings fields shipped
-      (slice 175) but colocated in the shared
+- [X] T005 [P] [SCAF] Closed as path-divergence. Auth
+      Pydantic Settings fields shipped (slice 175) but
+      colocated in the shared
       ``romarr.config.settings.Settings`` rather than the
       dedicated ``src/romarr/auth/settings.py`` the spec
       originally called for — mirrors the spec-002 / 003 /
@@ -435,13 +436,14 @@ prevention holds.
       ``tests/api/test_auth_endpoints.py::test_put_me_changes_password_revokes_other_sessions``
       — PUT ``/api/v3/auth/me`` with a new password revokes
       the session, requires re-login with the new password.
-- [~] T081 [P] [SELFSVC] Preferences round-trip test —
-      **deferred-by-design**. Preferences plumbing is
-      structurally trivial (pass-through dict update on
-      ``User.preferences``); no separate ``/me/preferences``
-      endpoint exists — the existing PUT ``/auth/me``
-      accepts ``preferences`` in the body. The lack of a
-      dedicated test is a coverage gap, not a contract gap.
+- [X] T081 [P] [SELFSVC] Preferences round-trip test shipped
+      at ``tests/api/test_auth_endpoints.py::test_put_me_preferences_round_trip``
+      (slice 241). PUT ``/api/v3/auth/me`` with a free-form
+      preferences dict (theme / language / card-size sample)
+      persists onto ``User.preferences``; the subsequent GET
+      ``/auth/me`` surfaces the same dict. The endpoint is
+      pass-through so operator UI prefs persist without
+      schema growth.
 - [X] T082 [P] [SELFSVC] Cannot-escalate invariant pinned
       structurally rather than by an explicit test:
       ``UpdateMeRequest`` schema at

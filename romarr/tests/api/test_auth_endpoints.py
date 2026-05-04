@@ -223,6 +223,37 @@ async def test_get_me_with_session_cookie(
 
 
 @pytest.mark.asyncio
+async def test_put_me_preferences_round_trip(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """T081 — PUT /auth/me with a preferences dict updates
+    User.preferences; subsequent GET surfaces the same dict.
+
+    Preferences are a free-form pass-through so the operator can
+    persist UI prefs (theme, language, layout) without a schema
+    change every time. The endpoint just merges the dict onto
+    the User row and returns it on read."""
+    await _seed_admin_user(api_engine)
+    await api_client.post(
+        "/api/v3/auth/login",
+        json={"username": "alice", "password": "goodpassword"},
+    )
+
+    prefs = {"theme": "dark", "language": "fr", "library_card_size": "compact"}
+    update = await api_client.put(
+        "/api/v3/auth/me",
+        json={"preferences": prefs},
+    )
+    assert update.status_code == 200
+
+    # Subsequent /me GET surfaces the round-tripped prefs.
+    me = await api_client.get("/api/v3/auth/me")
+    assert me.status_code == 200
+    body = me.json()
+    assert body["preferences"] == prefs
+
+
+@pytest.mark.asyncio
 async def test_put_me_changes_password_revokes_other_sessions(
     api_client: httpx.AsyncClient, api_engine: AsyncEngine
 ) -> None:
