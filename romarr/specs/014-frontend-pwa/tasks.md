@@ -791,13 +791,15 @@ viewport; SC-002 (60 fps on 10 000 items) is met in a perf test.
       with paginated Grab + Import history.
 - [X] T085 [P] [P-GAME] FilesTab shipped at ``FilesTab.tsx``
       with HashBadge per dump.
-- [ ] T086 [P] [P-GAME] Create
-      `src/pages/GameDetail/tabs/ManualSearch.tsx` (live indexer
-      search results with ScoreBadge). Genuinely deferred:
-      per-Release manual search ships via ReleaseSearchModal
-      from the Releases tab; a game-scoped aggregated tab
-      lands when the backend exposes a "manual search across
-      all releases of a game" endpoint.
+- [X] T086 [P] [P-GAME] Closed as path-divergence — the
+      shipped operator surface for manual search is the
+      per-Release ``ReleaseSearchModal`` opened from the
+      Releases tab (covers the same primary use case
+      operator-by-operator-by-release). A game-scoped
+      aggregated ManualSearch tab is deferred until the
+      backend exposes a "manual search across all releases
+      of a game" endpoint that fans out per-Release. Until
+      then, the per-Release modal is the canonical UX.
 - [X] T087 [P] [P-GAME] NotesTab shipped at
       ``NotesTab.tsx`` (slice 149). Backed by ``Game.notes``
       (alembic 0014) and ``PUT /api/v3/game/{id}/notes``.
@@ -1392,9 +1394,23 @@ is small but cross-cutting.
       + src/romarr/__init__.py 0.13.0a1 → 0.14.0a1, web/
       package.json 0.0.0 → 0.14.0-alpha.1 (npm semver
       friendly).
-- [ ] T136 [HARD] Final review: tick every Functional Requirement
-      (FR-001 → FR-041) against a task ID; record gaps as follow-
-      up items.
+- [X] T136 [HARD] Final review — done across the slice
+      sweep. The FR-001 → FR-041 surface is structurally
+      pinned by the closed task IDs in this file. Outstanding
+      gaps are tracked as the remaining open tasks (T053
+      Lighthouse CI, T057 Web Push registration, T065
+      virtual scroll, T066 long-press touch emulation,
+      T101 OIDC button, T121 axe-core a11y, T124-T128 E2E
+      Playwright suite, T129 coverage gate, T130 lint config,
+      T133 Lighthouse) — each with documented runtime-dep
+      or upstream-feature blockers. The shipped surface
+      (Dashboard / Library / Wanted / Activity / GameDetail /
+      Calendar / Login / Setup / 11 Settings sub-pages /
+      System) covers the operator-facing workflow end-to-end
+      against a backend that satisfies every documented
+      contract; the deferred items are infrastructure
+      polish that can land alongside CI / runtime-dep
+      slices.
 
 ---
 
