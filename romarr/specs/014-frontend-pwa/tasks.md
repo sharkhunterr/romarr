@@ -1499,21 +1499,75 @@ P-LIB and the page-cluster in Phase 14 split cleanly across them.
 
 ## Phase: Clarification Tasks (Session 2026-04-29)
 
-- [ ] CL001 [P] [US4] Configure `vite-plugin-pwa` with `registerType: 'prompt'` in `vite.config.ts` — service-worker auto-update is opt-in (FR-007a)
-- [ ] CL002 [P] [US4] Implement SW-update toast component in `src/components/shared/SwUpdateToast.tsx` — surfaces "New version available — Reload" CTA; `skipWaiting` + `clients.claim` + `window.location.reload()` fire ONLY on user click
-- [ ] CL003 [P] [US4] Wire `registerSW`'s `onNeedRefresh` callback in `src/main.tsx` to populate a Zustand `swUpdateStore` that the toast subscribes to
+- [X] CL001 [P] [US4] **Slice 263.** ``web/vite.config.ts`` flipped to
+      ``registerType: "prompt"`` + ``injectRegister: false`` — the SPA
+      now controls SW registration explicitly via
+      ``src/lib/sw-update/registerServiceWorker``.
+- [X] CL002 [P] [US4] **Slice 263.** Shipped
+      ``web/src/components/shared/SwUpdateToast.tsx`` — fixed bottom
+      toast with ``role="status"`` + ``aria-live="polite"``,
+      "New version available — Reload" CTA, dismiss button. Reads
+      from ``useSwUpdateStore``; ``applyUpdate()`` calls the
+      plugin's ``updateSW(true)`` (which fires ``skipWaiting`` +
+      ``clients.claim``) then ``window.location.reload()``. Both
+      only fire on the user's click.
+- [X] CL003 [P] [US4] **Slice 263.** ``main.tsx`` calls
+      ``registerServiceWorker()`` at boot. The helper imports
+      ``virtual:pwa-register`` via a runtime-built specifier
+      (so Vitest's resolver can't statically reach it), wires
+      ``onNeedRefresh`` to ``useSwUpdateStore.setNeedsRefresh``,
+      and the toast subscribes via Zustand. ``<SwUpdateToast/>``
+      is mounted at the App root (slice 263).
 - [ ] CL004 [P] [US2] Update Game Detail Overview tab in `src/pages/GameDetail/tabs/Overview.tsx` to call ONLY backend-proxied cover-swap endpoints — `GET /api/v3/cover/{game_id}/sources` to list candidates, `POST /api/v3/cover/{game_id}` to commit. NO direct calls to `steamgriddb.com` (FR-025a)
 - [ ] CL005 [P] [US2] Update CSP configuration to NOT allowlist any third-party origin for cover swap (the SteamGridDB CDN is reached only via backend proxy)
-- [ ] CL006 [P] Implement `<PageErrorBoundary>` component in `src/components/shared/PageErrorBoundary.tsx` per FR-038a — localized title via i18n, Retry action that resets the boundary, "Back to Dashboard" link, copyable short error id (hash of error message + chunk name); shell remains interactive
-- [ ] CL007 [P] Mount `<PageErrorBoundary>` around `<Outlet/>` in the router config in `src/App.tsx` so each top-level page is independently protected
+- [X] CL006 [P] **Slice 263.** Shipped
+      ``web/src/components/shared/PageErrorBoundary.tsx`` (class
+      component with ``getDerivedStateFromError`` + reset) +
+      ``ErrorFallback.tsx`` (functional half — uses
+      ``useTranslation`` + ``useState`` for clipboard feedback).
+      Localized title / body / Retry button / "Back to Dashboard"
+      link / copyable short error id (8-char hex FNV-1a hash of
+      ``error.message + chunkName``). ``componentDidCatch`` logs
+      to console only — no remote reporting (FR-038b).
+- [X] CL007 [P] **Slice 263.** ``web/src/App.tsx`` wraps the
+      protected-route ``<Outlet/>`` in ``<PageErrorBoundary>``;
+      every top-level page (Dashboard / Library / Wanted / Activity
+      / Calendar / Game Detail / Settings / System) renders inside
+      its own boundary so a render-time crash on one page leaves
+      the shell + bottom nav interactive.
 - [ ] CL008 [P] [US7] Implement preferences hydration order in `src/lib/auth/init.tsx` (FR-013b):
   1. Hydrate auth via `GET /api/v3/auth/me`
   2. Overwrite `localStorage` with `user.preferences`
   3. Apply theme + language from preferences before first render
   Optimistic UI on PATCH failure rolls back local change
-- [ ] CL009 [P] [US7] Add window-level error handler in `src/main.tsx` that logs unhandled errors to `console.error` and surfaces a generic localized toast — NO POST to any remote endpoint, NO third-party SDK (FR-038b)
-- [ ] CL010 [P] **Cross-spec consistency** (already applied to spec.md): the FR-009a body confirms the SPA uses cookie-only auth; CLIs/scripts use API keys per spec 010 FR-005. NO Bearer JWT in the chain at MVP
-- [ ] CL011 [P] Add tests in `tests/components/PageErrorBoundary.test.tsx` covering: descendant throws → fallback renders with localized title + Retry + Back to Dashboard + error id; Retry resets the boundary; shell (header, bottom nav) stays interactive
-- [ ] CL012 [P] Add tests in `tests/lib/sw-update.test.ts` covering: new SW detected → toast appears; user clicks Reload → `skipWaiting` fires + page reloads; user dismisses → existing SW continues
+- [X] CL009 [P] [US7] **Slice 263.** ``main.tsx`` registers
+      window-level ``error`` + ``unhandledrejection`` listeners
+      that log via ``console.error`` with a ``[romarr:unhandled]``
+      tag. No remote POST, no third-party SDK (FR-038b). The
+      generic localized toast is shipped via the existing toast
+      registry (``common:toast.*``) — operator-facing surface stays
+      the same as the existing FR-038 boundary path.
+- [X] CL010 [P] **Spec-text-only** — already applied to spec.md
+      FR-009a (cookie-only auth on the SPA; API keys for
+      CLIs/scripts per spec 010 FR-005; no Bearer JWT in the chain
+      at MVP). No code change required; the auth client at
+      ``web/src/lib/api/client.ts`` carries cookies via
+      ``credentials: "include"`` and never reads a Bearer token.
+- [X] CL011 [P] **Slice 263.** Shipped
+      ``web/src/components/shared/PageErrorBoundary.test.tsx`` — 3
+      tests covering: descendant throws → fallback renders with
+      localized title + Retry + Back to Dashboard + 8-char hex
+      error id; shell stays mounted; Retry resets the boundary
+      and the children re-mount (uses an external mutable cell to
+      flip the conditional throw).
+- [X] CL012 [P] **Slice 263.** Shipped
+      ``web/src/lib/sw-update/index.test.ts`` — 5 tests covering:
+      initial state (needsRefresh=false, trigger=null);
+      ``setNeedsRefresh`` fills both fields; ``dismissUpdate``
+      clears them and the trigger is NOT called (existing SW stays
+      active); ``applyUpdate`` calls the trigger then
+      ``window.location.reload``; ``applyUpdate`` is a no-op when
+      no trigger is buffered. Location is swapped at
+      ``beforeEach`` because jsdom freezes ``window.location.reload``.
 - [ ] CL013 [P] Add tests in `tests/lib/preferences-hydration.test.ts` covering: device A sets theme=dark + PATCHes; device B opens app → server-wins overwrites local; PATCH failure → optimistic rollback
 - [ ] CL014 [P] Add tests in `tests/lib/cover-swap.test.tsx` covering: cover-swap UI calls only the proxied endpoints; no `steamgriddb.com` requests in network mock

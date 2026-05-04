@@ -41,6 +41,11 @@
     "deactivatedTitle": "Account deactivated",
     "deactivatedBody": "Contact your Romarr administrator to re-enable your account."
   },
+  "swUpdate": {
+    "title": "New version available — Reload to update.",
+    "reload": "Reload",
+    "dismiss": "Later"
+  },
   "toast": {
     "dismiss": "Dismiss",
     "viewportLabel": "Notifications",

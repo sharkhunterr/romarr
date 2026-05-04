@@ -20,8 +20,13 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: "autoUpdate",
-      injectRegister: "auto",
+      // FR-007a: SW updates are opt-in. The application code
+      // calls ``registerSW`` from ``virtual:pwa-register`` and
+      // surfaces the "New version available — Reload" toast on
+      // ``onNeedRefresh``; nothing reloads without the user's
+      // explicit click. See ``src/lib/sw-update/index.ts``.
+      registerType: "prompt",
+      injectRegister: false,
       includeAssets: [
         "icon-192.png",
         "icon-512.png",

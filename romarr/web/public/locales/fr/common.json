@@ -41,6 +41,11 @@
     "deactivatedTitle": "Compte désactivé",
     "deactivatedBody": "Contactez votre administrateur Romarr pour réactiver votre compte."
   },
+  "swUpdate": {
+    "title": "Nouvelle version disponible — Recharger pour mettre à jour.",
+    "reload": "Recharger",
+    "dismiss": "Plus tard"
+  },
   "toast": {
     "dismiss": "Fermer",
     "viewportLabel": "Notifications",

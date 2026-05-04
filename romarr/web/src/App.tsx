@@ -21,6 +21,8 @@ import {
 
 import { AppLayout } from "@/components/shared/AppLayout";
 import { AuthGuard } from "@/components/shared/AuthGuard";
+import { PageErrorBoundary } from "@/components/shared/PageErrorBoundary";
+import { SwUpdateToast } from "@/components/shared/SwUpdateToast";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
 import { QueryProvider } from "@/lib/api/QueryProvider";
 import { ActivityPage } from "@/pages/Activity";
@@ -62,6 +64,13 @@ const router = createBrowserRouter([
       {
         element: <AppLayout />,
         children: [
+          {
+            element: (
+              <PageErrorBoundary>
+                <Outlet />
+              </PageErrorBoundary>
+            ),
+            children: [
           { path: "/", element: <DashboardPage /> },
           { path: "/library", element: <LibraryPage /> },
           { path: "/add", element: <AddNewPage /> },
@@ -109,6 +118,8 @@ const router = createBrowserRouter([
               { path: ":sub", element: <SystemPage /> },
             ],
           },
+            ],
+          },
         ],
       },
     ],
@@ -129,6 +140,7 @@ export default function App(): ReactElement {
       <ThemeProvider>
         <Suspense fallback={<I18nFallback />}>
           <RouterProvider router={router} />
+          <SwUpdateToast />
         </Suspense>
       </ThemeProvider>
     </QueryProvider>

@@ -4,5 +4,13 @@
   "forbidden": "You don't have permission to do that.",
   "notFound": "Not found.",
   "rate_limited": "Too many requests. Try again in a moment.",
-  "server": "The server hit an error. Try again."
+  "server": "The server hit an error. Try again.",
+  "boundary": {
+    "title": "Page hit an error",
+    "body": "Something on this page crashed. The shell still works — try again or head back to the dashboard.",
+    "retry": "Try again",
+    "dashboard": "Back to Dashboard",
+    "copyAria": "Copy error id {{id}}",
+    "copied": "Copied"
+  }
 }

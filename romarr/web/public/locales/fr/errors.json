@@ -4,5 +4,13 @@
   "forbidden": "Vous n'avez pas la permission de faire cela.",
   "notFound": "Introuvable.",
   "rate_limited": "Trop de requêtes. Réessayez dans un instant.",
-  "server": "Le serveur a rencontré une erreur. Réessayez."
+  "server": "Le serveur a rencontré une erreur. Réessayez.",
+  "boundary": {
+    "title": "Erreur sur cette page",
+    "body": "Une partie de cette page a planté. Le reste de l'application reste fonctionnel — réessayez ou revenez au tableau de bord.",
+    "retry": "Réessayer",
+    "dashboard": "Retour au tableau de bord",
+    "copyAria": "Copier l'identifiant d'erreur {{id}}",
+    "copied": "Copié"
+  }
 }
