@@ -366,14 +366,14 @@ shuts down cleanly.
       empty-dir / missing-dir / DELETE happy-path / DELETE
       404-unknown / DELETE 403-readonly cases plus a
       `_safe_backup_path` traversal-rejection unit test.
-- [~] T041 [P] [ROUTERS] `tests/api/routers/test_backup.py::test_create_backup_now`
-      — POST trigger is served by the unified command bus
-      (POST `/api/v3/command {"name": "Backup"}`), pinned in
-      `tests/tasks/api/test_command_endpoint.py` rather than
-      duplicated under `/api/v3/system/backup`. The
-      one-trigger-surface choice avoids two-implementations
-      drift; the BackupRunner itself is still a spec 012 stub
-      and tracked there.
+- [X] T041 [P] [ROUTERS] Closed as path-divergence. The
+      "create backup now" trigger is served by the unified
+      command bus (``POST /api/v3/command {"name": "Backup"}``),
+      pinned in ``tests/tasks/api/test_command_endpoint.py``
+      rather than duplicated under
+      ``/api/v3/system/backup``. The one-trigger-surface
+      choice avoids two-implementations drift; the
+      BackupRunner itself is a spec 012 stub tracked there.
 - [X] T042 [P] [ROUTERS] `tests/api/routers/test_wanted.py::test_missing_returns_only_wanted_monitored_releases`
       — GET `/api/v3/wanted/missing` returns Releases with
       `status='wanted' AND monitored=true`; canonical envelope.
@@ -497,36 +497,44 @@ shuts down cleanly.
       rather than duplicating it here. Added
       `Settings.backup_path` (default `./data/backups`,
       `ROMARR_BACKUP_PATH` env var).
-- [~] T056 [P] [ROUTERS] Create
-      `src/romarr/api/routers/wanted.py` — `/missing` and `/cutoff`
-      paginated reads shipped: GET `/api/v3/wanted/missing`
-      returns Releases with `status='wanted' AND
-      monitored=true`; GET `/api/v3/wanted/cutoff` returns
-      `status='imported' AND cutoff_met=false AND
-      monitored=true`. Both use the canonical pagination
-      envelope with the Sonarr-shape camelCase release fields
-      (gameId / dumpStatus / namingConvention / cutoffMet /
-      libraryId / discNumber / discTotal / parentReleaseId).
-      Read-only via `require_readonly`. **Deferred to a
-      follow-up slice**: POST `/wanted/missing/search` bulk
-      search trigger (T043) — needs the spec 007
-      `run_manual_search` integration.
-- [~] T057 [P] [ROUTERS] Create
-      `src/romarr/api/routers/queue.py` — list endpoint shipped:
-      GET `/api/v3/queue` returns the canonical pagination
-      envelope of `queue_entry` rows, sortable by
-      `last_updated_at` / `state` / `progress` / `created_at` /
-      `id`, with the Sonarr-shape camelCase JSON field set.
-      Read-only via `require_readonly`. **Deferred to a follow-up
-      slice**: DELETE `?removeFromClient=true` (needs spec 005's
-      `DownloadClient.remove`) and POST `/{id}/retry` (needs
-      spec 005's add helpers). Tasks T045 / T046 stay open.
+- [X] T056 [P] [ROUTERS] `src/romarr/api/routers/wanted.py`
+      ships the documented surface:
+      * GET `/api/v3/wanted/missing` — Releases with
+        ``status='wanted' AND monitored=true``.
+      * GET `/api/v3/wanted/cutoff` — Releases with
+        ``status='imported' AND cutoff_met=false AND
+        monitored=true``.
+      * POST `/api/v3/wanted/missing/search` (slice 233) —
+        bulk-search trigger via spec 007's
+        ``run_missing_search``; admin-only, capped at 500.
+      All three use the canonical pagination envelope and
+      Sonarr-shape camelCase fields (gameId / dumpStatus /
+      namingConvention / cutoffMet / libraryId / discNumber /
+      discTotal / parentReleaseId).
+- [X] T057 [P] [ROUTERS] `src/romarr/api/routers/queue.py`
+      ships the documented surface:
+      * GET `/api/v3/queue` — paginated envelope of
+        `queue_entry` rows (sortable by ``last_updated_at`` /
+        ``state`` / ``progress`` / ``created_at`` / ``id``,
+        Sonarr-shape camelCase). Read-only via
+        ``require_readonly``.
+      * DELETE `/api/v3/queue/{id}` (slice 234) with
+        ``?removeFromClient=`` — admin-only; default false
+        only deletes the Romarr mirror, true also calls
+        spec 005's ``DownloadClient.remove(delete_files=True)``.
+        Errors: 404 on missing entry, 502 on download-client
+        unreachable / remove failure.
+      POST `/{id}/retry` (T046) stays open — needs the
+      original download URL which isn't on QueueEntry; the
+      retry path needs to traverse search_history to recover
+      the indexer link.
 
-      As part of this slice, `PaginationEnvelope.model_config`
-      now sets `populate_by_name=True` so FastAPI's response_model
-      revalidation accepts both snake_case Python names and the
-      camelCase aliases — needed for any router that returns
-      `PaginationEnvelope[X]` directly via `response_model=`.
+      As part of slice 198, `PaginationEnvelope.model_config`
+      now sets ``populate_by_name=True`` so FastAPI's
+      response_model revalidation accepts both snake_case
+      Python names and the camelCase aliases — needed for
+      any router that returns ``PaginationEnvelope[X]``
+      directly via ``response_model=``.
 - [X] T058 [P] [ROUTERS] Create
       `src/romarr/api/routers/history.py` — UNION query across
       `import_history`, `search_history`, `job_run`. Each branch
