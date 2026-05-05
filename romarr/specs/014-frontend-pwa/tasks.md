@@ -194,8 +194,14 @@ hook; TypeScript compiles.
       operator sees.
 - [~] T017 [P] [SHARED] ActionSheet **deferred** — needs Framer
       Motion + shadcn Dialog primitive.
-- [~] T018 [P] [SHARED] PullToRefresh **deferred** — needs
-      `@use-gesture/react` runtime dep.
+- [X] T018 [P] [SHARED] **Slice 303.** Test ships at
+      ``web/src/components/shared/PullToRefresh.test.tsx``
+      (3 tests): renders children + starts in idle state,
+      disabled prop suppresses the gesture, className
+      propagates to the root wrapper. jsdom can't fully
+      simulate native pointer drags, so the gesture-driven
+      "trigger threshold" path is exercised at the E2E layer
+      when Playwright lands.
 
 ### Implementation
 
@@ -232,8 +238,18 @@ hook; TypeScript compiles.
 - [X] T025 [P] [SHARED] `src/components/shared/FloatingActionButton.tsx`
       — fixed bottom-right, `md:hidden`, sits above BottomNav
       with safe-area inset. Brand-coloured circle.
-- [~] T026 [P] [SHARED] PullToRefresh **deferred** — needs
-      `@use-gesture/react`.
+- [X] T026 [P] [SHARED] **Slice 303.** Shipped
+      ``web/src/components/shared/PullToRefresh.tsx`` —
+      ``@use-gesture/react``-driven vertical-drag wrapper for
+      list views. Captures pointer-y drag from a scroll
+      container's top, follows the finger up to
+      ``triggerDistance`` (default 64 px) with a state
+      machine (idle → pulling → triggered → refreshing); on
+      release past the threshold, awaits ``onRefresh`` and
+      shows a localized indicator label. Touch-action
+      ``pan-y`` keeps native scrolling available below the
+      threshold. ``@use-gesture/react@^10.3`` added to
+      ``web/package.json`` runtime deps.
 
 Plus `src/components/shared/AppLayout.tsx` — app shell
 (Header + `<Outlet />` + BottomNav) wrapped around every
