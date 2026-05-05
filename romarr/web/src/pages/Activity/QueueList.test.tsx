@@ -55,6 +55,7 @@ const SAMPLE_ENTRY: queueQuery.QueueEntry = {
   etaSeconds: 60,
   errorMsg: null,
   attemptCount: 0,
+  createdAt: "2026-05-01T00:00:00Z",
   lastUpdatedAt: "2026-05-01T00:00:00Z",
 };
 

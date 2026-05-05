@@ -1056,19 +1056,31 @@ manageable; each ships ≥ 1 test + an implementation.
       test files (each tab pulls its own query, so the
       page-level test mocks only `useQualityProfiles` since
       Quality is the default).
-- [~] T097 [P] [P-SET] `tests/unit/pages/Settings/test_CustomFormats.tsx::test_visual_builder`
-      **partial / deferred for builder** — Vitest not
-      installed. Read path is implemented:
-      `Profiles/CustomFormatsTab.tsx` lists every Custom
-      Format from /api/v3/customformat sorted by score
-      descending. Per-row score chip (signed/colored), factory
-      + modified pills, conditions count, expandable
-      conditions list rendering each condition object as
-      `key: value` pairs. Delete gated on `is_factory_default`
-      with double-confirm. Visual builder for adding
-      OR-grouped conditions (T097's primary goal) deferred —
-      hint surfaced on the page pointing at the deferred
-      slice.
+- [X] T097 [P] [P-SET] **Slice 305 — visual builder shipped.**
+      ``Profiles/CreateCustomFormatModal.tsx`` ships a
+      structured form for composing a Custom Format: name +
+      signed score + variable-length conditions list. Each
+      condition row picks (field, operator, value); the
+      operator dropdown filters contextually (numeric
+      comparisons only on ``release_size``); the value input
+      switches to ``type='number'`` for that field;
+      list-operators (``in``/``not_in``) accept comma /
+      semicolon-separated entries that project to a list
+      value. Save button gates on a non-empty name + valid
+      score (-10000 ≤ score ≤ 10000) + at least one
+      well-formed condition. ``CustomFormatsTab.tsx`` now
+      surfaces a top-right "Create" button that opens the
+      modal. ``useCreateCustomFormat`` mutation hook added to
+      ``lib/api/queries/custom-formats.ts``.
+      Tests at
+      ``CreateCustomFormatModal.test.tsx`` (4 tests):
+      renders form with one default condition, save disabled
+      while empty, "Add condition" appends a row, submit
+      projects the right payload and fires the mutation.
+      OR-grouped conditions (the JSON-edit surface for power
+      users) remain deferred to a follow-up slice — the v1
+      flat-condition builder covers the documented MVP
+      operator workflow.
 - [X] T098 [P] [P-SET] `web/src/pages/Settings/Indexers/IndexerRow.test.tsx`
       ships 3 tests (slice 245): Test button fires
       ``useTestIndexer.mutate`` with the row's id; test

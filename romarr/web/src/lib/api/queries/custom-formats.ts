@@ -25,6 +25,39 @@ import type { components } from "@/types/api/schema";
 
 export type CustomFormat = components["schemas"]["CustomFormatRead"];
 
+export type CustomFormatField =
+  | "tags"
+  | "region"
+  | "format"
+  | "dump_status"
+  | "release_group"
+  | "indexer_source"
+  | "languages"
+  | "revision"
+  | "naming_convention"
+  | "release_size";
+
+export type CustomFormatOperator =
+  | "matches_regex"
+  | "equals"
+  | "in"
+  | "contains"
+  | "not_in"
+  | "greater_than"
+  | "less_than";
+
+export interface CustomFormatConditionInput {
+  field: CustomFormatField;
+  operator: CustomFormatOperator;
+  values: string | number | (string | number)[];
+}
+
+export interface CustomFormatCreate {
+  name: string;
+  score: number;
+  conditions: CustomFormatConditionInput[];
+}
+
 const CUSTOM_FORMATS_KEY = ["settings", "custom-formats"] as const;
 
 export function useCustomFormats(): UseQueryResult<CustomFormat[], ApiError> {
@@ -32,6 +65,24 @@ export function useCustomFormats(): UseQueryResult<CustomFormat[], ApiError> {
     queryKey: CUSTOM_FORMATS_KEY,
     queryFn: () => apiFetch<CustomFormat[]>("/api/v3/customformat"),
     staleTime: 30_000,
+  });
+}
+
+export function useCreateCustomFormat(): UseMutationResult<
+  CustomFormat,
+  ApiError,
+  CustomFormatCreate
+> {
+  const qc = useQueryClient();
+  return useMutation<CustomFormat, ApiError, CustomFormatCreate>({
+    mutationFn: (payload) =>
+      apiFetch<CustomFormat>("/api/v3/customformat", {
+        method: "POST",
+        json: payload,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: CUSTOM_FORMATS_KEY });
+    },
   });
 }
 

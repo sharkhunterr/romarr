@@ -1,28 +1,44 @@
 /**
- * Profiles > Custom Formats tab (slice 64).
+ * Profiles > Custom Formats tab.
  *
- * Read-only audit list + delete; create / visual builder land
- * in a follow-up slice.
+ * Read-only audit list + delete (slice 64) + visual builder
+ * (slice 305 / spec 014 T097): operators add a new Custom
+ * Format from a structured form (name + score + conditions).
  */
 
-import { type ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useCustomFormats } from "@/lib/api/queries/custom-formats";
 
+import { CreateCustomFormatModal } from "./CreateCustomFormatModal";
 import { CustomFormatRow } from "./CustomFormatRow";
 
 export function CustomFormatsTab(): ReactElement {
   const { t } = useTranslation("settings");
   const formats = useCustomFormats();
+  const [createOpen, setCreateOpen] = useState(false);
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-zinc-400">
-        {t("customFormats.subtitle")}
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm text-zinc-400">
+          {t("customFormats.subtitle")}
+        </p>
+        <button
+          type="button"
+          onClick={() => setCreateOpen(true)}
+          className="shrink-0 rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          {t("customFormats.create.openButton")}
+        </button>
+      </div>
+
+      {createOpen && (
+        <CreateCustomFormatModal onClose={() => setCreateOpen(false)} />
+      )}
 
       {formats.isLoading && <ListSkeleton rows={4} />}
       {formats.isError && (
