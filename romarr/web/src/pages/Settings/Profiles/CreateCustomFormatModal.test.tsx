@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { renderWithProviders } from "@/test/render";
@@ -86,7 +86,11 @@ describe("CreateCustomFormatModal — visual builder", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(mutate).toHaveBeenCalledTimes(1);
-    const [payload] = mutate.mock.calls[0];
+    const firstCall = mutate.mock.calls[0];
+    if (!firstCall) {
+      throw new Error("mutate was not called");
+    }
+    const [payload] = firstCall;
     expect(payload).toMatchObject({
       name: "x265",
       score: 100,

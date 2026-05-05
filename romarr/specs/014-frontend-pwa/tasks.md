@@ -192,8 +192,16 @@ hook; TypeScript compiles.
       complementary signal — together they cover the two
       "we're not reaching the network" conditions the
       operator sees.
-- [~] T017 [P] [SHARED] ActionSheet **deferred** — needs Framer
-      Motion + shadcn Dialog primitive.
+- [X] T017 [P] [SHARED] **Slice 306 — path-divergence close.**
+      Tests ship at
+      ``web/src/components/shared/ActionSheet.test.tsx``
+      (9 tests covering both ``ActionSheet`` and
+      ``ActionSheetItem``): renders nothing when closed,
+      renders dialog/title/items when open, backdrop click
+      fires onClose, Escape fires onClose, Escape is a no-op
+      when closed, body scroll-lock on open + restored on
+      close; item onClick / disabled / danger-tone
+      assertions.
 - [X] T018 [P] [SHARED] **Slice 303.** Test ships at
       ``web/src/components/shared/PullToRefresh.test.tsx``
       (3 tests): renders children + starts in idle state,
@@ -233,8 +241,18 @@ hook; TypeScript compiles.
 - [X] T023 [P] [SHARED] `src/components/shared/LoadingSkeleton.tsx`
       — exports `Skeleton`, `ListSkeleton`, `CardGridSkeleton`,
       `DetailSkeleton`. Pure Tailwind `animate-pulse`.
-- [~] T024 [P] [SHARED] ActionSheet **deferred** — needs
-      Framer Motion + shadcn/ui Dialog primitive.
+- [X] T024 [P] [SHARED] **Slice 306 — path-divergence close.**
+      Shipped ``web/src/components/shared/ActionSheet.tsx``
+      with ``ActionSheet`` (bottom-anchored modal panel via
+      React portal) + ``ActionSheetItem`` (full-width
+      action button with optional danger tone). Slide-up
+      animation via CSS keyframe (``actionsheet-slide-in``,
+      200 ms ease-out, ``prefers-reduced-motion`` honored).
+      Path-divergence: the documented UX is achievable with
+      pure CSS transitions; skipped Framer Motion +
+      shadcn-cli to keep the bundle lean. Backdrop-click and
+      Escape both dismiss; body scroll-locked while open;
+      ``pb-[env(safe-area-inset-bottom)]`` for iOS PWA.
 - [X] T025 [P] [SHARED] `src/components/shared/FloatingActionButton.tsx`
       — fixed bottom-right, `md:hidden`, sits above BottomNav
       with safe-area inset. Brand-coloured circle.
