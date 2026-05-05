@@ -230,6 +230,23 @@ async def run_import(
                         )
                     except Exception:
                         pass
+                # LIFECYCLE: tag the originating download with the
+                # ``romarr-imported`` tag (FR-013) so the operator's
+                # client UI shows which downloads have been picked
+                # up + the lifecycle policy can act later. Best-
+                # effort — failure must not invalidate the import.
+                if (
+                    context.download_client_id is not None
+                    and context.download_client_native_id is not None
+                ):
+                    try:
+                        await _tag_downloaded_imported(
+                            session=session,
+                            client_id=context.download_client_id,
+                            native_id=context.download_client_native_id,
+                        )
+                    except Exception:
+                        pass
                 return outcome
             except Exception:
                 # Auto-import failed; fall through to parking.
@@ -297,6 +314,35 @@ async def run_import(
     )
     await session.commit()
     return outcome
+
+
+async def _tag_downloaded_imported(
+    *,
+    session: AsyncSession,
+    client_id: int,
+    native_id: str,
+) -> None:
+    """Tag the originating download with ``romarr-imported``
+    (FR-013). Best-effort: caller wraps in try/except so a
+    client error can't invalidate the committed import.
+
+    Loads the :class:`DownloadClient` row via the spec 005
+    factory, instantiates the matching impl, and calls
+    ``set_imported_tag``. Stub clients (Transmission /
+    Deluge / NZBGet) raise NotImplementedError; SAB's
+    implementation is a no-op (SAB has no per-job tag
+    surface).
+    """
+    from romarr.downloaders.factory import build_client_from_row
+    from romarr.downloaders.models import (
+        DownloadClient as DownloadClientRow,
+    )
+
+    row = await session.get(DownloadClientRow, client_id)
+    if row is None:
+        return
+    impl = build_client_from_row(row)
+    await impl.set_imported_tag(native_id)
 
 
 async def _emit_on_import(
