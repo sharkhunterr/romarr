@@ -1160,11 +1160,20 @@ contributors, the WATCH and EXTRACT phases (Day 2-3) split cleanly.
       and the SHA-1-mismatch raises; the parking +
       OnHealthIssue + manual-flow `?force=true` paths are
       gated on CL003.
-- [~] CL009 [P] Zip-bomb tests — `test_extract.py` covers
-      the bomb-detection raise path. The "small-but-shallow
-      nested → depth check applies first" assertion lives
-      in `test_extract.py::test_depth_exceeded`. Parking +
-      OnHealthIssue tests gate on CL004.
+- [X] CL009 [P] **Slice 302 — fully closed.** `test_extract.py`
+      already covers the bomb-detection raise path
+      (``test_bomb_detected_when_expansion_exceeds_cap``) and
+      the depth-exceeded path
+      (``test_depth_exceeded``). The orchestrator-level
+      parking-on-extract-failure is now wired in slice 302:
+      ``run_import`` runs archive sources through
+      :func:`extract_archive` before hashing; an
+      ``ExtractError`` parks the original archive with the
+      typed ``rejection_reason`` (``extract:bad-archive`` /
+      ``extract:depth-exceeded`` /
+      ``extract:bomb-detected``). Pinned by
+      ``tests/importer/test_orchestrator_extract.py::
+      test_bad_archive_parks_with_extract_bad_archive_reason``.
 - [X] CL010 [P] Webhook auth tests — shipped in
       `tests/importer/test_webhook.py` (7 tests):
       `test_invalid_token_returns_401`,

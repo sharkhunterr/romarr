@@ -18,8 +18,14 @@ def correlation_id() -> str:
 @pytest.fixture
 def base_context(tmp_path) -> ImportContext:
     """A minimal ``ImportContext`` for tests that just need a
-    valid value type to flow through the pipeline."""
-    source = tmp_path / "downloads" / "rom.zip"
+    valid value type to flow through the pipeline.
+
+    Uses a ``.md`` (Mega Drive ROM) suffix rather than an
+    archive extension so the orchestrator's audit-only path
+    runs to ``match:no_game`` rather than tripping the
+    EXTRACT failure branch (slice 302+).
+    """
+    source = tmp_path / "downloads" / "rom.md"
     source.parent.mkdir(parents=True, exist_ok=True)
     source.write_bytes(b"placeholder")
     return ImportContext(

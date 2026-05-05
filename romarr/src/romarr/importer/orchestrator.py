@@ -40,7 +40,8 @@ from romarr.identification.hasher import Hasher
 from romarr.identification.parsers import default_dispatcher
 from romarr.importer._outcome import make_failure_outcome
 from romarr.importer._park import park_in_unidentified
-from romarr.importer.errors import GameNotMatched
+from romarr.importer.errors import ExtractError, GameNotMatched
+from romarr.importer.steps.extract import extract as extract_archive
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -53,6 +54,13 @@ if TYPE_CHECKING:
 _NOT_IMPLEMENTED_MSG = (
     "{step} not implemented yet — lands with the {phase} slice"
 )
+
+_ARCHIVE_SUFFIXES = frozenset({".zip", ".7z", ".rar"})
+"""Archive file extensions the orchestrator will run through
+EXTRACT before hashing. Mirrors
+``romarr.importer.steps.extract._ARCHIVE_SUFFIXES``; consolidated
+here so the orchestrator's branching is checkable without
+importing the private constant."""
 
 
 async def run_import(
@@ -79,13 +87,50 @@ async def run_import(
     started_at = datetime.now(UTC)
     monotonic_start = asyncio.get_event_loop().time()
 
-    # Step 1 — hash the source file. Skip if the path doesn't
-    # exist; the failure helper will record a structured reason.
+    # Step 1a — EXTRACT (when the source is an archive). On
+    # success the working path advances to the extracted ROM;
+    # on a parkable ExtractError (bomb / depth-exceeded /
+    # bad-archive), the original archive is parked under that
+    # rejection reason so the operator's triage UI shows the
+    # taxonomy hit (FR-005 / CL004).
     source_path = context.source_path
+    extract_failure: ExtractError | None = None
+    if (
+        source_path.exists()
+        and source_path.is_file()
+        and source_path.suffix.lower() in _ARCHIVE_SUFFIXES
+    ):
+        dest_dir = source_path.with_suffix(source_path.suffix + ".extracted")
+        try:
+            result = await extract_archive(
+                archive_path=source_path, dest_dir=dest_dir
+            )
+            # Pick the first non-archive extracted file as the
+            # new working source. Multi-file archives (multi-disc
+            # sets) defer to the MULTIDISC slice; for now the
+            # single-file shape is enough for the audit chain to
+            # exercise the extract path.
+            roms = [
+                p
+                for p in result.extracted_paths
+                if p.suffix.lower() not in _ARCHIVE_SUFFIXES
+            ]
+            if roms:
+                source_path = roms[0]
+        except ExtractError as exc:
+            extract_failure = exc
+
+    # Step 1b — hash the (post-extract) source file. Skip if the
+    # path doesn't exist; the failure helper will record a
+    # structured reason.
     sha1: str | None = None
     size_bytes = 0
 
-    if source_path.exists() and source_path.is_file():
+    if (
+        extract_failure is None
+        and source_path.exists()
+        and source_path.is_file()
+    ):
         h = hasher or Hasher()
         try:
             hash_result = await asyncio.to_thread(h.hash_path, source_path)
@@ -103,25 +148,44 @@ async def run_import(
     # enrichment only — the full identification cascade
     # (hash-match → header read → DAT verify → game-match) lands
     # with the IDENTIFY / GAMEMATCH slices that follow.
-    suggested_platform_id, suggested_game_id = await _identify_suggestions(
-        session, source_path
-    )
+    suggested_platform_id: int | None = None
+    suggested_game_id: int | None = None
+    if extract_failure is None:
+        (
+            suggested_platform_id,
+            suggested_game_id,
+        ) = await _identify_suggestions(session, source_path)
 
-    # Step 2b — park as ``match:no_game``. The orchestrator's
-    # full game-match path lands with the GAMEMATCH slice; until
-    # then every input takes this branch so the audit chain
-    # stays exercised end-to-end.
-    if size_bytes > 0:
+    # Step 2b — park. The rejection reason picks the best signal
+    # we have: an extract failure wins (bomb / bad-archive /
+    # depth-exceeded — CL004 + CL009), otherwise fall through to
+    # ``match:no_game`` until the full game-match path lands.
+    rejection_reason = (
+        extract_failure.rejection_reason
+        if extract_failure is not None
+        else "match:no_game"
+    )
+    park_path = (
+        context.source_path if extract_failure is not None else source_path
+    )
+    try:
+        park_size = park_path.stat().st_size if park_path.exists() else 0
+    except OSError:
+        park_size = 0
+    if park_size > 0:
         try:
             await park_in_unidentified(
                 session=session,
-                source_path=source_path,
-                size_bytes=size_bytes,
-                rejection_reason="match:no_game",
+                source_path=park_path,
+                size_bytes=park_size,
+                rejection_reason=rejection_reason,
                 sha1=sha1,
                 library_id=context.library_id,
                 suggested_platform_id=suggested_platform_id,
                 suggested_game_id=suggested_game_id,
+                last_error=(
+                    str(extract_failure) if extract_failure is not None else None
+                ),
             )
         except Exception:
             # Park failure is non-fatal — the history-row write
@@ -135,13 +199,18 @@ async def run_import(
         0,
         int((asyncio.get_event_loop().time() - monotonic_start) * 1000),
     )
+    failure_exc: Exception = (
+        extract_failure
+        if extract_failure is not None
+        else GameNotMatched(
+            "no game matched (orchestrator still in audit-only mode)"
+        )
+    )
     outcome = await make_failure_outcome(
         session=session,
         context=context,
         started_at=started_at,
-        exception=GameNotMatched(
-            "no game matched (orchestrator still in audit-only mode)"
-        ),
+        exception=failure_exc,
         duration_ms=duration_ms,
         source_hash_sha1=sha1,
     )
