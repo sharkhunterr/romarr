@@ -40,6 +40,7 @@ from romarr.downloaders.types import (
     ClientType,
     DownloadState,
     DownloadStatus,
+    ManagedDownload,
     NzbBytes,
     NzbSource,
     NzbUrl,
@@ -257,6 +258,37 @@ class SabnzbdClient(DownloadClient):
             value=client_native_id,
             del_files="1" if delete_files else "0",
         )
+
+    async def list_managed_downloads(self) -> list[ManagedDownload]:
+        """List romarr-managed completed history entries.
+
+        SAB has no tag concept (per :meth:`set_imported_tag`'s no-op
+        comment) so the watcher loop's dedup runs purely off the
+        ``seen`` set. Status is filtered to ``Completed`` and the
+        history is scoped to the operator-configured category.
+        """
+        history = await self._call("history", category=self._category)
+        history_block = history.get("history") or {}
+        out: list[ManagedDownload] = []
+        for slot in history_block.get("slots", []):
+            if not isinstance(slot, dict):
+                continue
+            status = str(slot.get("status") or "")
+            if status != "Completed":
+                continue
+            native_id = str(slot.get("nzo_id") or "")
+            if not native_id:
+                continue
+            out.append(
+                ManagedDownload(
+                    client_id=self.client_id,
+                    client_native_id=native_id,
+                    name=str(slot.get("name") or native_id),
+                    save_path=str(slot.get("storage") or ""),
+                    imported=False,
+                )
+            )
+        return out
 
     async def set_imported_tag(self, client_native_id: str) -> None:
         """SAB has no tag concept; the lifecycle policy reads category

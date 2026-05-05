@@ -50,6 +50,7 @@ from romarr.downloaders.types import (
     ClientType,
     DownloadState,
     DownloadStatus,
+    ManagedDownload,
     NzbSource,
     TorrentBytes,
     TorrentMagnet,
@@ -295,6 +296,55 @@ class QBittorrentClient(DownloadClient):
                 self.client_id, data, files=files, fetched_at=datetime.now(UTC)
             )
 
+    async def list_managed_downloads(self) -> list[ManagedDownload]:
+        """List romarr-managed torrents whose download has finished.
+
+        Filters: ``category == TAG_ROMARR``, state is one of the
+        completed/seeding states (per ``_QBIT_COMPLETED_STATES``).
+        Items already carrying the ``romarr-imported`` tag are
+        flagged ``imported=True`` rather than skipped — the watcher
+        loop's dedup uses the flag.
+        """
+        async with self._new_client() as client:
+            await self._login(client)
+            response = await self._get(
+                client, "/torrents/info", category=self._category
+            )
+            try:
+                payload = response.json()
+            except ValueError:
+                return []
+
+        out: list[ManagedDownload] = []
+        if not isinstance(payload, list):
+            return out
+
+        for entry in payload:
+            if not isinstance(entry, dict):
+                continue
+            state = str(entry.get("state") or "")
+            if state not in _QBIT_COMPLETED_STATES:
+                continue
+            tags_raw = str(entry.get("tags") or "")
+            tag_set = {t.strip() for t in tags_raw.split(",") if t.strip()}
+            native_id = str(entry.get("hash") or "")
+            if not native_id:
+                continue
+            out.append(
+                ManagedDownload(
+                    client_id=self.client_id,
+                    client_native_id=native_id,
+                    name=str(entry.get("name") or native_id),
+                    save_path=str(
+                        entry.get("content_path")
+                        or entry.get("save_path")
+                        or ""
+                    ),
+                    imported=TAG_IMPORTED in tag_set,
+                )
+            )
+        return out
+
     async def remove(self, client_native_id: str, *, delete_files: bool) -> None:
         async with self._new_client() as client:
             await self._login(client)
@@ -458,6 +508,25 @@ def _maybe_extract_magnet_hash(source: TorrentSource) -> str | None:
 # ---------------------------------------------------------------------------
 # Status mapping
 # ---------------------------------------------------------------------------
+
+
+_QBIT_COMPLETED_STATES: frozenset[str] = frozenset(
+    {
+        "uploading",
+        "stalledUP",
+        "forcedUP",
+        "pausedUP",
+        "stoppedUP",
+        "checkingUP",
+        "queuedUP",
+    }
+)
+"""qBit native states meaning "the download is finished and on disk".
+
+The torrent may be seeding, paused, or queued in the upload phase —
+all four mean the importer can pick it up. Active-download / queued-
+download states are excluded so we don't grab in-flight files.
+"""
 
 
 _STATE_MAP: dict[str, DownloadState] = {

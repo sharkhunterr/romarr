@@ -65,6 +65,9 @@ class _FakeDownloadClient(DownloadClient):
     async def ensure_category(self) -> None:
         pass
 
+    async def list_managed_downloads(self) -> list:
+        return []
+
 
 def _action(kind: str) -> LifecycleAction:
     return LifecycleAction(

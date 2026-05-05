@@ -102,6 +102,28 @@ class DownloadState(StrEnum):
     FAILED = "failed"
 
 
+class ManagedDownload(_Base):
+    """A completed download the importer can pick up (spec 008 FR-001).
+
+    Yielded by :meth:`DownloadClient.list_managed_downloads`. Carries
+    just enough to dispatch the import: the client + native id pair so
+    the importer can correlate webhook + poll signals, and the
+    on-disk save path so :func:`run_import` can hash + extract.
+
+    The ``imported`` flag short-circuits the watcher's per-tick
+    deduplication: clients that successfully tagged an item with the
+    ``romarr-imported`` tag report ``imported=True`` so the loop skips
+    them without consulting its in-memory ``seen`` set. Pure value
+    object — no I/O, no DB.
+    """
+
+    client_id: int
+    client_native_id: str
+    name: str
+    save_path: str
+    imported: bool = False
+
+
 class DownloadStatus(_Base):
     """One snapshot of a download's progress.
 
@@ -195,6 +217,7 @@ __all__ = [
     "ConnectivityWarning",
     "DownloadState",
     "DownloadStatus",
+    "ManagedDownload",
     "NzbBytes",
     "NzbSource",
     "NzbUrl",

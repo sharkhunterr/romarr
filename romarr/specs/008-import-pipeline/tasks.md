@@ -109,16 +109,26 @@ signals to the orchestrator.
 
 ### Tests
 
-- [ ] T014 [P] [WATCH] `tests/importer/steps/test_watch_polling.py::test_polls_every_30s`
-      *(Deferred — DownloadClient ABC needs a
-      ``list_managed_downloads`` method that doesn't exist yet
-      on spec 005's surface. The polling watcher lands once
-      that method is added; for now the webhook covers the
-      operator's primary post-download-complete signal.)*
-- [ ] T015 [P] [WATCH] `tests/importer/steps/test_watch_polling.py::test_filters_by_tag`
-      *(Deferred with T014.)*
-- [ ] T016 [P] [WATCH] `tests/importer/steps/test_watch_polling.py::test_isolates_failing_client`
-      *(Deferred with T014.)*
+- [X] T014 [P] [WATCH] **Slice 294.** Test ships at
+      ``tests/importer/steps/test_watch_polling.py::test_polls_every_30s``.
+      Drives the loop at a 50 ms cadence (so the test isn't 30 s
+      long), asserts ≥ 2 ticks within 180 ms, AND pins the
+      ``DEFAULT_INTERVAL_SECONDS == 30`` constant to
+      structurally lock the FR-001 cadence.
+- [X] T015 [P] [WATCH] **Slice 294.** Test ships at
+      ``tests/importer/steps/test_watch_polling.py::test_filters_by_tag``.
+      Two-layer dedup pinned: (1) items with ``imported=True``
+      (qBit's ``romarr-imported`` tag) are skipped; (2) items
+      already-dispatched this run are skipped on the second
+      tick. A 3-item set with one imported + one re-tick
+      asserts both layers.
+- [X] T016 [P] [WATCH] **Slice 294.** Test ships at
+      ``tests/importer/steps/test_watch_polling.py::test_isolates_failing_client``.
+      One client raises ``ConnectionError`` from
+      ``list_managed_downloads``, the second client succeeds.
+      Asserts the failure is isolated (logged + skipped) and
+      the healthy client's items are still dispatched on the
+      same tick.
 - [X] T017 [P] [WATCH] `tests/importer/test_webhook.py::test_invalid_token_returns_401`
       — bad token returns HTTP 401 with structured
       ``errorCode='invalid_token'``; the comparison runs in
@@ -143,12 +153,20 @@ signals to the orchestrator.
 
 ### Implementation
 
-- [ ] T020 [WATCH] Create `src/romarr/importer/steps/watch.py` — async
-      ``WatcherLoop`` that runs every 30 s, iterates configured
-      clients, and enqueues ``(client_id, native_id)`` candidates
-      onto an internal ``asyncio.Queue`` consumed by the
-      orchestrator. *(Deferred with T014-T016 — needs
-      ``DownloadClient.list_managed_downloads``.)*
+- [X] T020 [WATCH] **Slice 294.** Shipped
+      ``src/romarr/importer/steps/watch.py::WatcherLoop`` —
+      async polling loop with ``start()`` / ``stop()`` /
+      ``tick()`` (public for tests). Path-divergence on the
+      consumer interface: rather than an internal
+      ``asyncio.Queue``, the loop calls a ``Dispatcher``
+      callable directly per item (typically wrapping
+      ``run_import``). The DownloadClient ABC gained the
+      ``list_managed_downloads`` async method in this slice;
+      qBit + SAB ship real implementations (filter by
+      category + completed states; qBit also flags items
+      tagged ``romarr-imported`` via ``ManagedDownload.imported``);
+      the three v1 stubs raise ``NotImplementedError("deferred to v1")``
+      from ``_stub.py``.
 - [X] T021 [WATCH] Create `src/romarr/importer/webhook.py` — FastAPI
       handler at ``/api/v3/webhook/download-complete``.
       Constant-time token comparison via
@@ -165,8 +183,18 @@ signals to the orchestrator.
       Wired into the application factory in ``api/app.py``.
       Settings: new ``importer_webhook_token`` field on
       :class:`Settings` (empty = webhook closed).
-- [ ] T022 [WATCH] Wire ``WatcherLoop.start()`` into the application
-      lifespan startup. *(Deferred with T014-T016, T020.)*
+- [~] T022 [WATCH] **Partial — slice 294.** Orchestrator's
+      ``start_watcher`` / ``stop_watcher`` helpers in
+      ``src/romarr/importer/orchestrator.py`` are wired to
+      construct the ``WatcherLoop`` lazily and proxy
+      start/stop. The application lifespan in
+      ``src/romarr/api/app.py`` still has to call
+      ``start_watcher(get_clients=…, dispatcher=…)`` — that
+      wiring needs the live ``DownloadClient`` registry +
+      orchestrator dispatcher composer, both of which lift
+      bigger spec 008 slices. The watcher CAN be started
+      explicitly today by callers that compose those two
+      pieces themselves (operators, tests).
 
 **Checkpoint**: WATCH tests green; the watcher loop runs as a background
 task and the webhook returns within the 1 s p95 budget.

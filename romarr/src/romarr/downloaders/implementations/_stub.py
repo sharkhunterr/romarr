@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from romarr.downloaders.types import (
         ClientType,
         DownloadStatus,
+        ManagedDownload,
         NzbSource,
         TorrentSource,
     )
@@ -56,6 +57,9 @@ class _StubClient(DownloadClient):
         raise NotImplementedError(_DEFERRED_MSG)
 
     async def ensure_category(self) -> None:
+        raise NotImplementedError(_DEFERRED_MSG)
+
+    async def list_managed_downloads(self) -> list[ManagedDownload]:
         raise NotImplementedError(_DEFERRED_MSG)
 
 

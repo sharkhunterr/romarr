@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from romarr.downloaders.types import (
         ClientType,
         DownloadStatus,
+        ManagedDownload,
         NzbSource,
         TorrentSource,
     )
@@ -123,6 +124,21 @@ class DownloadClient(ABC):
         SAB's tag model is per-job (``meta`` field); qBit uses the
         torrents/addTags endpoint. Both end up flagged so the
         lifecycle policy can act.
+        """
+
+    @abstractmethod
+    async def list_managed_downloads(self) -> list[ManagedDownload]:
+        """Return every Romarr-managed download the client knows about
+        whose status is "completed and on disk" (spec 008 FR-001).
+
+        Implementations MUST filter to the operator-configured
+        category and SHOULD skip items already carrying the
+        ``romarr-imported`` tag (or set ``imported=True`` on those
+        records so the watcher loop's dedup can rely on the flag).
+
+        Raises:
+            ConnectionError: network-layer failure.
+            AuthError:       credentials rejected.
         """
 
     @abstractmethod

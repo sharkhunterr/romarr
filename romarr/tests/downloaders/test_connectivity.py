@@ -77,6 +77,9 @@ class _FakeClient(DownloadClient):
     async def set_imported_tag(self, client_native_id: str) -> None:
         raise NotImplementedError  # pragma: no cover
 
+    async def list_managed_downloads(self) -> list:
+        raise NotImplementedError  # pragma: no cover
+
 
 # ---------------------------------------------------------------------------
 # T017 — happy path returns structured result

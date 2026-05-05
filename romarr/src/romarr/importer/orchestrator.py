@@ -130,18 +130,58 @@ async def run_import(
     return outcome
 
 
-async def start_watcher() -> None:
+_watcher: "WatcherLoop | None" = None
+
+
+async def start_watcher(
+    *,
+    get_clients: "ClientProvider",
+    dispatcher: "Dispatcher",
+    interval_seconds: float | None = None,
+) -> "WatcherLoop":
     """Spawn the polling watcher background task (FR-001).
-    Wired into the application lifespan."""
-    raise NotImplementedError(
-        _NOT_IMPLEMENTED_MSG.format(step="start_watcher", phase="WATCH")
+
+    Wired into the application lifespan. The watcher polls every
+    configured download client every ``interval_seconds`` (default
+    30 s) for completed downloads and hands new ones to the
+    dispatcher (typically a wrapper around :func:`run_import`).
+    """
+    from romarr.importer.steps.watch import (
+        DEFAULT_INTERVAL_SECONDS,
+        WatcherLoop,
     )
+
+    global _watcher
+    if _watcher is not None and _watcher.running:
+        return _watcher
+
+    _watcher = WatcherLoop(
+        get_clients=get_clients,
+        dispatcher=dispatcher,
+        interval_seconds=(
+            interval_seconds
+            if interval_seconds is not None
+            else DEFAULT_INTERVAL_SECONDS
+        ),
+    )
+    await _watcher.start()
+    return _watcher
 
 
 async def stop_watcher() -> None:
     """Cancel the polling watcher background task on shutdown."""
-    raise NotImplementedError(
-        _NOT_IMPLEMENTED_MSG.format(step="stop_watcher", phase="WATCH")
+    global _watcher
+    if _watcher is None:
+        return
+    await _watcher.stop()
+    _watcher = None
+
+
+if TYPE_CHECKING:
+    from romarr.importer.steps.watch import (
+        ClientProvider,
+        Dispatcher,
+        WatcherLoop,
     )
 
 
