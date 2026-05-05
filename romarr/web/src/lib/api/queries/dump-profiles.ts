@@ -20,6 +20,18 @@ import type { components } from "@/types/api/schema";
 
 export type DumpProfile = components["schemas"]["DumpProfileRead"];
 
+export type DumpPreferRevision = "latest" | "earliest" | "any";
+
+export interface DumpProfileCreate {
+  name: string;
+  allowed_dump_status: string[];
+  allow_proto_beta?: boolean;
+  allow_hacks?: boolean;
+  allow_trainers?: boolean;
+  allow_translations?: boolean;
+  prefer_revision?: DumpPreferRevision;
+}
+
 const KEY = ["settings", "dump-profiles"] as const;
 
 export function useDumpProfiles(): UseQueryResult<DumpProfile[], ApiError> {
@@ -27,6 +39,24 @@ export function useDumpProfiles(): UseQueryResult<DumpProfile[], ApiError> {
     queryKey: KEY,
     queryFn: () => apiFetch<DumpProfile[]>("/api/v3/rom/dumpprofile"),
     staleTime: 30_000,
+  });
+}
+
+export function useCreateDumpProfile(): UseMutationResult<
+  DumpProfile,
+  ApiError,
+  DumpProfileCreate
+> {
+  const qc = useQueryClient();
+  return useMutation<DumpProfile, ApiError, DumpProfileCreate>({
+    mutationFn: (payload) =>
+      apiFetch<DumpProfile>("/api/v3/rom/dumpprofile", {
+        method: "POST",
+        json: payload,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: KEY });
+    },
   });
 }
 

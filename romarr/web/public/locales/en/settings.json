@@ -257,7 +257,39 @@
         "cancel": "Cancel",
         "factoryBlocked": "Factory-default profiles can't be deleted; reset them with the seed migration if needed."
       },
-      "editorHint": "Allowed-list multi-select + four flag toggles + revision picker land in a follow-up slice."
+      "editorHint": "Allowed-list multi-select + four flag toggles + revision picker land in a follow-up slice.",
+      "create": {
+        "openButton": "+ Add dump profile",
+        "modalTitle": "Add a Dump profile",
+        "subhead": "List the dump statuses this profile accepts. The four toggles open specific risky variants.",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. Verified-only",
+        "allowedLabel": "Allowed dump statuses",
+        "allowedHint": "Comma-separated. Known values: {{values}}.",
+        "preferLabel": "Prefer revision",
+        "preferValue": {
+          "latest": "Latest revision (default)",
+          "earliest": "Earliest revision",
+          "any": "Any revision"
+        },
+        "flagsLabel": "Allow these variants",
+        "flags": {
+          "protoBeta": "Allow proto / beta dumps",
+          "hacks": "Allow hacks",
+          "trainers": "Allow trainers",
+          "translations": "Allow translations"
+        },
+        "errors": {
+          "name": "Pick a profile name first.",
+          "allowedEmpty": "Allowed dump statuses can't be empty."
+        },
+        "cancel": "Cancel",
+        "submit": "Add profile",
+        "submitting": "Adding…",
+        "successTitle": "Dump profile added",
+        "successBody": "{{name}} is ready.",
+        "errorTitle": "Couldn't add the profile"
+      }
     },
     "naming": {
       "subtitle": "Filename + folder layout templates. Each library binds to one Naming profile; the convention determines the token vocabulary the template can reference.",
@@ -288,6 +320,28 @@
         "pending": "Rendering…",
         "label": "Rendered against sample",
         "error": "Preview failed: {{message}}"
+      },
+      "create": {
+        "openButton": "+ Add naming profile",
+        "modalTitle": "Add a Naming profile",
+        "subhead": "Pick a convention + edit the Jinja template that builds the rendered filename. Tokens like {{ Game.Title }} and {{ Release.Region }} resolve at import time.",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. No-Intro USA",
+        "conventionLabel": "Convention",
+        "templateLabel": "Template",
+        "templateHint": "Jinja template using whitelisted tokens (Game.Title / Release.Region / Release.Languages / Dump.Extension / …). Use the Preview button after saving to see the rendered output.",
+        "flagsLabel": "Layout flags",
+        "flags": {
+          "platformSubfolder": "Wrap each platform in its own sub-folder",
+          "replaceIllegal": "Replace illegal filename characters",
+          "multiDiscSubfolder": "Group multi-disc sets in a sub-folder"
+        },
+        "cancel": "Cancel",
+        "submit": "Add profile",
+        "submitting": "Adding…",
+        "successTitle": "Naming profile added",
+        "successBody": "{{name}} is ready.",
+        "errorTitle": "Couldn't add the profile"
       }
     },
     "region": {
@@ -310,7 +364,29 @@
         "cancel": "Cancel",
         "factoryBlocked": "Factory-default profiles can't be deleted; reset them with the seed migration if needed."
       },
-      "editorHint": "Drag-list editor for priorities + multi-select for excluded regions lands in a follow-up slice."
+      "editorHint": "Drag-list editor for priorities + multi-select for excluded regions lands in a follow-up slice.",
+      "create": {
+        "openButton": "+ Add region profile",
+        "modalTitle": "Add a Region profile",
+        "subhead": "Priorities are most-preferred first. Excluded regions are dropped outright. Comma-separated, ISO 3-letter codes (USA, EUR, JPN, …).",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. Western priority",
+        "prioritiesLabel": "Priorities (most-preferred first)",
+        "prioritiesHint": "Comma-separated. e.g. ``USA, EUR, JPN``.",
+        "excludeLabel": "Exclude regions",
+        "allowFallback": "Allow fallback outside priorities",
+        "errors": {
+          "name": "Pick a profile name first.",
+          "emptyNoFallback": "Priorities can't be empty when fallback is disabled — the profile would reject every release.",
+          "overlap": "Region(s) appear in both priorities and exclude: {{regions}}."
+        },
+        "cancel": "Cancel",
+        "submit": "Add profile",
+        "submitting": "Adding…",
+        "successTitle": "Region profile added",
+        "successBody": "{{name}} is ready.",
+        "errorTitle": "Couldn't add the profile"
+      }
     },
     "language": {
       "subtitle": "Language preferences. Required languages must all be present on a release for it to qualify; preferred languages tie-break between qualifying releases.",
@@ -331,7 +407,24 @@
         "cancel": "Cancel",
         "factoryBlocked": "Factory-default profiles can't be deleted; reset them with the seed migration if needed."
       },
-      "editorHint": "Required + preferred drag-list editors land in a follow-up slice."
+      "editorHint": "Required + preferred drag-list editors land in a follow-up slice.",
+      "create": {
+        "openButton": "+ Add language profile",
+        "modalTitle": "Add a Language profile",
+        "subhead": "Required languages must all be present on a release. Preferred languages tie-break between qualifying releases. Use ISO 639-1 codes (en, fr, ja, …).",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. EN/FR strict",
+        "requiredLabel": "Required languages",
+        "languageHint": "Comma-separated, ISO 639-1 codes. Leave blank for no requirement.",
+        "preferredLabel": "Preferred languages",
+        "excludeJpOnly": "Exclude Japanese-only releases",
+        "cancel": "Cancel",
+        "submit": "Add profile",
+        "submitting": "Adding…",
+        "successTitle": "Language profile added",
+        "successBody": "{{name}} is ready.",
+        "errorTitle": "Couldn't add the profile"
+      }
     },
     "quality": {
       "subtitle": "Each library binds to one Quality profile. The profile lists the formats Romarr will accept (allowed), the one it prefers as the upgrade target (preferred), and the ceiling beyond which it won't keep upgrading (upgrade-until).",

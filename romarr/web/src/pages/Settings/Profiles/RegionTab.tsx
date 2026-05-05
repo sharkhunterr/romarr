@@ -18,6 +18,8 @@ import {
   type RegionProfile,
 } from "@/lib/api/queries/region-profiles";
 
+import { CreateRegionProfileModal } from "./CreateRegionProfileModal";
+
 interface RowProps {
   profile: RegionProfile;
 }
@@ -149,10 +151,24 @@ function RegionProfileRow(props: RowProps): ReactElement {
 export function RegionTab(): ReactElement {
   const { t } = useTranslation("settings");
   const profiles = useRegionProfiles();
+  const [createOpen, setCreateOpen] = useState(false);
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-zinc-400">{t("profiles.region.subtitle")}</p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm text-zinc-400">{t("profiles.region.subtitle")}</p>
+        <button
+          type="button"
+          onClick={() => setCreateOpen(true)}
+          className="shrink-0 rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          {t("profiles.region.create.openButton")}
+        </button>
+      </div>
+
+      {createOpen && (
+        <CreateRegionProfileModal onClose={() => setCreateOpen(false)} />
+      )}
 
       {profiles.isLoading && <ListSkeleton rows={3} />}
       {profiles.isError && (

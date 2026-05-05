@@ -19,6 +19,13 @@ import type { components } from "@/types/api/schema";
 
 export type RegionProfile = components["schemas"]["RegionProfileRead"];
 
+export interface RegionProfileCreate {
+  name: string;
+  priorities: string[];
+  exclude_regions: string[];
+  allow_fallback_outside_priorities?: boolean;
+}
+
 const KEY = ["settings", "region-profiles"] as const;
 
 export function useRegionProfiles(): UseQueryResult<
@@ -30,6 +37,24 @@ export function useRegionProfiles(): UseQueryResult<
     queryFn: () =>
       apiFetch<RegionProfile[]>("/api/v3/rom/regionprofile"),
     staleTime: 30_000,
+  });
+}
+
+export function useCreateRegionProfile(): UseMutationResult<
+  RegionProfile,
+  ApiError,
+  RegionProfileCreate
+> {
+  const qc = useQueryClient();
+  return useMutation<RegionProfile, ApiError, RegionProfileCreate>({
+    mutationFn: (payload) =>
+      apiFetch<RegionProfile>("/api/v3/rom/regionprofile", {
+        method: "POST",
+        json: payload,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: KEY });
+    },
   });
 }
 

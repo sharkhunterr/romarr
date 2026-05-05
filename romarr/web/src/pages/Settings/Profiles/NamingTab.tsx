@@ -19,6 +19,8 @@ import {
   type NamingProfile,
 } from "@/lib/api/queries/naming-profiles";
 
+import { CreateNamingProfileModal } from "./CreateNamingProfileModal";
+
 interface RowProps {
   profile: NamingProfile;
 }
@@ -210,10 +212,26 @@ function NamingProfileRow(props: RowProps): ReactElement {
 export function NamingTab(): ReactElement {
   const { t } = useTranslation("settings");
   const profiles = useNamingProfiles();
+  const [createOpen, setCreateOpen] = useState(false);
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-zinc-400">{t("profiles.naming.subtitle")}</p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm text-zinc-400">
+          {t("profiles.naming.subtitle")}
+        </p>
+        <button
+          type="button"
+          onClick={() => setCreateOpen(true)}
+          className="shrink-0 rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          {t("profiles.naming.create.openButton")}
+        </button>
+      </div>
+
+      {createOpen && (
+        <CreateNamingProfileModal onClose={() => setCreateOpen(false)} />
+      )}
 
       {profiles.isLoading && <ListSkeleton rows={3} />}
       {profiles.isError && (

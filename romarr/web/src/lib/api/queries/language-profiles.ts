@@ -18,6 +18,13 @@ import type { components } from "@/types/api/schema";
 
 export type LanguageProfile = components["schemas"]["LanguageProfileRead"];
 
+export interface LanguageProfileCreate {
+  name: string;
+  required_languages: string[];
+  preferred_languages: string[];
+  exclude_japanese_only?: boolean;
+}
+
 const KEY = ["settings", "language-profiles"] as const;
 
 export function useLanguageProfiles(): UseQueryResult<
@@ -29,6 +36,24 @@ export function useLanguageProfiles(): UseQueryResult<
     queryFn: () =>
       apiFetch<LanguageProfile[]>("/api/v3/rom/languageprofile"),
     staleTime: 30_000,
+  });
+}
+
+export function useCreateLanguageProfile(): UseMutationResult<
+  LanguageProfile,
+  ApiError,
+  LanguageProfileCreate
+> {
+  const qc = useQueryClient();
+  return useMutation<LanguageProfile, ApiError, LanguageProfileCreate>({
+    mutationFn: (payload) =>
+      apiFetch<LanguageProfile>("/api/v3/rom/languageprofile", {
+        method: "POST",
+        json: payload,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: KEY });
+    },
   });
 }
 

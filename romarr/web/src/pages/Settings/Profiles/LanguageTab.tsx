@@ -17,6 +17,8 @@ import {
   type LanguageProfile,
 } from "@/lib/api/queries/language-profiles";
 
+import { CreateLanguageProfileModal } from "./CreateLanguageProfileModal";
+
 interface RowProps {
   profile: LanguageProfile;
 }
@@ -154,10 +156,26 @@ function LanguageProfileRow(props: RowProps): ReactElement {
 export function LanguageTab(): ReactElement {
   const { t } = useTranslation("settings");
   const profiles = useLanguageProfiles();
+  const [createOpen, setCreateOpen] = useState(false);
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-zinc-400">{t("profiles.language.subtitle")}</p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm text-zinc-400">
+          {t("profiles.language.subtitle")}
+        </p>
+        <button
+          type="button"
+          onClick={() => setCreateOpen(true)}
+          className="shrink-0 rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          {t("profiles.language.create.openButton")}
+        </button>
+      </div>
+
+      {createOpen && (
+        <CreateLanguageProfileModal onClose={() => setCreateOpen(false)} />
+      )}
 
       {profiles.isLoading && <ListSkeleton rows={3} />}
       {profiles.isError && (

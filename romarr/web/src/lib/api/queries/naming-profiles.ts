@@ -44,6 +44,24 @@ export function useNamingProfiles(): UseQueryResult<NamingProfile[], ApiError> {
   });
 }
 
+export function useCreateNamingProfile(): UseMutationResult<
+  NamingProfile,
+  ApiError,
+  NamingProfileCreate
+> {
+  const qc = useQueryClient();
+  return useMutation<NamingProfile, ApiError, NamingProfileCreate>({
+    mutationFn: (payload) =>
+      apiFetch<NamingProfile>("/api/v3/rom/namingprofile", {
+        method: "POST",
+        json: payload,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: KEY });
+    },
+  });
+}
+
 export function useDeleteNamingProfile(): UseMutationResult<
   void,
   ApiError,

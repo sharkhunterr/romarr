@@ -257,7 +257,39 @@
         "cancel": "Annuler",
         "factoryBlocked": "Les profils factory ne peuvent pas être supprimés ; relancez la migration de seed pour les réinitialiser."
       },
-      "editorHint": "Le multi-select des statuts + les quatre toggles + le sélecteur de révision arriveront dans un slice à venir."
+      "editorHint": "Le multi-select des statuts + les quatre toggles + le sélecteur de révision arriveront dans un slice à venir.",
+      "create": {
+        "openButton": "+ Ajouter un profil dump",
+        "modalTitle": "Ajouter un profil Dump",
+        "subhead": "Listez les statuts de dump acceptés. Les quatre toggles ouvrent des variantes spécifiques.",
+        "nameLabel": "Nom",
+        "namePlaceholder": "ex. Verified-only",
+        "allowedLabel": "Statuts de dump autorisés",
+        "allowedHint": "Séparés par virgules. Valeurs connues : {{values}}.",
+        "preferLabel": "Révision préférée",
+        "preferValue": {
+          "latest": "Dernière révision (défaut)",
+          "earliest": "Première révision",
+          "any": "N'importe laquelle"
+        },
+        "flagsLabel": "Variantes autorisées",
+        "flags": {
+          "protoBeta": "Autoriser les dumps proto / beta",
+          "hacks": "Autoriser les hacks",
+          "trainers": "Autoriser les trainers",
+          "translations": "Autoriser les traductions"
+        },
+        "errors": {
+          "name": "Choisissez d'abord un nom de profil.",
+          "allowedEmpty": "Les statuts de dump autorisés ne peuvent pas être vides."
+        },
+        "cancel": "Annuler",
+        "submit": "Ajouter le profil",
+        "submitting": "Ajout…",
+        "successTitle": "Profil dump ajouté",
+        "successBody": "{{name}} est prêt.",
+        "errorTitle": "Impossible d'ajouter le profil"
+      }
     },
     "naming": {
       "subtitle": "Templates de nom de fichier et d'arborescence. Chaque ludothèque s'attache à un profil de nommage ; la convention détermine le vocabulaire de tokens que le template peut référencer.",
@@ -288,6 +320,28 @@
         "pending": "Rendu…",
         "label": "Rendu contre l'exemple",
         "error": "Aperçu échoué : {{message}}"
+      },
+      "create": {
+        "openButton": "+ Ajouter un profil nommage",
+        "modalTitle": "Ajouter un profil Nommage",
+        "subhead": "Choisissez une convention + éditez le template Jinja qui construit le nom de fichier rendu. Les tokens comme {{ Game.Title }} et {{ Release.Region }} sont résolus à l'import.",
+        "nameLabel": "Nom",
+        "namePlaceholder": "ex. No-Intro USA",
+        "conventionLabel": "Convention",
+        "templateLabel": "Template",
+        "templateHint": "Template Jinja avec les tokens whitelisted (Game.Title / Release.Region / Release.Languages / Dump.Extension / …). Utilisez le bouton Aperçu pour voir le rendu.",
+        "flagsLabel": "Drapeaux de mise en page",
+        "flags": {
+          "platformSubfolder": "Encapsuler chaque plateforme dans son sous-dossier",
+          "replaceIllegal": "Remplacer les caractères de fichier invalides",
+          "multiDiscSubfolder": "Grouper les sets multi-disques dans un sous-dossier"
+        },
+        "cancel": "Annuler",
+        "submit": "Ajouter le profil",
+        "submitting": "Ajout…",
+        "successTitle": "Profil nommage ajouté",
+        "successBody": "{{name}} est prêt.",
+        "errorTitle": "Impossible d'ajouter le profil"
       }
     },
     "region": {
@@ -310,7 +364,29 @@
         "cancel": "Annuler",
         "factoryBlocked": "Les profils factory ne peuvent pas être supprimés ; relancez la migration de seed pour les réinitialiser."
       },
-      "editorHint": "L'éditeur drag-list pour les priorités + multi-select pour les régions exclues arrivera dans un slice à venir."
+      "editorHint": "L'éditeur drag-list pour les priorités + multi-select pour les régions exclues arrivera dans un slice à venir.",
+      "create": {
+        "openButton": "+ Ajouter un profil région",
+        "modalTitle": "Ajouter un profil Région",
+        "subhead": "Les priorités sont par préférence décroissante. Les régions exclues sont rejetées d'office. Codes ISO 3 lettres, séparés par virgules (USA, EUR, JPN, …).",
+        "nameLabel": "Nom",
+        "namePlaceholder": "ex. Priorité occidentale",
+        "prioritiesLabel": "Priorités (préférée en premier)",
+        "prioritiesHint": "Séparées par virgules. ex. ``USA, EUR, JPN``.",
+        "excludeLabel": "Régions exclues",
+        "allowFallback": "Autoriser le fallback hors priorités",
+        "errors": {
+          "name": "Choisissez d'abord un nom de profil.",
+          "emptyNoFallback": "Les priorités ne peuvent pas être vides quand le fallback est désactivé — le profil rejetterait toutes les releases.",
+          "overlap": "Région(s) en double dans priorités et exclusions : {{regions}}."
+        },
+        "cancel": "Annuler",
+        "submit": "Ajouter le profil",
+        "submitting": "Ajout…",
+        "successTitle": "Profil région ajouté",
+        "successBody": "{{name}} est prêt.",
+        "errorTitle": "Impossible d'ajouter le profil"
+      }
     },
     "language": {
       "subtitle": "Préférences linguistiques. Les langues requises doivent toutes être présentes pour qu'une release soit éligible ; les langues préférées départagent entre releases éligibles.",
@@ -331,7 +407,24 @@
         "cancel": "Annuler",
         "factoryBlocked": "Les profils factory ne peuvent pas être supprimés ; relancez la migration de seed pour les réinitialiser."
       },
-      "editorHint": "Les éditeurs drag-list requis + préférés arriveront dans un slice à venir."
+      "editorHint": "Les éditeurs drag-list requis + préférés arriveront dans un slice à venir.",
+      "create": {
+        "openButton": "+ Ajouter un profil langue",
+        "modalTitle": "Ajouter un profil Langue",
+        "subhead": "Les langues requises doivent toutes être présentes sur une release. Les langues préférées départagent les releases éligibles. Codes ISO 639-1 (en, fr, ja, …).",
+        "nameLabel": "Nom",
+        "namePlaceholder": "ex. EN/FR strict",
+        "requiredLabel": "Langues requises",
+        "languageHint": "Séparées par virgules, codes ISO 639-1. Laissez vide pour aucune contrainte.",
+        "preferredLabel": "Langues préférées",
+        "excludeJpOnly": "Exclure les releases japonaises uniquement",
+        "cancel": "Annuler",
+        "submit": "Ajouter le profil",
+        "submitting": "Ajout…",
+        "successTitle": "Profil langue ajouté",
+        "successBody": "{{name}} est prêt.",
+        "errorTitle": "Impossible d'ajouter le profil"
+      }
     },
     "quality": {
       "subtitle": "Chaque ludothèque s'attache à un profil de qualité. Le profil liste les formats acceptés (allowed), celui visé comme cible d'upgrade (preferred) et le plafond au-delà duquel Romarr arrête d'upgrade (upgrade-until).",
