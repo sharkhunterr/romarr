@@ -37,6 +37,16 @@ from sqlalchemy import func, select
 
 from romarr.domain.models import Game, Platform
 from romarr.identification.hasher import Hasher
+from romarr.identification.headers import (
+    HeaderReadStatus,
+    InesReader,
+    Iso9660Reader,
+    MegaDriveReader,
+)
+from romarr.identification.headers.base import (
+    BaseHeaderReader,
+    UnsupportedPlatformError,
+)
 from romarr.identification.parsers import default_dispatcher
 from romarr.importer._outcome import make_failure_outcome
 from romarr.importer._park import park_in_unidentified
@@ -226,43 +236,105 @@ the dispatcher's per-parser threshold (0.7) so a clean
 ``Title (Region).ext`` clears the bar."""
 
 
+_HEADER_READERS: tuple[BaseHeaderReader, ...] = (
+    InesReader(),
+    MegaDriveReader(),
+    Iso9660Reader(),
+)
+"""Header readers tried in order during IDENTIFY enrichment. The
+ISO9660 reader's internal cascade also disambiguates PSX/PS2/Xbox/
+Saturn/Dreamcast/MegaCD by inspecting volume contents (CL002 of
+spec 001). Stub readers (3DS, NDS, etc.) raise
+:class:`UnsupportedPlatformError` and are silently skipped."""
+
+
+def _read_header_platform(source_path: "Path") -> str | None:
+    """Try each header reader; return the first OK platform_slug.
+
+    Stub readers (3DS / NDS / PSP / Vita / Switch / Wii / GC / GBA)
+    raise :class:`UnsupportedPlatformError`; we silently skip them
+    so a partial reader set doesn't block the rest of the cascade.
+    """
+    for reader in _HEADER_READERS:
+        try:
+            result = reader.read(source_path)
+        except UnsupportedPlatformError:
+            continue
+        except OSError:
+            continue
+        if result.status is HeaderReadStatus.OK and result.platform_slug:
+            return result.platform_slug
+    return None
+
+
 async def _identify_suggestions(
     session: AsyncSession, source_path: "Path"
 ) -> tuple[int | None, int | None]:
     """Best-effort IDENTIFY hint for the parked unidentified row.
 
-    Runs the filename dispatcher on ``source_path.name``. When the
-    parse exceeds the confidence floor:
+    Runs two parallel cascades whose hints feed the parking step:
 
-      * If ``parsed.platform_slug`` matches a known Platform, sets
-        ``suggested_platform_id`` to that platform's id.
-      * If exactly one Game (scoped to the suggested platform when
-        known, else global) matches the parsed title
-        case-insensitively, sets ``suggested_game_id`` to its id.
+      1. **Header read**: try each registered header reader in
+         order; the first that returns ``OK`` with a
+         ``platform_slug`` wins. Header reads work even when the
+         filename is uninformative (e.g., ``rom.bin``); when
+         the file's leading bytes encode a recognizable signature
+         (iNES magic, ``SEGA MEGA DRIVE``, ISO9660 PVD), this is
+         a high-confidence platform signal.
 
-    Returns ``(suggested_platform_id, suggested_game_id)``. Either
-    field may be ``None`` independently. Pure read — no DB writes.
+      2. **Filename parse**: dispatcher cascade across No-Intro /
+         Redump / TOSEC / GoodTools / Scene. When parser confidence
+         exceeds the floor + the title resolves to exactly one
+         Game in the catalogue, we suggest that Game's id.
+
+    Header-derived ``platform_slug`` takes precedence over the
+    parser's. Pure read — no DB writes.
     """
-    try:
-        parsed = default_dispatcher().parse(source_path.name)
-    except Exception:
-        return (None, None)
-
-    if not parsed.title or parsed.confidence < _IDENTIFY_CONFIDENCE_FLOOR:
-        return (None, None)
-
     suggested_platform_id: int | None = None
-    platform_slug = (
-        parsed.extra.get("platform_slug") if parsed.extra else None
-    )
-    if platform_slug:
+
+    # Header read first — runs blocking I/O, so threadpool it. Don't
+    # let a stat / mmap failure cascade out: catching at the call
+    # site keeps the orchestrator's audit chain robust.
+    try:
+        header_platform_slug = await asyncio.to_thread(
+            _read_header_platform, source_path
+        )
+    except Exception:
+        header_platform_slug = None
+
+    if header_platform_slug:
         platform = (
             await session.execute(
-                select(Platform.id).where(Platform.slug == platform_slug)
+                select(Platform.id).where(Platform.slug == header_platform_slug)
             )
         ).scalar_one_or_none()
         if platform is not None:
             suggested_platform_id = int(platform)
+
+    # Filename parser
+    try:
+        parsed = default_dispatcher().parse(source_path.name)
+    except Exception:
+        return (suggested_platform_id, None)
+
+    if not parsed.title or parsed.confidence < _IDENTIFY_CONFIDENCE_FLOOR:
+        return (suggested_platform_id, None)
+
+    # Parser-suggested platform only fires when the header reader
+    # didn't already pin one (the header signal is more
+    # authoritative — actual bytes vs. a filename guess).
+    if suggested_platform_id is None:
+        platform_slug = (
+            parsed.extra.get("platform_slug") if parsed.extra else None
+        )
+        if platform_slug:
+            platform = (
+                await session.execute(
+                    select(Platform.id).where(Platform.slug == platform_slug)
+                )
+            ).scalar_one_or_none()
+            if platform is not None:
+                suggested_platform_id = int(platform)
 
     title_query = select(Game.id).where(
         func.lower(Game.title) == parsed.title.lower()
