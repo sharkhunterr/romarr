@@ -793,11 +793,94 @@ contributors, the four exporter phases split cleanly across them.
   - (e) Add `library_id` FK on the existing `library_custom_format` m2m (which spec 006 created with `custom_format_id` only) AND the unique constraint `(library_id, custom_format_id)` (FR-005 in spec 006)
 - [ ] CL002 Within the same migration's `upgrade()` body, after the table DDL settles, run the one-shot `Release.library_id` backfill: for each newly-created library, UPDATE Release rows whose Dump path is under that library's canonicalized `path` (string-prefix match) and whose current `library_id IS NULL` (FR-003a)
 - [ ] CL003 [P] Post-migration hook: count Release rows where `library_id IS NULL` AFTER the backfill loop completes; if > 0, emit a single `OnHealthIssue` event with `category = 'orphan-releases'` and the count in the payload (FR-003a)
-- [ ] CL004 [P] [US2] Implement multi-library routing tie-breaker in `src/romarr/library/routing.py` — `routing_score = region_score (per spec 006 FR-013, len(priorities) − index) + (1 if Quality=ACCEPT else 0)`; higher wins; ties → lower `library.id`; Custom Format scores explicitly NOT included (FR-006 rewritten)
-- [ ] CL005 [P] [US3] Implement gamelist.xml absent-cover handling in `src/romarr/library/exporters/esde.py` — omit `<image>` element entirely when `data/covers/<game_id>.<ext>` doesn't exist; same rule for `<thumbnail>` and `<marquee>`; `<game>` element still emitted with all other fields (FR-018a)
-- [ ] CL006 [P] [US3] Implement filesystem-based advisory lock for emitters in `src/romarr/library/exporters/lock.py` — `fcntl.flock(fd, LOCK_EX | LOCK_NB)` on `<library_path>/<platform_slug>/.gamelist.lock`; lock unavailable → coalesce (skip; in-flight emission covers latest state); same lock pattern for Pegasus `metadata.txt` and LaunchBox XML, each with its own lock file (FR-017a)
+- [X] CL004 [P] [US2] **Slice 292 — path-divergence close.** The
+      multi-library routing tie-breaker is implemented at
+      ``src/romarr/libraries/routing.py::route_to_library``
+      (path-divergence: ``libraries/`` plural — module already
+      named that). Score = ``region_score + quality_bonus``
+      (``region_score`` per spec 006 FR-013 ``len(priorities) − index``;
+      ``quality_bonus = 1`` when Quality decision = ACCEPT, ``0``
+      otherwise). Sort key ``(-score, library.id)`` — highest
+      wins; final ties go to the lowest ``library.id`` (FR-006).
+      ``chosen_via`` distinguishes ``profile_match`` (single
+      top-score winner) from ``lower_id_tiebreak`` (multiple at
+      top score). Custom Format scores deliberately excluded —
+      those belong to the search engine. Pure function; no I/O;
+      deterministic. ``ReleaseFacts``-driven so callers can
+      reuse the same evaluation across releases.
+- [X] CL005 [P] [US3] **Slice 292 — path-divergence close.**
+      Absent-cover handling implemented at
+      ``src/romarr/libraries/exporters/esde.py``
+      (path-divergence: ``libraries/`` plural). The
+      ``EsdeGame`` value type carries ``cover_relative:
+      str | None``; when ``None`` the writer omits the
+      ``<image>`` element entirely (no empty ``<image/>`` tag,
+      no placeholder). Same rule applied to ``<thumbnail>`` and
+      ``<marquee>``. The ``<game>`` element with all other
+      fields still emits unconditionally per FR-018a.
+- [X] CL006 [P] [US3] **Slice 292 — path-divergence close.**
+      Filesystem-based advisory lock implemented at
+      ``src/romarr/libraries/exporters/_atomic.py``
+      (path-divergence: spec said ``exporters/lock.py`` —
+      consolidated with the atomic-write helper into
+      ``_atomic.py`` since the call sites always pair lock +
+      write). ``write_atomic_with_lock`` opens the per-target
+      lock file (``.gamelist.lock`` / ``.metadata.lock`` /
+      ``.platforms.lock``), acquires
+      ``fcntl.flock(LOCK_EX | LOCK_NB)``, writes via
+      ``os.replace`` for atomicity, releases the lock. When
+      the lock is held by another process, the helper returns
+      ``False`` (coalesces — in-flight emission covers latest
+      state); on successful write returns ``True``. The
+      contract is identical across the ESDE / Pegasus /
+      LaunchBox writers, each using its own per-target lock
+      file path so different exporters don't block each other
+      (FR-017a).
 - [ ] CL007 [P] [Admin] Wire admin-role gate on every mutating library endpoint AND on `GET /api/v3/rom/manual-import?folder=…` (path-traversal surface) in `src/romarr/library/api.py`. Other reads accessible to any authenticated user (FR-033a)
 - [ ] CL008 [P] Add tests in `tests/library/test_backfill.py` covering: fresh DB + library creation → orphan Releases bound by path prefix; remaining orphans → OnHealthIssue emitted once with the count
-- [ ] CL009 [P] Add tests in `tests/library/test_routing_tiebreaker.py` covering: 2 eligible libraries, different Region profiles → higher region_score wins; same region_score, different Quality outcomes → ACCEPT wins; full tie → lower id wins
-- [ ] CL010 [P] Add tests in `tests/library/test_emitter_lock.py` covering: 2 concurrent imports targeting same (lib, platform) → exactly one emission fires; second import sees the lock and coalesces (no second emission)
-- [ ] CL011 [P] Add tests in `tests/library/test_gamelist_no_cover.py` covering: Game with cover → `<image>` present; Game without cover → `<image>` element absent (NOT empty); other fields still present
+- [X] CL009 [P] **Slice 292 — path-divergence close.** Routing
+      tie-breaker tests ship at
+      ``tests/libraries/test_routing.py`` (path-divergence:
+      ``libraries/`` plural; tests live with the rest of the
+      routing suite rather than in a dedicated
+      ``test_routing_tiebreaker.py``).
+      ``test_profile_match_breaks_tie`` covers the
+      "different Region profiles → higher score wins" case
+      and the "Quality ACCEPT bonus tips a tied
+      region_score" case.
+      ``test_lower_id_final_tiebreak`` covers the "full tie
+      → lower library.id wins" case (asserts
+      ``chosen_via == "lower_id_tiebreak"``).
+      Plus the 30-release deterministic corpus
+      (``test_30_release_corpus_routes_deterministically``)
+      regression-guards against ordering instability.
+- [X] CL010 [P] **Slice 292 — path-divergence close.** Emitter
+      advisory-lock tests ship at
+      ``tests/libraries/exporters/test_esde_atomic_rewrite.py``
+      (path-divergence: lock + atomic-write helpers
+      colocate, so the tests do too).
+      ``test_lock_unavailable_coalesces`` exercises the
+      concurrent-emission scenario — opens the lock file
+      with ``fcntl.flock(LOCK_EX)`` in a sidecar test
+      fixture, then attempts ``write_atomic_with_lock``;
+      asserts the helper returns ``False`` AND the target
+      ``gamelist.xml`` is NOT written (lock held → coalesce
+      → second emission skipped, in-flight emission covers
+      the latest state).
+      ``test_lock_released_after_successful_write`` confirms
+      the lock is released after a normal write so a
+      following emission can re-acquire.
+- [X] CL011 [P] **Slice 292 — path-divergence close.** Absent-
+      cover gamelist tests ship at
+      ``tests/libraries/exporters/test_esde_gamelist.py``
+      (path-divergence: ``libraries/`` plural).
+      ``test_no_cover_omits_image_element`` builds an
+      ``EsdeGame`` with ``cover_relative=None`` and asserts
+      the rendered XML contains no ``<image>`` element at
+      all (not an empty ``<image/>`` tag) AND that all
+      other ``<game>`` fields still render.
+      ``test_relative_image_path_is_emitted_as_given``
+      pins the present-cover positive case.
+      ``test_thumbnail_and_marquee_emitted_when_present``
+      pins the same rule for the two adjacent media
+      elements.
