@@ -15,11 +15,17 @@
 import { Gamepad2, Plus } from "lucide-react";
 import { useEffect, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
-import { useGameLookup, type GameLookupRow } from "@/lib/api/queries/lookup";
+import {
+  useAddGameFromLookup,
+  useGameLookup,
+  type GameLookupRow,
+} from "@/lib/api/queries/lookup";
+import { usePlatforms } from "@/lib/api/queries/platforms";
+import { useToastStore } from "@/lib/store/toast";
 
 import { AddGameModal } from "./AddGameModal";
 import { RecentAdditions } from "./RecentAdditions";
@@ -116,6 +122,7 @@ function CoverThumb(props: {
 function LookupRow(props: {
   row: GameLookupRow;
   onAdd: (row: GameLookupRow) => void;
+  isAdding?: boolean;
 }): ReactElement {
   const { t } = useTranslation("addNew");
   const { row } = props;
@@ -155,10 +162,12 @@ function LookupRow(props: {
           <button
             type="button"
             onClick={() => props.onAdd(row)}
+            disabled={props.isAdding}
             className={[
               "inline-flex items-center gap-1 rounded-md bg-brand px-2.5 py-1 text-[0.65rem] font-medium text-zinc-900",
               "hover:bg-brand-300",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+              "disabled:cursor-not-allowed disabled:opacity-60",
             ].join(" ")}
           >
             <Plus size={12} aria-hidden="true" />
@@ -172,10 +181,57 @@ function LookupRow(props: {
 
 export function AddNewPage(): ReactElement {
   const { t } = useTranslation("addNew");
+  const navigate = useNavigate();
+  const pushToast = useToastStore((s) => s.push);
   const [searchParams, setSearchParams] = useSearchParams();
   const urlQuery = searchParams.get("q") ?? "";
   const [query, setQuery] = useState(urlQuery);
   const [pendingAdd, setPendingAdd] = useState<GameLookupRow | null>(null);
+
+  const platforms = usePlatforms();
+  const directAdd = useAddGameFromLookup();
+
+  // Click flow:
+  //   * Candidate has a platformSlug Romarr recognises → fire add
+  //     directly (one-click), navigate to detail on success.
+  //   * Otherwise (gray pill: IGDB-only platform) → open the modal
+  //     so the operator picks the closest local platform.
+  function handleAdd(row: GameLookupRow): void {
+    const list = platforms.data ?? [];
+    const matched = row.platformSlug
+      ? list.find((p) => p.slug === row.platformSlug)
+      : undefined;
+    if (matched === undefined) {
+      setPendingAdd(row);
+      return;
+    }
+    directAdd.mutate(
+      {
+        providerName: row.providerName,
+        providerGameId: row.providerGameId,
+        title: row.title,
+        platformId: matched.id,
+        monitored: true,
+      },
+      {
+        onSuccess: (game) => {
+          pushToast({
+            kind: "success",
+            title: t("add.successTitle"),
+            description: t("add.successBody", { title: game.title }),
+          });
+          navigate(`/game/${game.id}`);
+        },
+        onError: (err) => {
+          pushToast({
+            kind: "error",
+            title: t("add.errorTitle"),
+            description: err.message,
+          });
+        },
+      },
+    );
+  }
 
   // Debounce URL writes so keystrokes don't pollute history,
   // and the API call key only updates once the operator pauses.
@@ -250,9 +306,10 @@ export function AddNewPage(): ReactElement {
           <ul className="space-y-2">
             {lookup.data.map((row) => (
               <LookupRow
-                key={`${row.providerName}-${row.providerGameId}`}
+                key={`${row.providerName}-${row.providerGameId}-${row.platformSlug ?? "any"}`}
                 row={row}
-                onAdd={setPendingAdd}
+                onAdd={handleAdd}
+                isAdding={directAdd.isPending}
               />
             ))}
           </ul>

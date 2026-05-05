@@ -361,6 +361,29 @@ async def add_game_from_lookup(
     await db.commit()
     await db.refresh(game)
 
+    # Fire the aggregator inline so the GameRead we return carries
+    # the enriched fields (cover, summary, release_date, genres…).
+    # The operator just clicked Add — they expect the data on the
+    # detail page they'll navigate to next, not on the next
+    # scheduler tick. Bounded by a generous timeout so a stalled
+    # provider can't hang the response forever; on timeout / error
+    # the row stays in ``needs_metadata_refresh=True`` and the
+    # scheduler picks it up later.
+    import asyncio as _asyncio
+
+    from romarr.metadata.refresh import refresh_game_metadata as _refresh
+
+    try:
+        await _asyncio.wait_for(
+            _refresh(db, game_id=game.id, force=False),
+            timeout=15.0,
+        )
+        await db.refresh(game)
+    except Exception:
+        # Best-effort. The aggregator's own logging surfaces the
+        # actual error; a slow provider must not break the add.
+        pass
+
     # Emit OnGameAdded so live operator sessions see the row land
     # immediately (spec 011 + spec 013 T068/T072 — fans out via the
     # WS bridge → ``gameAdded`` envelope). Best-effort: a missing
