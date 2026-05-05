@@ -24,7 +24,7 @@ import { useState, type FormEvent, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
-import { useLogin } from "@/lib/api/queries/auth";
+import { useAuthConfig, useLogin } from "@/lib/api/queries/auth";
 
 function decodeReturnTo(raw: string): string {
   try {
@@ -49,6 +49,7 @@ export function LoginPage(): ReactElement {
   const returnTo = decodeReturnTo(returnToRaw);
   const navigate = useNavigate();
   const login = useLogin();
+  const authConfig = useAuthConfig();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -145,6 +146,23 @@ export function LoginPage(): ReactElement {
         >
           {login.isPending ? t("login.submitting") : t("login.submit")}
         </button>
+
+        {authConfig.data?.oidc_enabled && authConfig.data.oidc_start_url && (
+          <a
+            href={authConfig.data.oidc_start_url}
+            className={[
+              "block w-full rounded-md border border-zinc-700 bg-zinc-950",
+              "px-3 py-2 text-center text-sm font-medium text-zinc-100",
+              "hover:bg-zinc-900 focus-visible:outline-none",
+              "focus-visible:ring-2 focus-visible:ring-brand",
+            ].join(" ")}
+          >
+            {t("login.ssoButton", {
+              provider:
+                authConfig.data.oidc_provider_label ?? t("login.ssoFallback"),
+            })}
+          </a>
+        )}
 
         {returnTo !== "/" && (
           <p className="font-mono text-[0.65rem] text-zinc-600">

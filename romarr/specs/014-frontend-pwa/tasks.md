@@ -1074,9 +1074,21 @@ manageable; each ships ≥ 1 test + an implementation.
       link href. Cookie/redirect-to-returnTo path is covered
       by the auth slice integration tests; this test focuses
       on the Login PAGE contract.
-- [ ] T101 [P] [P-AUTH] `tests/unit/pages/test_Login.tsx::test_oidc_button`
-      — OIDC enabled; "Sign in with SSO" button visible and
-      redirects to `/api/v3/auth/oidc/start`.
+- [X] T101 [P] [P-AUTH] **Slice 280.** SSO button wired
+      end-to-end. Backend ships ``GET /api/v3/auth/config``
+      (public, no auth) returning ``{oidc_enabled,
+      oidc_provider_label, oidc_start_url}`` — today's body is
+      the documented OIDC-disabled shape since the OIDC chain
+      itself isn't implemented yet. Frontend
+      ``useAuthConfig`` hook + Login page conditionally render
+      the "Sign in with {provider}" link to the start_url when
+      ``oidc_enabled`` is true. Tests: 2 new Login page cases
+      (T101) — button hidden when disabled, button visible
+      with correct ``href`` when enabled. Plus the backend
+      contract test
+      ``test_auth_config_is_public_and_reports_oidc_disabled``.
+      When the OIDC chain lands the config endpoint flips its
+      body and the SPA picks up the change automatically.
 - [X] T102 [P] [P-SETUP] `web/src/pages/Setup/index.test.tsx`
       ships 5 tests (slice 212) covering the actual 3-step
       flow shipped (Welcome → Admin → Done; the spec's

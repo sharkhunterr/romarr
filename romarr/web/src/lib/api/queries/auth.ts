@@ -64,6 +64,29 @@ export function useLogin(): UseMutationResult<
   });
 }
 
+export interface AuthConfig {
+  oidc_enabled: boolean;
+  oidc_provider_label: string | null;
+  oidc_start_url: string | null;
+}
+
+const AUTH_CONFIG_KEY = ["auth", "config"] as const;
+
+/**
+ * Public auth-config probe. The Login page reads this to decide
+ * whether to render the "Sign in with SSO" button (spec 014 T101).
+ * No authentication required — the response is the same shape
+ * regardless of the operator's session.
+ */
+export function useAuthConfig(): UseQueryResult<AuthConfig, ApiError> {
+  return useQuery<AuthConfig, ApiError>({
+    queryKey: AUTH_CONFIG_KEY,
+    queryFn: () => apiFetch<AuthConfig>("/api/v3/auth/config"),
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+}
+
 export function useLogout(): UseMutationResult<void, ApiError, void> {
   const qc = useQueryClient();
   return useMutation<void, ApiError, void>({

@@ -465,6 +465,26 @@ async def test_openapi_schema_served(api_client: httpx.AsyncClient) -> None:
     assert "/api/v3/auth/me" in schema["paths"]
 
 
+@pytest.mark.asyncio
+async def test_auth_config_is_public_and_reports_oidc_disabled(
+    api_client: httpx.AsyncClient,
+) -> None:
+    """Slice 280 / spec 014 T101 — the auth-config probe is
+    public (no auth required) and reports the SSO state. Today
+    OIDC isn't shipped so the body is the documented disabled
+    shape; the contract becomes truthful for the SPA when OIDC
+    lands.
+    """
+    response = await api_client.get("/api/v3/auth/config")
+    assert response.status_code == 200
+    body = response.json()
+    assert body == {
+        "oidc_enabled": False,
+        "oidc_provider_label": None,
+        "oidc_start_url": None,
+    }
+
+
 # Suppress unused-import warnings for tokens / users used inline.
 _ = secrets
 _ = hash_api_key

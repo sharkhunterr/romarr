@@ -187,6 +187,31 @@ async def logout(
 
 
 @router.get(
+    "/config",
+    summary=(
+        "Public auth-config probe — what login flows the SPA should "
+        "render. No authentication required."
+    ),
+)
+async def get_auth_config() -> dict[str, object]:
+    """Return the public auth-config so the Login page knows
+    whether to render the OIDC SSO button (spec 014 T101 + spec
+    010 FR-026 forward-spec'd OIDC).
+
+    Today OIDC isn't shipped — the endpoint returns
+    ``{oidc_enabled: false}``. When the OIDC backend lands the
+    body grows ``{oidc_enabled: true, oidc_provider_label,
+    oidc_start_url}`` so the Login page can wire the
+    ``Sign in with SSO`` button to the right authority.
+    """
+    return {
+        "oidc_enabled": False,
+        "oidc_provider_label": None,
+        "oidc_start_url": None,
+    }
+
+
+@router.get(
     "/me",
     response_model=UserPublic,
     summary="Return the current authenticated user",
