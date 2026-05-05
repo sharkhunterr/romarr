@@ -119,6 +119,33 @@
       "title": "Aucun client de téléchargement configuré",
       "body": "Ajoutez un client qBittorrent ou SABnzbd pour commencer à télécharger. Les autres clients (Transmission, Deluge, NZBGet) arriveront en v1+."
     },
+    "create": {
+      "openButton": "+ Ajouter un client",
+      "modalTitle": "Ajouter un client de téléchargement",
+      "subhead": "qBittorrent + SABnzbd sont les clients supportés en MVP ; Transmission / Deluge / NZBGet sont structurés pour v1+.",
+      "typeLabel": "Implémentation",
+      "nameLabel": "Nom",
+      "namePlaceholder": "ex. qBit local",
+      "hostLabel": "Hôte",
+      "portLabel": "Port",
+      "apiKeyLabel": "Clé API",
+      "apiKeyPlaceholder": "Collez la clé API du client",
+      "usernameLabel": "Identifiant",
+      "passwordLabel": "Mot de passe",
+      "flagsLabel": "Drapeaux",
+      "flags": {
+        "enabled": "Activé (interrupteur principal)",
+        "useSsl": "Utiliser TLS / HTTPS",
+        "enableTorrents": "Accepter les grabs torrent",
+        "enableUsenet": "Accepter les grabs Usenet"
+      },
+      "cancel": "Annuler",
+      "submit": "Ajouter le client",
+      "submitting": "Ajout…",
+      "successTitle": "Client ajouté",
+      "successBody": "{{name}} est branché.",
+      "errorTitle": "Impossible d'ajouter le client"
+    },
     "type": {
       "qbittorrent": "qBittorrent",
       "sabnzbd": "SABnzbd",

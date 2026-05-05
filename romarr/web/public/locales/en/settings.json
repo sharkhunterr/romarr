@@ -119,6 +119,33 @@
       "title": "No download clients configured",
       "body": "Add a qBittorrent or SABnzbd client to start grabbing. Other clients (Transmission, Deluge, NZBGet) land in v1+."
     },
+    "create": {
+      "openButton": "+ Add download client",
+      "modalTitle": "Add a download client",
+      "subhead": "qBittorrent + SABnzbd are the MVP-supported clients; Transmission / Deluge / NZBGet are scaffolded for v1+.",
+      "typeLabel": "Implementation",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. local qBit",
+      "hostLabel": "Host",
+      "portLabel": "Port",
+      "apiKeyLabel": "API key",
+      "apiKeyPlaceholder": "Paste the client's API key",
+      "usernameLabel": "Username",
+      "passwordLabel": "Password",
+      "flagsLabel": "Flags",
+      "flags": {
+        "enabled": "Enabled (master switch)",
+        "useSsl": "Use TLS / HTTPS",
+        "enableTorrents": "Accept torrent grabs",
+        "enableUsenet": "Accept Usenet grabs"
+      },
+      "cancel": "Cancel",
+      "submit": "Add client",
+      "submitting": "Adding…",
+      "successTitle": "Download client added",
+      "successBody": "{{name}} is now wired up.",
+      "errorTitle": "Couldn't add the download client"
+    },
     "type": {
       "qbittorrent": "qBittorrent",
       "sabnzbd": "SABnzbd",

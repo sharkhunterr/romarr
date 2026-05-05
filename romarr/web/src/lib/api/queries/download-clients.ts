@@ -24,6 +24,9 @@ import { ApiError, apiFetch } from "@/lib/api/client";
 import type { components } from "@/types/api/schema";
 
 export type DownloadClient = components["schemas"]["DownloadClientRead"];
+export type DownloadClientCreate =
+  components["schemas"]["DownloadClientCreate"];
+export type DownloadClientType = components["schemas"]["ClientType"];
 export type DownloadClientTestResult =
   components["schemas"][
     "romarr__downloaders__types__ConnectivityTestResult"
@@ -57,6 +60,24 @@ export function useDownloadClientsById(): Map<number, DownloadClient> {
     }
     return out;
   }, [clients.data]);
+}
+
+export function useCreateDownloadClient(): UseMutationResult<
+  DownloadClient,
+  ApiError,
+  DownloadClientCreate
+> {
+  const qc = useQueryClient();
+  return useMutation<DownloadClient, ApiError, DownloadClientCreate>({
+    mutationFn: (payload) =>
+      apiFetch<DownloadClient>("/api/v3/downloadclient", {
+        method: "POST",
+        json: payload,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: CLIENTS_KEY });
+    },
+  });
 }
 
 export function useDeleteDownloadClient(): UseMutationResult<

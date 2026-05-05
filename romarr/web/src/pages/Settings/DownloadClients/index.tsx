@@ -14,7 +14,7 @@
  * worth a dedicated slice.
  */
 
-import { useMemo, type ReactElement } from "react";
+import { useMemo, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
@@ -22,6 +22,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useDownloadClients } from "@/lib/api/queries/download-clients";
 
+import { CreateDownloadClientModal } from "./CreateDownloadClientModal";
 import { DownloadClientRow } from "./DownloadClientRow";
 
 export function DownloadClientsPage(): ReactElement {
@@ -43,6 +44,8 @@ export function DownloadClientsPage(): ReactElement {
     );
   };
 
+  const [createOpen, setCreateOpen] = useState(false);
+
   const filtered = useMemo(() => {
     if (!clients.data) return [];
     if (queryNormalized.length === 0) return clients.data;
@@ -55,14 +58,27 @@ export function DownloadClientsPage(): ReactElement {
 
   return (
     <div className="space-y-4">
-      <header>
-        <h2 className="text-base font-medium text-zinc-100">
-          {t("downloadClients.title")}
-        </h2>
-        <p className="mt-1 text-sm text-zinc-400">
-          {t("downloadClients.subtitle")}
-        </p>
+      <header className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-base font-medium text-zinc-100">
+            {t("downloadClients.title")}
+          </h2>
+          <p className="mt-1 text-sm text-zinc-400">
+            {t("downloadClients.subtitle")}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setCreateOpen(true)}
+          className="shrink-0 rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          {t("downloadClients.create.openButton")}
+        </button>
       </header>
+
+      {createOpen && (
+        <CreateDownloadClientModal onClose={() => setCreateOpen(false)} />
+      )}
 
       {clients.isLoading && <ListSkeleton rows={3} />}
       {clients.isError && (
