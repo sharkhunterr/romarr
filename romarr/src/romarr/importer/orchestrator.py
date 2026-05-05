@@ -743,7 +743,21 @@ async def _dispatch_esde_exporter(
         rom_path=f"./{rom_relative}",
     )
     xml_bytes = render_gamelist_xml([esde_game])
-    write_gamelist_atomic(target_dir, xml_bytes)
+    written = write_gamelist_atomic(target_dir, xml_bytes)
+
+    # T077 / FR-019 — record the emission so the operator UI can
+    # surface "last gamelist.xml emit" per library + exporter.
+    try:
+        from romarr.libraries.exporters._runs import record_exporter_run
+
+        await record_exporter_run(
+            session=session,
+            library_id=library.id,
+            exporter_name="esde",
+            status="ok" if written else "coalesced",
+        )
+    except Exception:
+        pass
 
 
 async def _maybe_move_to_library(

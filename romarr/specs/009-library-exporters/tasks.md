@@ -656,15 +656,21 @@ correctly.
       is no separate "trigger an incremental scan" command
       because the incremental scanner is always-on. Only the
       full-scan trigger needs an HTTP surface.
-- [~] T077 [P] [API] **Slice 279 — partial.** GET catalog
-      shipped (lists the four documented exporters with name +
-      description + format + available flag). 5 tests in
-      ``tests/libraries/api/test_exporter_endpoints.py`` cover
-      list, single-read, unknown-name 404, format metadata,
-      unauthenticated 401. The "per-exporter last-run + count"
-      tracking the spec wants needs runtime persistence — lands
-      with the per-import dispatch when the spec 008 importer's
-      fan-out arrives.
+- [X] T077 [P] [API] Closed (slice 326). Catalog GET shipped
+      in slice 279; per-(library, exporter) run tracking
+      shipped now via:
+      * New ``library_exporter_run`` table (migration
+        ``0015_exporter_runs.py``) — PK is
+        (library_id, exporter_name); columns ``last_run_at``,
+        ``run_count``, ``last_status`` (ok / coalesced / error),
+        ``last_error``.
+      * ``record_exporter_run`` helper that the orchestrator's
+        per-import dispatch + the manual-run endpoint both call
+        on every emission.
+      * ``GET /api/v3/rom/exporters/runs/{library_id}`` surfaces
+        the rows for the operator UI.
+      2 new tests cover the upsert (counter increments across
+      runs) and the 401 auth gate.
 - [~] T078 [P] [API] POST ``/exporters/{name}/run`` — **ESDE
       shipped (slice 323).** New ``materialize_esde_games``
       helper projects every imported (Game, Release, Dump)

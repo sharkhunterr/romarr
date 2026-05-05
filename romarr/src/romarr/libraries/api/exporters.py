@@ -214,7 +214,35 @@ async def run_exporter(
         target_dir.mkdir(parents=True, exist_ok=True)
 
     xml_bytes = render_gamelist_xml(games)
-    written = write_gamelist_atomic(target_dir, xml_bytes)
+    try:
+        written = write_gamelist_atomic(target_dir, xml_bytes)
+        run_status = "ok" if written else "coalesced"
+        run_error = None
+    except Exception as exc:
+        written = False
+        run_status = "error"
+        run_error = str(exc)
+
+    # T077 / FR-019 — track emission for operator visibility.
+    from romarr.libraries.exporters._runs import record_exporter_run
+
+    await record_exporter_run(
+        session=db,
+        library_id=body.library_id,
+        exporter_name="esde",
+        status=run_status,
+        error=run_error,
+    )
+
+    if run_status == "error":
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "errorMessage": "exporter_run_failed",
+                "errorCode": "exporter_run_failed",
+                "details": run_error,
+            },
+        )
 
     return ExporterRunResponse(
         name=name,
@@ -223,6 +251,43 @@ async def run_exporter(
         games_written=len(games),
         written=written,
     )
+
+
+class LibraryExporterRunRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    library_id: int
+    exporter_name: str
+    last_run_at: object | None = None
+    run_count: int
+    last_status: str
+    last_error: str | None = None
+
+
+@router.get(
+    "/runs/{library_id}",
+    response_model=list[LibraryExporterRunRead],
+    summary="Per-(library, exporter) emission tracking (any user).",
+)
+async def list_library_exporter_runs(
+    library_id: int,
+    _user: Annotated[Principal, Depends(require_readonly)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[LibraryExporterRunRead]:
+    """T077 / FR-019 — return the per-exporter run rows for one
+    library. Empty list when no exporter has fired yet."""
+    from sqlalchemy import select as _select
+
+    from romarr.libraries.models import LibraryExporterRun
+
+    rows = (
+        await db.execute(
+            _select(LibraryExporterRun)
+            .where(LibraryExporterRun.library_id == library_id)
+            .order_by(LibraryExporterRun.exporter_name)
+        )
+    ).scalars().all()
+    return [LibraryExporterRunRead.model_validate(r) for r in rows]
 
 
 __all__ = ["router"]

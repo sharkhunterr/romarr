@@ -296,3 +296,69 @@ async def test_run_missing_library_returns_404(
     )
     assert response.status_code == 404
     assert response.json()["errorCode"] == "library_not_found"
+
+
+# ---------------------------------------------------------------------------
+# T077 — per-(library, exporter) run tracking surfaces via GET /runs/{id}
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_run_records_last_run_metadata(
+    authed_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+    tmp_path,
+) -> None:
+    """A successful manual run upserts a ``library_exporter_run``
+    row; the GET endpoint surfaces it (T077 / FR-019)."""
+    library_id, platform_slug = await _seed_library_with_imported_game(
+        api_engine, str(tmp_path)
+    )
+
+    # No row before the first run.
+    listing = await authed_client.get(
+        f"/api/v3/rom/exporters/runs/{library_id}"
+    )
+    assert listing.status_code == 200
+    assert listing.json() == []
+
+    # First run.
+    run1 = await authed_client.post(
+        "/api/v3/rom/exporters/esde/run",
+        json={"library_id": library_id, "platform_slug": platform_slug},
+    )
+    assert run1.status_code == 200, run1.text
+
+    listing = await authed_client.get(
+        f"/api/v3/rom/exporters/runs/{library_id}"
+    )
+    assert listing.status_code == 200
+    rows = listing.json()
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["exporter_name"] == "esde"
+    assert row["run_count"] == 1
+    assert row["last_status"] == "ok"
+    assert row["last_run_at"] is not None
+    assert row["last_error"] is None
+
+    # Second run — counter increments.
+    run2 = await authed_client.post(
+        "/api/v3/rom/exporters/esde/run",
+        json={"library_id": library_id, "platform_slug": platform_slug},
+    )
+    assert run2.status_code == 200
+
+    listing = await authed_client.get(
+        f"/api/v3/rom/exporters/runs/{library_id}"
+    )
+    rows = listing.json()
+    assert rows[0]["run_count"] == 2
+
+
+@pytest.mark.asyncio
+async def test_runs_listing_unauthenticated_returns_401(
+    api_client: httpx.AsyncClient,
+) -> None:
+    response = await api_client.get("/api/v3/rom/exporters/runs/1")
+    assert response.status_code == 401

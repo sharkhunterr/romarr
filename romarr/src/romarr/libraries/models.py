@@ -186,7 +186,63 @@ class LibraryPlatform(Base, TimestampMixin):
     )
 
 
+_EXPORTER_RUN_STATUS_CHECK = "last_status IN ('ok','coalesced','error')"
+
+
+class LibraryExporterRun(Base):
+    """Per-(library, exporter) emission tracking — T077 / FR-019.
+
+    Upserted by both the orchestrator's per-import dispatch and the
+    manual ``POST /exporters/{name}/run`` endpoint on every successful
+    emission. The operator UI surfaces ``last_run_at`` and
+    ``run_count`` so the operator can verify the gamelist.xml is
+    current.
+
+    ``last_status`` carries one of:
+      * ``ok``        — the writer wrote the file;
+      * ``coalesced`` — another writer held the advisory lock so this
+        emission was skipped (FR-017a);
+      * ``error``     — the renderer or writer raised; ``last_error``
+        carries the diagnostic message.
+    """
+
+    __tablename__ = "library_exporter_run"
+
+    library_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("library.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    exporter_name: Mapped[str] = mapped_column(
+        String(64), primary_key=True
+    )
+    last_run_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    run_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    last_status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="ok", server_default="ok"
+    )
+    last_error: Mapped[str | None] = mapped_column(
+        String, nullable=True
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            _EXPORTER_RUN_STATUS_CHECK,
+            name="ck_library_exporter_run_status",
+        ),
+    )
+
+
 # Re-export BigInteger so future modules importing constraint helpers
 # from this file find a consistent vocabulary even if SQLAlchemy moves
 # things around between minor versions.
-__all__ = ["BigInteger", "Library", "LibraryPlatform"]
+__all__ = [
+    "BigInteger",
+    "Library",
+    "LibraryExporterRun",
+    "LibraryPlatform",
+]
