@@ -35,7 +35,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import func, select
 
-from romarr.domain.models import Game, Platform
+from romarr.domain.models import Game, Platform, Release
 from romarr.identification.dat.manager import DatManager
 from romarr.identification.hasher import Hasher
 from romarr.identification.headers import (
@@ -137,6 +137,7 @@ async def run_import(
     # structured reason.
     sha1: str | None = None
     size_bytes = 0
+    hash_result = None
 
     if (
         extract_failure is None
@@ -152,21 +153,71 @@ async def run_import(
             # The file disappeared mid-hash; the park + history
             # writes below capture the failure reason.
             sha1 = None
+            hash_result = None
 
-    # Step 2a — IDENTIFY (best-effort): run the filename parser
-    # on the source basename so the parked row carries a
-    # ``suggested_platform_id`` and ``suggested_game_id`` hint
-    # for the operator's manual-match UI. This is audit-grade
-    # enrichment only — the full identification cascade
-    # (hash-match → header read → DAT verify → game-match) lands
-    # with the IDENTIFY / GAMEMATCH slices that follow.
+    # Step 2a — IDENTIFY (Header → Parser → DAT → GAMEMATCH).
+    # Returns three signals: the suggested_platform_id +
+    # suggested_game_id (always populated when known — feeds the
+    # park hint), and monitored_game_id (only set when GAMEMATCH
+    # resolves to a confident monitored hit — feeds the auto-
+    # import gate at Step 2b).
     suggested_platform_id: int | None = None
     suggested_game_id: int | None = None
+    monitored_game_id: int | None = None
     if extract_failure is None:
         (
             suggested_platform_id,
             suggested_game_id,
+            monitored_game_id,
         ) = await _identify_suggestions(session, source_path, sha1=sha1)
+
+    # Step 2b — AUTO-IMPORT: when GAMEMATCH resolved to a
+    # monitored Game AND that Game has exactly one wanted
+    # Release, we have enough confidence to bypass parking and
+    # run an in-place import. Mirrors the manual-match endpoint's
+    # contract through ``manual_import_known``.
+    if (
+        extract_failure is None
+        and monitored_game_id is not None
+        and hash_result is not None
+        and source_path.exists()
+        and source_path.is_file()
+    ):
+        wanted = (
+            await session.execute(
+                select(Release.id)
+                .where(
+                    Release.game_id == monitored_game_id,
+                    Release.status == "wanted",
+                )
+                .limit(2)
+            )
+        ).scalars().all()
+        if len(wanted) == 1:
+            from romarr.importer._manual import manual_import_known
+
+            release_id = int(wanted[0])
+            file_format = (
+                source_path.suffix.lstrip(".").lower() or "raw"
+            )
+            try:
+                outcome = await manual_import_known(
+                    session=session,
+                    context=context,
+                    release_id=release_id,
+                    game_id=monitored_game_id,
+                    dest_path=source_path,
+                    file_format=file_format,
+                    original_filename=source_path.name,
+                    hashes=hash_result,
+                )
+                await session.commit()
+                return outcome
+            except Exception:
+                # Auto-import failed; fall through to parking.
+                # The audit row written by the park branch carries
+                # the operator-actionable failure surface.
+                pass
 
     # Step 2b — park. The rejection reason picks the best signal
     # we have: an extract failure wins (bomb / bad-archive /
@@ -274,7 +325,7 @@ async def _identify_suggestions(
     source_path: "Path",
     *,
     sha1: str | None = None,
-) -> tuple[int | None, int | None]:
+) -> tuple[int | None, int | None, int | None]:
     """Best-effort IDENTIFY hint for the parked unidentified row.
 
     Runs two parallel cascades whose hints feed the parking step:
@@ -366,6 +417,7 @@ async def _identify_suggestions(
     # either populates the parked row's ``suggested_game_id``
     # so the operator's manual-match UI can one-click confirm.
     suggested_game_id: int | None = None
+    monitored_game_id: int | None = None
     titles: list[str] = []
     if (
         parsed is not None
@@ -389,6 +441,12 @@ async def _identify_suggestions(
             suggested_game_id = (
                 gm_result.game_id or gm_result.suggested_game_id
             )
+            # ``game_id`` is non-None only when the match was a
+            # confident hit against a *monitored* Game (signal in
+            # ``title_exact`` or ``title_fuzzy`` ≥ 90). That's the
+            # green light for an in-place auto-import — caller
+            # gates the success path on this field.
+            monitored_game_id = gm_result.game_id
     elif titles:
         # No platform pinned — fall back to a single global
         # case-insensitive title lookup. Picks at most one Game;
@@ -404,7 +462,7 @@ async def _identify_suggestions(
                 suggested_game_id = int(global_matches[0])
                 break
 
-    return (suggested_platform_id, suggested_game_id)
+    return (suggested_platform_id, suggested_game_id, monitored_game_id)
 
 
 _watcher: "WatcherLoop | None" = None
