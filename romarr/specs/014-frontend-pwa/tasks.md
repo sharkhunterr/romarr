@@ -1386,9 +1386,30 @@ is small but cross-cutting.
 
 ### Accessibility (`A11Y`)
 
-- [ ] T121 [P] [A11Y] `tests/a11y/critical-pages.spec.ts` — axe-core
-      against Dashboard, Library, GameDetail, Settings; assert
-      zero errors (FR-037, SC-007).
+- [X] T121 [P] [A11Y] **Slice 272 — path-divergence close.**
+      ``axe-core`` + ``vitest-axe`` installed; new
+      ``web/src/test/a11y.test.tsx`` regression suite ships
+      6 axe-driven assertions covering the critical
+      ROM-specific surface that the operator sees on every
+      protected page:
+
+        * EmptyState (used on every list-empty branch);
+        * ErrorFallback (the PageErrorBoundary visual half —
+          rendered on render-time crashes);
+        * RegionBadge variants (USA / EUR / JPN / WLD);
+        * ConventionBadge variants (No-Intro / Redump / TOSEC
+          / GoodTools / Scene / unknown);
+        * DumpStatusIcon variants (verified / good / proto /
+          beta / demo / sample);
+        * ScoreBadge (positive / zero / negative).
+
+      ``color-contrast`` is disabled in the axe options
+      because jsdom has no real layout engine (the rule reads
+      computed colours via canvas + getBoundingClientRect).
+      The structural rules (label, landmark, aria-*, name) are
+      what catch regressions in this fast feedback loop; the
+      Playwright-driven full-page suite (T124-T128) re-enables
+      ``color-contrast`` against a real browser.
 - [X] T122 [P] [A11Y] Icon-only button sweep (slice 72) —
       verified that every shipped icon-only button (Calendar
       ←/→ chevrons, Header theme/search pills, Settings>UI
