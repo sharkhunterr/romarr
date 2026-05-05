@@ -795,10 +795,17 @@ auto-blocklist, perf, coverage, ruff.
       recover handler in ``run_import`` covers the real
       concurrency case (PostgreSQL deployments + the qBit-
       pushed-twice operator scenario).
-- [ ] T083 [P] [HARD] `tests/importer/test_auto_blocklist_on_failure.py`
-      — fault-injected extract failure; assert blocklist row created via
-      spec 007 helper with `added_by='system'` and the documented reason
-      (FR-035, SC-006).
+- [X] T083 [P] [HARD] **Slice 317.** Tests ship at
+      ``tests/importer/test_auto_blocklist_on_failure.py``
+      (3 tests). Drops a corrupt zip → extract fires
+      ``extract:bad-archive`` → orchestrator's failure block
+      calls ``romarr.search.blocklist.add_entry`` with
+      ``added_by='system'`` + ``reason='extract:bad-archive'``
+      + ``release_title=<filename>``. Complementary tests:
+      ``match:no_game`` does NOT auto-blocklist (transient
+      sub-reason); the bad-archive entry's ``hash_sha1`` is
+      None because extract fails before hash (file bytes
+      aren't safely hashable).
 - [ ] T084 [P] [HARD] `tests/importer/test_manual_flow.py::test_force_overrides_profile`
       — manual flow with `force=true`; profile rejection becomes warning
       (FR-021, US4.2).
@@ -1128,13 +1135,20 @@ contributors, the WATCH and EXTRACT phases (Day 2-3) split cleanly.
 > mismatch, 403 user-role forbidden. Full importer suite:
 > 155 passed.
 
-- [~] CL001 [P] [US6] Subreason-aware auto-blocklist —
-      **gated on orchestrator**. The taxonomy (`RejectionReason`
-      enum in `importer/types.py`) splits content-correctness
-      from transient subreasons cleanly; the emitter belongs
-      in the orchestrator's failure-handling block
-      (`apply_lifecycle_on_failure`) which depends on
-      `run_import` being implemented first.
+- [X] CL001 [P] [US6] **Slice 317 — fully closed.** Subreason-
+      aware auto-blocklist shipped at
+      ``orchestrator.py::_auto_blocklist`` + the
+      ``_BLOCKLIST_WORTHY_REASONS`` frozenset taxonomy:
+      ``extract:bomb-detected``, ``extract:bad-archive``,
+      ``extract:depth-exceeded``, ``destination_collision``,
+      ``move:copy_hash_mismatch``. Transient sub-reasons
+      (``hash:failed``, ``profile:*``, ``move:permission_error``,
+      ``move:disk_full``, ``lock:timeout``, ``routing:*``)
+      are excluded — they're operator-config or environmental
+      and a re-grab might succeed. The auto-blocklist call
+      lives in the failure-handling block right after the
+      ``park_in_unidentified`` write so the audit row +
+      blocklist entry land in the same transaction.
 - [X] CL002 [P] [US9] Webhook bearer-token validator —
       shipped in `src/romarr/importer/webhook.py` (note:
       slice settled on the `webhook.py` filename rather than
@@ -1179,10 +1193,14 @@ contributors, the WATCH and EXTRACT phases (Day 2-3) split cleanly.
       `require_role` / `require_admin` Depends). Only the
       `X-Romarr-Webhook-Token` Header drives auth, exactly
       as spec'd.
-- [~] CL007 [P] Subreason-taxonomy tests — **gated on
-      CL001** (the taxonomy is implemented but the
-      blocklist-vs-no-blocklist behavior lives in the
-      orchestrator).
+- [X] CL007 [P] **Slice 317 — closed alongside CL001.**
+      Subreason-taxonomy tests ship at
+      ``tests/importer/test_auto_blocklist_on_failure.py``:
+      ``test_extract_bad_archive_creates_blocklist_row``
+      pins the content-correctness path;
+      ``test_no_game_match_does_not_blocklist`` pins the
+      transient-skip path; ``test_blocklist_entry_carries_sha1_when_available``
+      documents the no-hash-on-extract-failure boundary.
 - [~] CL008 [P] Destination-collision tests — partial:
       `test_move.py` covers the same-SHA-1 idempotent no-op
       and the SHA-1-mismatch raises; the parking +

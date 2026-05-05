@@ -75,6 +75,22 @@ EXTRACT before hashing. Mirrors
 here so the orchestrator's branching is checkable without
 importing the private constant."""
 
+_BLOCKLIST_WORTHY_REASONS = frozenset(
+    {
+        "extract:bomb-detected",
+        "extract:bad-archive",
+        "extract:depth-exceeded",
+        "destination_collision",
+        "move:copy_hash_mismatch",
+    }
+)
+"""Content-correctness rejection reasons that auto-blocklist
+the source release per CL001 / FR-035 / SC-006. Transient
+sub-reasons (hash:failed, move:permission_error,
+move:disk_full, lock:timeout, profile:*, routing:*) DO NOT
+blocklist — they're operator-config or environmental and a
+re-grab might succeed."""
+
 
 async def run_import(
     context: ImportContext,
@@ -377,6 +393,25 @@ async def run_import(
             # decides whether to re-raise.
             pass
 
+    # CL001 / T083 / FR-035 / SC-006 — subreason-aware auto-
+    # blocklist. When the failure rejection_reason is one of
+    # the content-correctness reasons (bomb / bad-archive /
+    # depth-exceeded / destination_collision /
+    # move_hash_mismatch), add a Blocklist row with
+    # ``added_by='system'`` so the search engine doesn't re-
+    # grab the same bad release. Best-effort — a blocklist
+    # failure can't invalidate the audit row.
+    if rejection_reason in _BLOCKLIST_WORTHY_REASONS:
+        try:
+            await _auto_blocklist(
+                session=session,
+                release_title=context.source_path.name,
+                reason=rejection_reason,
+                hash_sha1=sha1,
+            )
+        except Exception:
+            pass
+
     # Step 3 — write the failure history row + project the
     # outcome.
     duration_ms = max(
@@ -400,6 +435,41 @@ async def run_import(
     )
     await session.commit()
     return outcome
+
+
+async def _auto_blocklist(
+    *,
+    session: AsyncSession,
+    release_title: str,
+    reason: str,
+    hash_sha1: str | None,
+) -> None:
+    """CL001 / T083 — auto-blocklist on content-correctness
+    failure. Adds a row to the spec 007 blocklist with
+    ``added_by='system'`` so the search engine doesn't re-grab
+    the same bad release on the next RSS pass.
+
+    Best-effort: caller wraps in try/except so a blocklist
+    failure (DB constraint, missing-match-field) can't
+    invalidate the audit row.
+
+    The Blocklist's at-least-one-match-field invariant is
+    documented at the Pydantic schema layer; the underlying
+    DB columns are all nullable, so an "audit-only" entry
+    (release_title + reason, no hash) lands cleanly. Future
+    grabs match by hash when available; without a hash the
+    entry serves as a record of what failed for the
+    operator's "Blocklisted Releases" UI.
+    """
+    from romarr.search.blocklist import add_entry
+
+    await add_entry(
+        session=session,
+        release_title=release_title,
+        reason=reason,
+        hash_sha1=hash_sha1,
+        added_by="system",
+    )
 
 
 async def _maybe_delete_archive(
