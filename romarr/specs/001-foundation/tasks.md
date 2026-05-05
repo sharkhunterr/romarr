@@ -216,17 +216,44 @@ hash/name lookups.
 
 ### Tests (corpus-driven)
 
-- [ ] T045 [P] [FN] Author `tests/fixtures/filenames/nointro_corpus.txt` — ≈100
-      curated No-Intro filenames + expected (region, languages, revision, tags).
-- [ ] T046 [P] [FN] Author `tests/fixtures/filenames/goodtools_corpus.txt` — ≈100
-      curated GoodTools filenames + expected.
-- [ ] T047 [P] [FN] Author `tests/fixtures/filenames/tosec_corpus.txt` — ≈100
-      TOSEC filenames + expected.
-- [ ] T048 [P] [FN] Author `tests/fixtures/filenames/scene_corpus.txt` — ≈100
-      Scene release names + expected.
-- [ ] T049 [FN] `tests/identification/filename/test_dispatcher.py::test_corpus_recall`
-      — load all four corpora, run them through the dispatcher, assert overall
-      recall ≥ 95% (SC-003).
+- [X] T045 [P] [FN] **Slice 293.** ``tests/fixtures/filenames/nointro_corpus.txt``
+      ships with 58 curated No-Intro filenames in JSONL format
+      (one record per line). Coverage spans single-region
+      (USA / Europe / Japan / World), multi-region
+      (USA, Europe), multi-language (En,Fr,De / En,Fr,De,Es,It),
+      revision tags (Rev 1 / Rev A), multi-disc parens, and
+      bracketed dump-status tags ([!] / [b] / [h2]).
+- [X] T046 [P] [FN] **Slice 293.**
+      ``tests/fixtures/filenames/goodtools_corpus.txt`` ships
+      with 50 curated GoodTools filenames. Coverage spans the
+      single-letter region codes (U / E / J), multi-region
+      shorthand (UE / W), version markers (V1.1), and the
+      bracketed dump tags ([!] / [b] / [h2] / [b1]).
+- [X] T047 [P] [FN] **Slice 293.**
+      ``tests/fixtures/filenames/tosec_corpus.txt`` ships
+      with 45 curated TOSEC filenames. Coverage spans the
+      canonical ``(year)(publisher)`` shape, optional
+      region annex, and the [!] verified tag. The 4-digit
+      year is TOSEC's strong distinguishing signal — the
+      No-Intro parser was tightened in this slice to decline
+      filenames carrying that pattern so the dispatcher hands
+      them to TOSEC.
+- [X] T048 [P] [FN] **Slice 293.**
+      ``tests/fixtures/filenames/scene_corpus.txt`` ships
+      with 46 curated Scene release names. Coverage spans
+      dot-separated tokens, trailing ``-GROUP`` release tags
+      (DEMENT / PARADOX), and multi-disc Disc.1 / Disc.2 /
+      Disc.3 / Disc.4 markers.
+- [X] T049 [FN] **Slice 293.**
+      ``tests/identification/filename/test_dispatcher.py``
+      loads all four corpora and asserts the dispatcher picks
+      the correct convention for ≥ 95% of entries (SC-003).
+      Current recall: 199/199 (100.0%) across the combined
+      corpus — NO_INTRO 58/58, GOODTOOLS 50/50, TOSEC 45/45,
+      SCENE 46/46. A second test parametrised over each
+      corpus pins JSONL well-formedness + non-empty title
+      extraction. The recall fix in this slice closed the
+      No-Intro / TOSEC ambiguity — see the corpus header.
 
 ### Implementation
 

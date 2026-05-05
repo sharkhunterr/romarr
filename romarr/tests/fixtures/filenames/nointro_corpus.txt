@@ -1,0 +1,71 @@
+# No-Intro filename corpus (spec 001 T045 / SC-003).
+#
+# Format: JSONL (one JSON record per line). Lines starting with ``#`` and
+# blank lines are ignored. Each record:
+#   filename   : the basename to parse
+#   regions    : list of ISO codes (e.g. ["US","EU"])
+#   languages  : list of ISO-639-1 codes (e.g. ["en","fr"])
+#   revision   : "Rev N" string or null
+#   dump_status: DumpStatus enum value (e.g. "VERIFIED", "BADDUMP", "UNKNOWN")
+#   tags       : list of informational tags surfaced by the parser
+#
+# Driven by tests/identification/filename/test_dispatcher.py::test_corpus_recall
+# which asserts the dispatcher picks NO_INTRO for ≥ 95% of these entries.
+{"filename": "Sonic the Hedgehog (USA).md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Super Mario World (USA) (Rev A).sfc", "regions": ["US"], "languages": [], "revision": "Rev A", "dump_status": "UNKNOWN", "tags": []}
+{"filename": "The Legend of Zelda (USA).nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Tetris (World).nes", "regions": ["WW"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Akumajou Densetsu (Japan).nes", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Castlevania (USA) (En,Fr,De).gba", "regions": ["US"], "languages": ["de", "en", "fr"], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Sonic the Hedgehog (USA, Europe).md", "regions": ["EU", "US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Final Fantasy IX (USA) (Disc 1).cue", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 1"]}
+{"filename": "Final Fantasy IX (USA) (Disc 2).cue", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 2"]}
+{"filename": "Final Fantasy IX (USA) (Disc 3).cue", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 3"]}
+{"filename": "Sonic (USA) [b].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "BADDUMP", "tags": ["[b]"]}
+{"filename": "Sonic the Hedgehog (USA) [h2].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "HACK", "tags": ["[h2]"]}
+{"filename": "Sonic the Hedgehog (USA) [!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Pokemon Red (USA, Europe).gb", "regions": ["EU", "US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Pokemon Blue (USA, Europe).gb", "regions": ["EU", "US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Pokemon Yellow (USA, Europe).gbc", "regions": ["EU", "US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Pokemon Crystal (USA, Europe) (Rev 1).gbc", "regions": ["EU", "US"], "languages": [], "revision": "Rev 1", "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Super Metroid (Japan, USA).sfc", "regions": ["JP", "US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Chrono Trigger (USA).sfc", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "EarthBound (USA).sfc", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "F-Zero (USA).sfc", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Mega Man X (USA).sfc", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Mega Man 2 (USA).nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Donkey Kong Country (USA).sfc", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Donkey Kong Country 2 - Diddy's Kong Quest (USA).sfc", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Star Fox (USA).sfc", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Secret of Mana (USA).sfc", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Yoshi's Island (USA).sfc", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Street Fighter II Turbo (USA).sfc", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Castlevania III - Dracula's Curse (USA).nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Final Fantasy VI (Japan).sfc", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Dragon Quest III (Japan).nes", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Sonic & Knuckles (World).md", "regions": ["WW"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Streets of Rage 2 (USA, Europe).md", "regions": ["EU", "US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Phantasy Star IV (USA, Europe).md", "regions": ["EU", "US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Gunstar Heroes (USA, Europe).md", "regions": ["EU", "US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Final Fantasy Tactics Advance (USA) (En,Fr,De,Es,It).gba", "regions": ["US"], "languages": ["de", "en", "es", "fr", "it"], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Advance Wars (USA) (En,Fr,De,Es,It).gba", "regions": ["US"], "languages": ["de", "en", "es", "fr", "it"], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Metroid Fusion (USA, Europe) (En,Fr,De,Es,It).gba", "regions": ["EU", "US"], "languages": ["de", "en", "es", "fr", "it"], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Metroid Zero Mission (USA, Europe).gba", "regions": ["EU", "US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Mario Kart - Super Circuit (USA).gba", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Wario Land 4 (USA).gba", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Astro Boy - Omega Factor (USA).gba", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "The Minish Cap (USA).gba", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Golden Sun (USA).gba", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Sonic Advance (USA).gba", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Castlevania - Aria of Sorrow (USA).gba", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Castlevania - Circle of the Moon (USA).gba", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Final Fantasy IV (Japan) (Rev 1).sfc", "regions": ["JP"], "languages": [], "revision": "Rev 1", "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Final Fantasy V (Japan).sfc", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Mother 3 (Japan).gba", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Mother 2 (Japan).sfc", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Bahamut Lagoon (Japan).sfc", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Tales of Phantasia (Japan).sfc", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Star Ocean (Japan).sfc", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Front Mission - Gun Hazard (Japan).sfc", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Live A Live (Japan).sfc", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Treasure Hunter G (Japan).sfc", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}

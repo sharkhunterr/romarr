@@ -1,0 +1,56 @@
+# GoodTools filename corpus (spec 001 T046 / SC-003).
+#
+# Format: JSONL — see ``nointro_corpus.txt`` header.
+# Driven by tests/identification/filename/test_dispatcher.py::test_corpus_recall.
+#
+# GoodTools convention: single-letter regions in parens, [b] [h] [!] tags.
+{"filename": "Sonic the Hedgehog (U).md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Sonic the Hedgehog (E).md", "regions": ["EU"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Sonic the Hedgehog (J).md", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Castlevania (U) (V1.1) [!].nes", "regions": ["US"], "languages": [], "revision": "V1.1", "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Final Fantasy (J) [h2].sfc", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "HACK", "tags": ["[h2]"]}
+{"filename": "Super Mario World (E) [b].smc", "regions": ["EU"], "languages": [], "revision": null, "dump_status": "BADDUMP", "tags": ["[b]"]}
+{"filename": "Sonic the Hedgehog (UE).smc", "regions": ["EU", "US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Sonic 3D Blast (UE).smc", "regions": ["EU", "US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Donkey Kong Country (U) [!].smc", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Super Mario All-Stars (U) [!].smc", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Final Fantasy III (U) [!].smc", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Chrono Trigger (U) [!].smc", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Mega Man X (U) [b1].smc", "regions": ["US"], "languages": [], "revision": null, "dump_status": "BADDUMP", "tags": ["[b1]"]}
+{"filename": "Sonic 2 (W) [!].md", "regions": [], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Streets of Rage (U) [!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Streets of Rage 2 (U) [!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Streets of Rage 3 (E) [!].md", "regions": ["EU"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Phantasy Star (U) [!].sms", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Phantasy Star II (U) [!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Phantasy Star III (U) [!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Phantasy Star IV (U) [!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Shining Force (U) [!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Shining Force II (U) [!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Vectorman (U) [!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Vectorman 2 (U) [!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Toejam & Earl (U) [!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Comix Zone (U) [!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Ristar (U) [!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Earthworm Jim (U) [!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Earthworm Jim 2 (U) [!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Battletoads (U) [!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Contra (U) [!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Super C (U) [!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Contra Force (U) [!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Castlevania (U) [!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Castlevania II - Simon's Quest (U) [!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Castlevania III - Dracula's Curse (U) [!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Mega Man (U) [!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Mega Man 2 (U) [!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Mega Man 3 (U) [!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Mega Man 4 (U) [!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Mega Man 5 (U) [!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Mega Man 6 (U) [!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "The Legend of Zelda (U) (PRG1) [!].nes", "regions": ["US"], "languages": [], "revision": "PRG1", "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Zelda II - The Adventure of Link (U) [!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Tetris (J) [!].gb", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Tetris (U) [!].gb", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Wario Land - Super Mario Land 3 (W) [!].gb", "regions": [], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Wario Land 2 (UE) [!].gbc", "regions": ["EU", "US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}
+{"filename": "Wario Land 3 (UE) [!].gbc", "regions": ["EU", "US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["[!]"]}

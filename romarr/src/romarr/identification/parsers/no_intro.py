@@ -93,6 +93,12 @@ _TAG_TO_DUMP_STATUS: dict[str, DumpStatus] = {
 _PAREN_RE = re.compile(r"\(([^()]+)\)")
 _SQBRACKET_RE = re.compile(r"\[([^\[\]]+)\]")
 _REVISION_RE = re.compile(r"^Rev(?:ision)? ?([0-9A-Za-z]+)$", re.IGNORECASE)
+_YEAR_RE = re.compile(r"^[12][0-9]{3}$")
+"""TOSEC's strong signal — a bare 4-digit year in parens. No-Intro
+filenames never carry one (they encode the year via the DAT entry,
+not the filename), so the parser bails to its UNKNOWN sentinel
+when this pattern fires and the dispatcher hands the filename to
+TOSEC."""
 
 
 class NoIntroParser(BaseFilenameParser):
@@ -101,6 +107,17 @@ class NoIntroParser(BaseFilenameParser):
     convention = NamingConvention.NO_INTRO
 
     def _parse_basename(self, stem: str) -> ParsedFilename:
+        # TOSEC short-circuit: a bare 4-digit year in parens is the
+        # canonical TOSEC signature. Decline so the dispatcher falls
+        # through to the TOSEC parser.
+        for group in _PAREN_RE.findall(stem):
+            if _YEAR_RE.match(group.strip()):
+                return ParsedFilename(
+                    title=stem,
+                    convention=NamingConvention.UNKNOWN,
+                    confidence=0.0,
+                )
+
         # Title is everything up to the first parenthesis or square bracket.
         first_open = min(
             (idx for idx in (stem.find("("), stem.find("[")) if idx != -1),

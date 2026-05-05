@@ -1,0 +1,53 @@
+# Scene release-name corpus (spec 001 T048 / SC-003).
+#
+# Format: JSONL — see ``nointro_corpus.txt`` header.
+# Driven by tests/identification/filename/test_dispatcher.py::test_corpus_recall.
+#
+# Scene convention: dot-separated tokens + trailing ``-GROUP`` release tag.
+# No bracketed groups. Region tokens (USA / EUR / JPN) are uppercased.
+{"filename": "Sonic.the.Hedgehog.USA-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Final.Fantasy.IX.USA.Disc.1-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 1"]}
+{"filename": "Final.Fantasy.IX.USA.Disc.2-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 2"]}
+{"filename": "Castlevania.Symphony.of.the.Night.USA-PARADOX", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Metal.Gear.Solid.USA.Disc.1-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 1"]}
+{"filename": "Metal.Gear.Solid.USA.Disc.2-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 2"]}
+{"filename": "Resident.Evil.USA-PARADOX", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Resident.Evil.2.USA.Disc.1-PARADOX", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 1"]}
+{"filename": "Resident.Evil.2.USA.Disc.2-PARADOX", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 2"]}
+{"filename": "Resident.Evil.3.Nemesis.USA-PARADOX", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Tony.Hawks.Pro.Skater.2.USA-PARADOX", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Crash.Bandicoot.USA-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Crash.Bandicoot.2.USA-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Crash.Bandicoot.3.USA-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Spyro.the.Dragon.USA-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Spyro.2.Riptos.Rage.USA-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Spyro.3.Year.of.the.Dragon.USA-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Tomb.Raider.USA-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Tomb.Raider.2.USA-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Tomb.Raider.3.USA-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Gran.Turismo.USA-PARADOX", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Gran.Turismo.2.USA-PARADOX", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Final.Fantasy.VII.USA.Disc.1-PARADOX", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 1"]}
+{"filename": "Final.Fantasy.VII.USA.Disc.2-PARADOX", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 2"]}
+{"filename": "Final.Fantasy.VII.USA.Disc.3-PARADOX", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 3"]}
+{"filename": "Final.Fantasy.VIII.USA.Disc.1-PARADOX", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 1"]}
+{"filename": "Final.Fantasy.VIII.USA.Disc.2-PARADOX", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 2"]}
+{"filename": "Final.Fantasy.VIII.USA.Disc.3-PARADOX", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 3"]}
+{"filename": "Final.Fantasy.VIII.USA.Disc.4-PARADOX", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 4"]}
+{"filename": "Vagrant.Story.USA-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Chrono.Cross.USA.Disc.1-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 1"]}
+{"filename": "Chrono.Cross.USA.Disc.2-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 2"]}
+{"filename": "Suikoden.USA-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Suikoden.II.USA-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Xenogears.USA.Disc.1-PARADOX", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 1"]}
+{"filename": "Xenogears.USA.Disc.2-PARADOX", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 2"]}
+{"filename": "Parasite.Eve.USA.Disc.1-PARADOX", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 1"]}
+{"filename": "Parasite.Eve.USA.Disc.2-PARADOX", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Disc 2"]}
+{"filename": "Bushido.Blade.USA-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Threads.of.Fate.USA-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Front.Mission.3.USA-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Tactics.Ogre.USA-DEMENT", "regions": ["US"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Symphony.of.the.Night.JPN-DEMENT", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Sakura.Wars.JPN-PARADOX", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Saga.Frontier.JPN-DEMENT", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}
+{"filename": "Genso.Suikogaiden.JPN-PARADOX", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": []}

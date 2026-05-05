@@ -1,0 +1,52 @@
+# TOSEC filename corpus (spec 001 T047 / SC-003).
+#
+# Format: JSONL — see ``nointro_corpus.txt`` header.
+# Driven by tests/identification/filename/test_dispatcher.py::test_corpus_recall.
+#
+# TOSEC convention: Title (year)(publisher)(region)[flags]. The year+publisher
+# pair is the strong signal that distinguishes TOSEC from No-Intro / GoodTools.
+{"filename": "Tetris (1989)(Nintendo).gb", "regions": [], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Nintendo"]}
+{"filename": "Sonic the Hedgehog (1991)(Sega).md", "regions": [], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Sega"]}
+{"filename": "Sonic the Hedgehog (1991)(Sega)(USA)[!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Sega", "[!]"]}
+{"filename": "Castlevania (1986)(Konami)(USA)[!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Konami", "[!]"]}
+{"filename": "Super Mario Bros (1985)(Nintendo)(USA)[!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Nintendo", "[!]"]}
+{"filename": "Super Mario Bros 2 (1988)(Nintendo)(USA)[!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Nintendo", "[!]"]}
+{"filename": "Super Mario Bros 3 (1990)(Nintendo)(USA)[!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Nintendo", "[!]"]}
+{"filename": "The Legend of Zelda (1987)(Nintendo)(USA)[!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Nintendo", "[!]"]}
+{"filename": "Zelda II (1988)(Nintendo)(USA)[!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Nintendo", "[!]"]}
+{"filename": "Final Fantasy (1990)(Square)(USA)[!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Square", "[!]"]}
+{"filename": "Final Fantasy II (1988)(Square)(Japan)[!].nes", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Square", "[!]"]}
+{"filename": "Final Fantasy III (1990)(Square)(Japan)[!].nes", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Square", "[!]"]}
+{"filename": "Dragon Quest (1986)(Enix)(Japan)[!].nes", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Enix", "[!]"]}
+{"filename": "Dragon Quest II (1987)(Enix)(Japan)[!].nes", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Enix", "[!]"]}
+{"filename": "Dragon Quest III (1988)(Enix)(Japan)[!].nes", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Enix", "[!]"]}
+{"filename": "Phantasy Star (1987)(Sega)(Japan).sms", "regions": ["JP"], "languages": [], "revision": null, "dump_status": "UNKNOWN", "tags": ["Sega"]}
+{"filename": "Phantasy Star II (1989)(Sega)(USA)[!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Sega", "[!]"]}
+{"filename": "Streets of Rage (1991)(Sega)(USA)[!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Sega", "[!]"]}
+{"filename": "Altered Beast (1988)(Sega)(USA)[!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Sega", "[!]"]}
+{"filename": "Golden Axe (1989)(Sega)(USA)[!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Sega", "[!]"]}
+{"filename": "Mortal Kombat (1992)(Acclaim)(USA)[!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Acclaim", "[!]"]}
+{"filename": "Mortal Kombat II (1994)(Acclaim)(USA)[!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Acclaim", "[!]"]}
+{"filename": "Mortal Kombat 3 (1995)(Williams)(USA)[!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Williams", "[!]"]}
+{"filename": "Street Fighter II (1992)(Capcom)(USA)[!].smc", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Capcom", "[!]"]}
+{"filename": "Street Fighter II Turbo (1993)(Capcom)(USA)[!].smc", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Capcom", "[!]"]}
+{"filename": "Donkey Kong (1981)(Nintendo)(USA)[!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Nintendo", "[!]"]}
+{"filename": "Donkey Kong Jr (1982)(Nintendo)(USA)[!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Nintendo", "[!]"]}
+{"filename": "Pac-Man (1980)(Namco)(USA)[!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Namco", "[!]"]}
+{"filename": "Galaga (1981)(Namco)(USA)[!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Namco", "[!]"]}
+{"filename": "Mega Man (1987)(Capcom)(USA)[!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Capcom", "[!]"]}
+{"filename": "Mega Man 2 (1988)(Capcom)(USA)[!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Capcom", "[!]"]}
+{"filename": "Bionic Commando (1988)(Capcom)(USA)[!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Capcom", "[!]"]}
+{"filename": "Strider (1989)(Capcom)(USA)[!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Capcom", "[!]"]}
+{"filename": "Ninja Gaiden (1988)(Tecmo)(USA)[!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Tecmo", "[!]"]}
+{"filename": "Ninja Gaiden II (1990)(Tecmo)(USA)[!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Tecmo", "[!]"]}
+{"filename": "Ninja Gaiden III (1991)(Tecmo)(USA)[!].nes", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Tecmo", "[!]"]}
+{"filename": "Castle of Illusion (1990)(Sega)(USA)[!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Sega", "[!]"]}
+{"filename": "World of Illusion (1992)(Sega)(USA)[!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Sega", "[!]"]}
+{"filename": "Quackshot (1991)(Sega)(USA)[!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Sega", "[!]"]}
+{"filename": "Aladdin (1993)(Virgin)(USA)[!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Virgin", "[!]"]}
+{"filename": "The Lion King (1994)(Virgin)(USA)[!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Virgin", "[!]"]}
+{"filename": "Cool Spot (1993)(Virgin)(USA)[!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Virgin", "[!]"]}
+{"filename": "Earthworm Jim (1994)(Shiny)(USA)[!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Shiny", "[!]"]}
+{"filename": "Sonic Spinball (1993)(Sega)(USA)[!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Sega", "[!]"]}
+{"filename": "Sonic 3D Blast (1996)(Sega)(USA)[!].md", "regions": ["US"], "languages": [], "revision": null, "dump_status": "VERIFIED", "tags": ["Sega", "[!]"]}
