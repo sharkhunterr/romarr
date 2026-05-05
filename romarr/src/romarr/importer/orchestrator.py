@@ -188,19 +188,41 @@ async def run_import(
         # Pick the auto-import target Release. Prefer wanted (the
         # first-import case); allow imported so re-runs against
         # the same file coalesce idempotently (FR-033). Multi-
-        # Release ambiguity falls through to parking — operator
-        # picks via the manual-match endpoint.
-        candidates = (
+        # Release ambiguity falls through to parking unless the
+        # parser-derived regions disambiguate to exactly one.
+        candidate_rows = (
             await session.execute(
-                select(Release.id)
+                select(Release.id, Release.regions)
                 .where(
                     Release.game_id == monitored_game_id,
                     Release.status.in_(("wanted", "imported")),
                 )
                 .order_by(Release.id)
-                .limit(2)
             )
-        ).scalars().all()
+        ).all()
+        candidates: list[int] = [int(r[0]) for r in candidate_rows]
+
+        if len(candidates) > 1:
+            # Region-disambiguate: parse the filename for region
+            # tags and pick the Release whose regions tuple
+            # overlaps. Single-overlap → that's the target;
+            # zero or multi-overlap → fall through to parking.
+            try:
+                parsed = default_dispatcher().parse(source_path.name)
+                parsed_regions = (
+                    set(parsed.regions) if parsed.regions else set()
+                )
+            except Exception:
+                parsed_regions = set()
+            if parsed_regions:
+                overlapping = [
+                    int(rid)
+                    for rid, regions in candidate_rows
+                    if regions and (set(regions) & parsed_regions)
+                ]
+                if len(overlapping) == 1:
+                    candidates = overlapping
+
         if len(candidates) == 1:
             from sqlalchemy.exc import IntegrityError
             from romarr.importer._idempotency import find_existing_dump
