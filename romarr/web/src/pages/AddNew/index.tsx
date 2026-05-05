@@ -58,50 +58,29 @@ function ConfidenceBar(props: { value: number }): ReactElement {
 }
 
 /**
- * Per-manufacturer Tailwind classes. Limited palette so the
- * Add page stays visually quiet — the colour is a hint, not a
- * brand statement. Unknown / missing manufacturer falls back to
- * the brand-green accent. Unrecognised platforms (no Romarr
- * slug match) get a muted zinc background instead.
+ * Two-state platform pill.
+ *
+ * The pill colour is a "recognised by Romarr" hint, nothing more:
+ *   * brand-green — the platform is in the operator's installed
+ *     Platform Pack (the AddGame modal can pre-select it);
+ *   * muted zinc — IGDB knows about this platform but Romarr's
+ *     pack doesn't (e.g. Xbox Series X). The operator still sees
+ *     the candidate and can pick the closest configured platform
+ *     manually if relevant.
  */
-const MANUFACTURER_PILL: Record<string, string> = {
-  Nintendo: "bg-red-950/60 text-red-300 ring-red-900/60",
-  Sony: "bg-blue-950/60 text-blue-300 ring-blue-900/60",
-  Sega: "bg-sky-950/60 text-sky-300 ring-sky-900/60",
-  Microsoft: "bg-emerald-950/60 text-emerald-300 ring-emerald-900/60",
-  Atari: "bg-orange-950/60 text-orange-300 ring-orange-900/60",
-  SNK: "bg-amber-950/60 text-amber-300 ring-amber-900/60",
-  NEC: "bg-violet-950/60 text-violet-300 ring-violet-900/60",
-  Bandai: "bg-rose-950/60 text-rose-300 ring-rose-900/60",
-  Coleco: "bg-red-950/60 text-red-300 ring-red-900/60",
-  Mattel: "bg-indigo-950/60 text-indigo-300 ring-indigo-900/60",
-  "3DO": "bg-purple-950/60 text-purple-300 ring-purple-900/60",
-  GCE: "bg-yellow-950/60 text-yellow-300 ring-yellow-900/60",
-  Commodore: "bg-fuchsia-950/60 text-fuchsia-300 ring-fuchsia-900/60",
-  Sinclair: "bg-cyan-950/60 text-cyan-300 ring-cyan-900/60",
-  Apple: "bg-zinc-800/60 text-zinc-200 ring-zinc-700/60",
-  Sharp: "bg-stone-800/60 text-stone-200 ring-stone-700/60",
-  Various: "bg-zinc-800/60 text-zinc-200 ring-zinc-700/60",
-};
-
 function PlatformPill(props: {
   name: string;
-  manufacturer: string | null | undefined;
   isKnown: boolean;
 }): ReactElement {
-  const tint = props.manufacturer
-    ? MANUFACTURER_PILL[props.manufacturer]
-    : undefined;
-  const fallback = props.isKnown
-    ? "bg-brand/15 text-brand ring-brand/30"
-    : "bg-zinc-800/60 text-zinc-400 ring-zinc-700/60";
   return (
     <span
       className={[
         "mt-1 inline-flex max-w-full items-center gap-1 rounded-md px-2 py-0.5",
         "ring-1 ring-inset",
         "text-[0.7rem] font-medium",
-        tint ?? fallback,
+        props.isKnown
+          ? "bg-brand/15 text-brand ring-brand/30"
+          : "bg-zinc-800/60 text-zinc-400 ring-zinc-700/60",
       ].join(" ")}
       title={props.isKnown ? undefined : props.name}
     >
@@ -162,7 +141,6 @@ function LookupRow(props: {
             {(row.platformName || row.platformSlug) && (
               <PlatformPill
                 name={row.platformName ?? row.platformSlug ?? ""}
-                manufacturer={row.platformManufacturer}
                 isKnown={Boolean(row.platformSlug)}
               />
             )}
