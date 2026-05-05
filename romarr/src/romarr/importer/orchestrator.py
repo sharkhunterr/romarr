@@ -53,6 +53,7 @@ from romarr.importer._outcome import make_failure_outcome
 from romarr.importer._park import park_in_unidentified
 from romarr.importer.errors import ExtractError, GameNotMatched
 from romarr.importer.steps.extract import extract as extract_archive
+from romarr.importer.steps.game_match import match_to_game
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -321,52 +322,33 @@ async def _identify_suggestions(
     except Exception:
         parsed = None
 
-    suggested_game_id: int | None = None
     if (
         parsed is not None
         and parsed.title
         and parsed.confidence >= _IDENTIFY_CONFIDENCE_FLOOR
+        and suggested_platform_id is None
     ):
         # Parser-suggested platform only fires when the header
         # reader didn't already pin one (header signal is more
         # authoritative — actual bytes vs. a filename guess).
-        if suggested_platform_id is None:
-            platform_slug = (
-                parsed.extra.get("platform_slug") if parsed.extra else None
-            )
-            if platform_slug:
-                platform = (
-                    await session.execute(
-                        select(Platform.id).where(Platform.slug == platform_slug)
-                    )
-                ).scalar_one_or_none()
-                if platform is not None:
-                    suggested_platform_id = int(platform)
-
-        title_query = select(Game.id).where(
-            func.lower(Game.title) == parsed.title.lower()
+        platform_slug = (
+            parsed.extra.get("platform_slug") if parsed.extra else None
         )
-        if suggested_platform_id is not None:
-            title_query = title_query.where(
-                Game.platform_id == suggested_platform_id
-            )
-        matches = (
-            await session.execute(title_query.limit(2))
-        ).scalars().all()
-        if len(matches) == 1:
-            suggested_game_id = int(matches[0])
+        if platform_slug:
+            platform = (
+                await session.execute(
+                    select(Platform.id).where(Platform.slug == platform_slug)
+                )
+            ).scalar_one_or_none()
+            if platform is not None:
+                suggested_platform_id = int(platform)
 
-    # DAT-match fallback: when the parser missed but we have a
-    # SHA-1 + platform_id, try the local DAT cache. A high-
-    # authority DAT match (No-Intro > Redump > TOSEC, CL001 of
-    # spec 001) often carries a canonical Game name; resolve it
-    # against the catalogue. This catches the case where the
-    # filename is uninformative but the SHA-1 is known.
-    if (
-        suggested_game_id is None
-        and sha1 is not None
-        and suggested_platform_id is not None
-    ):
+    # DAT-match: when we have a SHA-1 + platform_id, query the
+    # local DAT cache. A high-authority DAT match (No-Intro >
+    # Redump > TOSEC, CL001 of spec 001) often carries a
+    # canonical Game name we can feed into game-match.
+    dat_name: str | None = None
+    if sha1 is not None and suggested_platform_id is not None:
         try:
             dat_manager = DatManager(session)
             best = await dat_manager.best_match_by_sha1(
@@ -375,15 +357,52 @@ async def _identify_suggestions(
         except Exception:
             best = None
         if best is not None and best.winner.name:
-            dat_query = select(Game.id).where(
-                func.lower(Game.title) == best.winner.name.lower(),
-                Game.platform_id == suggested_platform_id,
+            dat_name = best.winner.name
+
+    # Game-match: feed every title we know about (parsed
+    # filename + DAT canonical name) to the spec 008 fuzzy
+    # matcher. Returns the best monitored hit (game_id) or
+    # the best unmonitored suggestion (suggested_game_id);
+    # either populates the parked row's ``suggested_game_id``
+    # so the operator's manual-match UI can one-click confirm.
+    suggested_game_id: int | None = None
+    titles: list[str] = []
+    if (
+        parsed is not None
+        and parsed.title
+        and parsed.confidence >= _IDENTIFY_CONFIDENCE_FLOOR
+    ):
+        titles.append(parsed.title)
+    if dat_name:
+        titles.append(dat_name)
+
+    if titles and suggested_platform_id is not None:
+        try:
+            gm_result = await match_to_game(
+                session=session,
+                platform_id=suggested_platform_id,
+                titles=titles,
             )
-            dat_matches = (
-                await session.execute(dat_query.limit(2))
+        except Exception:
+            gm_result = None
+        if gm_result is not None:
+            suggested_game_id = (
+                gm_result.game_id or gm_result.suggested_game_id
+            )
+    elif titles:
+        # No platform pinned — fall back to a single global
+        # case-insensitive title lookup. Picks at most one Game;
+        # ambiguous matches stay None (operator triages).
+        for title in titles:
+            global_query = select(Game.id).where(
+                func.lower(Game.title) == title.lower()
+            )
+            global_matches = (
+                await session.execute(global_query.limit(2))
             ).scalars().all()
-            if len(dat_matches) == 1:
-                suggested_game_id = int(dat_matches[0])
+            if len(global_matches) == 1:
+                suggested_game_id = int(global_matches[0])
+                break
 
     return (suggested_platform_id, suggested_game_id)
 
