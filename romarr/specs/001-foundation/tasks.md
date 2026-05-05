@@ -586,10 +586,74 @@ These tasks materialize the 5 clarifications recorded in `spec.md` and the
 deltas captured in `plan.md`. Each task is independently checkboxable
 without disturbing the original task ordering above.
 
-- [ ] CL001 [P] [US2] Implement cross-DAT hash precedence resolver in `src/romarr/identification/cascade/hash_resolver.py` — fixed authority order **No-Intro > Redump > TOSEC**; first match's metadata wins; others recorded as supporting matches in the conflict log (FR-020a)
-- [ ] CL002 [P] [US3] Implement ISO9660 platform-disambiguation file-presence cascade in `src/romarr/identification/headers/iso9660.py` — `SYSTEM.CNF` → PSX/PS2 (with `BOOT2 =` / `VER =` disambiguation); `IP.BIN` boot sector → Mega CD / Saturn / Dreamcast; `default.xbe` → Xbox; otherwise `platform = unknown` (FR-024a)
-- [ ] CL003 [P] [US3] Add fixture-based tests for the ISO9660 cascade in `tests/identification/test_iso9660_cascade.py` covering each branch including the unknown-platform path
-- [ ] CL004 [P] [US5] Update `merge(...)` in `src/romarr/identification/cascade/merger.py` to apply a flat 10% confidence reduction when one or more conflicts fire (no stacking) (FR-012)
-- [ ] CL005 [P] [US5] Update Identifier façade in `src/romarr/identification/identifier.py` so files with merged confidence < 0.5 are routed to `unidentified_dump` (FR-029)
-- [ ] CL006 [P] Wire env-var overrides for Hasheous and PlayMatch base URLs and optional bearer tokens in `src/romarr/identification/cascade/clients.py`: `ROMARR_HASHEOUS_BASE_URL`, `ROMARR_HASHEOUS_TOKEN`, `ROMARR_PLAYMATCH_BASE_URL`, `ROMARR_PLAYMATCH_TOKEN`. HTTP 429 counts as a circuit-breaker failure (FR-026a, FR-027)
-- [ ] CL007 [P] Add tests in `tests/identification/test_confidence_threshold.py` covering the 0.5 boundary: hash match (≈1.0 → through), No-Intro filename (≈0.85 → through), header-only (≈0.6 → through), bare guess (<0.5 → unidentified_dump)
+- [X] CL001 [P] [US2] **Slice 290 — path-divergence close.** The
+      cross-DAT precedence resolver lives at
+      ``src/romarr/identification/hashmatch/cascade.py::_resolve_authority``
+      (not ``cascade/hash_resolver.py``). Backed by
+      ``DAT_AUTHORITY_ORDER`` from ``identification/dat/manager.py``,
+      it sorts every backend's matching entries by authority rank,
+      returns the highest as ``winner`` and the rest as ``losers``
+      on ``CascadeMatch``. ``Identifier`` consumes ``losers`` via
+      ``IdentifyOutcome.cascade_losers`` so the operator-facing
+      conflict log surfaces every supporting match (FR-020a).
+      Covered by ``tests/identification/test_hashmatch_cascade.py``.
+- [X] CL002 [P] [US3] **Slice 290 — shipped.** The ISO9660
+      file-presence cascade is implemented in
+      ``src/romarr/identification/headers/iso9660.py``.
+      Step order: IP.BIN signature scan first (catches Mega CD /
+      Saturn / Dreamcast where the disc lacks a PVD entirely),
+      then ISO9660 PVD read at LBA 16, then root-directory walk
+      for ``SYSTEM.CNF`` (PSX/PS2 disambiguation via the ``VER =``
+      line) and ``default.xbe`` (Xbox). No signature file +
+      legitimate ISO9660 PVD → ``platform_slug=None`` with
+      confidence 0.3 so the merger routes to
+      ``unidentified_dump`` per FR-029.
+- [X] CL003 [P] [US3] **Slice 290 — path-divergence close.**
+      ISO9660-cascade tests ship at
+      ``tests/identification/test_headers.py`` (rather than
+      ``test_iso9660_cascade.py``). 7 tests cover every branch:
+      PSX via SYSTEM.CNF, PS2 via SYSTEM.CNF + ``VER =``, Xbox
+      via ``default.xbe``, Dreamcast via IP.BIN, Saturn via
+      IP.BIN, unknown ISO9660 (PVD valid, no signature file),
+      and not-an-ISO at all (UNRECOGNIZED). Co-located with the
+      other header readers' tests so the file-cascade + IP.BIN
+      checks share fixture helpers (``_make_minimal_iso``).
+- [X] CL004 [P] [US5] **Slice 290 — shipped.** The merger applies
+      a flat 10% confidence reduction whenever the conflict list
+      is non-empty —
+      ``src/romarr/identification/merger.py::CONFLICT_PENALTY``
+      = 0.10, applied once at line ``merge(...)::base_confidence
+      - CONFLICT_PENALTY`` regardless of conflict count.
+      Pinned by ``test_merger.py::test_merge_conflict_penalty_does_not_stack``.
+- [X] CL005 [P] [US5] **Slice 290 — shipped.** The 0.5 routing
+      threshold lives on
+      ``MergedIdentification.is_unidentified``
+      (``merger.py::UNIDENTIFIED_THRESHOLD``). The Identifier
+      façade returns ``IdentifyOutcome`` with
+      ``merged.is_unidentified`` set; the importer routes
+      via ``importer/_park.py::park_in_unidentified`` which
+      idempotently INSERTs / UPDATEs the
+      ``unidentified_dump`` row (path-unique).
+      Round-trip pinned by
+      ``test_unidentified_persistence.py::test_low_confidence_routes_to_unidentified_dump_persistence``.
+- [X] CL006 [P] **Slice 290 — shipped.** Settings exposes
+      ``hasheous_base_url`` / ``hasheous_token`` /
+      ``playmatch_base_url`` / ``playmatch_token`` with the
+      ``ROMARR_`` env prefix on
+      ``src/romarr/config/settings.py``; ``HasheousBackend`` and
+      ``PlayMatchBackend`` in
+      ``src/romarr/identification/hashmatch/remote.py`` consume
+      them, send the optional ``Authorization: Bearer …`` header,
+      and return ``error="rate_limited:429"`` on HTTP 429.
+      The cascade calls ``breaker.record_failure()`` whenever
+      ``result.ok`` is false, so 429 trips the circuit per
+      FR-026a / FR-027.
+- [X] CL007 [P] **Slice 290 — shipped.** New tests at
+      ``tests/identification/test_confidence_threshold.py`` —
+      7 tests: hash ≈ 1.0 → through, No-Intro filename ≈ 0.85
+      → through, header-only ≈ 0.6 → through, bare guess < 0.5
+      → ``is_unidentified``, threshold strictly less-than at
+      0.5, multi-source agreement keeps max above threshold,
+      conflict penalty can drop a near-boundary case below
+      threshold (validates that the 0.5 cut applies AFTER the
+      CL004 penalty).
