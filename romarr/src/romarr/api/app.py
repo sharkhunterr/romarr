@@ -66,6 +66,7 @@ from romarr.indexers.api import applications_router, indexers_router
 from romarr.libraries.api import (
     exporters_router,
     libraries_router,
+    manual_import_router,
     scan_router,
 )
 from romarr.metadata.api import (
@@ -549,6 +550,8 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     app.include_router(scan_router)
     # Spec 009 T082 (slice 279) — read-only exporter catalog.
     app.include_router(exporters_router)
+    # Spec 009 T079 + T083 — manual-import surface.
+    app.include_router(manual_import_router)
     # Schema router goes before the {client_id} catch-all so /schema
     # doesn't get pattern-matched as an integer id.
     app.include_router(download_clients_schema_router)

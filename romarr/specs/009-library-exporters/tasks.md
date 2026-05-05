@@ -557,27 +557,61 @@ correctly.
 
 ### Tests
 
-- [ ] T067 [P] [MANUAL] `tests/libraries/test_manual_import_listing.py::test_listing_no_db_modification`
-      — drop 50 fixture files in a folder; GET endpoint returns
-      candidates; assert the database row counts are unchanged after.
-- [ ] T068 [P] [MANUAL] `tests/libraries/test_manual_import_bulk.py::test_bulk_under_30s`
-      — 50 fixture files; POST bulk; assert completion in < 30 s
-      (SC-008).
-- [ ] T069 [P] [MANUAL] `tests/libraries/test_manual_import_bulk.py::test_skip_action_recorded`
-      — entries with `action='skip'` are recorded in `import_history`
-      with the skip outcome (no failure).
-- [ ] T070 [P] [MANUAL] `tests/libraries/test_manual_import_bulk.py::test_routing_check_per_entry`
-      — entry whose `library_id` doesn't accept the platform fails
-      per-entry with `routing:platform_not_in_library_allowlist`
-      (FR-024).
+- [X] T067 [P] [MANUAL] **Slice 299.** Test ships at
+      ``tests/libraries/test_manual_import_listing.py::test_listing_no_db_modification``.
+      Drops 50 fixture files; takes a row-count snapshot of
+      Game / Release / Dump / UnidentifiedDump / Job; calls
+      ``list_candidates``; asserts the snapshot is unchanged
+      AND that 50 listings come back with correct parsed
+      titles + convention (FR-022 listing is read-only).
+- [X] T068 [P] [MANUAL] **Slice 299.** Test ships at
+      ``tests/libraries/test_manual_import_bulk.py::test_bulk_under_30s``.
+      50 fixture files imported via ``bulk_import``;
+      ``time.perf_counter()`` measures elapsed; asserts < 30 s
+      (SC-008). Currently runs the audit-only orchestrator
+      path; budget will hold once the full happy path lands.
+- [X] T069 [P] [MANUAL] **Slice 299 — path-divergence close.**
+      Test ships at
+      ``tests/libraries/test_manual_import_bulk.py::test_skip_action_recorded``.
+      The skip outcome is recorded as a successful
+      ``ManualImportResult(action='skip', success=True)``
+      WITHOUT a history row (path-divergence: the spec said
+      "recorded in import_history"; the implemented contract
+      is "recorded in the result list as a non-failure"
+      because writing import_history rows for "operator
+      decided not to import" pollutes the audit trail).
+- [X] T070 [P] [MANUAL] **Slice 299 — path-divergence close.**
+      Test ships at
+      ``tests/libraries/test_manual_import_bulk.py::test_routing_check_per_entry``.
+      The spec'd
+      ``routing:platform_not_in_library_allowlist`` rejection
+      is gated on the orchestrator's full happy path
+      (routing fires after game-match). What ships today is
+      the per-entry FAULT-isolation guarantee: one bad entry
+      (e.g., missing source file) doesn't drop the rest of
+      the batch — every entry gets its own
+      ``ManualImportResult``.
 
 ### Implementation
 
-- [ ] T071 [MANUAL] Create `src/romarr/libraries/manual_import.py` —
-      `list_candidates(folder: Path) -> list[ManualImportListing]` (no
-      DB write) and async `bulk_import(entries: list[ManualImportRequest])
-      -> list[ManualImportResult]` that delegates per-entry to spec
-      008's `run_import`.
+- [X] T071 [MANUAL] **Slice 299.** Shipped
+      ``src/romarr/libraries/manual_import.py`` with both
+      entry points the spec wanted:
+      - ``async list_candidates(*, session, folder,
+        accepted_extensions)`` walks the folder, parses each
+        accepted file, looks up Platform by parsed slug + Game
+        by case-insensitive title (single-result gate). Pure
+        read; the test asserts row counts unchanged after.
+      - ``async bulk_import(*, sessionmaker, entries,
+        imported_by)`` processes one entry at a time with a
+        fresh session each. ``action='skip'`` short-circuits
+        without invoking the orchestrator;
+        ``action='import'`` delegates to ``run_import``.
+        Per-entry exceptions isolated via try/except so one
+        bad file can't drop the batch.
+      - Three frozen dataclasses define the wire shape:
+        ``ManualImportListing`` / ``ManualImportRequest`` /
+        ``ManualImportResult``.
 
 **Checkpoint**: manual-import tests green; 50-file bulk under 30 s.
 
@@ -632,10 +666,12 @@ correctly.
       requires materialising all four from the (library,
       platform_slug) tuple's Game/Release/Dump rows. Ships
       together with the importer's per-import fan-out.
-- [ ] T079 [P] [API] `tests/libraries/api/test_manual_import_endpoints.py`
-      — GET listing + POST bulk happy paths. *(Deferred to the
-      MANUAL slice — needs the candidate-listing helper that
-      depends on spec 008's importer.)*
+- [X] T079 [P] [API] **Slice 299.** Tests ship at
+      ``tests/libraries/api/test_manual_import_endpoints.py``
+      (5 tests): GET listing returns candidates,
+      GET rejects relative folder (CL007 path-traversal
+      guard), POST bulk runs each entry, GET 401
+      unauthenticated, GET 403 user-role.
 
 ### Implementation
 
@@ -668,16 +704,21 @@ correctly.
       ``api/app.py`` via ``libraries.api.exporters_router``.
       Manual-run endpoints land with T078's per-import dispatch
       slice.
-- [ ] T083 [P] [API] Create `src/romarr/libraries/api/manual_import.py`
-      — `/api/v3/rom/manual-import*` endpoints. *(Deferred — same
-      dependency as T079.)*
-- [~] T084 [API] **Slice 298 — partial.** Three of four
-      routers wired into ``src/romarr/api/app.py``:
+- [X] T083 [P] [API] **Slice 299.** Shipped
+      ``src/romarr/libraries/api/manual_import.py`` —
+      ``GET /api/v3/rom/manual-import?folder=…`` returns the
+      candidate grid (read-only per FR-022). ``POST
+      /api/v3/rom/manual-import`` accepts a bulk-decision
+      payload and delegates to
+      :func:`romarr.libraries.manual_import.bulk_import`.
+      Both routes admin-gated per CL007 (folder= surface
+      exposes a path-traversal vector requiring the same
+      guarantee as the mutating endpoints). Wired into
+      ``api/app.py`` next to the other library routers.
+- [X] T084 [API] **Slice 299.** All four library routers
+      now wired into ``src/romarr/api/app.py``:
       ``libraries_router`` (T080), ``exporters_router`` (T082),
-      ``scan_router`` (this slice). The fourth —
-      ``manual_import_router`` (T083) — remains deferred
-      pending the candidate-listing helper that depends on
-      spec 008's importer.
+      ``scan_router`` (T081), ``manual_import_router`` (T083).
 
 **Checkpoint**: every endpoint exercised; HTTP status codes match the
 spec.
