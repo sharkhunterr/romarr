@@ -36,6 +36,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import func, select
 
 from romarr.domain.models import Game, Platform
+from romarr.identification.dat.manager import DatManager
 from romarr.identification.hasher import Hasher
 from romarr.identification.headers import (
     HeaderReadStatus,
@@ -164,7 +165,7 @@ async def run_import(
         (
             suggested_platform_id,
             suggested_game_id,
-        ) = await _identify_suggestions(session, source_path)
+        ) = await _identify_suggestions(session, source_path, sha1=sha1)
 
     # Step 2b — park. The rejection reason picks the best signal
     # we have: an extract failure wins (bomb / bad-archive /
@@ -268,7 +269,10 @@ def _read_header_platform(source_path: "Path") -> str | None:
 
 
 async def _identify_suggestions(
-    session: AsyncSession, source_path: "Path"
+    session: AsyncSession,
+    source_path: "Path",
+    *,
+    sha1: str | None = None,
 ) -> tuple[int | None, int | None]:
     """Best-effort IDENTIFY hint for the parked unidentified row.
 
@@ -315,39 +319,71 @@ async def _identify_suggestions(
     try:
         parsed = default_dispatcher().parse(source_path.name)
     except Exception:
-        return (suggested_platform_id, None)
-
-    if not parsed.title or parsed.confidence < _IDENTIFY_CONFIDENCE_FLOOR:
-        return (suggested_platform_id, None)
-
-    # Parser-suggested platform only fires when the header reader
-    # didn't already pin one (the header signal is more
-    # authoritative — actual bytes vs. a filename guess).
-    if suggested_platform_id is None:
-        platform_slug = (
-            parsed.extra.get("platform_slug") if parsed.extra else None
-        )
-        if platform_slug:
-            platform = (
-                await session.execute(
-                    select(Platform.id).where(Platform.slug == platform_slug)
-                )
-            ).scalar_one_or_none()
-            if platform is not None:
-                suggested_platform_id = int(platform)
-
-    title_query = select(Game.id).where(
-        func.lower(Game.title) == parsed.title.lower()
-    )
-    if suggested_platform_id is not None:
-        title_query = title_query.where(
-            Game.platform_id == suggested_platform_id
-        )
-    matches = (await session.execute(title_query.limit(2))).scalars().all()
+        parsed = None
 
     suggested_game_id: int | None = None
-    if len(matches) == 1:
-        suggested_game_id = int(matches[0])
+    if (
+        parsed is not None
+        and parsed.title
+        and parsed.confidence >= _IDENTIFY_CONFIDENCE_FLOOR
+    ):
+        # Parser-suggested platform only fires when the header
+        # reader didn't already pin one (header signal is more
+        # authoritative — actual bytes vs. a filename guess).
+        if suggested_platform_id is None:
+            platform_slug = (
+                parsed.extra.get("platform_slug") if parsed.extra else None
+            )
+            if platform_slug:
+                platform = (
+                    await session.execute(
+                        select(Platform.id).where(Platform.slug == platform_slug)
+                    )
+                ).scalar_one_or_none()
+                if platform is not None:
+                    suggested_platform_id = int(platform)
+
+        title_query = select(Game.id).where(
+            func.lower(Game.title) == parsed.title.lower()
+        )
+        if suggested_platform_id is not None:
+            title_query = title_query.where(
+                Game.platform_id == suggested_platform_id
+            )
+        matches = (
+            await session.execute(title_query.limit(2))
+        ).scalars().all()
+        if len(matches) == 1:
+            suggested_game_id = int(matches[0])
+
+    # DAT-match fallback: when the parser missed but we have a
+    # SHA-1 + platform_id, try the local DAT cache. A high-
+    # authority DAT match (No-Intro > Redump > TOSEC, CL001 of
+    # spec 001) often carries a canonical Game name; resolve it
+    # against the catalogue. This catches the case where the
+    # filename is uninformative but the SHA-1 is known.
+    if (
+        suggested_game_id is None
+        and sha1 is not None
+        and suggested_platform_id is not None
+    ):
+        try:
+            dat_manager = DatManager(session)
+            best = await dat_manager.best_match_by_sha1(
+                platform_id=suggested_platform_id, sha1=sha1
+            )
+        except Exception:
+            best = None
+        if best is not None and best.winner.name:
+            dat_query = select(Game.id).where(
+                func.lower(Game.title) == best.winner.name.lower(),
+                Game.platform_id == suggested_platform_id,
+            )
+            dat_matches = (
+                await session.execute(dat_query.limit(2))
+            ).scalars().all()
+            if len(dat_matches) == 1:
+                suggested_game_id = int(dat_matches[0])
 
     return (suggested_platform_id, suggested_game_id)
 
