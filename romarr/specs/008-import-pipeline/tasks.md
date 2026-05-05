@@ -806,9 +806,22 @@ auto-blocklist, perf, coverage, ruff.
       sub-reason); the bad-archive entry's ``hash_sha1`` is
       None because extract fails before hash (file bytes
       aren't safely hashable).
-- [ ] T084 [P] [HARD] `tests/importer/test_manual_flow.py::test_force_overrides_profile`
-      — manual flow with `force=true`; profile rejection becomes warning
-      (FR-021, US4.2).
+- [X] T084 [P] [HARD] **Slice 318 — path-divergence close.**
+      Tests ship at
+      ``tests/importer/test_force_overrides_profile.py``
+      (2 tests) rather than the spec'd
+      ``test_manual_flow.py`` path. The orchestrator's auto-
+      import branch now wires ``apply_profile_gate`` from
+      spec 008's ``profile_gate.py``; ``ImportContext.force``
+      threads through. ``force=False`` + profile REJECT →
+      auto-import halts, file parks with ``profile:region``
+      (or quality/dump/language) rejection_reason.
+      ``force=True`` + profile REJECT → auto-import lands
+      (Release flips to imported, Dump persists, no
+      parking). Profile gate gracefully skips when
+      ``Release.library_id`` is NULL (legacy path —
+      preserves existing test fixtures that don't seed the
+      full Library + profile chain).
 - [X] T085 [P] [HARD] **Slice 289 — path-divergence close.** Test
       ships at
       ``tests/importer/api/test_unidentified_endpoints.py::test_match_unidentified_inserts_dump_and_drops_unidentified``

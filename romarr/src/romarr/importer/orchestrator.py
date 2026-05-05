@@ -75,6 +75,33 @@ EXTRACT before hashing. Mirrors
 here so the orchestrator's branching is checkable without
 importing the private constant."""
 
+_FORMAT_FAMILY_BY_SUFFIX: dict[str, str] = {
+    ".zip": "zip",
+    ".7z": "7z",
+    ".rar": "rar",
+    ".chd": "chd",
+    ".rvz": "rvz",
+    ".nkit": "nkit",
+    ".cso": "cso",
+    ".pbp": "pbp",
+}
+"""File-suffix → format-family map for the Quality profile's
+``allowed_formats`` check. Extensions not in this map are
+classified as ``raw`` (.md / .nes / .sfc / .smc / .gb / .gba /
+.iso / .bin / etc — the canonical uncompressed dumps)."""
+
+
+def _classify_file_format(path: "Path") -> str:
+    """Map ``path.suffix`` to a format family string the spec 006
+    Quality profile evaluates against ``allowed_formats``.
+
+    Unknown extensions fall through to ``raw`` so the typical
+    raw-rom case clears the gate without an explicit
+    suffix-by-suffix allow-list.
+    """
+    return _FORMAT_FAMILY_BY_SUFFIX.get(path.suffix.lower(), "raw")
+
+
 _BLOCKLIST_WORTHY_REASONS = frozenset(
     {
         "extract:bomb-detected",
@@ -246,9 +273,70 @@ async def run_import(
             from romarr.importer._outcome import make_success_outcome
 
             release_id = int(candidates[0])
-            file_format = (
-                source_path.suffix.lstrip(".").lower() or "raw"
+            file_format = _classify_file_format(source_path)
+
+            # T084 / FR-021 / US4.2 — PROFILE-GATE. When the
+            # picked Release is bound to a Library, evaluate the
+            # 4 profile gates (quality / region / dump /
+            # language). REJECT → fall through to parking
+            # (failure path); REJECT + context.force=True →
+            # pass with a warning on the outcome.
+            gate_result = await _evaluate_profile_gate(
+                session=session,
+                release_id=release_id,
+                source_path=source_path,
+                file_format=file_format,
+                hash_result=hash_result,
+                force=context.force,
             )
+            if gate_result is not None and not gate_result.passed:
+                # Hard reject → record the audit failure and
+                # park with the structured rejection reason.
+                rejection_reason = (
+                    gate_result.rejection_reason.value
+                    if gate_result.rejection_reason is not None
+                    else "profile:reject"
+                )
+                try:
+                    await park_in_unidentified(
+                        session=session,
+                        source_path=source_path,
+                        size_bytes=size_bytes,
+                        rejection_reason=rejection_reason,
+                        sha1=sha1,
+                        library_id=context.library_id,
+                        suggested_platform_id=suggested_platform_id,
+                        suggested_game_id=monitored_game_id,
+                        last_error=(
+                            f"profile_gate {gate_result.failing_gate} "
+                            f"rejected"
+                        ),
+                    )
+                except Exception:
+                    pass
+                duration_ms = max(
+                    0,
+                    int(
+                        (
+                            asyncio.get_event_loop().time()
+                            - monotonic_start
+                        )
+                        * 1000
+                    ),
+                )
+                failure_outcome = await make_failure_outcome(
+                    session=session,
+                    context=context,
+                    started_at=started_at,
+                    exception=GameNotMatched(
+                        f"profile_gate {gate_result.failing_gate} "
+                        "rejected"
+                    ),
+                    duration_ms=duration_ms,
+                    source_hash_sha1=sha1,
+                )
+                await session.commit()
+                return failure_outcome
             outcome = None
             try:
                 outcome = await manual_import_known(
@@ -435,6 +523,73 @@ async def run_import(
     )
     await session.commit()
     return outcome
+
+
+async def _evaluate_profile_gate(
+    *,
+    session: AsyncSession,
+    release_id: int,
+    source_path: "Path",
+    file_format: str,
+    hash_result,  # type: ignore[no-untyped-def]
+    force: bool,
+):  # type: ignore[no-untyped-def]
+    """T084 / FR-021 — evaluate the 4 profile gates against the
+    candidate Release.
+
+    Returns ``None`` when the Release has no Library binding
+    (skip the gate, legacy path); otherwise a
+    :class:`ProfileGateResult`. Caller acts on
+    ``passed`` / ``rejection_reason`` / ``warning``.
+    """
+    from romarr.importer.steps.profile_gate import apply_profile_gate
+    from romarr.libraries.models import Library
+    from romarr.profiles.models import (
+        DumpProfile,
+        LanguageProfile,
+        QualityProfile,
+        RegionProfile,
+    )
+    from romarr.profiles.types import ReleaseFacts
+
+    release = await session.get(Release, release_id)
+    if release is None or release.library_id is None:
+        return None  # legacy path — no profile gate
+
+    library = await session.get(Library, release.library_id)
+    if library is None:
+        return None
+
+    quality = await session.get(
+        QualityProfile, library.quality_profile_id
+    )
+    region = await session.get(RegionProfile, library.region_profile_id)
+    dump = await session.get(DumpProfile, library.dump_profile_id)
+    language = await session.get(
+        LanguageProfile, library.language_profile_id
+    )
+    if any(p is None for p in (quality, region, dump, language)):
+        return None  # profile data incomplete — skip gate
+
+    facts = ReleaseFacts(
+        title=release.name,
+        regions=tuple(release.regions or ()),
+        languages=tuple(release.languages or ()),
+        revision=release.revision,
+        dump_status=release.dump_status,
+        naming_convention=release.naming_convention,
+        file_format=file_format,
+        release_size=hash_result.size_bytes if hash_result else None,
+    )
+
+    return apply_profile_gate(
+        quality=quality,
+        region=region,
+        dump=dump,
+        language=language,
+        facts=facts,
+        force=force,
+    )
 
 
 async def _auto_blocklist(
