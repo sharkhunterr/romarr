@@ -196,10 +196,12 @@ export function AddNewPage(): ReactElement {
     return () => window.clearTimeout(handle);
   }, [query, urlQuery, setSearchParams]);
 
-  // 100 hits per query so multi-platform franchises (Harry Potter,
-  // Pokémon, Lego…) keep all their handheld variants visible
-  // alongside the console headliners.
-  const lookup = useGameLookup({ q: urlQuery, limit: 100 });
+  // No cap from the operator's perspective: 500 hits per query so
+  // every (game, platform) combination IGDB / MobyGames /
+  // ScreenScraper return surfaces in the list. Multi-platform
+  // franchises (Harry Potter, Pokémon, Lego…) show up across
+  // every console + handheld they shipped on.
+  const lookup = useGameLookup({ q: urlQuery, limit: 500 });
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-6 md:px-6 md:py-8">

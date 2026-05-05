@@ -139,7 +139,9 @@ class MobyGamesProvider(MetadataProvider):
     async def search_games(
         self, query: str, *, platform_slug: str | None = None
     ) -> list[GameSearchResult]:
-        params = self._params(title=query, limit=20)
+        # MobyGames caps `limit` at 100; pull the maximum so all
+        # platforms a title shipped on are surfaced.
+        params = self._params(title=query, limit=100)
         if platform_slug:
             pid = self._platform_mapping.get(platform_slug)
             if pid is not None:
