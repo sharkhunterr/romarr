@@ -607,10 +607,18 @@ shuts down cleanly.
       spec 012 scheduler exposes a public
       ``progress_callback`` hook the WS bridge can subscribe
       to.
-- [~] T065 [P] [WS] queueUpdated E2E —
-      **deferred-by-design** alongside T064. The broadcast
-      shape is pinned by T066; the queue-update emission
-      site lands with the queue-write paths from T045/T046.
+- [X] T065 [P] [WS] **Slice 275.** ``queueUpdated`` is now
+      emitted on the queue-delete path. Added
+      ``WsBridge.emit_message(message_type, data)`` as the
+      low-level non-spec-011 producer hook (queue / scheduler
+      / future raw producers). The ``DELETE /api/v3/queue/{id}``
+      handler retrieves ``app.state.ws_bridge`` and calls
+      ``emit_message(MessageType.QUEUE_UPDATED, data={"entry_id":
+      …, "kind": "deleted"})`` after the row is removed.
+      Best-effort: a missing bridge (test harness) is a silent
+      no-op so the existing queue-router tests keep passing.
+      The retry/upsert emission sites land alongside T046's
+      retry endpoint and the spec 005 reconciler.
 - [X] T066 [P] [WS] `tests/api/ws/test_messages.py::test_each_message_type_round_trips_to_subscriber`
       — parametrized over every `MessageType` value; each
       broadcast through `SubscriptionRegistry.broadcast()`

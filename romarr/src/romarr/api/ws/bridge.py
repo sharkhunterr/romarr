@@ -67,6 +67,29 @@ class WsBridge:
     def __init__(self, registry: SubscriptionRegistry) -> None:
         self._registry = registry
 
+    async def emit_message(
+        self, message_type: MessageType, data: Any | None = None
+    ) -> None:
+        """Direct broadcast of a non-spec-011 envelope.
+
+        Used by producers that don't have a spec 011 ``EventType``
+        equivalent — the queue reconciler (``QUEUE_UPDATED``), the
+        scheduler (``TASK_STARTED`` / ``TASK_PROGRESS`` /
+        ``TASK_FINISHED``), or routes that mutate observable state
+        and want a live signal pushed to operator sessions.
+
+        Best-effort: a failed broadcast is logged but never
+        re-raises. Pass ``data=None`` for envelopes that don't need
+        a payload (the receiver re-fetches via REST).
+        """
+        envelope = {"messageType": message_type.value, "data": data or {}}
+        try:
+            await self._registry.broadcast(envelope)
+        except Exception:
+            _logger.exception(
+                "ws bridge raw broadcast failed; envelope dropped"
+            )
+
     async def emit_event(self, event: Any) -> None:
         """Convert ``event`` to an envelope and broadcast.
 

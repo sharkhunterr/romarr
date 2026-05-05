@@ -210,6 +210,40 @@ async def test_bridge_skips_unknown_objects() -> None:
 
 
 @pytest.mark.asyncio
+async def test_emit_message_broadcasts_raw_envelope() -> None:
+    """``emit_message(message_type, data)`` is the low-level
+    backdoor for non-spec-011 producers (queue reconciler,
+    scheduler) — it skips the EventType→MessageType mapping and
+    broadcasts the supplied envelope verbatim."""
+    from romarr.api.ws.messages import MessageType
+
+    registry = _CapturingRegistry()
+    bridge = WsBridge(registry=registry)  # type: ignore[arg-type]
+
+    await bridge.emit_message(
+        MessageType.QUEUE_UPDATED,
+        data={"entry_id": 42, "kind": "deleted"},
+    )
+
+    assert len(registry.calls) == 1
+    assert registry.calls[0]["messageType"] == "queueUpdated"
+    assert registry.calls[0]["data"]["entry_id"] == 42
+
+
+@pytest.mark.asyncio
+async def test_emit_message_default_data_is_empty_object() -> None:
+    """Pass ``data=None`` for envelopes that don't carry a payload —
+    the envelope still ships with ``data: {}``."""
+    from romarr.api.ws.messages import MessageType
+
+    registry = _CapturingRegistry()
+    bridge = WsBridge(registry=registry)  # type: ignore[arg-type]
+
+    await bridge.emit_message(MessageType.HEALTH_CHANGED, data=None)
+    assert registry.calls[0]["data"] == {}
+
+
+@pytest.mark.asyncio
 async def test_detach_stops_broadcasts() -> None:
     """``detach`` removes the global subscription so future
     publishes don't reach the registry."""

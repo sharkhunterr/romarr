@@ -54,6 +54,19 @@ async def get_db(request: Request) -> AsyncIterator[AsyncSession]:
         yield session
 
 
+def get_event_channel(request: Request):  # type: ignore[no-untyped-def]
+    """Return the app-wide :class:`EventChannel` (spec 011) or
+    None when the lifespan hasn't constructed one (test
+    harnesses that build the app without entering it as a
+    context manager).
+
+    Routes that produce events publish through this channel; the
+    WS bridge fans out to live operator sessions automatically
+    (spec 013 T068 / T072).
+    """
+    return getattr(request.app.state, "event_channel", None)
+
+
 def get_sessionmaker(request: Request) -> async_sessionmaker[AsyncSession]:
     """Return the app-wide sessionmaker for callers that need a fresh
     session OUTSIDE the per-request transaction (e.g. spec 003's

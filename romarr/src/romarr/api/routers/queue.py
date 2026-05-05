@@ -22,7 +22,15 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    status,
+)
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -204,6 +212,7 @@ async def delete_queue_entry(
     entry_id: int,
     _admin: Annotated[Principal, Depends(require_admin)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    request: Request,
     remove_from_client: Annotated[
         bool,
         Query(
@@ -283,6 +292,20 @@ async def delete_queue_entry(
 
     await db.delete(entry)
     await db.commit()
+
+    # Slice 275 — fan out a ``queueUpdated`` WS event so live
+    # Activity tabs invalidate their queue query immediately. The
+    # bridge is best-effort: a missing bridge (test harness) is
+    # a silent no-op.
+    bridge = getattr(request.app.state, "ws_bridge", None)
+    if bridge is not None:
+        from romarr.api.ws.messages import MessageType
+
+        await bridge.emit_message(
+            MessageType.QUEUE_UPDATED,
+            data={"entry_id": entry_id, "kind": "deleted"},
+        )
+
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

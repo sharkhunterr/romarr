@@ -29,13 +29,15 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from romarr.api.dependencies import get_db, require_admin
+from romarr.api.dependencies import get_db, get_event_channel, require_admin
 from romarr.auth import Principal
 from romarr.domain.models import Game, Platform
 from romarr.domain.schemas import GameRead
 from romarr.metadata.providers import MetadataProvider
 from romarr.metadata.registry import load_enabled_providers
 from romarr.metadata.types import GameSearchResult
+from romarr.notifications.channel import EventChannel
+from romarr.notifications.types import GameRef, OnGameAddedPayload
 
 router = APIRouter(prefix="/api/v3/game", tags=["Metadata"])
 
@@ -237,6 +239,7 @@ async def add_game_from_lookup(
     body: Annotated[LookupAddRequest, Body()],
     _admin: Annotated[Principal, Depends(require_admin)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    event_channel: Annotated[EventChannel | None, Depends(get_event_channel)] = None,
 ) -> GameRead:
     column = _PROVIDER_TO_FK_COLUMN.get(body.provider_name.lower())
     if column is None:
@@ -304,6 +307,26 @@ async def add_game_from_lookup(
     db.add(game)
     await db.commit()
     await db.refresh(game)
+
+    # Emit OnGameAdded so live operator sessions see the row land
+    # immediately (spec 011 + spec 013 T068/T072 — fans out via the
+    # WS bridge → ``gameAdded`` envelope). Best-effort: a missing
+    # channel (test harness / disabled lifespan) is a silent no-op.
+    if event_channel is not None:
+        # Resolve the platform for the GameRef payload — already in
+        # session cache from the existence check above.
+        platform_row = await db.get(Platform, body.platform_id)
+        if platform_row is not None:
+            await event_channel.publish(
+                OnGameAddedPayload(
+                    game=GameRef(
+                        id=game.id,
+                        title=game.title,
+                        platform_slug=platform_row.slug,
+                        platform_name=platform_row.name,
+                    ),
+                )
+            )
 
     return GameRead.model_validate(game, from_attributes=True)
 
