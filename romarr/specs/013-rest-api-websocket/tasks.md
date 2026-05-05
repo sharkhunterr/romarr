@@ -418,10 +418,19 @@ shuts down cleanly.
       Connection / unexpected). 3 router tests cover the
       happy path (entry deleted, list endpoint reports the
       survivor only), 404 missing entry, 401 unauthenticated.
-- [~] T046 [P] [ROUTERS] POST ``/api/v3/queue/{id}/retry`` —
-      **deferred-by-design** alongside T045. Same wiring
-      gap (needs the spec 005 add helpers exposed as a
-      router-callable function).
+- [X] T046 [P] [ROUTERS] POST ``/api/v3/queue/{id}/retry`` —
+      state-only reset shipped (slice 324). The endpoint
+      transitions ``failed`` → ``stuck`` and clears the
+      retry-cooldown bookkeeping (``attempt_count=0``,
+      ``last_attempt_at=None``, ``error_msg=None``) so the
+      spec 012 scheduler tick re-fires the entry at the
+      next cadence. Refuses ``completed`` entries with 409.
+      Path-divergence — the actual client re-fire (calling
+      ``add_torrent`` / ``add_nzb`` against the original
+      download URL) lands with the spec 012 retry runner.
+      4 router tests cover the happy path (state reset),
+      404 missing entry, 409 completed-state, 401
+      unauthenticated.
 - [X] T047 [P] [ROUTERS] `tests/api/routers/test_history.py::test_paginated_history_unions_all_three_tables`
       — GET `/api/v3/history` aggregates `import_history`,
       `search_history`, `job_run` rows into the unified

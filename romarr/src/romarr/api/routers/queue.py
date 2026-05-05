@@ -309,4 +309,81 @@ async def delete_queue_entry(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+@router.post(
+    "/{entry_id}/retry",
+    response_model=QueueEntryRead,
+    status_code=status.HTTP_200_OK,
+    summary="Reset a STUCK or FAILED queue entry so the next "
+    "scheduler tick re-fires it (admin only).",
+    responses={
+        404: {"description": "No queue entry with this id."},
+        409: {
+            "description": (
+                "Entry is in a terminal-success state (``completed``)"
+                " and can't be retried. Issue a fresh grab instead."
+            )
+        },
+    },
+)
+async def retry_queue_entry(
+    entry_id: int,
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    request: Request,
+) -> QueueEntryRead:
+    """T046 — manual queue-entry retry.
+
+    Resets the entry's retry-cooldown bookkeeping
+    (``last_attempt_at`` cleared, ``attempt_count`` reset) and
+    transitions ``failed`` → ``stuck`` so the spec 012 scheduler
+    tick picks it back up at the next cadence.
+
+    The actual client re-fire (``add_torrent`` / ``add_nzb`` against
+    the original download URL) lands with the spec 012 retry
+    runner — today's endpoint is the state-only reset that
+    re-arms the entry. Refuses ``completed`` entries with 409
+    (a re-grab is the right path).
+    """
+    entry = (
+        await db.execute(
+            select(QueueEntry).where(QueueEntry.id == entry_id)
+        )
+    ).scalar_one_or_none()
+    if entry is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "errorMessage": "queue_entry_not_found",
+                "errorCode": "queue_entry_not_found",
+            },
+        )
+
+    if entry.state == "completed":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "errorMessage": "queue_entry_completed",
+                "errorCode": "queue_entry_completed",
+            },
+        )
+
+    entry.state = "stuck"
+    entry.attempt_count = 0
+    entry.last_attempt_at = None
+    entry.error_msg = None
+    await db.commit()
+    await db.refresh(entry)
+
+    bridge = getattr(request.app.state, "ws_bridge", None)
+    if bridge is not None:
+        from romarr.api.ws.messages import MessageType
+
+        await bridge.emit_message(
+            MessageType.QUEUE_UPDATED,
+            data={"entry_id": entry_id, "kind": "retry-reset"},
+        )
+
+    return QueueEntryRead.model_validate(entry)
+
+
 __all__ = ["router"]

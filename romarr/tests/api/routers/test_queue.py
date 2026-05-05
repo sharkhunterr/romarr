@@ -373,3 +373,96 @@ async def test_delete_unauthenticated_returns_401(
     ids = await _seed_queue_entries(api_engine, count=1)
     resp = await api_client.delete(f"/api/v3/queue/{ids[0]}")
     assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# T046 — POST /api/v3/queue/{id}/retry resets the entry for re-firing
+# ---------------------------------------------------------------------------
+
+
+async def _seed_one_failed_entry(engine: AsyncEngine) -> int:
+    sm = async_sessionmaker(engine, expire_on_commit=False)
+    async with sm() as session:
+        await session.execute(text("PRAGMA foreign_keys=OFF"))
+        now = datetime.now(UTC)
+        row = QueueEntry(
+            release_id=4242,
+            download_client_id=1,
+            download_client_native_id="hash-failed",
+            state="failed",
+            progress=0.0,
+            size_bytes=None,
+            eta_seconds=None,
+            last_updated_at=now,
+            attempt_count=12,
+            last_attempt_at=now,
+            error_msg="connection refused",
+        )
+        session.add(row)
+        await session.flush()
+        eid = row.id
+        await session.commit()
+    return eid
+
+
+@pytest.mark.asyncio
+async def test_retry_resets_failed_entry_to_stuck(
+    authed_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+) -> None:
+    eid = await _seed_one_failed_entry(api_engine)
+
+    resp = await authed_client.post(f"/api/v3/queue/{eid}/retry")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["state"] == "stuck"
+    assert body["attemptCount"] == 0
+    # The cooldown bookkeeping is cleared so the next scheduler
+    # tick fires immediately.
+    assert body.get("errorMsg") is None
+
+
+@pytest.mark.asyncio
+async def test_retry_returns_404_when_entry_missing(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.post("/api/v3/queue/99999/retry")
+    assert resp.status_code == 404
+    assert resp.json()["errorCode"] == "queue_entry_not_found"
+
+
+@pytest.mark.asyncio
+async def test_retry_completed_entry_returns_409(
+    authed_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+) -> None:
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        await session.execute(text("PRAGMA foreign_keys=OFF"))
+        now = datetime.now(UTC)
+        row = QueueEntry(
+            release_id=999,
+            download_client_id=1,
+            download_client_native_id="hash-completed",
+            state="completed",
+            progress=1.0,
+            last_updated_at=now,
+        )
+        session.add(row)
+        await session.flush()
+        eid = row.id
+        await session.commit()
+
+    resp = await authed_client.post(f"/api/v3/queue/{eid}/retry")
+    assert resp.status_code == 409
+    assert resp.json()["errorCode"] == "queue_entry_completed"
+
+
+@pytest.mark.asyncio
+async def test_retry_unauthenticated_returns_401(
+    api_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+) -> None:
+    eid = await _seed_one_failed_entry(api_engine)
+    resp = await api_client.post(f"/api/v3/queue/{eid}/retry")
+    assert resp.status_code == 401
