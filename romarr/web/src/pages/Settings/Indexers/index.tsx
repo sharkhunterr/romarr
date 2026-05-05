@@ -14,7 +14,7 @@
  * slice.
  */
 
-import { useMemo, type ReactElement } from "react";
+import { useMemo, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
@@ -23,6 +23,7 @@ import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useIndexers } from "@/lib/api/queries/indexers";
 
 import { ApplicationsPanel } from "./ApplicationsPanel";
+import { CreateIndexerModal } from "./CreateIndexerModal";
 import { IndexerRow } from "./IndexerRow";
 
 export function IndexersPage(): ReactElement {
@@ -44,6 +45,8 @@ export function IndexersPage(): ReactElement {
     );
   };
 
+  const [createOpen, setCreateOpen] = useState(false);
+
   const filtered = useMemo(() => {
     if (!indexers.data) return [];
     if (queryNormalized.length === 0) return indexers.data;
@@ -56,12 +59,27 @@ export function IndexersPage(): ReactElement {
 
   return (
     <div className="space-y-4">
-      <header>
-        <h2 className="text-base font-medium text-zinc-100">
-          {t("indexers.title")}
-        </h2>
-        <p className="mt-1 text-sm text-zinc-400">{t("indexers.subtitle")}</p>
+      <header className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-base font-medium text-zinc-100">
+            {t("indexers.title")}
+          </h2>
+          <p className="mt-1 text-sm text-zinc-400">
+            {t("indexers.subtitle")}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setCreateOpen(true)}
+          className="shrink-0 rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          {t("indexers.create.openButton")}
+        </button>
       </header>
+
+      {createOpen && (
+        <CreateIndexerModal onClose={() => setCreateOpen(false)} />
+      )}
 
       <ApplicationsPanel />
 

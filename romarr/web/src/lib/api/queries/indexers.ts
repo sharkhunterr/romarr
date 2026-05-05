@@ -26,6 +26,8 @@ import { ApiError, apiFetch } from "@/lib/api/client";
 import type { components } from "@/types/api/schema";
 
 export type Indexer = components["schemas"]["IndexerRead"];
+export type IndexerCreate = components["schemas"]["IndexerCreate"];
+export type IndexerImplementation = "newznab" | "torznab";
 export type IndexerTestResult =
   components["schemas"][
     "romarr__indexers__connectivity__ConnectivityTestResult"
@@ -57,6 +59,24 @@ export function useIndexersById(): Map<number, Indexer> {
     }
     return out;
   }, [indexers.data]);
+}
+
+export function useCreateIndexer(): UseMutationResult<
+  Indexer,
+  ApiError,
+  IndexerCreate
+> {
+  const qc = useQueryClient();
+  return useMutation<Indexer, ApiError, IndexerCreate>({
+    mutationFn: (payload) =>
+      apiFetch<Indexer>("/api/v3/indexer", {
+        method: "POST",
+        json: payload,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: INDEXERS_KEY });
+    },
+  });
 }
 
 export function useDeleteIndexer(): UseMutationResult<

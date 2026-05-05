@@ -594,6 +594,31 @@
       "title": "No indexers configured",
       "body": "Add an indexer manually below, or push one from Prowlarr — Romarr is registered as a Prowlarr application and accepts pushed sources."
     },
+    "create": {
+      "openButton": "+ Add indexer",
+      "modalTitle": "Add an indexer",
+      "subhead": "Manual entry for indexers that aren't pushed by Prowlarr. Most operators should register Romarr as a Prowlarr application instead.",
+      "implementationLabel": "Protocol",
+      "implementationHint": "Newznab is the canonical Usenet API; Torznab is the torrent variant. Both formats are interchangeable for the search engine.",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. NZBgeek",
+      "urlLabel": "Base URL",
+      "apiKeyLabel": "API key",
+      "apiKeyPlaceholder": "Paste the indexer's API key",
+      "flagsLabel": "Search modes",
+      "flags": {
+        "enableRss": "Enable RSS sync (auto-grab feed)",
+        "enableAutomatic": "Enable automatic search (Wanted refresh)",
+        "enableInteractive": "Enable interactive search (manual search UI)"
+      },
+      "prowlarrHint": "Tip: prefer the Prowlarr push setup. Add Romarr to your Prowlarr instance and the indexers sync over without you maintaining the manual entry below.",
+      "cancel": "Cancel",
+      "submit": "Add indexer",
+      "submitting": "Adding…",
+      "successTitle": "Indexer added",
+      "successBody": "{{name}} is now wired up.",
+      "errorTitle": "Couldn't add the indexer"
+    },
     "table": {
       "name": "Name",
       "url": "URL",

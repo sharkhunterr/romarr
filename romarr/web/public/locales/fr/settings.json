@@ -594,6 +594,31 @@
       "title": "Aucun indexeur configuré",
       "body": "Ajoutez un indexeur manuellement ci-dessous, ou poussez-en un depuis Prowlarr — Romarr est enregistré comme application Prowlarr et accepte les sources poussées."
     },
+    "create": {
+      "openButton": "+ Ajouter un indexeur",
+      "modalTitle": "Ajouter un indexeur",
+      "subhead": "Saisie manuelle pour les indexeurs non poussés par Prowlarr. Pour la plupart des installations, enregistrez plutôt Romarr comme application Prowlarr.",
+      "implementationLabel": "Protocole",
+      "implementationHint": "Newznab est l'API Usenet canonique ; Torznab en est la variante torrent. Les deux formats sont interchangeables pour le moteur de recherche.",
+      "nameLabel": "Nom",
+      "namePlaceholder": "ex. NZBgeek",
+      "urlLabel": "URL de base",
+      "apiKeyLabel": "Clé API",
+      "apiKeyPlaceholder": "Collez la clé API de l'indexeur",
+      "flagsLabel": "Modes de recherche",
+      "flags": {
+        "enableRss": "Activer le sync RSS (auto-grab feed)",
+        "enableAutomatic": "Activer la recherche automatique (rafraîchissement Wanted)",
+        "enableInteractive": "Activer la recherche interactive (UI manuelle)"
+      },
+      "prowlarrHint": "Conseil : préférez le setup Prowlarr push. Ajoutez Romarr à votre instance Prowlarr et les indexeurs se synchronisent sans la saisie manuelle ci-dessous.",
+      "cancel": "Annuler",
+      "submit": "Ajouter l'indexeur",
+      "submitting": "Ajout…",
+      "successTitle": "Indexeur ajouté",
+      "successBody": "{{name}} est branché.",
+      "errorTitle": "Impossible d'ajouter l'indexeur"
+    },
     "table": {
       "name": "Nom",
       "url": "URL",
