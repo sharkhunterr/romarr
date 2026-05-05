@@ -402,7 +402,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                     app.state.db_sessionmaker
                 ),
                 dispatcher=build_managed_download_dispatcher(
-                    app.state.db_sessionmaker
+                    app.state.db_sessionmaker,
+                    event_channel=event_channel,
                 ),
             )
         except Exception:

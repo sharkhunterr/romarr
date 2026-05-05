@@ -61,6 +61,7 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from romarr.importer.types import ImportContext, ImportOutcome
+    from romarr.notifications.channel import EventChannel
 
 
 _NOT_IMPLEMENTED_MSG = (
@@ -80,6 +81,7 @@ async def run_import(
     *,
     session: AsyncSession,
     hasher: Hasher | None = None,
+    event_channel: "EventChannel | None" = None,
 ) -> ImportOutcome:
     """Run the import pipeline against ``context``.
 
@@ -212,6 +214,22 @@ async def run_import(
                     hashes=hash_result,
                 )
                 await session.commit()
+                # NOTIFY: emit OnImport so the spec 011 dispatcher
+                # fans out to Apprise / Notifiarr / etc. Best-
+                # effort — a publish failure must not invalidate
+                # the import that already committed.
+                if event_channel is not None:
+                    try:
+                        await _emit_on_import(
+                            event_channel=event_channel,
+                            session=session,
+                            game_id=monitored_game_id,
+                            release_id=release_id,
+                            outcome=outcome,
+                            hash_result=hash_result,
+                        )
+                    except Exception:
+                        pass
                 return outcome
             except Exception:
                 # Auto-import failed; fall through to parking.
@@ -279,6 +297,73 @@ async def run_import(
     )
     await session.commit()
     return outcome
+
+
+async def _emit_on_import(
+    *,
+    event_channel: "EventChannel",
+    session: AsyncSession,
+    game_id: int,
+    release_id: int,
+    outcome: "ImportOutcome",
+    hash_result,  # type: ignore[no-untyped-def]
+) -> None:
+    """Publish an OnImport notification event after a successful
+    auto-import. Loads the Game + Release from session so the
+    payload's GameRef / ReleaseRef are fully populated.
+
+    Best-effort: caller wraps this in try/except so a publish
+    failure can't invalidate the committed import.
+    """
+    from romarr.notifications.types import (
+        DumpRef,
+        EventType,
+        GameRef,
+        OnImportPayload,
+        ReleaseRef,
+    )
+
+    game_row = await session.get(Game, game_id)
+    release_row = await session.get(Release, release_id)
+    if game_row is None or release_row is None:
+        return  # row vanished — defensive
+
+    platform_row = await session.get(Platform, game_row.platform_id)
+    platform_slug = platform_row.slug if platform_row else ""
+    platform_name = platform_row.name if platform_row else ""
+
+    region = (
+        release_row.regions[0]
+        if release_row.regions
+        else None
+    )
+
+    payload = OnImportPayload(
+        event_type=EventType.ON_IMPORT,
+        game=GameRef(
+            id=game_row.id,
+            title=game_row.title,
+            platform_slug=platform_slug,
+            platform_name=platform_name,
+        ),
+        release=ReleaseRef(
+            id=release_row.id,
+            name=release_row.name,
+            region=region,
+            languages=tuple(release_row.languages or ()),
+            revision=release_row.revision,
+            dump_status=str(release_row.dump_status),
+            naming_convention=str(release_row.naming_convention),
+        ),
+        dump=DumpRef(
+            path=str(outcome.dest_path) if outcome.dest_path else "",
+            sha1=hash_result.sha1,
+            crc32=hash_result.crc32 or None,
+            md5=hash_result.md5 or None,
+            size_bytes=hash_result.size_bytes,
+        ),
+    )
+    await event_channel.publish(payload)
 
 
 _IDENTIFY_CONFIDENCE_FLOOR = 0.75

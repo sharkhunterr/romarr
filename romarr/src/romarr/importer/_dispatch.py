@@ -48,12 +48,15 @@ if TYPE_CHECKING:
 
     from romarr.downloaders.base import DownloadClient
     from romarr.downloaders.types import ManagedDownload
+    from romarr.notifications.channel import EventChannel
 
 logger = logging.getLogger(__name__)
 
 
 def build_managed_download_dispatcher(
     sessionmaker: "async_sessionmaker",
+    *,
+    event_channel: "EventChannel | None" = None,
 ) -> Callable[["ManagedDownload"], Awaitable[None]]:
     """Build a watcher-compatible dispatcher closure over ``sessionmaker``.
 
@@ -89,7 +92,11 @@ def build_managed_download_dispatcher(
 
         async with sessionmaker() as session:
             try:
-                await run_import(context, session=session)
+                await run_import(
+                    context,
+                    session=session,
+                    event_channel=event_channel,
+                )
             except Exception:
                 logger.exception(
                     "watcher_dispatch.run_import_failed "
