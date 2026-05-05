@@ -46,6 +46,33 @@
       "title": "Aucune notification configurée",
       "body": "Ajoutez une URL Apprise pour commencer à router les événements OnGrab / OnImport / OnFail / santé."
     },
+    "create": {
+      "openButton": "+ Ajouter une notification",
+      "modalTitle": "Ajouter une cible de notification",
+      "subhead": "Une ligne par endpoint Apprise. L'URL est chiffrée au repos ; vous ne verrez ensuite que la forme masquée.",
+      "nameLabel": "Nom",
+      "namePlaceholder": "ex. Discord — équipe ludothèque",
+      "urlLabel": "URL Apprise",
+      "urlPlaceholder": "discord://webhook_id/webhook_token",
+      "urlHint": "Schémas Apprise : discord://, slack://, mailto://, gotify://, ntfy://, … Voir le wiki Apprise pour la liste complète.",
+      "eventsLabel": "S'abonner aux événements",
+      "toggles": {
+        "enabled": "Activé (interrupteur principal)",
+        "onGrab": "On Grab — release ajoutée à la file de téléchargement",
+        "onImport": "On Import — release ajoutée à la ludothèque",
+        "onUpgrade": "On Upgrade — meilleure release a remplacé une plus ancienne",
+        "onFail": "On Fail — téléchargement ou import en échec",
+        "onHealthIssue": "On Health Issue — événement de santé système",
+        "onDatUpdate": "On DAT Update — cache DAT rafraîchi",
+        "onGameAdded": "On Game Added — nouvelle entrée Game créée"
+      },
+      "cancel": "Annuler",
+      "submit": "Ajouter la notification",
+      "submitting": "Ajout…",
+      "successTitle": "Notification ajoutée",
+      "successBody": "{{name}} est branchée.",
+      "errorTitle": "Impossible d'ajouter la notification"
+    },
     "events": {
       "onGrab": "Grab",
       "onImport": "Import",

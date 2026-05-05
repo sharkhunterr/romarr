@@ -12,7 +12,7 @@
  * templates and the canonical UX is a 3-step modal.
  */
 
-import { useMemo, type ReactElement } from "react";
+import { useMemo, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
@@ -20,6 +20,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useNotifications } from "@/lib/api/queries/notifications";
 
+import { CreateNotificationModal } from "./CreateNotificationModal";
 import { NotificationRow } from "./NotificationRow";
 
 export function ConnectPage(): ReactElement {
@@ -41,6 +42,8 @@ export function ConnectPage(): ReactElement {
     );
   };
 
+  const [createOpen, setCreateOpen] = useState(false);
+
   const filtered = useMemo(() => {
     if (!notifications.data) return [];
     if (queryNormalized.length === 0) return notifications.data;
@@ -53,11 +56,20 @@ export function ConnectPage(): ReactElement {
 
   return (
     <div className="space-y-4">
-      <header>
-        <h2 className="text-base font-medium text-zinc-100">
-          {t("connect.title")}
-        </h2>
-        <p className="mt-1 text-sm text-zinc-400">{t("connect.subtitle")}</p>
+      <header className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-base font-medium text-zinc-100">
+            {t("connect.title")}
+          </h2>
+          <p className="mt-1 text-sm text-zinc-400">{t("connect.subtitle")}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setCreateOpen(true)}
+          className="shrink-0 rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          {t("connect.create.openButton")}
+        </button>
       </header>
 
       <aside
@@ -96,6 +108,10 @@ export function ConnectPage(): ReactElement {
           description={t("connect.empty.body")}
         />
       )}
+      {createOpen && (
+        <CreateNotificationModal onClose={() => setCreateOpen(false)} />
+      )}
+
       {notifications.isSuccess && notifications.data.length > 0 && (
         <>
           <label className="block">

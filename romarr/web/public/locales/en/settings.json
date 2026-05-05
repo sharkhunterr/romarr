@@ -46,6 +46,33 @@
       "title": "No notifications configured",
       "body": "Add an Apprise URL to start routing OnGrab / OnImport / OnFail / health events outbound."
     },
+    "create": {
+      "openButton": "+ Add notification",
+      "modalTitle": "Add a notification target",
+      "subhead": "One row per Apprise endpoint. The URL is encrypted at rest; you'll only see the redacted form afterwards.",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. Discord — Library team",
+      "urlLabel": "Apprise URL",
+      "urlPlaceholder": "discord://webhook_id/webhook_token",
+      "urlHint": "Apprise schemas: discord://, slack://, mailto://, gotify://, ntfy://, … See the Apprise wiki for the full list.",
+      "eventsLabel": "Subscribe to events",
+      "toggles": {
+        "enabled": "Enabled (master switch)",
+        "onGrab": "On Grab — release queued for download",
+        "onImport": "On Import — release added to library",
+        "onUpgrade": "On Upgrade — better release replaced an older one",
+        "onFail": "On Fail — download or import failed",
+        "onHealthIssue": "On Health Issue — system health event",
+        "onDatUpdate": "On DAT Update — DAT cache refreshed",
+        "onGameAdded": "On Game Added — new Game row created"
+      },
+      "cancel": "Cancel",
+      "submit": "Add notification",
+      "submitting": "Adding…",
+      "successTitle": "Notification added",
+      "successBody": "{{name}} is now wired up.",
+      "errorTitle": "Couldn't add the notification"
+    },
     "events": {
       "onGrab": "Grab",
       "onImport": "Import",

@@ -25,6 +25,8 @@ import { ApiError, apiFetch } from "@/lib/api/client";
 import type { components } from "@/types/api/schema";
 
 export type Notification = components["schemas"]["NotificationRead"];
+export type NotificationCreate =
+  components["schemas"]["NotificationCreate"];
 export type NotificationTestResult =
   components["schemas"]["TestNotificationResponse"];
 
@@ -38,6 +40,24 @@ export function useNotifications(): UseQueryResult<
     queryKey: NOTIFICATIONS_KEY,
     queryFn: () => apiFetch<Notification[]>("/api/v3/notification"),
     staleTime: 30_000,
+  });
+}
+
+export function useCreateNotification(): UseMutationResult<
+  Notification,
+  ApiError,
+  NotificationCreate
+> {
+  const qc = useQueryClient();
+  return useMutation<Notification, ApiError, NotificationCreate>({
+    mutationFn: (payload) =>
+      apiFetch<Notification>("/api/v3/notification", {
+        method: "POST",
+        json: payload,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
+    },
   });
 }
 
