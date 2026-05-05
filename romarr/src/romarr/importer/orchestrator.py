@@ -33,12 +33,18 @@ import asyncio
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+from sqlalchemy import func, select
+
+from romarr.domain.models import Game, Platform
 from romarr.identification.hasher import Hasher
+from romarr.identification.parsers import default_dispatcher
 from romarr.importer._outcome import make_failure_outcome
 from romarr.importer._park import park_in_unidentified
 from romarr.importer.errors import GameNotMatched
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from romarr.importer.types import ImportContext, ImportOutcome
@@ -90,7 +96,18 @@ async def run_import(
             # writes below capture the failure reason.
             sha1 = None
 
-    # Step 2 — park as ``match:no_game``. The orchestrator's
+    # Step 2a — IDENTIFY (best-effort): run the filename parser
+    # on the source basename so the parked row carries a
+    # ``suggested_platform_id`` and ``suggested_game_id`` hint
+    # for the operator's manual-match UI. This is audit-grade
+    # enrichment only — the full identification cascade
+    # (hash-match → header read → DAT verify → game-match) lands
+    # with the IDENTIFY / GAMEMATCH slices that follow.
+    suggested_platform_id, suggested_game_id = await _identify_suggestions(
+        session, source_path
+    )
+
+    # Step 2b — park as ``match:no_game``. The orchestrator's
     # full game-match path lands with the GAMEMATCH slice; until
     # then every input takes this branch so the audit chain
     # stays exercised end-to-end.
@@ -103,6 +120,8 @@ async def run_import(
                 rejection_reason="match:no_game",
                 sha1=sha1,
                 library_id=context.library_id,
+                suggested_platform_id=suggested_platform_id,
+                suggested_game_id=suggested_game_id,
             )
         except Exception:
             # Park failure is non-fatal — the history-row write
@@ -128,6 +147,68 @@ async def run_import(
     )
     await session.commit()
     return outcome
+
+
+_IDENTIFY_CONFIDENCE_FLOOR = 0.75
+"""Confidence below which the parser's title is considered too
+unreliable to use as a Game-match hint. Above the floor + a single
+title match in DB → ``suggested_game_id`` is set. Tuned just above
+the dispatcher's per-parser threshold (0.7) so a clean
+``Title (Region).ext`` clears the bar."""
+
+
+async def _identify_suggestions(
+    session: AsyncSession, source_path: "Path"
+) -> tuple[int | None, int | None]:
+    """Best-effort IDENTIFY hint for the parked unidentified row.
+
+    Runs the filename dispatcher on ``source_path.name``. When the
+    parse exceeds the confidence floor:
+
+      * If ``parsed.platform_slug`` matches a known Platform, sets
+        ``suggested_platform_id`` to that platform's id.
+      * If exactly one Game (scoped to the suggested platform when
+        known, else global) matches the parsed title
+        case-insensitively, sets ``suggested_game_id`` to its id.
+
+    Returns ``(suggested_platform_id, suggested_game_id)``. Either
+    field may be ``None`` independently. Pure read — no DB writes.
+    """
+    try:
+        parsed = default_dispatcher().parse(source_path.name)
+    except Exception:
+        return (None, None)
+
+    if not parsed.title or parsed.confidence < _IDENTIFY_CONFIDENCE_FLOOR:
+        return (None, None)
+
+    suggested_platform_id: int | None = None
+    platform_slug = (
+        parsed.extra.get("platform_slug") if parsed.extra else None
+    )
+    if platform_slug:
+        platform = (
+            await session.execute(
+                select(Platform.id).where(Platform.slug == platform_slug)
+            )
+        ).scalar_one_or_none()
+        if platform is not None:
+            suggested_platform_id = int(platform)
+
+    title_query = select(Game.id).where(
+        func.lower(Game.title) == parsed.title.lower()
+    )
+    if suggested_platform_id is not None:
+        title_query = title_query.where(
+            Game.platform_id == suggested_platform_id
+        )
+    matches = (await session.execute(title_query.limit(2))).scalars().all()
+
+    suggested_game_id: int | None = None
+    if len(matches) == 1:
+        suggested_game_id = int(matches[0])
+
+    return (suggested_platform_id, suggested_game_id)
 
 
 _watcher: "WatcherLoop | None" = None

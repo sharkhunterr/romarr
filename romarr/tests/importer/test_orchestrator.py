@@ -120,6 +120,50 @@ async def test_run_import_handles_missing_source_path(
 
 
 @pytest.mark.asyncio
+async def test_run_import_persists_suggested_game_id_when_unique_title_match(
+    async_session: AsyncSession, tmp_path: Path
+) -> None:
+    """The IDENTIFY enrichment step (slice 296) populates
+    ``suggested_game_id`` on the parked row when the filename
+    parser produces a high-confidence title that matches exactly
+    one Game in the catalogue. The operator's manual-match UI uses
+    this hint to one-click the right Game."""
+    from uuid import uuid4
+
+    from romarr.domain.models import Game, Platform
+
+    platform = Platform(slug="megadrive", name="Mega Drive", manufacturer="Sega")
+    async_session.add(platform)
+    await async_session.flush()
+
+    game = Game(
+        platform_id=platform.id,
+        slug="sonic-the-hedgehog",
+        title="Sonic the Hedgehog",
+    )
+    async_session.add(game)
+    await async_session.flush()
+
+    rom = _make_rom(tmp_path)
+    context = ImportContext(
+        source_path=rom,
+        correlation_id=uuid4(),
+        imported_via="manual",
+    )
+    outcome = await run_import(context, session=async_session)
+    assert outcome.success is False
+
+    parked = (
+        await async_session.execute(
+            select(UnidentifiedDump).where(
+                UnidentifiedDump.path == str(rom),
+            )
+        )
+    ).scalar_one()
+    assert parked.suggested_game_id == game.id
+
+
+@pytest.mark.asyncio
 async def test_run_import_records_correlation_id_and_outcome_shape(
     async_session: AsyncSession, base_context: ImportContext
 ) -> None:
