@@ -460,12 +460,13 @@ warnings without blocking imports.
       FR-017a (concurrent writer holding the advisory lock makes
       the second writer return False without re-emitting) and
       `test_lock_released_after_successful_write`.
-- [ ] T059 [P] [EXP-ESDE] `tests/libraries/exporters/test_esde_gamelist.py::test_disabled_emits_nothing`
+- [X] T059 [P] [EXP-ESDE] `tests/libraries/exporters/test_esde_gamelist.py::test_disabled_emits_nothing`
       — `exporter_esde_enabled=false`; no gamelist.xml created on
-      import. *(Deferred to the orchestrator slice — slice 4 ships
-      the renderer + writer + media-mirror primitives; the
-      enabled-flag check lives in the per-import dispatch in spec
-      008's importer.)*
+      import. *(Path-divergence close — the per-import dispatch
+      lives in the orchestrator (`_dispatch_esde_exporter` in
+      `src/romarr/importer/orchestrator.py`). Tests live at
+      `tests/importer/test_orchestrator_esde_dispatch.py` covering
+      both the disabled and enabled gates.)*
 
 ### Implementation
 

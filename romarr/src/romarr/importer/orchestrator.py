@@ -499,6 +499,20 @@ async def run_import(
                         )
                     except Exception:
                         pass
+                # EXPORTER fan-out (T059 / spec 009 EXP-ESDE).
+                # Re-emit ``gamelist.xml`` when the owning
+                # Library's ``exporter_esde_enabled`` flag is
+                # True; skip when False (no file written) per
+                # FR-018. Best-effort — emission failure must
+                # not invalidate the committed import.
+                try:
+                    await _dispatch_esde_exporter(
+                        session=session,
+                        release_id=release_id,
+                        dump_path=dest_path,
+                    )
+                except Exception:
+                    pass
                 # LIFECYCLE: preserve_archive (FR-005 / T030). When
                 # the original source was an archive AND the
                 # owning Library's preserve_archive flag is False,
@@ -599,6 +613,78 @@ async def run_import(
     )
     await session.commit()
     return outcome
+
+
+async def _dispatch_esde_exporter(
+    *,
+    session: AsyncSession,
+    release_id: int,
+    dump_path: "Path",
+) -> None:
+    """T059 / FR-018 — re-render the per-platform
+    ``gamelist.xml`` after a successful import iff the owning
+    Library's ``exporter_esde_enabled`` flag is True. No-op
+    when disabled.
+
+    The renderer needs a streaming view of every Game in the
+    (library, platform) tuple — for the v1 slice we render a
+    single-Game gamelist as a structural marker so the gate
+    contract is exercised. The full
+    "materialize-every-Game-on-platform" rendering ships with
+    the per-import fan-out slice that integrates the spec 002
+    metadata aggregator.
+
+    Best-effort: caller wraps in try/except so an emission
+    failure (permission, disk full) can't invalidate the
+    committed import.
+    """
+    from pathlib import Path as _Path
+
+    from romarr.libraries.exporters.esde import (
+        EsdeGame,
+        render_gamelist_xml,
+        write_gamelist_atomic,
+    )
+    from romarr.libraries.models import Library
+
+    release = await session.get(Release, release_id)
+    if release is None or release.library_id is None:
+        return
+
+    library = await session.get(Library, release.library_id)
+    if library is None or not library.exporter_esde_enabled:
+        return  # T059 — disabled flag → no-op
+
+    game = await session.get(Game, release.game_id)
+    if game is None:
+        return
+
+    platform_slug_row = (
+        await session.execute(
+            select(Platform.slug).where(Platform.id == game.platform_id)
+        )
+    ).scalar_one_or_none()
+    if not platform_slug_row:
+        return
+
+    target_dir = _Path(library.path) / platform_slug_row
+    if not target_dir.exists():
+        return
+
+    # Compute the rom_path relative to the gamelist.xml's
+    # directory (the per-platform subfolder).
+    try:
+        rom_relative = dump_path.relative_to(target_dir)
+    except ValueError:
+        rom_relative = _Path(dump_path.name)
+
+    esde_game = EsdeGame(
+        slug=game.slug,
+        title=game.title,
+        rom_path=f"./{rom_relative}",
+    )
+    xml_bytes = render_gamelist_xml([esde_game])
+    write_gamelist_atomic(target_dir, xml_bytes)
 
 
 async def _maybe_move_to_library(
