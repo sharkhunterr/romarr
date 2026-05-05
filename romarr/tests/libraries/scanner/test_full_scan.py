@@ -487,3 +487,81 @@ async def test_10k_files_under_5min(
     assert elapsed < 300.0, (
         f"10k-file full scan took {elapsed:.2f}s; SC-003 budget is 300.0s"
     )
+
+
+# ---------------------------------------------------------------------------
+# T040 — full-scan creates Release for unmatched files (delegates to importer)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_new_file_creates_release(
+    async_session: AsyncSession,
+    seeded_library: Library,
+    tmp_path: Path,
+) -> None:
+    """T040 / FR-014 — file not matching any Release → scanner
+    delegates to the importer orchestrator. The orchestrator's
+    fuzzy-match resolves the filename to the seeded Game; the
+    in-place MOVE fast-path keeps the file under the library tree;
+    auto-import creates a new Release+Dump."""
+    from romarr.domain.models import Dump as DumpModel
+
+    # Seed an unmonitored Game whose title fuzzy-matches the
+    # filename below. Mega Drive header so the IDENTIFY cascade
+    # locks the platform.
+    platform = Platform(slug="megadrive", name="Mega Drive")
+    async_session.add(platform)
+    await async_session.commit()
+    await async_session.refresh(platform)
+
+    game = Game(
+        platform_id=platform.id,
+        slug="sonic-fullscan",
+        title="Sonic the Hedgehog",
+        monitored=True,
+    )
+    async_session.add(game)
+    await async_session.commit()
+    await async_session.refresh(game)
+
+    # Drop a Mega-Drive ROM directly under the library tree at the
+    # right platform subfolder. The scanner walks `library_root`,
+    # not the importer-watched downloads dir.
+    library_root = Path(seeded_library.path)
+    rom_dir = library_root / "megadrive"
+    rom_dir.mkdir(parents=True, exist_ok=True)
+    rom_path = rom_dir / "Sonic the Hedgehog (USA).md"
+    body = bytearray(b"\x00" * 0x100)
+    body.extend(b"SEGA MEGA DRIVE ")
+    body.extend(b"\x00" * (0x200 - len(body)))
+    rom_path.write_bytes(bytes(body))
+
+    result = await full_scan(
+        session=async_session,
+        library_id=seeded_library.id,
+        library_path=library_root,
+        accepted_extensions={".md"},
+        create_release_for_unmatched=True,
+    )
+    assert result.last_status == "success"
+
+    # The orchestrator's auto-import created a Release for the
+    # matched Game and bound a Dump to the existing on-disk path
+    # (the MOVE step's in-place fast-path skips the rename).
+    releases = (
+        await async_session.execute(
+            select(Release).where(Release.game_id == game.id)
+        )
+    ).scalars().all()
+    assert len(releases) == 1
+    new_release = releases[0]
+    assert new_release.library_id == seeded_library.id
+
+    dumps = (
+        await async_session.execute(
+            select(DumpModel).where(DumpModel.release_id == new_release.id)
+        )
+    ).scalars().all()
+    assert len(dumps) == 1
+    assert dumps[0].path == str(rom_path)

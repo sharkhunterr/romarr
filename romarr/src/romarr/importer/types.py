@@ -23,7 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field
 LifecyclePolicy = Literal[
     "hardlink_and_seed", "move_and_remove", "copy_and_keep"
 ]
-ImportSource = Literal["automatic", "manual", "rss", "api", "webhook"]
+ImportSource = Literal["automatic", "manual", "rss", "api", "webhook", "scan"]
 
 
 class RejectionReason(StrEnum):

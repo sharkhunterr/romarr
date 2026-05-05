@@ -105,7 +105,7 @@ def upgrade() -> None:
         ),
         sa.CheckConstraint(
             "imported_via IN "
-            "('automatic','manual','rss','api','webhook')",
+            "('automatic','manual','rss','api','webhook','scan')",
             name="ck_import_history_imported_via",
         ),
     )

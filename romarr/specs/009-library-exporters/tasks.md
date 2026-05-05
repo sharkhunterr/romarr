@@ -283,14 +283,15 @@ storms.
       no-op. Plus
       ``tests/libraries/scanner/test_full_scan.py::test_full_scan_emits_progress_events``
       proving the integration: 5 files / every=2 → ≥ 3 events.
-- [ ] T040 [P] [SCAN-FULL] `tests/libraries/scanner/test_full_scan.py::test_new_file_creates_release`
-      — file not matching any Release ⇒ runs identification cascade;
-      passes profile gate ⇒ new Release created; fails ⇒ parked in
-      `unidentified_dump` with `library_id` set (FR-014).
-      *(Deferred — needs spec 008's full identification cascade
-      and profile gate; the unmatched files surface in the
-      ``files_unmatched`` counter today so the operator can see
-      what the importer will pick up.)*
+- [X] T040 [P] [SCAN-FULL] `tests/libraries/scanner/test_full_scan.py::test_new_file_creates_release`
+      — file not matching any Release ⇒ scanner delegates to
+      orchestrator's `run_import` with `imported_via="scan"` and
+      `create_release_for_unmatched=True`. The orchestrator's
+      MOVE step has an in-place fast-path (source under library
+      tree → no rename), and the auto-import code path now
+      creates a fresh wanted Release for the matched Game when
+      none exists (scan-origin only). Failed identifications
+      land in `unidentified_dump` with the library bound (FR-014).
 
 ### Implementation
 

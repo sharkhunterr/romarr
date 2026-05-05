@@ -112,6 +112,7 @@ async def full_scan(
     progress_sink: Callable[[ScanProgressEvent], None] | None = None,
     progress_every: int = _DEFAULT_PROGRESS_EVERY,
     hasher: Hasher | None = None,
+    create_release_for_unmatched: bool = False,
 ) -> FullScanResult:
     """Walk ``library_path``; hash and link every matching file.
 
@@ -224,6 +225,33 @@ async def full_scan(
         # create the Release. We count it here so the operator
         # sees the number of new files awaiting import.
         emitter.record_unmatched(now=datetime.now(UTC))
+
+        # T040 / FR-014 — when the operator wants the scanner to
+        # create Releases (rather than just count), delegate to the
+        # importer orchestrator. The MOVE step's in-place fast path
+        # detects that the file is already under the library tree
+        # and skips the rename, so a successful auto-import lands
+        # the Release+Dump on the existing path.
+        if create_release_for_unmatched:
+            from uuid import uuid4
+
+            from romarr.importer.orchestrator import run_import
+            from romarr.importer.types import ImportContext
+
+            try:
+                await run_import(
+                    ImportContext(
+                        source_path=file_path,
+                        correlation_id=uuid4(),
+                        imported_via="scan",
+                    ),
+                    session=session,
+                )
+            except Exception:
+                # Per-file failure must not abort the scan; the
+                # orchestrator already parks failed identifications
+                # in unidentified_dump.
+                pass
 
     await session.flush()
 

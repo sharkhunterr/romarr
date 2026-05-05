@@ -245,6 +245,65 @@ async def run_import(
         ).all()
         candidates: list[int] = [int(r[0]) for r in candidate_rows]
 
+        # T040 / FR-014 — scanner-driven import: when the Game has no
+        # wanted/imported Release yet but the filename has parseable
+        # region/dump info, create a fresh wanted Release so the
+        # auto-import has a binding target. Limited to the scan path
+        # so an ambiguous downloaded file still parks instead of
+        # auto-creating a Release.
+        if not candidates and context.imported_via == "scan":
+            try:
+                parsed_for_create = default_dispatcher().parse(source_path.name)
+            except Exception:
+                parsed_for_create = None
+            if parsed_for_create is not None:
+                from romarr.domain.enums import (
+                    DumpStatus as _DumpStatus,
+                    NamingConvention as _NamingConvention,
+                )
+
+                regions_for_release = (
+                    list(parsed_for_create.regions)
+                    if parsed_for_create.regions
+                    else []
+                )
+                languages_for_release = (
+                    list(parsed_for_create.languages)
+                    if parsed_for_create.languages
+                    else []
+                )
+                # Pick library binding from the matched Game's
+                # platform — when a Library covers this platform,
+                # bind to the first one. Falls back to the Release's
+                # parent Game's existing library hint when present.
+                library_id_for_release: int | None = None
+                from romarr.libraries.models import Library as _LibModel
+
+                lib_rows = (
+                    await session.execute(
+                        select(_LibModel.id).order_by(_LibModel.id)
+                    )
+                ).scalars().all()
+                library_id_for_release = (
+                    int(lib_rows[0]) if lib_rows else None
+                )
+
+                new_release = Release(
+                    game_id=monitored_game_id,
+                    name=source_path.stem,
+                    regions=regions_for_release,
+                    languages=languages_for_release,
+                    dump_status=_DumpStatus.VERIFIED,
+                    naming_convention=_NamingConvention.NO_INTRO,
+                    status="wanted",
+                    library_id=library_id_for_release,
+                )
+                session.add(new_release)
+                await session.commit()
+                await session.refresh(new_release)
+                candidates = [new_release.id]
+                candidate_rows = [(new_release.id, regions_for_release)]
+
         if len(candidates) > 1:
             # Region-disambiguate: parse the filename for region
             # tags and pick the Release whose regions tuple
@@ -751,6 +810,16 @@ async def _maybe_move_to_library(
     platform_slug = platform_slug_row or "unknown"
 
     dest_path = library_path / platform_slug / source_path.name
+    # In-place fast path: source already lives at the destination.
+    # The scanner-driven import case (`imported_via="scan"`) hits
+    # this — the file is already under the library tree, so the
+    # MOVE step is a no-op and we hand back the existing path.
+    try:
+        if source_path.resolve() == dest_path.resolve():
+            return dest_path
+    except OSError:
+        pass
+
     result = await move_atomic(
         source=source_path,
         dest=dest_path,
