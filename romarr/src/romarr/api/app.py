@@ -261,6 +261,25 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     ws_bridge.attach(event_channel)
     app.state.ws_bridge = ws_bridge
 
+    # Spec 009 CL003 — orphan-releases health check. Runs once
+    # per startup; if any Release has no library_id (the spec 009
+    # backfill couldn't bind it via path-prefix), emit a single
+    # OnHealthIssue so the operator sees it on the Dashboard.
+    if enable_bootstrap:
+        try:
+            from romarr.libraries._orphan_health import (
+                check_orphan_releases_on_startup,
+            )
+
+            await check_orphan_releases_on_startup(
+                sessionmaker=app.state.db_sessionmaker,
+                event_channel=event_channel,
+            )
+        except Exception:
+            bootstrap_log.warning(
+                "lifespan.orphan_releases_check_failed", exc_info=True
+            )
+
     # Spec 012 — start the Tasks subsystem when explicitly
     # enabled. Default OFF so the test suite (which builds
     # the app many times per session) doesn't pay the

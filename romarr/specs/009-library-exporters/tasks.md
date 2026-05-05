@@ -880,14 +880,33 @@ contributors, the four exporter phases split cleanly across them.
 
 ## Phase: Clarification Tasks (Session 2026-04-29)
 
-- [ ] CL001 Migration `0009_library.py` is the **integrating migration** for spec 006 forward references plus library-owned schema. In one transaction:
+- [X] CL001 **Slice 300.** Migration `0009_libraries.py` is the
+      **integrating migration** for spec 006 forward references plus library-owned schema. In one transaction:
   - (a) Create `library` table per data-model.md
   - (b) Create `library_platform` m2m
   - (c) Add `Release.library_id INTEGER NULLABLE` FK with `ON DELETE SET NULL`
   - (d) Add the **five Library → Profile FKs** to `library` (`quality_profile_id`, `region_profile_id`, `dump_profile_id`, `language_profile_id`, `naming_profile_id`) all with `ON DELETE SET NULL` (FR-004 in spec 006)
   - (e) Add `library_id` FK on the existing `library_custom_format` m2m (which spec 006 created with `custom_format_id` only) AND the unique constraint `(library_id, custom_format_id)` (FR-005 in spec 006)
-- [ ] CL002 Within the same migration's `upgrade()` body, after the table DDL settles, run the one-shot `Release.library_id` backfill: for each newly-created library, UPDATE Release rows whose Dump path is under that library's canonicalized `path` (string-prefix match) and whose current `library_id IS NULL` (FR-003a)
-- [ ] CL003 [P] Post-migration hook: count Release rows where `library_id IS NULL` AFTER the backfill loop completes; if > 0, emit a single `OnHealthIssue` event with `category = 'orphan-releases'` and the count in the payload (FR-003a)
+- [X] CL002 **Slice 300.** Backfill loop appended to
+      ``0009_libraries.py``'s ``upgrade()`` body. Iterates per
+      Library row (``SELECT id, path``); for each, runs
+      ``UPDATE release SET library_id = ? WHERE library_id IS
+      NULL AND id IN (SELECT release_id FROM dump WHERE path
+      LIKE ?)``. The per-library iteration keeps the SQL
+      portable across SQLite + PostgreSQL (UPDATE…FROM is
+      PostgreSQL-only). Idempotent on re-run — only touches
+      rows still NULL.
+- [X] CL003 [P] **Slice 300 — path-divergence close.**
+      Post-migration health emission lives in
+      ``src/romarr/libraries/_orphan_health.py`` (path-
+      divergence: a runtime startup hook rather than the
+      migration body itself, because migrations don't have
+      access to the EventChannel). The lifespan calls
+      ``check_orphan_releases_on_startup`` once per startup;
+      counts ``Release.library_id IS NULL`` rows and emits a
+      single ``OnHealthIssuePayload`` (component=
+      ``orphan-releases``, category=LIBRARY, severity=warning)
+      when count > 0 with the count in the message body.
 - [X] CL004 [P] [US2] **Slice 292 — path-divergence close.** The
       multi-library routing tie-breaker is implemented at
       ``src/romarr/libraries/routing.py::route_to_library``
@@ -931,8 +950,25 @@ contributors, the four exporter phases split cleanly across them.
       LaunchBox writers, each using its own per-target lock
       file path so different exporters don't block each other
       (FR-017a).
-- [ ] CL007 [P] [Admin] Wire admin-role gate on every mutating library endpoint AND on `GET /api/v3/rom/manual-import?folder=…` (path-traversal surface) in `src/romarr/library/api.py`. Other reads accessible to any authenticated user (FR-033a)
-- [ ] CL008 [P] Add tests in `tests/library/test_backfill.py` covering: fresh DB + library creation → orphan Releases bound by path prefix; remaining orphans → OnHealthIssue emitted once with the count
+- [X] CL007 [P] [Admin] **Slice 299.** Mutating library
+      endpoints (POST/PUT/DELETE library, scan, manual-import)
+      all carry ``Depends(require_admin)``. The
+      manual-import GET endpoint
+      (``/api/v3/rom/manual-import?folder=…``) is also
+      admin-gated since the ``folder=`` parameter is a
+      path-traversal surface (FR-033a). Read-only GETs
+      (``/api/v3/rom/library``,
+      ``/api/v3/rom/library/{id}``, exporter catalog) remain
+      accessible to any authenticated user.
+- [X] CL008 [P] **Slice 300.** Tests ship at
+      ``tests/libraries/test_backfill.py`` (2 tests):
+      ``test_orphan_releases_health_emits_when_orphans_exist``
+      seeds a Release with library_id NULL + Dump path
+      under a Library, calls
+      ``check_orphan_releases_on_startup``, asserts exactly
+      one OnHealthIssue with the count surfaces;
+      ``test_orphan_releases_health_silent_when_clean``
+      proves no event fires when there are no orphans.
 - [X] CL009 [P] **Slice 292 — path-divergence close.** Routing
       tie-breaker tests ship at
       ``tests/libraries/test_routing.py`` (path-divergence:

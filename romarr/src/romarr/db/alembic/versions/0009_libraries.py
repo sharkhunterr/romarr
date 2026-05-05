@@ -284,6 +284,42 @@ def upgrade() -> None:
                 ondelete="SET NULL",
             )
 
+    # CL002 — one-shot Release.library_id backfill. For each
+    # newly-created Library, UPDATE Release rows whose Dump path
+    # is under that library's path (string-prefix match) and
+    # whose current library_id IS NULL (FR-003a).
+    #
+    # Iterate per-library so the SQL stays portable across
+    # SQLite + PostgreSQL (UPDATE ... FROM ... is PG-only).
+    # Idempotent on re-run — only touches rows still NULL.
+    libraries = bind.exec_driver_sql(
+        "SELECT id, path FROM library"
+    ).fetchall()
+    for lib_id, lib_path in libraries:
+        prefix = (lib_path or "").rstrip("/") + "/"
+        bind.exec_driver_sql(
+            """
+            UPDATE release
+            SET library_id = ?
+            WHERE library_id IS NULL
+              AND id IN (
+                SELECT release_id FROM dump
+                WHERE path LIKE ?
+              )
+            """
+            if bind.dialect.name == "sqlite"
+            else """
+            UPDATE release
+            SET library_id = %s
+            WHERE library_id IS NULL
+              AND id IN (
+                SELECT release_id FROM dump
+                WHERE path LIKE %s
+              )
+            """,
+            (lib_id, prefix + "%"),
+        )
+
 
 def downgrade() -> None:
     bind = op.get_bind()
