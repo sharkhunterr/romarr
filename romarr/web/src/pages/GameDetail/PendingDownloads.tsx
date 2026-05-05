@@ -8,6 +8,7 @@
  * noise to the overview.
  */
 
+import { Download } from "lucide-react";
 import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -45,9 +46,7 @@ export function PendingDownloads(
         "border-sky-900/50 bg-sky-950/20 px-3 py-2",
       ].join(" ")}
     >
-      <span aria-hidden="true" className="text-base">
-        ⬇️
-      </span>
+      <Download size={16} aria-hidden="true" className="text-sky-300" />
       <div className="min-w-0 flex-1">
         <p className="text-xs font-medium text-sky-200">
           {t("pendingDownloads.title", { count: records.length })}

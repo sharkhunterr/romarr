@@ -761,7 +761,55 @@
       },
       "lastSync": "Last sync {{when}}",
       "unregister": "Unregister",
-      "unregisterConfirm": "Unregister Prowlarr application \"{{name}}\"? Indexers it pushed will remain but won't receive future updates."
+      "unregisterConfirm": "Unregister Prowlarr application \"{{name}}\"? Indexers it pushed will remain but won't receive future updates.",
+      "register": {
+        "button": "Register Prowlarr",
+        "title": "Register a Prowlarr instance",
+        "subtitle": "Romarr will pull the indexer list from Prowlarr. You'll get an app token to paste into Prowlarr for the reverse-sync channel.",
+        "successTitle": "Prowlarr registered!",
+        "successBody": "Copy the token below then paste it into Prowlarr — Settings → Apps → Romarr → Application Token.",
+        "tokenWarn": "This token is shown EXACTLY ONCE. Copy it now. If you lose it, delete the registration and create a new one.",
+        "tokenLabel": "Application token (paste into Prowlarr)",
+        "afterTitle": "Next steps",
+        "after": {
+          "step1": "In Prowlarr → Settings → Apps → click \"+\" → Romarr.",
+          "step2": "Romarr URL: http://romarr:8585 (or the network URL of Romarr).",
+          "step3": "Application Token: paste the token above. Sync Categories: pick the ones you want pushed."
+        },
+        "howTo": {
+          "title": "Where do I find the Prowlarr API key?",
+          "step1": "Open Prowlarr → Settings → General.",
+          "step2": "Section Security → API Key (32-character hex string).",
+          "step3": "Copy it and paste it below. This is the key Prowlarr generated when it was installed, not a Romarr key.",
+          "openLink": "Open Prowlarr → Settings → General"
+        },
+        "field": {
+          "name": "Name (free-form, for your records)",
+          "url": "Prowlarr URL",
+          "apiKey": "Prowlarr API key",
+          "apiKeyHint": "Visible at Prowlarr → Settings → General → API Key. A single all-permissions key per instance — no scope selection on Prowlarr's side.",
+          "syncLevel": "Sync level"
+        },
+        "syncLevel": {
+          "full_sync": {
+            "label": "Full sync",
+            "hint": "Romarr reads + Prowlarr can also push updates here (recommended)."
+          },
+          "add_only": {
+            "label": "Add only",
+            "hint": "Prowlarr can add new indexers but won't modify existing ones."
+          },
+          "disabled": {
+            "label": "Disabled",
+            "hint": "Registration kept but no automatic sync."
+          }
+        },
+        "submit": "Register",
+        "submitting": "Registering…",
+        "cancel": "Cancel",
+        "done": "Done",
+        "copy": "Copy token"
+      }
     },
     "empty": {
       "title": "No indexers configured",

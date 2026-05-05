@@ -761,7 +761,55 @@
       },
       "lastSync": "Dernière synchro {{when}}",
       "unregister": "Désinscrire",
-      "unregisterConfirm": "Désinscrire l'application Prowlarr « {{name}} » ? Les indexeurs déjà poussés resteront mais ne recevront plus de mises à jour."
+      "unregisterConfirm": "Désinscrire l'application Prowlarr « {{name}} » ? Les indexeurs déjà poussés resteront mais ne recevront plus de mises à jour.",
+      "register": {
+        "button": "Enregistrer Prowlarr",
+        "title": "Enregistrer une instance Prowlarr",
+        "subtitle": "Romarr lira la liste des indexeurs depuis Prowlarr. Vous récupérerez à la fin un jeton (app token) à coller dans Prowlarr pour la synchro inverse.",
+        "successTitle": "Prowlarr enregistré !",
+        "successBody": "Copiez le jeton ci-dessous puis collez-le dans Prowlarr — Settings → Apps → Romarr → Application Token.",
+        "tokenWarn": "Ce jeton ne sera affiché qu'UNE SEULE FOIS. Copiez-le maintenant. En cas de perte, supprimez l'enregistrement et recréez-le.",
+        "tokenLabel": "Jeton d'application (à coller dans Prowlarr)",
+        "afterTitle": "Étapes suivantes",
+        "after": {
+          "step1": "Dans Prowlarr → Settings → Apps → cliquez « + » → Romarr.",
+          "step2": "URL Romarr : http://romarr:8585 (ou l'URL réseau de Romarr).",
+          "step3": "Application Token : collez le jeton ci-dessus. Sync Categories : choisissez celles que vous voulez pousser."
+        },
+        "howTo": {
+          "title": "Où trouver la clé API Prowlarr ?",
+          "step1": "Ouvrez Prowlarr → Settings → General.",
+          "step2": "Section Security → API Key (chaîne de 32 caractères hex).",
+          "step3": "Copiez-la et collez-la ci-dessous. C'est la clé que Prowlarr a générée à son installation, pas une clé Romarr.",
+          "openLink": "Ouvrir Prowlarr → Settings → General"
+        },
+        "field": {
+          "name": "Nom (libre, pour vous y retrouver)",
+          "url": "URL Prowlarr",
+          "apiKey": "Clé API Prowlarr",
+          "apiKeyHint": "Visible dans Prowlarr → Settings → General → API Key. Une seule clé par instance, tous droits — pas de sélection de scopes côté Prowlarr.",
+          "syncLevel": "Niveau de synchronisation"
+        },
+        "syncLevel": {
+          "full_sync": {
+            "label": "Synchro complète",
+            "hint": "Romarr lit + Prowlarr peut aussi pousser des mises à jour ici (recommandé)."
+          },
+          "add_only": {
+            "label": "Ajout uniquement",
+            "hint": "Prowlarr peut ajouter de nouveaux indexeurs mais pas modifier ceux qui existent."
+          },
+          "disabled": {
+            "label": "Désactivé",
+            "hint": "Enregistrement créé mais aucune synchro automatique."
+          }
+        },
+        "submit": "Enregistrer",
+        "submitting": "Enregistrement…",
+        "cancel": "Annuler",
+        "done": "Terminé",
+        "copy": "Copier le jeton"
+      }
     },
     "empty": {
       "title": "Aucun indexeur configuré",

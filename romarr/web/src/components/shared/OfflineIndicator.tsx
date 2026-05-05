@@ -14,6 +14,7 @@
  * schedule.
  */
 
+import { WifiOff } from "lucide-react";
 import { useEffect, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -56,7 +57,7 @@ export function OfflineIndicator(): ReactElement | null {
         "text-amber-100 ring-1 ring-inset ring-amber-500/40",
       ].join(" ")}
     >
-      <span aria-hidden="true">📡</span>
+      <WifiOff size={12} aria-hidden="true" />
       <span>{t("connection.deviceOffline")}</span>
     </div>
   );

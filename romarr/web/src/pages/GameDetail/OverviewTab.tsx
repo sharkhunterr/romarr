@@ -12,6 +12,7 @@
  * are the constitutional anti-RomM-#1770 mechanism.
  */
 
+import { Loader2, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -528,7 +529,11 @@ function RefreshMetadataButton(props: { game: Game }): ReactElement {
           : undefined
       }
     >
-      <span aria-hidden="true">{refresh.isPending ? "⏳" : "🔄"}</span>
+      {refresh.isPending ? (
+        <Loader2 size={12} aria-hidden="true" className="animate-spin" />
+      ) : (
+        <RefreshCw size={12} aria-hidden="true" />
+      )}
       <span>{label}</span>
     </button>
   );

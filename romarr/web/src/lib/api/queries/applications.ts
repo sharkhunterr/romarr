@@ -24,6 +24,10 @@ import { ApiError, apiFetch } from "@/lib/api/client";
 import type { components } from "@/types/api/schema";
 
 export type Application = components["schemas"]["ApplicationRead"];
+export type ApplicationCreatePayload =
+  components["schemas"]["ApplicationCreate"];
+export type ApplicationCreateResult =
+  components["schemas"]["ApplicationCreateResult"];
 
 const KEY = ["admin", "applications"] as const;
 
@@ -49,6 +53,29 @@ export function useDeleteApplication(): UseMutationResult<
       apiFetch<void>(`/api/v3/applications/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: KEY });
+    },
+  });
+}
+
+export function useCreateApplication(): UseMutationResult<
+  ApplicationCreateResult,
+  ApiError,
+  ApplicationCreatePayload
+> {
+  const qc = useQueryClient();
+  return useMutation<
+    ApplicationCreateResult,
+    ApiError,
+    ApplicationCreatePayload
+  >({
+    mutationFn: (payload) =>
+      apiFetch<ApplicationCreateResult>("/api/v3/applications", {
+        method: "POST",
+        json: payload,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: KEY });
+      void qc.invalidateQueries({ queryKey: ["admin", "indexers"] });
     },
   });
 }

@@ -11,6 +11,7 @@
  * the dashboard slice.
  */
 
+import { Download } from "lucide-react";
 import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -38,7 +39,7 @@ export function InstallButton(): ReactElement | null {
         "focus-visible:ring-brand",
       ].join(" ")}
     >
-      <span aria-hidden="true">⬇️</span>
+      <Download size={16} aria-hidden="true" />
       <span>{t("ui.install.button")}</span>
     </button>
   );

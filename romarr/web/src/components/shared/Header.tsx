@@ -15,6 +15,7 @@
  * their own slices.
  */
 
+import { Search } from "lucide-react";
 import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -81,7 +82,7 @@ export function Header(): ReactElement {
             "focus-visible:ring-brand",
           ].join(" ")}
         >
-          <span aria-hidden="true">🔍</span>
+          <Search size={14} aria-hidden="true" />
           <span className="font-mono text-[0.6rem] uppercase tracking-wider text-zinc-500">
             ⌘K
           </span>

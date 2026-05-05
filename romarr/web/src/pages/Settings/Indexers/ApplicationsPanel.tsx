@@ -10,7 +10,8 @@
  * role to avoid noisy 403s for non-admin viewers.
  */
 
-import { type ReactElement } from "react";
+import { Plus } from "lucide-react";
+import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
@@ -20,6 +21,8 @@ import {
   type Application,
 } from "@/lib/api/queries/applications";
 import { useCurrentPrincipal } from "@/lib/api/queries/auth";
+
+import { RegisterApplicationModal } from "./RegisterApplicationModal";
 
 function formatDate(value: string | null, locale: string): string {
   if (!value) return "—";
@@ -98,6 +101,7 @@ export function ApplicationsPanel(): ReactElement | null {
   const principal = useCurrentPrincipal();
   const isAdmin = principal.data?.role === "admin";
   const apps = useApplications({ enabled: isAdmin });
+  const [registerOpen, setRegisterOpen] = useState(false);
 
   if (!isAdmin) return null;
 
@@ -107,9 +111,19 @@ export function ApplicationsPanel(): ReactElement | null {
         <h3 className="text-xs font-medium uppercase tracking-wider text-zinc-400">
           {t("indexers.applications.section")}
         </h3>
-        <span className="rounded bg-brand/20 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-brand">
-          {t("indexers.applications.adminOnly")}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="rounded bg-brand/20 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-brand">
+            {t("indexers.applications.adminOnly")}
+          </span>
+          <button
+            type="button"
+            onClick={() => setRegisterOpen(true)}
+            className="inline-flex items-center gap-1 rounded-md border border-brand bg-brand px-2.5 py-1 text-xs font-medium text-zinc-900 hover:bg-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            <Plus size={12} aria-hidden="true" />
+            {t("indexers.applications.register.button")}
+          </button>
+        </div>
       </header>
       <p className="text-[0.7rem] text-zinc-500">
         {t("indexers.applications.subtitle")}
@@ -132,6 +146,10 @@ export function ApplicationsPanel(): ReactElement | null {
             <ApplicationRow key={app.id} app={app} />
           ))}
         </ul>
+      )}
+
+      {registerOpen && (
+        <RegisterApplicationModal onClose={() => setRegisterOpen(false)} />
       )}
     </section>
   );

@@ -8,6 +8,7 @@
  * (mirrors the Tags `tag_in_use` flow from slice 51).
  */
 
+import { AlertTriangle, Check } from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -113,23 +114,27 @@ export function LibraryRow(props: LibraryRowProps): ReactElement {
 
         <div className="flex flex-wrap items-center gap-1.5 text-[0.6rem] uppercase tracking-wider">
           {library.platform_subfolders && (
-            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-400">
-              ✓ {t("mediaManagement.platformSubfolders")}
+            <span className="inline-flex items-center gap-1 rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-400">
+              <Check size={10} aria-hidden="true" />
+              {t("mediaManagement.platformSubfolders")}
             </span>
           )}
           {library.use_hardlinks && (
-            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-400">
-              ✓ {t("mediaManagement.useHardlinks")}
+            <span className="inline-flex items-center gap-1 rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-400">
+              <Check size={10} aria-hidden="true" />
+              {t("mediaManagement.useHardlinks")}
             </span>
           )}
           {library.delete_after_import && (
-            <span className="rounded bg-amber-950/40 px-1.5 py-0.5 text-amber-400">
-              ⚠ {t("mediaManagement.deleteAfterImport")}
+            <span className="inline-flex items-center gap-1 rounded bg-amber-950/40 px-1.5 py-0.5 text-amber-400">
+              <AlertTriangle size={10} aria-hidden="true" />
+              {t("mediaManagement.deleteAfterImport")}
             </span>
           )}
           {library.keep_dump_history && (
-            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-400">
-              ✓ {t("mediaManagement.keepDumpHistory")}
+            <span className="inline-flex items-center gap-1 rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-400">
+              <Check size={10} aria-hidden="true" />
+              {t("mediaManagement.keepDumpHistory")}
             </span>
           )}
           <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-400">
