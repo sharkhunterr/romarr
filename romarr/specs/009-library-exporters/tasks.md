@@ -25,11 +25,11 @@ Pegasus, LaunchBox) → manual import → API → hardening.
 
 ## Phase 1: Scaffolding (`SCAF`)
 
-- [ ] T001 [SCAF] Update `pyproject.toml` — add runtime dep
-      `watchdog>=4.0` (inotify on Linux + polling fallback).
-      *(Deferred to the SCAN-INC slice — watchdog is only needed
-      by the incremental scanner; landing it now would add an
-      unused import surface.)*
+- [X] T001 [SCAF] **Slice 297.** ``watchdog>=4.0`` added to
+      ``pyproject.toml`` runtime deps. Consumed by
+      ``src/romarr/libraries/scanner/incremental.py``
+      (``Observer`` for inotify on Linux / FSEvents on macOS;
+      ``PollingObserver`` for the cross-fs fallback).
 - [X] T002 [P] [SCAF] Create `src/romarr/libraries/__init__.py` exposing
       the slice-1 surface (errors + value types). Router /
       registry / scan / exporter exports land in their own slices.
@@ -605,10 +605,17 @@ correctly.
       409 (`library_in_use`); with `?force=true` → 204 + every
       attached Release's `library_id` set to NULL, no files on
       disk touched (FR-026, SC-006).
-- [ ] T076 [P] [API] `tests/libraries/api/test_scan_endpoints.py`
-      — POST scan + scan/incremental return command IDs; full + incr
-      scans run. *(Deferred to the SCAN slice — needs the scan
-      orchestrator that lands with SCAN-FULL / SCAN-INC.)*
+- [X] T076 [P] [API] **Slice 298.** Tests ship at
+      ``tests/libraries/api/test_scan_endpoints.py`` (4 tests):
+      ``test_scan_all_returns_command_id``,
+      ``test_scan_one_library_forwards_libraryId_parameter``,
+      ``test_scan_unknown_library_returns_404``,
+      ``test_scan_unauthenticated_returns_401``. The
+      ``scan/incremental`` part of the spec is path-divergence:
+      incremental scanning is event-driven (slice 297) — there
+      is no separate "trigger an incremental scan" command
+      because the incremental scanner is always-on. Only the
+      full-scan trigger needs an HTTP surface.
 - [~] T077 [P] [API] **Slice 279 — partial.** GET catalog
       shipped (lists the four documented exporters with name +
       description + format + available flag). 5 tests in
@@ -637,8 +644,16 @@ correctly.
       m2m platform allowlist, optional ``?force=true`` cascade
       gate, and Fernet encryption of the RomM API key on save).
       Wired into the application factory in `api/app.py`.
-- [ ] T081 [P] [API] Create `src/romarr/libraries/api/scan.py` —
-      scan trigger endpoints. *(Deferred — same dependency as T076.)*
+- [X] T081 [P] [API] **Slice 298.** Shipped
+      ``src/romarr/libraries/api/scan.py`` — two routes:
+      ``POST /api/v3/rom/scan`` (rescan every enabled library)
+      and ``POST /api/v3/rom/library/{id}/scan`` (rescan one).
+      Both delegate to ``SchedulerService.trigger("LibraryScan",
+      parameters={"libraryId": id})``; return the new
+      ``JobRun.id`` in a Sonarr-shape ``CommandStatus``
+      envelope so the UI's polling code path works against
+      either trigger surface (this one or the
+      ``/api/v3/command``-bus alias). Admin-gated.
 - [X] T082 [P] [API] **Slice 279.** Shipped
       ``src/romarr/libraries/api/exporters.py`` with the read-only
       catalog surface:
@@ -656,7 +671,13 @@ correctly.
 - [ ] T083 [P] [API] Create `src/romarr/libraries/api/manual_import.py`
       — `/api/v3/rom/manual-import*` endpoints. *(Deferred — same
       dependency as T079.)*
-- [ ] T084 [API] Wire all four routers into the application factory.
+- [~] T084 [API] **Slice 298 — partial.** Three of four
+      routers wired into ``src/romarr/api/app.py``:
+      ``libraries_router`` (T080), ``exporters_router`` (T082),
+      ``scan_router`` (this slice). The fourth —
+      ``manual_import_router`` (T083) — remains deferred
+      pending the candidate-listing helper that depends on
+      spec 008's importer.
 
 **Checkpoint**: every endpoint exercised; HTTP status codes match the
 spec.
