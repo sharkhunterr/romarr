@@ -939,13 +939,17 @@ viewport; SC-002 (60 fps on 10 000 items) is met in a perf test.
 
 ### Tests
 
-- [~] T091 [P] [P-ACT] `test_queue_live_updates` **partial**
-      — `web/src/pages/Activity/index.test.tsx` ships 3
-      tests covering tab routing (Queue active by default,
-      Queue empty-state, Cutoff…er, History switch) but the
-      live-updates path itself stays deferred until the
-      spec 013 T072 WS bridge forwards `queueUpdated` events.
-      Today's QueueList still polls every 5s instead.
+- [X] T091 [P] [P-ACT] **Slice 277.** Live updates now flow
+      end-to-end. Backend ``DELETE /api/v3/queue/{id}`` emits
+      ``queueUpdated`` via the WS bridge (spec 013 slice 275);
+      the frontend ``useWebSocketBridge`` already invalidates
+      ``["queue"]`` on ``queueUpdated`` (slice 49); QueueList
+      re-fetches on the cache invalidation (slice 67). The
+      polling fallback (5s ``refetchInterval``) stays as a safety
+      net for the WS-disconnected case (FR-007a). Queue-write
+      paths from spec 013 T046 retry / spec 005 reconciler will
+      add ``upserted`` envelopes alongside the existing
+      ``deleted`` one.
 - [~] T092 [P] [P-ACT] Swipe-to-remove **deferred** — needs
       `@use-gesture/react` plus the spec 013 queue DELETE
       endpoint (T045).

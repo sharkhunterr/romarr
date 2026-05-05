@@ -395,6 +395,35 @@ class DatUpdateAdapter(_AdapterBase):
         ]
         async with sessionmaker() as session:
             result = await run_dat_update(session, sources=specs)
+
+        # Slice 277 — emit OnDatUpdate so live operator sessions
+        # see the cache refresh land. We publish one
+        # ``OnDatUpdate`` per successfully ingested source (skipping
+        # both errored fetches and idempotent re-ingests where
+        # nothing actually changed). Best-effort: a missing channel
+        # is a silent no-op.
+        event_channel = getattr(context, "event_channel", None)
+        if event_channel is not None:
+            from romarr.notifications.types import OnDatUpdatePayload
+
+            for outcome in result.outcomes:
+                if outcome.error is not None or outcome.skipped_idempotent:
+                    continue
+                try:
+                    await event_channel.publish(
+                        OnDatUpdatePayload(
+                            source=outcome.spec.source,
+                            platform=str(outcome.spec.platform_id),
+                            entries_count=outcome.inserted,
+                            version="",
+                        )
+                    )
+                except Exception:
+                    _logger.exception(
+                        "DatUpdateAdapter ws emission failed for source=%s",
+                        outcome.spec.source,
+                    )
+
         return JobResult(
             status=JobStatus.SUCCESS,
             summary={

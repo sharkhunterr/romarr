@@ -84,6 +84,13 @@ class JobContext(BaseModel):
     # through here. Stays optional so existing tests that
     # build a JobContext without the field keep working.
     sessionmaker: Any = None
+    # Slice 277 — optional EventChannel reference. When wired,
+    # runners (DatUpdate / future) publish their per-event
+    # payloads through it (``OnDatUpdate`` / etc.) and the WS
+    # bridge fans out to live operator sessions automatically.
+    # Tests build a JobContext without this field; runners
+    # short-circuit emission when None.
+    event_channel: Any = None
 
 
 class JobResult(BaseModel):

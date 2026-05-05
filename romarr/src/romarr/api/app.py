@@ -303,6 +303,7 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
             runners=build_default_registry(health_engine=health_engine),
             cancellation_registry=cancellation_registry,
             ws_bridge=ws_bridge,
+            event_channel=event_channel,
         )
         try:
             await scheduler.start()

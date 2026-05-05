@@ -417,15 +417,16 @@ this one.
       tests the same contract (one provider call per Game)
       without wiring respx for every provider's HTTP
       surface.
-- [~] T047 [P] [NEWRUN] Download + ingest covered by slice 180 —
-      ``tests/tasks/runners/test_dat_update.py::test_run_dat_update_downloads_and_ingests``
-      uses a fetcher fake (cleaner than respx for our case) to
-      verify the bytes round-trip through ``DatManager.ingest``
-      and rows land in ``dat_entry``. ``OnDatUpdate`` event
-      emission is deferred — the notifications fan-out helper
-      hasn't been surfaced yet (same story as the bootstrap
-      slice 173 noted). Lands when an ``emit_event(payload)``
-      entry point exists on the dispatcher.
+- [X] T047 [P] [NEWRUN] **Slice 277.** Download + ingest
+      covered by slice 180; ``OnDatUpdate`` event emission landed
+      in this slice. The ``DatUpdateAdapter`` now reads
+      ``context.event_channel`` (threaded through by
+      ``SchedulerService`` from ``app.state.event_channel``) and
+      publishes one ``OnDatUpdatePayload`` per successfully
+      ingested source (skipping idempotent re-ingests + errored
+      fetches). The WS bridge auto-fans these to live operator
+      sessions as ``systemMessage`` envelopes. Test:
+      ``test_dat_update_adapter_emits_on_dat_update_event``.
 - [~] T048 [P] [NEWRUN] Runner half covered by slice 181 —
       ``tests/tasks/runners/test_auto_check_added.py`` verifies
       ``run_search_on_add`` loads the Game, calls the injected

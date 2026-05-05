@@ -119,6 +119,7 @@ class SchedulerService:
         auto_pause: AutoPause | None = None,
         cancellation_registry: CancellationRegistry | None = None,
         ws_bridge: Any = None,
+        event_channel: Any = None,
     ) -> None:
         self._session_factory = session_factory
         self._runners = dict(runners)
@@ -131,6 +132,13 @@ class SchedulerService:
         # bridge errors are caught + logged so scheduler dispatch
         # never depends on WS delivery.
         self._ws_bridge = ws_bridge
+        # Optional spec 011 EventChannel — passed into JobContext
+        # so per-runner emitters (DatUpdate's ``OnDatUpdate``,
+        # backup's outcome events, etc.) can publish through the
+        # canonical fan-out point. Test contexts construct a
+        # JobContext without it; runners short-circuit emission
+        # when None.
+        self._event_channel = event_channel
         self._scheduler = AsyncIOScheduler()
         self._inflight: dict[str, set[asyncio.Task[None]]] = {}
         self._inflight_lock = asyncio.Lock()
@@ -412,6 +420,7 @@ class SchedulerService:
             # do real DB work instead of falling through to
             # their stub branch when fired by the actual cron.
             sessionmaker=self._session_factory,
+            event_channel=self._event_channel,
         )
         # Register with the cancellation registry (when wired)
         # so the cancel-endpoint can signal this run by id.

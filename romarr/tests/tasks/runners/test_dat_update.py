@@ -94,6 +94,79 @@ async def test_run_dat_update_downloads_and_ingests(
 
 
 @pytest.mark.asyncio
+async def test_dat_update_adapter_emits_on_dat_update_event(
+    async_session: AsyncSession,
+) -> None:
+    """Slice 277 / spec 012 T047 — when a JobContext carries an
+    ``event_channel``, the DatUpdateAdapter publishes one
+    ``OnDatUpdate`` per successfully ingested source."""
+    import asyncio
+    from datetime import UTC, datetime
+
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+
+    from romarr.notifications.types import OnDatUpdatePayload
+    from romarr.tasks.runners.adapters import DatUpdateAdapter
+    from romarr.tasks.types import JobContext, TriggerKind
+
+    md = Platform(slug="md", name="MD")
+    async_session.add(md)
+    await async_session.commit()
+    md_id = md.id
+
+    async def _fake_fetch(url: str) -> bytes:
+        return _LOGIQX_MD
+
+    captured: list[OnDatUpdatePayload] = []
+
+    class _ChannelStub:
+        async def publish(self, event):  # type: ignore[no-untyped-def]
+            assert isinstance(event, OnDatUpdatePayload)
+            captured.append(event)
+
+    sm = async_sessionmaker(async_session.bind, expire_on_commit=False)
+    context = JobContext(
+        job_id="DatUpdate",
+        job_run_id=1,
+        started_at=datetime.now(UTC),
+        triggered_by=TriggerKind.MANUAL,
+        progress_callback=lambda _c, _t, _m: None,
+        cancellation_event=asyncio.Event(),
+        parameters={
+            "sources": [
+                {
+                    "url": "https://example/md.dat",
+                    "source": "no-intro",
+                    "platform_id": md_id,
+                },
+            ],
+            # The adapter doesn't take a fetcher param yet; the
+            # default fetcher would 502. We work around by
+            # monkey-patching the runner's _default_fetcher via
+            # the test fixture below.
+        },
+        sessionmaker=sm,
+        event_channel=_ChannelStub(),
+    )
+
+    # Monkey-patch the default fetcher so the adapter goes through
+    # the real code path without a network call.
+    import romarr.tasks.runners.dat_update as _du
+
+    orig = _du._default_fetcher
+    _du._default_fetcher = _fake_fetch  # type: ignore[assignment]
+    try:
+        adapter = DatUpdateAdapter()
+        await adapter._run(context)
+    finally:
+        _du._default_fetcher = orig  # type: ignore[assignment]
+
+    assert len(captured) == 1
+    assert captured[0].source == "no-intro"
+    assert captured[0].platform == str(md_id)
+
+
+@pytest.mark.asyncio
 async def test_run_dat_update_records_per_source_failure(
     async_session: AsyncSession,
 ) -> None:
