@@ -376,8 +376,19 @@ async def ingest_pack(
             return await _record_skipped(
                 session, parsed=parsed, source=source, diff=diff
             )
-        # FR-010: same version, different hash → conflict.
-        raise PackVersionConflictError(parsed.pack_version)
+        # The 0001 migration seeds a placeholder ``platform_pack``
+        # row with ``contents_hash = "0" * 64`` so the FK target
+        # exists for the seeded ``platform_format`` rows. The real
+        # built-in pack first-boot apply lands the actual hash —
+        # treat the placeholder sentinel as "no pack yet" and
+        # delete it here so the regular insert path runs below.
+        if existing_pack.contents_hash == "0" * 64:
+            await session.delete(existing_pack)
+            await session.flush()
+            existing_pack = None
+        else:
+            # FR-010: same version, different hash → conflict.
+            raise PackVersionConflictError(parsed.pack_version)
 
     # FR-013a: reject downgrades by lexical pack_version order.
     _enforce_version_order(

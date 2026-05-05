@@ -12,6 +12,7 @@
  * Strings resolve through the `addNew` namespace.
  */
 
+import { Gamepad2, Plus } from "lucide-react";
 import { useEffect, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
@@ -56,6 +57,30 @@ function ConfidenceBar(props: { value: number }): ReactElement {
   );
 }
 
+function CoverThumb(props: {
+  url: string | null | undefined;
+  title: string;
+}): ReactElement {
+  if (!props.url) {
+    return (
+      <div
+        aria-hidden="true"
+        className="flex h-20 w-14 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-zinc-800 to-zinc-900 ring-1 ring-zinc-800"
+      >
+        <Gamepad2 size={20} className="text-zinc-600" aria-hidden="true" />
+      </div>
+    );
+  }
+  return (
+    <img
+      src={props.url}
+      alt={props.title}
+      loading="lazy"
+      className="h-20 w-14 shrink-0 rounded-md object-cover ring-1 ring-zinc-800"
+    />
+  );
+}
+
 function LookupRow(props: {
   row: GameLookupRow;
   onAdd: (row: GameLookupRow) => void;
@@ -65,39 +90,48 @@ function LookupRow(props: {
   return (
     <li
       className={[
-        "flex flex-col gap-2 rounded-md border border-zinc-800",
+        "flex gap-3 rounded-md border border-zinc-800",
         "bg-zinc-900/40 p-3",
       ].join(" ")}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-zinc-100">
-            {row.title}
-          </p>
-          {(row.platformName || row.platformSlug) && (
-            <p className="mt-0.5 truncate text-[0.7rem] text-brand">
-              {row.platformName ?? row.platformSlug}
+      <CoverThumb url={row.coverUrl} title={row.title} />
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-zinc-100">
+              {row.title}
+              {row.releaseYear && (
+                <span className="ml-1.5 font-mono text-xs font-normal text-zinc-500">
+                  ({row.releaseYear})
+                </span>
+              )}
             </p>
-          )}
+            {(row.platformName || row.platformSlug) && (
+              <p className="mt-0.5 truncate text-[0.7rem] text-brand">
+                {row.platformName ?? row.platformSlug}
+              </p>
+            )}
+          </div>
+          <ConfidenceBar value={row.confidence} />
         </div>
-        <ConfidenceBar value={row.confidence} />
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 text-[0.65rem] text-zinc-500">
-        <div className="flex flex-wrap items-center gap-2">
-          <ProviderPill name={row.providerName} />
-          <span className="font-mono">id: {row.providerGameId}</span>
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-2 text-[0.65rem] text-zinc-500">
+          <div className="flex flex-wrap items-center gap-2">
+            <ProviderPill name={row.providerName} />
+            <span className="font-mono">id: {row.providerGameId}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => props.onAdd(row)}
+            className={[
+              "inline-flex items-center gap-1 rounded-md bg-brand px-2.5 py-1 text-[0.65rem] font-medium text-zinc-900",
+              "hover:bg-brand-300",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+            ].join(" ")}
+          >
+            <Plus size={12} aria-hidden="true" />
+            {t("addButton")}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => props.onAdd(row)}
-          className={[
-            "rounded-md bg-brand px-2.5 py-1 text-[0.65rem] font-medium text-zinc-900",
-            "hover:bg-brand-300",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-          ].join(" ")}
-        >
-          {t("addButton")}
-        </button>
       </div>
     </li>
   );

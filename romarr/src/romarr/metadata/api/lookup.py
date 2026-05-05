@@ -126,6 +126,8 @@ class GameLookupRow(BaseModel):
     confidence: float
     platform_slug: str | None = Field(default=None, alias="platformSlug")
     platform_name: str | None = Field(default=None, alias="platformName")
+    release_year: int | None = Field(default=None, alias="releaseYear")
+    cover_url: str | None = Field(default=None, alias="coverUrl")
 
 
 @router.get(
@@ -219,6 +221,8 @@ async def lookup_games(
                 if row.platform_slug
                 else None
             ),
+            releaseYear=row.release_year,
+            coverUrl=row.cover_url,
         )
         for index, row in enumerate(truncated)
     ]

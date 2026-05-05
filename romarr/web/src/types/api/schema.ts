@@ -3021,6 +3021,8 @@ export interface components {
         GameLookupRow: {
             /** Confidence */
             confidence: number;
+            /** Coverurl */
+            coverUrl?: string | null;
             /** Platformname */
             platformName?: string | null;
             /** Platformslug */
@@ -3031,6 +3033,8 @@ export interface components {
             providerName: string;
             /** Rank */
             rank: number;
+            /** Releaseyear */
+            releaseYear?: number | null;
             /** Title */
             title: string;
         };

@@ -1,18 +1,32 @@
 /**
  * Settings sidebar / mobile list nav (T105, T117/T119 partial).
  *
- * Twelve entries, in workflow order. Desktop: 16-rem sidebar
- * column (md+). Mobile: vertical list above the outlet (the
- * grid collapses to a single column).
+ * Twelve entries in workflow order. Desktop: 16-rem sidebar column
+ * (md+). Mobile: vertical list above the outlet.
  *
- * Tags + UI are the implemented sub-pages today (slices 51 +
- * 56); the rest land in their own slices and currently render
- * the placeholder. The "shipped" badge marks pages that have a
- * real implementation behind them.
+ * Icons resolve to lucide-react components (slice 329) — replacing
+ * the earlier emoji set with consistent outline icons that follow
+ * the brand's modern dark aesthetic.
  *
- * Labels resolve through `settings:nav.<slug>` (slice 56).
+ * Labels resolve through `settings:nav.<slug>`.
  */
 
+import {
+  Bell,
+  Database,
+  Download,
+  FileQuestion,
+  FolderTree,
+  Gamepad2,
+  HelpCircle,
+  Library,
+  Palette,
+  Search,
+  Settings as SettingsIcon,
+  SlidersHorizontal,
+  Tag,
+  type LucideIcon,
+} from "lucide-react";
 import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
@@ -21,24 +35,24 @@ export interface SettingsNavEntry {
   to: string;
   /** Path slug used as the i18n key under `settings:nav.<slug>`. */
   slug: string;
-  emoji: string;
+  Icon: LucideIcon;
   shipped?: boolean;
 }
 
 export const SETTINGS_NAV_ENTRIES: readonly SettingsNavEntry[] = [
-  { to: "/settings/profiles", slug: "profiles", emoji: "🎚️", shipped: true },
-  { to: "/settings/media-management", slug: "media-management", emoji: "📁", shipped: true },
-  { to: "/settings/quality-definitions", slug: "quality-definitions", emoji: "📐" },
-  { to: "/settings/indexers", slug: "indexers", emoji: "🔍", shipped: true },
-  { to: "/settings/download-clients", slug: "download-clients", emoji: "⬇️", shipped: true },
-  { to: "/settings/dat-sources", slug: "dat-sources", emoji: "📋" },
-  { to: "/settings/metadata-sources", slug: "metadata-sources", emoji: "🗂️", shipped: true },
-  { to: "/settings/platforms", slug: "platforms", emoji: "🎮", shipped: true },
-  { to: "/settings/connect", slug: "connect", emoji: "🔔", shipped: true },
-  { to: "/settings/tags", slug: "tags", emoji: "🏷️", shipped: true },
-  { to: "/settings/unidentified", slug: "unidentified", emoji: "❓", shipped: true },
-  { to: "/settings/ui", slug: "ui", emoji: "🎨", shipped: true },
-  { to: "/settings/general", slug: "general", emoji: "⚙️", shipped: true },
+  { to: "/settings/profiles", slug: "profiles", Icon: SlidersHorizontal, shipped: true },
+  { to: "/settings/media-management", slug: "media-management", Icon: FolderTree, shipped: true },
+  { to: "/settings/quality-definitions", slug: "quality-definitions", Icon: Library },
+  { to: "/settings/indexers", slug: "indexers", Icon: Search, shipped: true },
+  { to: "/settings/download-clients", slug: "download-clients", Icon: Download, shipped: true },
+  { to: "/settings/dat-sources", slug: "dat-sources", Icon: Database },
+  { to: "/settings/metadata-sources", slug: "metadata-sources", Icon: FileQuestion, shipped: true },
+  { to: "/settings/platforms", slug: "platforms", Icon: Gamepad2, shipped: true },
+  { to: "/settings/connect", slug: "connect", Icon: Bell, shipped: true },
+  { to: "/settings/tags", slug: "tags", Icon: Tag, shipped: true },
+  { to: "/settings/unidentified", slug: "unidentified", Icon: HelpCircle, shipped: true },
+  { to: "/settings/ui", slug: "ui", Icon: Palette, shipped: true },
+  { to: "/settings/general", slug: "general", Icon: SettingsIcon, shipped: true },
 ];
 
 function entryClass(isActive: boolean): string {
@@ -67,9 +81,7 @@ export function SettingsNav(): ReactElement {
           end
           className={({ isActive }) => entryClass(isActive)}
         >
-          <span aria-hidden="true" className="text-base leading-none">
-            {entry.emoji}
-          </span>
+          <entry.Icon size={16} aria-hidden="true" className="shrink-0" />
           <span className="flex-1">{t(`nav.${entry.slug}`)}</span>
           {entry.shipped !== true && (
             <span

@@ -8,6 +8,18 @@
  * happy-path mutation surfaces immediately on success.
  */
 
+import {
+  BookOpen,
+  Clock,
+  Database,
+  Image as ImageIcon,
+  KeyRound,
+  Monitor,
+  Package,
+  Puzzle,
+  Trophy,
+  type LucideIcon,
+} from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -20,16 +32,16 @@ import {
 
 import { ConfigureProviderModal } from "./ConfigureProviderModal";
 
-const PROVIDER_EMOJI: Record<string, string> = {
-  igdb: "🎮",
-  screenscraper: "🖥️",
-  mobygames: "📚",
-  launchbox: "📦",
-  steamgriddb: "🖼️",
-  retroachievements: "🏆",
-  howlongtobeat: "⏱️",
-  hasheous: "🔑",
-  playmatch: "🎯",
+const PROVIDER_ICON: Record<string, LucideIcon> = {
+  igdb: Database,
+  screenscraper: Monitor,
+  mobygames: BookOpen,
+  launchbox: Package,
+  steamgriddb: ImageIcon,
+  retroachievements: Trophy,
+  howlongtobeat: Clock,
+  hasheous: KeyRound,
+  playmatch: Puzzle,
 };
 
 type Health = "ok" | "fail" | "untested";
@@ -71,7 +83,7 @@ export function ProviderRow(props: ProviderRowProps): ReactElement {
     `metadataSources.providerName.${provider.provider_name}`,
     { defaultValue: provider.provider_name },
   );
-  const emoji = PROVIDER_EMOJI[provider.provider_name] ?? "🗂️";
+  const Icon = PROVIDER_ICON[provider.provider_name] ?? Database;
   const health = deriveHealth(provider);
 
   function onToggle(): void {
@@ -100,9 +112,12 @@ export function ProviderRow(props: ProviderRowProps): ReactElement {
   return (
     <li className="rounded-md border border-zinc-800 bg-zinc-900/40 p-3">
       <div className="flex items-start gap-3">
-        <span aria-hidden="true" className="mt-0.5 text-lg leading-none">
-          {emoji}
-        </span>
+        <div
+          aria-hidden="true"
+          className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-800/60 text-zinc-300"
+        >
+          <Icon size={14} />
+        </div>
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="truncate text-sm font-medium text-zinc-100">

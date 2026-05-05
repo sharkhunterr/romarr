@@ -153,9 +153,12 @@ class IGDBProvider(MetadataProvider):
         # domain model binds a Game to exactly one Platform, so we
         # explode each IGDB hit into one row per (game, platform)
         # pair so the operator picks both the title AND the
-        # platform from the search results.
+        # platform from the search results. We also pull
+        # ``first_release_date`` + ``cover.image_id`` so the AddNew
+        # page can render year + thumbnail per row.
         body = (
-            "fields id, name, slug, platforms;"
+            "fields id, name, slug, platforms, first_release_date, "
+            "cover.image_id;"
             f' where name ~ *"{_escape(query)}"*'
         )
         if platform_slug:
@@ -181,6 +184,26 @@ class IGDBProvider(MetadataProvider):
             if not name:
                 continue
             confidence = _substring_confidence(query, name)
+            release_year: int | None = None
+            ts = row.get("first_release_date")
+            if ts:
+                try:
+                    from datetime import UTC, datetime as _dt
+
+                    release_year = _dt.fromtimestamp(int(ts), UTC).year
+                except (ValueError, OSError):
+                    release_year = None
+            cover_url: str | None = None
+            cover = row.get("cover")
+            if isinstance(cover, dict):
+                image_id = cover.get("image_id")
+                if image_id:
+                    # IGDB's image CDN — `t_cover_small` is the 90x128
+                    # pre-cropped thumbnail variant suited to a list row.
+                    cover_url = (
+                        "https://images.igdb.com/igdb/image/upload/"
+                        f"t_cover_small/{image_id}.jpg"
+                    )
             platform_ids = row.get("platforms") or []
             if not platform_ids:
                 # IGDB row with no platform metadata — emit one
@@ -191,6 +214,8 @@ class IGDBProvider(MetadataProvider):
                         provider_game_id=str(row["id"]),
                         title=name,
                         confidence=confidence,
+                        release_year=release_year,
+                        cover_url=cover_url,
                     )
                 )
                 continue
@@ -205,6 +230,8 @@ class IGDBProvider(MetadataProvider):
                         title=name,
                         confidence=confidence,
                         platform_slug=slug,
+                        release_year=release_year,
+                        cover_url=cover_url,
                     )
                 )
         return out

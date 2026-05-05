@@ -71,6 +71,18 @@ class GameSearchResult(BaseModel):
         default=None,
         description="Human-readable platform name (e.g. 'Mega Drive').",
     )
+    release_year: int | None = Field(
+        default=None,
+        description="First-release year for the candidate (provider-supplied).",
+    )
+    cover_url: str | None = Field(
+        default=None,
+        description=(
+            "Absolute URL to a small cover thumbnail; the AddNew page "
+            "renders it as a hero image so the operator can disambiguate "
+            "candidates visually."
+        ),
+    )
 
 
 class GameMetadata(BaseModel):

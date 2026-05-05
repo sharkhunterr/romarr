@@ -12,6 +12,14 @@
  * Strings are i18n-resolved (slice 55).
  */
 
+import {
+  Activity,
+  Library as LibraryIcon,
+  Search,
+  Settings,
+  Star,
+  type LucideIcon,
+} from "lucide-react";
 import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
@@ -22,23 +30,23 @@ type RouteEntry = {
   kind: "route";
   to: string;
   i18nKey: "library" | "wanted" | "activity" | "settings";
-  emoji: string;
+  Icon: LucideIcon;
 };
 
 type ActionEntry = {
   kind: "action";
   i18nKey: "search";
-  emoji: string;
+  Icon: LucideIcon;
 };
 
 type NavEntry = RouteEntry | ActionEntry;
 
 const ENTRIES: readonly NavEntry[] = [
-  { kind: "route", to: "/library", i18nKey: "library", emoji: "📦" },
-  { kind: "route", to: "/wanted", i18nKey: "wanted", emoji: "⭐" },
-  { kind: "route", to: "/activity", i18nKey: "activity", emoji: "📡" },
-  { kind: "route", to: "/settings", i18nKey: "settings", emoji: "⚙️" },
-  { kind: "action", i18nKey: "search", emoji: "🔍" },
+  { kind: "route", to: "/library", i18nKey: "library", Icon: LibraryIcon },
+  { kind: "route", to: "/wanted", i18nKey: "wanted", Icon: Star },
+  { kind: "route", to: "/activity", i18nKey: "activity", Icon: Activity },
+  { kind: "route", to: "/settings", i18nKey: "settings", Icon: Settings },
+  { kind: "action", i18nKey: "search", Icon: Search },
 ];
 
 function entryClass(isActive: boolean): string {
@@ -67,9 +75,7 @@ function NavEntryNode(props: { entry: NavEntry; index: number }): ReactElement {
         onClick={openSearch}
         className={entryClass(false)}
       >
-        <span aria-hidden="true" className="text-base leading-none">
-          {entry.emoji}
-        </span>
+        <entry.Icon size={20} aria-hidden="true" />
         <span>{t(`nav.${entry.i18nKey}`)}</span>
       </button>
     );
@@ -82,9 +88,7 @@ function NavEntryNode(props: { entry: NavEntry; index: number }): ReactElement {
       end={entry.to === "/library"}
       className={({ isActive }) => entryClass(isActive)}
     >
-      <span aria-hidden="true" className="text-base leading-none">
-        {entry.emoji}
-      </span>
+      <entry.Icon size={20} aria-hidden="true" />
       <span>{t(`nav.${entry.i18nKey}`)}</span>
     </NavLink>
   );
