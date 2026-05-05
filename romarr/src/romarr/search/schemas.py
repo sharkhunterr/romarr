@@ -129,6 +129,17 @@ class ManualSearchRequest(_Base):
     ``would_auto_reject=true`` so the operator can decide."""
 
 
+class ReleaseSearchRequest(_Base):
+    """POST /api/v3/rom/search/release/{id}.
+
+    The query is derived server-side from the Release's parent Game;
+    the operator only filters indexers and toggles strict mode.
+    """
+
+    indexer_ids: list[int] | None = None
+    strict: bool = False
+
+
 class GrabRequest(_Base):
     """POST /api/v3/rom/release/grab.
 
@@ -170,6 +181,7 @@ __all__ = [
     "CommandRequest",
     "GrabRequest",
     "ManualSearchRequest",
+    "ReleaseSearchRequest",
     "SearchCacheRead",
     "SearchHistoryRead",
 ]

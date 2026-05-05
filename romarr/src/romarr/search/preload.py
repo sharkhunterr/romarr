@@ -175,6 +175,48 @@ async def preload_default_profiles(
     return out
 
 
+async def preload_library_profiles(
+    session: AsyncSession, library_id: int
+) -> dict[str, object]:
+    """Return the five profiles bound to one Library.
+
+    Mirrors :func:`preload_default_profiles` but resolves each profile
+    via the Library's FK columns. Used by the release-search round so
+    the gate set matches the Library that owns the Release.
+    """
+    from romarr.libraries.models import Library
+
+    library = (
+        await session.execute(select(Library).where(Library.id == library_id))
+    ).scalar_one_or_none()
+    if library is None:
+        return {
+            "quality": None,
+            "region": None,
+            "dump": None,
+            "language": None,
+            "naming": None,
+        }
+    bindings = {
+        "quality": (QualityProfile, library.quality_profile_id),
+        "region": (RegionProfile, library.region_profile_id),
+        "dump": (DumpProfile, library.dump_profile_id),
+        "language": (LanguageProfile, library.language_profile_id),
+        "naming": (NamingProfile, library.naming_profile_id),
+    }
+    out: dict[str, object] = {}
+    for label, (model_cls, profile_id) in bindings.items():
+        if profile_id is None:
+            out[label] = None
+            continue
+        out[label] = (
+            await session.execute(
+                select(model_cls).where(model_cls.id == profile_id)
+            )
+        ).scalar_one_or_none()
+    return out
+
+
 async def preload_custom_formats(session: AsyncSession) -> list[CustomFormat]:
     """Return every Custom Format (no library scope until spec 009)."""
     return list((await session.execute(select(CustomFormat))).scalars().all())

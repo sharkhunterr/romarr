@@ -410,12 +410,13 @@ blocklist.
 - [X] T061 [P] [API] `tests/search/api/test_search_endpoints.py::test_manual_endpoint`
       — POST `/api/v3/rom/search/manual`; asserts the response is a
       `SearchRoundReport` JSON.
-- [ ] T062 [P] [API] `tests/search/api/test_search_endpoints.py::test_release_search_endpoint`
+- [X] T062 [P] [API] `tests/search/api/test_search_endpoints.py::test_release_search_endpoint`
       — POST `/api/v3/rom/search/release/{id}`; the round uses the
-      Game's bound profiles.
-      *(Deferred — needs spec 009's library bindings to scope the
-      bound profile set per Library; for MVP `manual_search` against
-      the factory-default profiles is sufficient.)*
+      Release's bound Library profiles (falls back to factory-default
+      when ``library_id`` is None — the Wanted-pre-import case).
+      Wires `run_release_search` (new round) + `preload_library_profiles`
+      (new helper) + `ReleaseSearchRequest` schema + `release_search`
+      route handler.
 - [X] T063 [P] [API] `tests/search/api/test_grab_endpoint.py::test_grab_normal`
       — POST `/api/v3/rom/release/grab`; the chosen release is
       dispatched and `search_history` is updated. *(Coverage via
