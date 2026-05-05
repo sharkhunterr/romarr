@@ -44,6 +44,8 @@ dependencies = [
     # Utility
     "structlog>=24.1",
     "tenacity>=8.2",
+    # Filesystem watching (spec 009 incremental scanner)
+    "watchdog>=4.0",
     # Platform Packs (spec 003)
     "PyYAML>=6.0",
     "jsonschema>=4.21",

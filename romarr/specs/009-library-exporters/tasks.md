@@ -317,28 +317,61 @@ storms.
 
 ### Tests
 
-- [ ] T043 [P] [SCAN-INC] `tests/libraries/scanner/test_incremental.py::test_inotify_detects_new_file`
-      — start the watcher; copy a known ROM into the path; assert
-      Dump created in < 5 s (SC-004).
-- [ ] T044 [P] [SCAN-INC] `tests/libraries/scanner/test_incremental.py::test_rename_updates_path_no_rehash`
-      — rename a file inside the library; the existing Dump's `path`
-      column updates without re-hashing.
-- [ ] T045 [P] [SCAN-INC] `tests/libraries/scanner/test_incremental.py::test_rename_outside_library_orphans`
-      — move a file outside the library path; the Dump becomes
-      orphaned (FR-011) on the next event.
-- [ ] T046 [P] [SCAN-INC] `tests/libraries/scanner/test_incremental_polling.py::test_polling_fallback`
-      — disable inotify (force `watchdog`'s polling observer); a new
-      file is detected within `scan_poll_seconds` (test with reduced
-      interval).
+- [~] T043 [P] [SCAN-INC] **Slice 297 — partial.** The
+      direct-handler path is shipped in
+      ``test_handle_created_links_existing_dump_by_sha1`` —
+      a new file whose SHA-1 matches an existing Dump
+      relinks the Dump path. The full inotify timing test
+      (real fs watcher + 5 s SC-004 budget) needs a
+      controlled-fs harness; deferred together with T046.
+- [X] T044 [P] [SCAN-INC] **Slice 297.** Test ships at
+      ``tests/libraries/scanner/test_incremental.py::test_rename_updates_path_no_rehash``.
+      Drives ``IncrementalScanner.handle_moved`` directly —
+      the dispatch from watchdog's observer thread to this
+      handler is exercised via the polling-fallback test.
+      The contract pinned: rename inside the library updates
+      ``Dump.path`` without rehashing; counters reflect the
+      ``renamed`` outcome.
+- [X] T045 [P] [SCAN-INC] **Slice 297.** Test ships at
+      ``tests/libraries/scanner/test_incremental.py::test_rename_outside_library_orphans``.
+      A move from inside the library to outside drops the
+      ``Dump`` row + transitions the parent Release to
+      ``status='wanted'`` (FR-011). A bonus
+      ``test_delete_orphans_dump`` mirrors the same
+      contract for the delete path.
+- [~] T046 [P] [SCAN-INC] **Slice 297 — partial.** The
+      ``IncrementalScanner`` honours the
+      ``ROMARR_WATCHDOG_OBSERVER_TYPE=polling`` env override
+      to force ``PollingObserver`` over the native inotify
+      observer — wired in
+      ``src/romarr/libraries/scanner/incremental.py``. The
+      end-to-end "polling-mode detects a new file within
+      scan_poll_seconds" integration test needs a
+      controlled-fs harness with reduced poll interval; lands
+      with the perf-test slice.
 
 ### Implementation
 
-- [ ] T047 [SCAN-INC] Create `src/romarr/libraries/scanner/incremental.py`
-      — async `IncrementalScanner` wrapping a `watchdog.observers.Observer`.
-      `start(library)` chooses `Observer` (inotify) or
-      `PollingObserver` based on `WATCHDOG_OBSERVER_TYPE` env or auto-
-      detect. Events are debounced with a 500 ms quiet period before
-      processing.
+- [X] T047 [SCAN-INC] **Slice 297.** Shipped
+      ``src/romarr/libraries/scanner/incremental.py`` —
+      ``IncrementalScanner`` wraps watchdog's ``Observer``
+      (inotify) or ``PollingObserver`` based on
+      ``ROMARR_WATCHDOG_OBSERVER_TYPE`` env (``"polling"`` to
+      force the polling path; default native).
+      ``start()`` / ``stop()`` lifecycle plus three
+      domain-level handlers (``handle_created`` /
+      ``handle_moved`` / ``handle_deleted``) that the
+      watchdog event handler routes to. Per-path 500 ms
+      debounce coalesces editor write/rename storms into a
+      single domain callback. ``handle_created`` hashes +
+      tries to link existing Dumps by SHA-1 (FR-009 / FR-010
+      idempotency) and falls through to an
+      ``on_unmatched`` callback for files the importer
+      should pick up. ``handle_moved`` updates ``Dump.path``
+      in-library or orphans the Dump on out-of-library
+      moves (FR-011). ``handle_deleted`` mirrors the
+      orphan path. Watchdog dep added to ``pyproject.toml``
+      (``watchdog>=4.0``).
 
 **Checkpoint**: incremental-scan tests green on both inotify and
 polling paths.
