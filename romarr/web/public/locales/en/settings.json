@@ -228,7 +228,13 @@
         "cancel": "Cancel",
         "factoryBlocked": "Factory-default profiles can't be deleted; reset them with the seed migration if needed."
       },
-      "editorHint": "Template editor + live preview (POST /api/v3/rom/namingprofile/preview) lands in a follow-up slice."
+      "editorHint": "Click Preview on any profile to render its template against the synthetic sample release (Sonic the Hedgehog (USA).md). The full template editor lands in a follow-up slice.",
+      "preview": {
+        "button": "Preview",
+        "pending": "Rendering…",
+        "label": "Rendered against sample",
+        "error": "Preview failed: {{message}}"
+      }
     },
     "region": {
       "subtitle": "Region preferences for selecting between releases of the same game. Priorities resolve ties (USA-first, EUR-first, etc.); excluded regions are dropped outright.",

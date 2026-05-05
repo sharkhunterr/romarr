@@ -228,7 +228,13 @@
         "cancel": "Annuler",
         "factoryBlocked": "Les profils factory ne peuvent pas être supprimés ; relancez la migration de seed pour les réinitialiser."
       },
-      "editorHint": "L'éditeur de template + l'aperçu live (POST /api/v3/rom/namingprofile/preview) arriveront dans un slice à venir."
+      "editorHint": "Cliquez Aperçu sur un profil pour rendre son template contre la release-exemple synthétique (Sonic the Hedgehog (USA).md). L'éditeur de template complet arrivera dans un slice à venir.",
+      "preview": {
+        "button": "Aperçu",
+        "pending": "Rendu…",
+        "label": "Rendu contre l'exemple",
+        "error": "Aperçu échoué : {{message}}"
+      }
     },
     "region": {
       "subtitle": "Préférences de région pour départager les releases d'un même jeu. Les priorités gèrent les égalités (USA d'abord, EUR d'abord, etc.) ; les régions exclues sont rejetées d'office.",

@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import {
   useDeleteNamingProfile,
+  useNamingPreview,
   useNamingProfiles,
   type NamingProfile,
 } from "@/lib/api/queries/naming-profiles";
@@ -42,7 +43,28 @@ function NamingProfileRow(props: RowProps): ReactElement {
   const { t } = useTranslation("settings");
   const { profile } = props;
   const del = useDeleteNamingProfile();
+  const preview = useNamingPreview();
   const [confirming, setConfirming] = useState(false);
+
+  const handlePreview = (): void => {
+    preview.mutate({
+      profile: {
+        name: profile.name,
+        // ``convention`` on the read schema is a wider union
+        // (no-intro / redump / tosec / goodtools / scene /
+        // unknown). The create schema accepts the
+        // engine-supported subset. The factory profiles ship
+        // with values from the engine's whitelist, so the cast
+        // is safe in practice.
+        convention:
+          profile.convention as unknown as "no-intro" | "redump" | "tosec" | "es-de" | "romm" | "custom",
+        template: profile.template,
+        platform_subfolder: profile.platform_subfolder,
+        replace_illegal_chars: profile.replace_illegal_chars,
+        multi_disc_subfolder: profile.multi_disc_subfolder,
+      },
+    });
+  };
 
   return (
     <li className="rounded-md border border-zinc-800 bg-zinc-900/40 p-3">
@@ -88,7 +110,22 @@ function NamingProfileRow(props: RowProps): ReactElement {
         </div>
       </div>
 
-      <div className="mt-3">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={handlePreview}
+          disabled={preview.isPending}
+          className={[
+            "min-h-[36px] rounded-md border border-zinc-700 px-3 text-xs font-medium",
+            "text-zinc-200 hover:bg-zinc-800",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+            "disabled:cursor-not-allowed disabled:opacity-60",
+          ].join(" ")}
+        >
+          {preview.isPending
+            ? t("profiles.naming.preview.pending")
+            : t("profiles.naming.preview.button")}
+        </button>
         <button
           type="button"
           onClick={() => setConfirming(true)}
@@ -108,6 +145,28 @@ function NamingProfileRow(props: RowProps): ReactElement {
           {t("profiles.naming.delete.button")}
         </button>
       </div>
+
+      {preview.isSuccess && preview.data && (
+        <div className="mt-2 space-y-1">
+          <p className="text-[0.6rem] uppercase tracking-wider text-zinc-500">
+            {t("profiles.naming.preview.label")}
+          </p>
+          <p className="break-all rounded-md border border-emerald-900/40 bg-emerald-950/20 px-2 py-1.5 font-mono text-[0.7rem] text-emerald-200">
+            {preview.data.rendered}
+          </p>
+        </div>
+      )}
+
+      {preview.isError && (
+        <div
+          role="alert"
+          className="mt-2 rounded-md border border-red-900/50 bg-red-950/20 px-2 py-1.5 text-[0.7rem] text-red-300"
+        >
+          {t("profiles.naming.preview.error", {
+            message: preview.error.message,
+          })}
+        </div>
+      )}
 
       {confirming && (
         <div className="mt-3 rounded-md border border-red-900/50 bg-red-950/20 p-3">
