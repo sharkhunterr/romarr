@@ -315,6 +315,15 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         else:
             app.state.scheduler = scheduler
             app.state.cancellation_registry = cancellation_registry
+            # Slice 278 — wire OnGameAdded → AutoCheckAdded.
+            # The dispatcher subscribes globally to the channel and
+            # fires the matching job when the event lands. Best
+            # effort: trigger failures log but never block the
+            # channel.
+            from romarr.tasks.event_dispatch import attach_event_dispatch
+
+            event_dispatcher = attach_event_dispatch(event_channel, scheduler)
+            app.state.event_dispatcher = event_dispatcher
 
     # Spec 009 T030 — heartbeat loop. Independent of the
     # scheduler: it has its own per-library cadence and
@@ -348,6 +357,12 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     finally:
         if heartbeat_loop is not None:
             await heartbeat_loop.stop()
+        # Slice 278 — detach the event-dispatcher (if attached)
+        # before tearing down the channel so we don't fire
+        # spurious triggers during shutdown.
+        event_dispatcher = getattr(app.state, "event_dispatcher", None)
+        if event_dispatcher is not None:
+            event_channel.unsubscribe_global(event_dispatcher)
         ws_bridge.detach(event_channel)
         await event_channel.stop()
         if scheduler is not None:

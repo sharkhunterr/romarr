@@ -427,17 +427,23 @@ this one.
       fetches). The WS bridge auto-fans these to live operator
       sessions as ``systemMessage`` envelopes. Test:
       ``test_dat_update_adapter_emits_on_dat_update_event``.
-- [~] T048 [P] [NEWRUN] Runner half covered by slice 181 —
-      ``tests/tasks/runners/test_auto_check_added.py`` verifies
-      ``run_search_on_add`` loads the Game, calls the injected
-      search function with the right title + platform_id,
-      captures candidate / grab counts, and returns a
-      structured ``skipped`` result for a missing game. The
-      dispatcher-fires-this-not-APScheduler half is already
-      pinned by the seeder + scheduler tests
-      (``auto_check_added`` job-type guard). End-to-end
-      "OnGameAdded → dispatcher → AutoCheckAddedAdapter" wire-up
-      lands when the event-bus fan-out helper exists.
+- [X] T048 [P] [NEWRUN] **Slice 278.** Runner half covered by
+      slice 181 (``test_auto_check_added.py``); the
+      OnGameAdded → AutoCheckAdded dispatch glue landed in this
+      slice. New ``src/romarr/tasks/event_dispatch.py`` ships a
+      table-driven ``_EventDispatcher`` that subscribes globally
+      on the spec 011 ``EventChannel``: when an
+      ``OnGameAddedPayload`` lands, it builds
+      ``parameters={"gameId": event.game.id}`` and calls
+      ``SchedulerService.trigger("AutoCheckAdded", ...)``.
+      Best-effort: a failing trigger logs but never propagates
+      back into the channel's publish loop. App lifespan calls
+      ``attach_event_dispatch(event_channel, scheduler)`` on
+      startup and ``unsubscribe_global`` on shutdown. Tests:
+      ``test_event_dispatch.py`` (4 cases) — happy path,
+      unrelated-event filter, unsubscribe, trigger-failure
+      isolation. Adding a new event-driven job is a one-line
+      change to ``_DISPATCH_TABLE``.
 
 ### Implementation
 
