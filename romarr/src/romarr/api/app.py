@@ -242,6 +242,20 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                 extra={"error": str(exc)},
             )
 
+    # Spec 011 + spec 013 T068 / T072 (slice 274) — construct the
+    # in-process EventChannel + WS bridge BEFORE the scheduler so
+    # the scheduler can wire ``taskStarted`` / ``taskFinished``
+    # emission through the bridge (slice 276 / T064).
+    from romarr.api.ws.bridge import WsBridge
+    from romarr.notifications.channel import EventChannel
+
+    event_channel = EventChannel()
+    await event_channel.start()
+    app.state.event_channel = event_channel
+    ws_bridge = WsBridge(registry=app.state.ws_subscriptions)
+    ws_bridge.attach(event_channel)
+    app.state.ws_bridge = ws_bridge
+
     # Spec 012 — start the Tasks subsystem when explicitly
     # enabled. Default OFF so the test suite (which builds
     # the app many times per session) doesn't pay the
@@ -288,6 +302,7 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
             session_factory=app.state.db_sessionmaker,
             runners=build_default_registry(health_engine=health_engine),
             cancellation_registry=cancellation_registry,
+            ws_bridge=ws_bridge,
         )
         try:
             await scheduler.start()
@@ -299,22 +314,6 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         else:
             app.state.scheduler = scheduler
             app.state.cancellation_registry = cancellation_registry
-
-    # Spec 011 + spec 013 T068 / T072 (slice 274) — construct the
-    # in-process EventChannel + WS bridge. The channel is the
-    # canonical fan-out point for every spec 011 event payload;
-    # the bridge subscribes globally and converts payloads into
-    # the documented ``MessageType`` envelopes broadcast through
-    # ``SubscriptionRegistry``.
-    from romarr.api.ws.bridge import WsBridge
-    from romarr.notifications.channel import EventChannel
-
-    event_channel = EventChannel()
-    await event_channel.start()
-    app.state.event_channel = event_channel
-    ws_bridge = WsBridge(registry=app.state.ws_subscriptions)
-    ws_bridge.attach(event_channel)
-    app.state.ws_bridge = ws_bridge
 
     # Spec 009 T030 — heartbeat loop. Independent of the
     # scheduler: it has its own per-library cadence and

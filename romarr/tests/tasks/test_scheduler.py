@@ -453,6 +453,53 @@ async def test_runner_exception_marks_job_run_failed(
 
 
 @pytest.mark.asyncio
+async def test_scheduler_emits_taskstarted_and_taskfinished_via_ws_bridge(
+    sessionmaker: async_sessionmaker,
+) -> None:
+    """Slice 276 / spec 013 T064 — when wired with a bridge,
+    every JobRun emits ``taskStarted`` (after start_run commits)
+    + ``taskFinished`` (after finish_run commits) via
+    ``WsBridge.emit_message``. Best-effort: a failing bridge
+    never blocks dispatch.
+    """
+    await _seed_job(sessionmaker, job_id="WsTrack", interval_seconds=60)
+
+    async def runner(_ctx: JobContext) -> JobResult:
+        return JobResult(status=JobStatus.SUCCESS, items_processed=7)
+
+    captured: list[tuple[str, dict]] = []
+
+    class _StubBridge:
+        async def emit_message(self, message_type, data):  # type: ignore[no-untyped-def]
+            captured.append((message_type.value, dict(data)))
+
+    service = SchedulerService(
+        session_factory=sessionmaker,
+        runners={"WsTrack": runner},
+        ws_bridge=_StubBridge(),
+    )
+    try:
+        run_id = await service.trigger("WsTrack")
+        await service.await_run(run_id)
+    finally:
+        await service.stop()
+
+    # Expect exactly two emissions in order.
+    types = [t for t, _ in captured]
+    assert types == ["taskStarted", "taskFinished"]
+    started_data = captured[0][1]
+    finished_data = captured[1][1]
+    assert started_data["job_id"] == "WsTrack"
+    assert started_data["job_run_id"] == run_id
+    assert finished_data["job_id"] == "WsTrack"
+    assert finished_data["job_run_id"] == run_id
+    assert finished_data["status"] == "success"
+    assert finished_data["successful"] is True
+    assert finished_data["items_processed"] == 7
+    assert finished_data["error_message"] is None
+
+
+@pytest.mark.asyncio
 async def test_no_runner_registered_marks_failed(
     sessionmaker: async_sessionmaker,
 ) -> None:

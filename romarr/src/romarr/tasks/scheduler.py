@@ -118,12 +118,19 @@ class SchedulerService:
         misfire_grace_seconds: int = 3600,
         auto_pause: AutoPause | None = None,
         cancellation_registry: CancellationRegistry | None = None,
+        ws_bridge: Any = None,
     ) -> None:
         self._session_factory = session_factory
         self._runners = dict(runners)
         self._misfire_grace_seconds = misfire_grace_seconds
         self._auto_pause = auto_pause
         self._cancellation_registry = cancellation_registry
+        # Optional WS bridge — when wired, every JobRun emits a
+        # ``taskStarted`` / ``taskFinished`` envelope to live
+        # operator sessions (spec 013 T064 / T068). Best-effort:
+        # bridge errors are caught + logged so scheduler dispatch
+        # never depends on WS delivery.
+        self._ws_bridge = ws_bridge
         self._scheduler = AsyncIOScheduler()
         self._inflight: dict[str, set[asyncio.Task[None]]] = {}
         self._inflight_lock = asyncio.Lock()
@@ -286,6 +293,17 @@ class SchedulerService:
                 await session.commit()
                 run_id = run.id
 
+            # Slice 276 — emit ``taskStarted`` to live operator
+            # sessions. Best-effort, never blocks dispatch.
+            await self._emit_ws(
+                "taskStarted",
+                {
+                    "job_id": job.id,
+                    "job_run_id": run_id,
+                    "triggered_by": triggered_by.value,
+                },
+            )
+
             task = asyncio.create_task(
                 self._run_and_finalise(
                     job_id=job_id,
@@ -447,6 +465,26 @@ class SchedulerService:
             output_summary=dict(result.summary),
         )
 
+    async def _emit_ws(self, message_type_name: str, data: dict[str, Any]) -> None:
+        """Best-effort WS broadcast — never raises into dispatch.
+
+        ``message_type_name`` is the literal string from the
+        ``MessageType`` enum (avoids the import cost when no
+        bridge is wired). When the bridge is None, this is a
+        cheap no-op.
+        """
+        if self._ws_bridge is None:
+            return
+        try:
+            from romarr.api.ws.messages import MessageType
+
+            mt = MessageType(message_type_name)
+            await self._ws_bridge.emit_message(mt, data=data)
+        except Exception:
+            _logger.exception(
+                "scheduler ws emission failed; envelope dropped"
+            )
+
     async def _finalise(
         self,
         *,
@@ -473,6 +511,23 @@ class SchedulerService:
                 )
                 return
             await session.commit()
+            job_id = run.job_id
+            duration_ms = run.duration_ms
+
+        # Slice 276 — emit ``taskFinished`` to live operator
+        # sessions after the row commits. Best-effort.
+        await self._emit_ws(
+            "taskFinished",
+            {
+                "job_id": job_id,
+                "job_run_id": job_run_id,
+                "status": status.value,
+                "duration_ms": duration_ms,
+                "successful": status == JobStatus.SUCCESS,
+                "error_message": error_message,
+                "items_processed": items_processed,
+            },
+        )
 
     # ------------------------------------------------------------------
     # Internals — APScheduler-side dispatch

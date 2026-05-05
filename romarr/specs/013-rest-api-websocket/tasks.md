@@ -596,17 +596,20 @@ shuts down cleanly.
       (policy violation, mirrors HTTP 401 for FR-018) before
       the welcome frame ships. Companion test pins the
       bogus-apikey case.
-- [~] T064 [P] [WS] taskStarted / taskFinished E2E —
-      **deferred-by-design**. The broadcast contract is
-      structurally pinned by T066's
-      ``test_each_message_type_round_trips_to_subscriber``
-      (parametrised over every MessageType, including
-      taskStarted + taskFinished). The
-      "scheduler dispatch → SubscriptionRegistry.broadcast()"
-      glue is the missing integration piece; lands when the
-      spec 012 scheduler exposes a public
-      ``progress_callback`` hook the WS bridge can subscribe
-      to.
+- [X] T064 [P] [WS] **Slice 276.** ``SchedulerService`` now
+      accepts an optional ``ws_bridge`` and emits
+      ``taskStarted`` after ``start_run`` commits + ``taskFinished``
+      after ``finish_run`` commits. ``app.py`` constructs the
+      bridge BEFORE the scheduler so it threads through. The
+      ``taskStarted`` envelope carries ``job_id`` / ``job_run_id``
+      / ``triggered_by``; ``taskFinished`` adds ``status`` /
+      ``duration_ms`` / ``successful`` / ``error_message`` /
+      ``items_processed`` so live operator UIs can render the
+      outcome without re-fetching. Best-effort: a failing
+      bridge never blocks dispatch (``_emit_ws`` catches and
+      logs every exception). Test:
+      ``test_scheduler_emits_taskstarted_and_taskfinished_via_ws_bridge``
+      pins the two-envelope round-trip with a stub bridge.
 - [X] T065 [P] [WS] **Slice 275.** ``queueUpdated`` is now
       emitted on the queue-delete path. Added
       ``WsBridge.emit_message(message_type, data)`` as the
