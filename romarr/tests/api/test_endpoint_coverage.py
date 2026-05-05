@@ -43,6 +43,10 @@ PUBLIC_PATHS: set[str] = {
     "/api/v3/auth/setup",
     "/api/v3/auth/login",
     "/api/v3/auth/logout",
+    # Auth config probe — surfaces OIDC enablement to the SPA's
+    # /login page (slice 280) so the SSO button only renders when
+    # the operator wired OIDC. Returns no PII.
+    "/api/v3/auth/config",
     # Importer webhook — gated by its own bearer token, not the
     # auth chain. See spec 008.
     "/api/v3/webhook/download-complete",

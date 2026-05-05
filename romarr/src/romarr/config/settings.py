@@ -147,6 +147,15 @@ class Settings(BaseSettings):
         "download client in the operator's qBittorrent / SAB hook "
         "configuration.",
     )
+    importer_watcher_enabled: bool = Field(
+        default=False,
+        description="Enable the polling watcher (FR-001 fallback to "
+        "the webhook surface). When True, the lifespan starts a "
+        "background loop that polls every enabled download client "
+        "for completed downloads on a 30 s cadence. Default OFF for "
+        "the test suite + dev workflows; production deployments "
+        "set ROMARR_IMPORTER_WATCHER_ENABLED=true.",
+    )
 
     # Cover storage
     data_dir: str = Field(

@@ -183,18 +183,23 @@ signals to the orchestrator.
       Wired into the application factory in ``api/app.py``.
       Settings: new ``importer_webhook_token`` field on
       :class:`Settings` (empty = webhook closed).
-- [~] T022 [WATCH] **Partial — slice 294.** Orchestrator's
-      ``start_watcher`` / ``stop_watcher`` helpers in
-      ``src/romarr/importer/orchestrator.py`` are wired to
-      construct the ``WatcherLoop`` lazily and proxy
-      start/stop. The application lifespan in
-      ``src/romarr/api/app.py`` still has to call
-      ``start_watcher(get_clients=…, dispatcher=…)`` — that
-      wiring needs the live ``DownloadClient`` registry +
-      orchestrator dispatcher composer, both of which lift
-      bigger spec 008 slices. The watcher CAN be started
-      explicitly today by callers that compose those two
-      pieces themselves (operators, tests).
+- [X] T022 [WATCH] **Slice 295.** Application lifespan in
+      ``src/romarr/api/app.py`` now calls ``start_watcher``
+      after the scheduler bootstrap (gated on the
+      ``ROMARR_IMPORTER_WATCHER_ENABLED`` settings flag, default
+      OFF for tests). Composes the two callables via
+      ``romarr.importer._dispatch``:
+      ``build_get_enabled_clients(sessionmaker)`` queries the DB
+      for enabled ``DownloadClient`` rows on every tick + builds
+      instances via ``factory.build_client_from_row``;
+      ``build_managed_download_dispatcher(sessionmaker)`` opens
+      a fresh session per item, builds an ``ImportContext``
+      carrying the (client_id, native_id) origin pair and
+      ``imported_via='automatic'``, then calls
+      ``run_import``. On shutdown the lifespan calls
+      ``stop_watcher`` before tearing down the engine.
+      Build failures (missing creds, decrypt errors) log + skip
+      the row rather than aborting the tick (FR-019).
 
 **Checkpoint**: WATCH tests green; the watcher loop runs as a background
 task and the webhook returns within the 1 s p95 budget.

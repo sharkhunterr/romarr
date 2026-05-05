@@ -352,9 +352,48 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
             app.state.heartbeat_loop = heartbeat_loop
             bootstrap_log.info("lifespan.heartbeat_started")
 
+    # Spec 008 T022 — importer polling watcher. Same opt-in
+    # pattern as the heartbeat: default OFF for tests, production
+    # sets ROMARR_IMPORTER_WATCHER_ENABLED=true. The watcher is
+    # the FR-001 fallback to the webhook surface — clients that
+    # don't speak webhooks (or webhook drops) get picked up on
+    # the 30 s tick.
+    watcher = None
+    enable_watcher = getattr(
+        app.state, "_enable_watcher", settings.importer_watcher_enabled
+    )
+    if enable_watcher:
+        from romarr.importer._dispatch import (
+            build_get_enabled_clients,
+            build_managed_download_dispatcher,
+        )
+        from romarr.importer.orchestrator import start_watcher
+
+        try:
+            watcher = await start_watcher(
+                get_clients=build_get_enabled_clients(
+                    app.state.db_sessionmaker
+                ),
+                dispatcher=build_managed_download_dispatcher(
+                    app.state.db_sessionmaker
+                ),
+            )
+        except Exception:
+            bootstrap_log.warning(
+                "lifespan.watcher_start_failed", exc_info=True
+            )
+            watcher = None
+        else:
+            app.state.watcher = watcher
+            bootstrap_log.info("lifespan.watcher_started")
+
     try:
         yield
     finally:
+        if watcher is not None:
+            from romarr.importer.orchestrator import stop_watcher
+
+            await stop_watcher()
         if heartbeat_loop is not None:
             await heartbeat_loop.stop()
         # Slice 278 — detach the event-dispatcher (if attached)
