@@ -27,6 +27,21 @@ import type { components } from "@/types/api/schema";
 
 export type QualityProfile = components["schemas"]["QualityProfileRead"];
 
+/**
+ * ``POST /api/v3/qualityprofile`` body. The OpenAPI codegen
+ * leaves the request body untyped (see the LibraryCreate
+ * comment); we mirror the documented backend pydantic model so
+ * the create modal has a typed contract.
+ */
+export interface QualityProfileCreate {
+  name: string;
+  allowed_formats: string[];
+  preferred_format: string;
+  upgrade_until_format: string;
+  require_dat_verified?: boolean;
+  allow_archive_double_compression?: boolean;
+}
+
 const QUALITY_PROFILES_KEY = ["settings", "quality-profiles"] as const;
 
 export function useQualityProfiles(): UseQueryResult<
@@ -37,6 +52,24 @@ export function useQualityProfiles(): UseQueryResult<
     queryKey: QUALITY_PROFILES_KEY,
     queryFn: () => apiFetch<QualityProfile[]>("/api/v3/qualityprofile"),
     staleTime: 30_000,
+  });
+}
+
+export function useCreateQualityProfile(): UseMutationResult<
+  QualityProfile,
+  ApiError,
+  QualityProfileCreate
+> {
+  const qc = useQueryClient();
+  return useMutation<QualityProfile, ApiError, QualityProfileCreate>({
+    mutationFn: (payload) =>
+      apiFetch<QualityProfile>("/api/v3/qualityprofile", {
+        method: "POST",
+        json: payload,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: QUALITY_PROFILES_KEY });
+    },
   });
 }
 

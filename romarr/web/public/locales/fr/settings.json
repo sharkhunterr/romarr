@@ -354,7 +354,35 @@
         "cancel": "Annuler",
         "factoryBlocked": "Les profils factory ne peuvent pas être supprimés ; relancez la migration de seed pour les réinitialiser."
       },
-      "editorHint": "L'éditeur complet de profil de qualité (liste allowed drag-drop, sélecteurs preferred / upgrade-until, toggles DAT + archive) arrivera dans un slice à venir."
+      "editorHint": "L'éditeur complet de profil de qualité (liste allowed drag-drop, sélecteurs preferred / upgrade-until, toggles DAT + archive) arrivera dans un slice à venir.",
+      "create": {
+        "openButton": "+ Ajouter un profil qualité",
+        "modalTitle": "Ajouter un profil qualité",
+        "subhead": "Listez les formats acceptés par ce profil, puis choisissez celui qui est préféré et celui qui est le plafond d'upgrade. Les deux doivent figurer dans la liste autorisée.",
+        "nameLabel": "Nom",
+        "namePlaceholder": "ex. Megadrive USA strict",
+        "allowedFormatsLabel": "Formats autorisés",
+        "allowedFormatsHint": "Liste séparée par virgules des chaînes de format issues de vos platform packs. ex. ``cartridge, cd_chd, cd_iso``.",
+        "preferredLabel": "Préféré",
+        "upgradeLabel": "Upgrade jusqu'à",
+        "flagsLabel": "Drapeaux",
+        "flags": {
+          "requireDat": "Exiger des dumps DAT-vérifiés",
+          "allowArchive": "Autoriser la double compression d'archive"
+        },
+        "errors": {
+          "name": "Choisissez d'abord un nom de profil.",
+          "allowedEmpty": "Les formats autorisés ne peuvent pas être vides.",
+          "preferredNotAllowed": "Le format préféré doit figurer dans la liste autorisée.",
+          "upgradeNotAllowed": "Le format upgrade-until doit figurer dans la liste autorisée."
+        },
+        "cancel": "Annuler",
+        "submit": "Ajouter le profil",
+        "submitting": "Ajout…",
+        "successTitle": "Profil qualité ajouté",
+        "successBody": "{{name}} est disponible pour être lié à une ludothèque.",
+        "errorTitle": "Impossible d'ajouter le profil"
+      }
     }
   },
   "customFormats": {

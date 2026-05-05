@@ -7,24 +7,39 @@
  * full editor lands in a follow-up slice.
  */
 
-import { type ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useQualityProfiles } from "@/lib/api/queries/quality-profiles";
 
+import { CreateQualityProfileModal } from "./CreateQualityProfileModal";
 import { QualityProfileRow } from "./QualityProfileRow";
 
 export function QualityTab(): ReactElement {
   const { t } = useTranslation("settings");
   const profiles = useQualityProfiles();
+  const [createOpen, setCreateOpen] = useState(false);
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-zinc-400">
-        {t("profiles.quality.subtitle")}
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm text-zinc-400">
+          {t("profiles.quality.subtitle")}
+        </p>
+        <button
+          type="button"
+          onClick={() => setCreateOpen(true)}
+          className="shrink-0 rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          {t("profiles.quality.create.openButton")}
+        </button>
+      </div>
+
+      {createOpen && (
+        <CreateQualityProfileModal onClose={() => setCreateOpen(false)} />
+      )}
 
       {profiles.isLoading && <ListSkeleton rows={3} />}
       {profiles.isError && (

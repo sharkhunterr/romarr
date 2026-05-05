@@ -354,7 +354,35 @@
         "cancel": "Cancel",
         "factoryBlocked": "Factory-default profiles can't be deleted; reset them with the seed migration if needed."
       },
-      "editorHint": "The full Quality profile editor (drag-drop allowed-formats list, preferred / upgrade-until pickers, DAT + archive toggles) lands in a follow-up slice."
+      "editorHint": "The full Quality profile editor (drag-drop allowed-formats list, preferred / upgrade-until pickers, DAT + archive toggles) lands in a follow-up slice.",
+      "create": {
+        "openButton": "+ Add quality profile",
+        "modalTitle": "Add a Quality profile",
+        "subhead": "List the formats this profile accepts, then pick one as preferred + one as the upgrade ceiling. Both must be in the allowed list.",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. Megadrive USA strict",
+        "allowedFormatsLabel": "Allowed formats",
+        "allowedFormatsHint": "Comma-separated list of format strings from your platform packs. e.g. ``cartridge, cd_chd, cd_iso``.",
+        "preferredLabel": "Preferred",
+        "upgradeLabel": "Upgrade until",
+        "flagsLabel": "Flags",
+        "flags": {
+          "requireDat": "Require DAT-verified dumps",
+          "allowArchive": "Allow archive double-compression"
+        },
+        "errors": {
+          "name": "Pick a profile name first.",
+          "allowedEmpty": "Allowed formats can't be empty.",
+          "preferredNotAllowed": "Preferred format must be in the allowed list.",
+          "upgradeNotAllowed": "Upgrade-until format must be in the allowed list."
+        },
+        "cancel": "Cancel",
+        "submit": "Add profile",
+        "submitting": "Adding…",
+        "successTitle": "Quality profile added",
+        "successBody": "{{name}} is now available to bind to a library.",
+        "errorTitle": "Couldn't add the profile"
+      }
     }
   },
   "customFormats": {
