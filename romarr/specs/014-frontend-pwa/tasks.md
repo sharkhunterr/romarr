@@ -478,8 +478,17 @@ invalidations.
       promptInstall() forwards the user's "accepted" /
       "dismissed" choice and clears the deferred event from
       the store after resolution.
-- [ ] T052 [P] [PWA] `tests/unit/pwa/test_offline_reads.test.tsx`
-      — simulate offline; the Library page renders from cache.
+- [X] T052 [P] [PWA] **Slice 282 — path-divergence close.**
+      ``web/src/pages/Library/index.offline.test.tsx`` ships
+      the offline-reads contract at the React layer. With
+      ``useGames`` returning previously-loaded data and
+      ``window.dispatchEvent(new Event("offline"))`` fired, the
+      Library page keeps the cached cards mounted — operator
+      can keep browsing the last-known catalogue without the
+      page blanking out. The full SW-cache-hit round-trip
+      (workbox NetworkFirst → cache fallback) needs a real
+      browser; that surface lands with the spec 014 E2E gate
+      (T124-T128) when Playwright is wired.
 - [ ] T053 [P] [PWA] Lighthouse CI gate in
       `tests/e2e/lighthouse.spec.ts` — production build scores
       ≥ 90 on Performance, Accessibility, Best Practices, PWA
