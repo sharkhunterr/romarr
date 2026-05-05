@@ -59,6 +59,11 @@ class EventChannel:
         self._tasks: dict[int, asyncio.Task[None]] = {}
         self._dropped: dict[int, int] = {}
         self._last_errors: dict[int, str | None] = {}
+        # Global subscribers receive every published event without
+        # the operator-configured Notification.on_* gating. Used by
+        # the WS bridge (spec 013 T068 / T072) to fan out
+        # ``MessageType`` envelopes to live operator sessions.
+        self._global_subscribers: list[_Subscriber] = []
 
     # ------------------------------------------------------------------
     # Subscription
@@ -77,6 +82,20 @@ class EventChannel:
         self._callbacks[notification_id] = callback
         self._dropped.setdefault(notification_id, 0)
         self._last_errors.setdefault(notification_id, None)
+
+    def subscribe_global(self, callback: _Subscriber) -> None:
+        """Register a global subscriber — called for every event
+        regardless of any per-notification filter. The WS bridge
+        uses this to fan-out events to live operator sessions
+        (spec 013 T068 / T072). Idempotent on the same callback.
+        """
+        if callback not in self._global_subscribers:
+            self._global_subscribers.append(callback)
+
+    def unsubscribe_global(self, callback: _Subscriber) -> None:
+        """Remove a previously-registered global subscriber."""
+        with contextlib.suppress(ValueError):
+            self._global_subscribers.remove(callback)
 
     def unsubscribe(self, notification_id: int) -> None:
         """Remove a subscriber (and cancel its dispatcher task)."""
@@ -135,6 +154,16 @@ class EventChannel:
                     self._dropped[notification_id],
                 )
                 queue.put_nowait(event)
+        # Global subscribers (WS bridge etc.) — best-effort: a
+        # failing global subscriber is logged but never blocks
+        # the per-notification flow.
+        for cb in list(self._global_subscribers):
+            try:
+                await cb(event)
+            except Exception:
+                _logger.exception(
+                    "global subscriber failed; dropping event for it"
+                )
         await asyncio.sleep(0)
 
     # ------------------------------------------------------------------

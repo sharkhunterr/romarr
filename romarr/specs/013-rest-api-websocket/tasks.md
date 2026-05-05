@@ -628,14 +628,16 @@ shuts down cleanly.
       `test_disconnect_removes_subscription_from_registry`
       pins the handler's `finally` cleanup (otherwise dead
       subs would leak across disconnects).
-- [~] T068 [P] [WS] In-process pubsub → WS subscribers —
-      **deferred-by-design**. The dispatcher → bridge glue
-      lands when spec 011's notification dispatcher exposes a
-      single ``emit_event(payload)`` hook the WS bridge can
-      subscribe to (same gap that defers spec 012's
-      OnDatUpdate emission and spec 008's auto-blocklist
-      OnFail emission). The broadcast-to-subscribers contract
-      is pinned by T066 already.
+- [X] T068 [P] [WS] **Slice 274.** Wired end-to-end. Added
+      ``EventChannel.subscribe_global`` / ``unsubscribe_global``
+      to the spec 011 channel — global subscribers receive every
+      published event without the per-Notification ``on_*``
+      filtering. The :class:`WsBridge` (T072) registers as a
+      global subscriber and adapts spec 011 payloads into
+      ``MessageType`` envelopes broadcast through
+      ``SubscriptionRegistry``. App lifespan
+      (``src/romarr/api/app.py``) constructs the channel +
+      bridge on startup, tears them down on shutdown.
 
 ### Implementation
 
@@ -664,13 +666,21 @@ shuts down cleanly.
       one dead connection doesn't abort the broadcast for the
       rest. Process-local — for multi-replica deployments the
       bridge will swap to Redis pub/sub.
-- [~] T072 [P] [WS] Create `src/romarr/api/ws/bridge.py` —
-      async consumer of spec 011's pub/sub channel. **Deferred**
-      to a follow-up slice when the spec 011 pub/sub surface is
-      exposed. Today the foundation ships
-      `SubscriptionRegistry.broadcast()`; the bridge will be a
-      thin adapter that converts spec 011 events into
-      `MessageType` envelopes and calls `broadcast`.
+- [X] T072 [P] [WS] **Slice 274.** Shipped
+      ``src/romarr/api/ws/bridge.py``. ``WsBridge`` registers
+      as a global subscriber on the spec 011 ``EventChannel``
+      and converts each ``BaseModel`` event payload (OnGrab /
+      OnImport / OnUpgrade / OnFail / OnHealthIssue /
+      OnGameAdded / OnDatUpdate) into the documented
+      ``MessageType`` envelope (releaseGrabbed /
+      releaseImported / releaseFailed / healthChanged /
+      gameAdded / systemMessage). Unknown event types are
+      skipped silently for forward-compat. Failed broadcasts
+      are logged but never propagate back into the channel's
+      publish loop (best-effort delivery — spec FR-019).
+      Tests: ``tests/api/ws/test_bridge.py`` (8 cases) cover
+      every documented mapping plus the detach + skip-unknown
+      paths.
 - [X] T073 [WS] Create `src/romarr/api/ws/handler.py` — FastAPI
       WebSocket route at `/signalr/messages`. Calls
       `authenticate_upgrade`; on failure
