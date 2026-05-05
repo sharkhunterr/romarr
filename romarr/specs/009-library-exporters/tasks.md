@@ -661,13 +661,19 @@ correctly.
       tracking the spec wants needs runtime persistence — lands
       with the per-import dispatch when the spec 008 importer's
       fan-out arrives.
-- [~] T078 [P] [API] POST ``/exporters/{name}/run`` —
-      **deferred to the per-import-dispatch slice**. Each
-      exporter has its own value type (EsdeGame / PegasusGame /
-      LaunchBoxGame) with different fields; running on demand
-      requires materialising all four from the (library,
-      platform_slug) tuple's Game/Release/Dump rows. Ships
-      together with the importer's per-import fan-out.
+- [~] T078 [P] [API] POST ``/exporters/{name}/run`` — **ESDE
+      shipped (slice 323).** New ``materialize_esde_games``
+      helper projects every imported (Game, Release, Dump)
+      tuple on a (library, platform_slug) pair into the
+      :class:`EsdeGame` value type; the run endpoint pipes
+      the result through the spec-009 renderer + atomic
+      writer. Refuses with 409 when the per-library enable
+      flag is False. Pegasus / LaunchBox / RomM return 501
+      (``exporter_run_not_wired``) until their materializers
+      ship — the wiring template is pinned for follow-up
+      slices. 5 router tests cover the happy path, 409
+      disabled, 501 unwired, 404 unknown exporter, 404
+      missing library.
 - [X] T079 [P] [API] **Slice 299.** Tests ship at
       ``tests/libraries/api/test_manual_import_endpoints.py``
       (5 tests): GET listing returns candidates,
