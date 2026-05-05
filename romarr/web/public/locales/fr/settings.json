@@ -705,6 +705,12 @@
       "label": "Actif et fonctionnel",
       "title": "Activé, identifiants valides, dernier test OK"
     },
+    "statusDot": {
+      "inactive": "Inactif",
+      "healthy": "Actif et fonctionnel",
+      "failing": "Actif mais le dernier test a échoué",
+      "untested": "Actif, en attente du premier test"
+    },
     "disabled": "Désactivé",
     "priority": {
       "label": "Priorité",

@@ -165,7 +165,7 @@ async def lookup_games(
             max_length=64,
         ),
     ] = None,
-    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    limit: Annotated[int, Query(ge=1, le=200)] = 100,
 ) -> list[GameLookupRow]:
     if not q.strip():
         raise HTTPException(

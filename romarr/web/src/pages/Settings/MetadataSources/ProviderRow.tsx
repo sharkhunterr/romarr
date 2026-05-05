@@ -56,12 +56,6 @@ function deriveHealth(p: MetadataProvider): Health {
   return p.last_health_check_ok === true ? "ok" : "fail";
 }
 
-const HEALTH_DOT: Record<Health, string> = {
-  ok: "bg-brand",
-  fail: "bg-red-500",
-  untested: "bg-zinc-600",
-};
-
 interface ProviderRowProps {
   provider: MetadataProvider;
 }
@@ -109,56 +103,38 @@ export function ProviderRow(props: ProviderRowProps): ReactElement {
     });
   }
 
-  // "Active" means: configured + enabled. The badge always shows
-  // when active so the operator gets immediate feedback after
-  // saving credentials and flipping the toggle, even before the
-  // first health probe runs.
-  // Tinted by last-probe outcome:
-  //   * ok       → bright brand-green ring + dot
-  //   * fail     → red ring + dot (config wrong / provider down)
-  //   * untested → green ring + amber dot (active, unverified)
+  // "Active" means: configured + enabled. The status dot to the
+  // right of the title surfaces this, tinted by last-probe outcome:
+  //   * ok       → brand-green   (active, last health probe OK)
+  //   * fail     → red           (active but probe failing)
+  //   * untested → amber         (active, never tested yet)
+  // Inactive providers (not configured / disabled) keep the old
+  // grey-zinc dot so the row still tells the operator the row
+  // exists but isn't running.
   const isActive = provider.enabled && provider.is_configured;
-  let iconRingClass = "ring-1 ring-zinc-800/60";
-  let cornerDotClass = "";
+  let dotClass = "bg-zinc-600";
+  let dotTitleKey = "metadataSources.statusDot.inactive";
   if (isActive) {
     if (health === "ok") {
-      iconRingClass = "ring-2 ring-brand";
-      cornerDotClass = "bg-brand";
+      dotClass = "bg-brand";
+      dotTitleKey = "metadataSources.statusDot.healthy";
     } else if (health === "fail") {
-      iconRingClass = "ring-2 ring-red-500";
-      cornerDotClass = "bg-red-500";
+      dotClass = "bg-red-500";
+      dotTitleKey = "metadataSources.statusDot.failing";
     } else {
-      iconRingClass = "ring-2 ring-brand/60";
-      cornerDotClass = "bg-amber-400";
+      dotClass = "bg-amber-400";
+      dotTitleKey = "metadataSources.statusDot.untested";
     }
   }
 
   return (
     <li className="rounded-md border border-zinc-800 bg-zinc-900/40 p-3">
       <div className="flex items-start gap-3">
-        <div className="relative mt-0.5 shrink-0">
-          <div
-            aria-hidden="true"
-            className={[
-              "flex h-9 w-9 items-center justify-center rounded-md",
-              "bg-zinc-800/60 text-zinc-300",
-              iconRingClass,
-            ].join(" ")}
-          >
-            <Icon size={16} />
-          </div>
-          {isActive && (
-            <span
-              aria-label={t("metadataSources.liveBadge.label")}
-              className={[
-                "absolute -right-1 -top-1 inline-flex h-3 w-3",
-                "items-center justify-center rounded-full",
-                "ring-2 ring-zinc-950",
-                cornerDotClass,
-              ].join(" ")}
-              title={t("metadataSources.liveBadge.title")}
-            />
-          )}
+        <div
+          aria-hidden="true"
+          className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-zinc-800/60 text-zinc-300 ring-1 ring-zinc-800/60"
+        >
+          <Icon size={16} />
         </div>
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -166,8 +142,9 @@ export function ProviderRow(props: ProviderRowProps): ReactElement {
               {displayName}
             </p>
             <span
-              aria-hidden="true"
-              className={`inline-block h-2 w-2 rounded-full ${HEALTH_DOT[health]}`}
+              className={`inline-block h-2.5 w-2.5 rounded-full ${dotClass}`}
+              title={t(dotTitleKey)}
+              aria-label={t(dotTitleKey)}
             />
             {!provider.is_configured && (
               <span className="rounded bg-amber-950/40 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-amber-400">

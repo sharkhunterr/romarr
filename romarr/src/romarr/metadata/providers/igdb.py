@@ -221,7 +221,15 @@ class IGDBProvider(MetadataProvider):
             pid = self._platform_mapping.get(platform_slug)
             if pid is not None:
                 body += f" & platforms = ({pid})"
-        body += "; limit 20;"
+        # IGDB caps responses at 500. We pull up to 50 here so a
+        # title that ships across many platforms (e.g. "Harry Potter
+        # and the Chamber of Secrets" → 8 platforms × multiple
+        # variants) doesn't lose its handheld releases to the cap.
+        # The lookup endpoint truncates to ``limit`` (default 50) on
+        # its side so the operator never sees more than they asked
+        # for, but the per-provider fan-out is wide enough to cover
+        # all platforms.
+        body += "; limit 50;"
 
         rows = await self._authed_post("/games", body)
 

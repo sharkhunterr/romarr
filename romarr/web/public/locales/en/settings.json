@@ -705,6 +705,12 @@
       "label": "Active and healthy",
       "title": "Enabled, credentials valid, last health check OK"
     },
+    "statusDot": {
+      "inactive": "Inactive",
+      "healthy": "Active and healthy",
+      "failing": "Active but last probe failed",
+      "untested": "Active, awaiting first probe"
+    },
     "disabled": "Disabled",
     "priority": {
       "label": "Priority",
