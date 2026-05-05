@@ -185,23 +185,33 @@ async def run_import(
         and source_path.exists()
         and source_path.is_file()
     ):
-        wanted = (
+        # Pick the auto-import target Release. Prefer wanted (the
+        # first-import case); allow imported so re-runs against
+        # the same file coalesce idempotently (FR-033). Multi-
+        # Release ambiguity falls through to parking — operator
+        # picks via the manual-match endpoint.
+        candidates = (
             await session.execute(
                 select(Release.id)
                 .where(
                     Release.game_id == monitored_game_id,
-                    Release.status == "wanted",
+                    Release.status.in_(("wanted", "imported")),
                 )
+                .order_by(Release.id)
                 .limit(2)
             )
         ).scalars().all()
-        if len(wanted) == 1:
+        if len(candidates) == 1:
+            from sqlalchemy.exc import IntegrityError
+            from romarr.importer._idempotency import find_existing_dump
             from romarr.importer._manual import manual_import_known
+            from romarr.importer._outcome import make_success_outcome
 
-            release_id = int(wanted[0])
+            release_id = int(candidates[0])
             file_format = (
                 source_path.suffix.lstrip(".").lower() or "raw"
             )
+            outcome = None
             try:
                 outcome = await manual_import_known(
                     session=session,
@@ -214,10 +224,52 @@ async def run_import(
                     hashes=hash_result,
                 )
                 await session.commit()
+            except IntegrityError:
+                # Concurrent-import race (FR-033 / SC-007). Another
+                # coroutine inserted the Dump between our
+                # find_existing_dump check and our flush. Roll back,
+                # re-query, project a coalesced success outcome.
+                await session.rollback()
+                existing = await find_existing_dump(
+                    session=session,
+                    sha1=hash_result.sha1,
+                    release_id=release_id,
+                )
+                if existing is not None:
+                    outcome = await make_success_outcome(
+                        session=session,
+                        context=context,
+                        started_at=started_at,
+                        duration_ms=max(
+                            0,
+                            int(
+                                (
+                                    asyncio.get_event_loop().time()
+                                    - monotonic_start
+                                )
+                                * 1000
+                            ),
+                        ),
+                        dest_path=existing.path,
+                        game_id=monitored_game_id,
+                        release_id=release_id,
+                        dump_id=existing.id,
+                        source_hash_sha1=hash_result.sha1,
+                        confidence=1.0,
+                        coalesced=True,
+                        warning=None,
+                    )
+                    await session.commit()
+            except Exception:
+                # Other failure (fs / DB / integrity-but-no-existing-
+                # row) → fall through to parking. The audit row
+                # written by the park branch carries the operator-
+                # actionable failure surface.
+                outcome = None
+            if outcome is not None:
                 # NOTIFY: emit OnImport so the spec 011 dispatcher
-                # fans out to Apprise / Notifiarr / etc. Best-
-                # effort — a publish failure must not invalidate
-                # the import that already committed.
+                # fans out. Best-effort — a publish failure must
+                # not invalidate the committed import.
                 if event_channel is not None:
                     try:
                         await _emit_on_import(
@@ -231,10 +283,8 @@ async def run_import(
                     except Exception:
                         pass
                 # LIFECYCLE: tag the originating download with the
-                # ``romarr-imported`` tag (FR-013) so the operator's
-                # client UI shows which downloads have been picked
-                # up + the lifecycle policy can act later. Best-
-                # effort — failure must not invalidate the import.
+                # ``romarr-imported`` tag (FR-013). Best-effort —
+                # failure must not invalidate the committed import.
                 if (
                     context.download_client_id is not None
                     and context.download_client_native_id is not None
@@ -248,11 +298,6 @@ async def run_import(
                     except Exception:
                         pass
                 return outcome
-            except Exception:
-                # Auto-import failed; fall through to parking.
-                # The audit row written by the park branch carries
-                # the operator-actionable failure surface.
-                pass
 
     # Step 2b — park. The rejection reason picks the best signal
     # we have: an extract failure wins (bomb / bad-archive /

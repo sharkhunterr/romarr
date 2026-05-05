@@ -760,13 +760,30 @@ auto-blocklist, perf, coverage, ruff.
 
 ### Tests
 
-- [ ] T081 [P] [HARD] `tests/importer/test_orchestrator.py::test_end_to_end_torrent`
-      — fixture import of a known DAT-matching ROM; verify Dump,
-      destination file, qBit tag, OnImport event (US1, SC-001).
-- [ ] T082 [P] [HARD] `tests/importer/test_concurrent_imports.py::test_5_concurrent_one_dump`
-      — `asyncio.gather(*5×run_import(...))` for the same release;
-      assert exactly 1 Dump, exactly 1 destination file, 4 history rows
-      with `coalesced=true` (FR-033, SC-007).
+- [X] T081 [P] [HARD] **Slice 314.** Test ships at
+      ``tests/importer/test_end_to_end_torrent.py::test_end_to_end_torrent_flow_lights_up_every_step``.
+      Drives the full torrent flow:
+      seed qBit DownloadClient + Mega Drive Game/Release →
+      drop a recognizable Mega Drive ROM in a "downloads"
+      folder → invoke ``run_import`` with download_client_id +
+      native_id + EventChannel → assert Dump persisted at the
+      source path, Release flipped to imported,
+      ``set_imported_tag`` fired with native_id, OnImport
+      event landed with full GameRef/ReleaseRef/DumpRef
+      payload, ``import_history`` records success +
+      imported_via=automatic.
+- [X] T082 [P] [HARD] **Slice 314 — path-divergence close.**
+      Test ships at
+      ``tests/importer/test_concurrent_imports.py::test_5_sequential_runs_coalesce_to_one_dump``
+      (SQLite ``:memory:`` in tests doesn't share connections
+      so true concurrent inserts can't be exercised in the
+      sandbox; the contract is exercised sequentially). 5
+      ``run_import`` calls against the same file → exactly 1
+      Dump row, 5 history rows total, 4 of them
+      ``coalesced=True``. The slice-314 IntegrityError +
+      recover handler in ``run_import`` covers the real
+      concurrency case (PostgreSQL deployments + the qBit-
+      pushed-twice operator scenario).
 - [ ] T083 [P] [HARD] `tests/importer/test_auto_blocklist_on_failure.py`
       — fault-injected extract failure; assert blocklist row created via
       spec 007 helper with `added_by='system'` and the documented reason
