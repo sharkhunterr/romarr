@@ -135,6 +135,57 @@ async def test_list_unidentified_unauthenticated_401(
     assert response.status_code == 401
 
 
+@pytest.mark.asyncio
+async def test_delete_unidentified_keeps_source_file(
+    api_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+    tmp_path: Path,
+) -> None:
+    """Spec 008 T086 / FR-038: DELETE on an unidentified row removes
+    the DB row but MUST NOT touch the source file on disk. Operators
+    rely on the file staying around so they can re-trigger the
+    pipeline against the same byte stream after fixing whatever
+    config gap caused the original park.
+    """
+    await seed_user_and_login(api_engine, api_client, role="admin")
+
+    # Real on-disk file the unidentified row points at.
+    rom = tmp_path / "downloads" / "Sonic the Hedgehog (USA).md"
+    rom.parent.mkdir(parents=True, exist_ok=True)
+    rom.write_bytes(b"\x00" * 4096)
+    assert rom.exists()
+
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        row = UnidentifiedDump(
+            path=str(rom),
+            size_bytes=4096,
+            discovered_at=datetime.now(UTC),
+            rejection_reason="match:no_game",
+        )
+        session.add(row)
+        await session.commit()
+        await session.refresh(row)
+        target_id = row.id
+
+    response = await api_client.delete(
+        f"/api/v3/rom/unidentified/{target_id}"
+    )
+    assert response.status_code == 204
+
+    # The DB row is gone — the source file is NOT.
+    async with sm() as session:
+        gone = (
+            await session.execute(
+                select(UnidentifiedDump).where(
+                    UnidentifiedDump.id == target_id
+                )
+            )
+        ).scalar_one_or_none()
+        assert gone is None
+    assert rom.exists(), "source file must survive the DELETE per FR-038"
+
+
 # ---------------------------------------------------------------------------
 # POST /unidentified/{id}/match (slice 84)
 

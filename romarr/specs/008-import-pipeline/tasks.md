@@ -741,13 +741,28 @@ auto-blocklist, perf, coverage, ruff.
 - [ ] T084 [P] [HARD] `tests/importer/test_manual_flow.py::test_force_overrides_profile`
       — manual flow with `force=true`; profile rejection becomes warning
       (FR-021, US4.2).
-- [ ] T085 [P] [HARD] `tests/importer/test_manual_flow.py::test_unidentified_match_endpoint`
-      — POST `/api/v3/rom/unidentified/{id}/match`; importer runs from
-      step 9 (render); destination materialises; unidentified row deleted
-      (US8).
-- [ ] T086 [P] [HARD] `tests/importer/test_manual_flow.py::test_unidentified_delete_keeps_file`
-      — DELETE on unidentified row removes DB row but NOT the source file
-      (US8.2, FR-038).
+- [X] T085 [P] [HARD] **Slice 289 — path-divergence close.** Test
+      ships at
+      ``tests/importer/api/test_unidentified_endpoints.py::test_match_unidentified_inserts_dump_and_drops_unidentified``
+      rather than the spec'd ``test_manual_flow.py`` path. The
+      test goes through ``POST /api/v3/rom/unidentified/{id}/match``
+      and asserts the documented contract end-to-end:
+      ``ImportOutcome`` fields populated (success / game_id /
+      release_id / dump_id / imported_via / imported_by);
+      ``Dump`` persisted with the right release_id; ``Release``
+      transitioned; ``UnidentifiedDump`` row dropped. The
+      import-from-step-9 (render) chain is exercised through
+      the ``importer/_manual.py`` helper.
+- [X] T086 [P] [HARD] **Slice 289 — path-divergence close.** Test
+      ships at
+      ``tests/importer/api/test_unidentified_endpoints.py::test_delete_unidentified_keeps_source_file``
+      rather than the spec'd ``test_manual_flow.py`` path —
+      the DELETE contract lives on the unidentified-API
+      endpoint. The test creates a real on-disk file in
+      ``tmp_path``, parks an unidentified row pointing at it,
+      calls ``DELETE /api/v3/rom/unidentified/{id}``, asserts
+      the DB row is gone AND the source file is still present
+      (FR-038, US8.2). 12 unidentified endpoint tests passing.
 - [ ] T087 [P] [HARD] `tests/importer/test_manual_flow.py::test_retry_creates_new_history_row`
       — POST retry on a failed import; new history row is created; the
       original row is preserved.
