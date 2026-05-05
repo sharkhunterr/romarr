@@ -319,6 +319,25 @@ async def run_import(
                         )
                     except Exception:
                         pass
+                # LIFECYCLE: preserve_archive (FR-005 / T030). When
+                # the original source was an archive AND the
+                # owning Library's preserve_archive flag is False,
+                # delete the archive after a successful in-place
+                # import. Best-effort — failure here must not
+                # invalidate the committed import.
+                if (
+                    context.source_path != source_path
+                    and context.source_path.suffix.lower()
+                    in _ARCHIVE_SUFFIXES
+                ):
+                    try:
+                        await _maybe_delete_archive(
+                            session=session,
+                            release_id=release_id,
+                            archive_path=context.source_path,
+                        )
+                    except Exception:
+                        pass
                 return outcome
 
     # Step 2b — park. The rejection reason picks the best signal
@@ -381,6 +400,43 @@ async def run_import(
     )
     await session.commit()
     return outcome
+
+
+async def _maybe_delete_archive(
+    *,
+    session: AsyncSession,
+    release_id: int,
+    archive_path: "Path",
+) -> None:
+    """FR-005 / T030 — delete the archive after a successful
+    in-place import iff the owning Library's
+    ``preserve_archive`` flag is False.
+
+    Resolves the Library by walking
+    ``Release.library_id``; when the Release isn't bound to a
+    Library (legacy data, missing FK), the archive is preserved
+    by default — the operator's intent isn't known.
+
+    Best-effort: the caller wraps in try/except so an unlink
+    failure (filesystem permission, file already gone) can't
+    invalidate the committed import.
+    """
+    from romarr.libraries.models import Library
+
+    release = await session.get(Release, release_id)
+    if release is None or release.library_id is None:
+        return
+    library = await session.get(Library, release.library_id)
+    if library is None:
+        return
+    if library.preserve_archive:
+        return  # operator opted to keep archives
+
+    if archive_path.exists() and archive_path.is_file():
+        try:
+            archive_path.unlink()
+        except OSError:
+            return
 
 
 async def _tag_downloaded_imported(

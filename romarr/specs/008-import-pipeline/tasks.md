@@ -240,12 +240,23 @@ task and the webhook returns within the 1 s p95 budget.
       removed, and
       ``test_zip_with_path_traversal_member_raises`` rejecting
       ``../../etc/passwd``-style members before any bytes land.
-- [ ] T030 [P] [EXTRACT] `tests/importer/steps/test_extract.py::test_preserve_archive_flag`
-      — when ``preserve_archive=false`` the archive is deleted
-      after a successful import; when ``true``, kept (FR-005).
-      *(Deferred to the orchestrator slice — FR-005 is a
-      lifecycle decision the orchestrator owns; ``extract``
-      itself never touches the source archive.)*
+- [X] T030 [P] [EXTRACT] **Slice 316 — path-divergence close.**
+      Tests ship at
+      ``tests/importer/test_orchestrator_preserve_archive.py``
+      (3 tests) rather than the spec'd
+      ``test_extract.py::test_preserve_archive_flag`` path:
+      FR-005 is a lifecycle decision the orchestrator owns —
+      ``extract`` itself never touches the source archive,
+      so the contract test belongs at the orchestrator
+      level. Tests cover: ``preserve_archive=False`` →
+      archive unlinked after auto-import;
+      ``preserve_archive=True`` → archive retained;
+      ``Release.library_id IS NULL`` → archive preserved
+      (operator intent unknown). New
+      ``_maybe_delete_archive`` helper walks
+      Release → Library → preserve_archive flag; best-effort
+      unlink so a permission/already-gone failure can't
+      invalidate the committed import.
 
 ### Implementation
 
