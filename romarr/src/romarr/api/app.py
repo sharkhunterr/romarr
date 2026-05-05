@@ -59,6 +59,9 @@ from romarr.importer.api import (
     history_router as importer_history_router,
 )
 from romarr.importer.api import (
+    manual_router as importer_manual_router,
+)
+from romarr.importer.api import (
     unidentified_router as importer_unidentified_router,
 )
 from romarr.importer.webhook import router as importer_webhook_router
@@ -590,6 +593,8 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     app.include_router(importer_webhook_router)
     app.include_router(importer_history_router)
     app.include_router(importer_unidentified_router)
+    # Spec 008 T088 — manual import + retry endpoints.
+    app.include_router(importer_manual_router)
     # Notifications + health subsystem (spec 011). The webhook-
     # payloads doc router shares the /api/v3/notification prefix
     # with the CRUD router, so it goes before the catch-all

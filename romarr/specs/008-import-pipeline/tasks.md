@@ -806,11 +806,23 @@ auto-blocklist, perf, coverage, ruff.
       row is the SAME row across runs (FR-038 idempotent-on-
       path retain). The HTTP retry endpoint is a thin façade
       over ``run_import`` and ships with T088.
-- [ ] T088 [P] [HARD] `tests/importer/api/test_manual_endpoints.py` —
-      full CRUD-style round trip on the manual import endpoints.
-      *(Deferred — manual / retry / match endpoints depend on the
-      orchestrator end-to-end which lands in a follow-up HARD
-      slice.)*
+- [X] T088 [P] [HARD] **Slice 301.** Tests ship at
+      ``tests/importer/api/test_manual_endpoints.py`` (7 tests):
+      ``test_post_manual_returns_history_per_entry``,
+      ``test_post_manual_unauthenticated_returns_401``,
+      ``test_post_manual_user_role_returns_403``,
+      ``test_post_manual_empty_entries_returns_422``,
+      ``test_post_retry_creates_new_history_row`` (asserts
+      both rows present in DB — retry non-destructive),
+      ``test_post_retry_unknown_id_returns_404``,
+      ``test_post_retry_unauthenticated_returns_401``.
+      Endpoints ship at
+      ``src/romarr/importer/api/manual.py``:
+      ``POST /api/v3/rom/import/manual`` (bulk per-entry
+      manual import) +
+      ``POST /api/v3/rom/import/retry/{id}`` (replays the
+      original ``source_path`` with a fresh correlation id;
+      original row preserved per FR-035). Both admin-gated.
 - [X] T089 [P] [HARD] `tests/importer/api/test_history_endpoint.py`
       — 5 tests covering ``GET /api/v3/rom/import/history``:
       paginated, filter by ``imported_via``, filter by
@@ -1122,18 +1134,17 @@ contributors, the WATCH and EXTRACT phases (Day 2-3) split cleanly.
       `ExtractError(rejection_reason='extract:bomb-detected')`.
       Parking + OnHealthIssue emission belongs to the
       orchestrator's failure handler (gated on CL003).
-- [~] CL005 [P] [Admin] Admin-role gate on the four
-      documented manual endpoints — partially done.
-      `DELETE /api/v3/rom/unidentified/{id}` is gated on
-      `require_admin` (`importer/api/unidentified.py`).
-      `POST /api/v3/rom/unidentified/{id}/match` shipped
-      slice 84 with `require_admin`; the
-      `test_match_unidentified_user_role_forbidden` test
-      pins the 403 response.
-      The other two endpoints (`POST /import/manual`,
-      `POST /import/retry/{id}`) are documented as
-      **landing with the HARD slice**; admin gates ship from
-      day one with those endpoints.
+- [X] CL005 [P] [Admin] **Slice 301 — fully closed.** All
+      four documented manual endpoints carry
+      ``Depends(require_admin)``:
+      ``DELETE /api/v3/rom/unidentified/{id}`` and
+      ``POST /api/v3/rom/unidentified/{id}/match``
+      (``importer/api/unidentified.py``);
+      ``POST /api/v3/rom/import/manual`` and
+      ``POST /api/v3/rom/import/retry/{id}``
+      (``importer/api/manual.py``, slice 301).
+      Per-endpoint 401-unauthenticated and 403-user-role
+      tests pin the gates.
 - [X] CL006 [P] Webhook handler bypasses the user-session /
       API-key auth chain — confirmed by inspection
       (`importer/webhook.py::download_complete` carries no
