@@ -308,22 +308,31 @@ class IncrementalScanner:
     ) -> None:
         """Coalesce rapid-fire events on the same path.
 
-        Called from the watchdog observer thread via
-        :meth:`call_soon_threadsafe`; the debounced fire schedules
-        the actual coroutine on the asyncio loop.
+        Called from the watchdog observer thread, so the loop-side
+        bookkeeping (``call_later`` + the ``_pending`` map) MUST be
+        marshalled back to the asyncio loop via
+        :meth:`call_soon_threadsafe` — touching ``self._pending`` or
+        ``self._loop.call_later`` from a non-loop thread is undefined.
         """
-        if self._loop is None or self._loop.is_closed():
+        loop = self._loop
+        if loop is None or loop.is_closed():
             return
 
         def _fire() -> None:
             self._pending.pop(path, None)
-            if self._loop is not None and not self._loop.is_closed():
-                asyncio.run_coroutine_threadsafe(coro_factory(), self._loop)
+            if loop is not None and not loop.is_closed():
+                asyncio.run_coroutine_threadsafe(coro_factory(), loop)
 
-        if path in self._pending:
-            self._pending[path].cancel()
-        timer = self._loop.call_later(self._debounce_seconds, _fire)
-        self._pending[path] = timer
+        def _arm() -> None:
+            if loop.is_closed():
+                return
+            existing = self._pending.pop(path, None)
+            if existing is not None:
+                existing.cancel()
+            timer = loop.call_later(self._debounce_seconds, _fire)
+            self._pending[path] = timer
+
+        loop.call_soon_threadsafe(_arm)
 
 
 class _ScannerEventHandler(FileSystemEventHandler):

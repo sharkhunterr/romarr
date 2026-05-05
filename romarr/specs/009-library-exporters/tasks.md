@@ -318,13 +318,17 @@ storms.
 
 ### Tests
 
-- [~] T043 [P] [SCAN-INC] **Slice 297 — partial.** The
-      direct-handler path is shipped in
-      ``test_handle_created_links_existing_dump_by_sha1`` —
-      a new file whose SHA-1 matches an existing Dump
-      relinks the Dump path. The full inotify timing test
-      (real fs watcher + 5 s SC-004 budget) needs a
-      controlled-fs harness; deferred together with T046.
+- [X] T043 [P] [SCAN-INC] Closed (slice 325) alongside T046.
+      The direct-handler path ships in
+      ``test_handle_created_links_existing_dump_by_sha1``; the
+      end-to-end polling-observer integration test ships at
+      ``tests/libraries/scanner/test_incremental_polling.py``
+      proving a new file under ``library_path`` fires the
+      ``on_unmatched`` callback in well under the SC-004 5 s
+      budget. Slice 325 also fixed a thread-safety bug in
+      ``_schedule_debounced`` (``call_later`` from the watchdog
+      observer thread now marshalls through
+      :meth:`call_soon_threadsafe`).
 - [X] T044 [P] [SCAN-INC] **Slice 297.** Test ships at
       ``tests/libraries/scanner/test_incremental.py::test_rename_updates_path_no_rehash``.
       Drives ``IncrementalScanner.handle_moved`` directly —
@@ -340,16 +344,16 @@ storms.
       ``status='wanted'`` (FR-011). A bonus
       ``test_delete_orphans_dump`` mirrors the same
       contract for the delete path.
-- [~] T046 [P] [SCAN-INC] **Slice 297 — partial.** The
-      ``IncrementalScanner`` honours the
-      ``ROMARR_WATCHDOG_OBSERVER_TYPE=polling`` env override
-      to force ``PollingObserver`` over the native inotify
-      observer — wired in
-      ``src/romarr/libraries/scanner/incremental.py``. The
-      end-to-end "polling-mode detects a new file within
-      scan_poll_seconds" integration test needs a
-      controlled-fs harness with reduced poll interval; lands
-      with the perf-test slice.
+- [X] T046 [P] [SCAN-INC] Closed (slice 325). The
+      ``IncrementalScanner`` honours
+      ``ROMARR_WATCHDOG_OBSERVER_TYPE=polling`` plus a
+      direct ``observer_kind="polling"`` constructor override.
+      End-to-end test at
+      ``tests/libraries/scanner/test_incremental_polling.py``
+      runs the scanner under a real :class:`PollingObserver`
+      with 0.1 s poll cadence, drops a new file, and asserts
+      the ``on_unmatched`` callback fires within the 5 s
+      SC-004 budget (typically <0.5 s).
 
 ### Implementation
 
