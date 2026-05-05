@@ -18,6 +18,8 @@ import {
   type MetadataProviderTestResult,
 } from "@/lib/api/queries/metadata-sources";
 
+import { ConfigureProviderModal } from "./ConfigureProviderModal";
+
 const PROVIDER_EMOJI: Record<string, string> = {
   igdb: "🎮",
   screenscraper: "🖥️",
@@ -63,6 +65,7 @@ export function ProviderRow(props: ProviderRowProps): ReactElement {
   const [priorityDraft, setPriorityDraft] = useState<number>(
     provider.priority_global,
   );
+  const [configureOpen, setConfigureOpen] = useState(false);
 
   const displayName = t(
     `metadataSources.providerName.${provider.provider_name}`,
@@ -185,6 +188,17 @@ export function ProviderRow(props: ProviderRowProps): ReactElement {
         </button>
         <button
           type="button"
+          onClick={() => setConfigureOpen(true)}
+          className={[
+            "min-h-[36px] rounded-md border border-zinc-700 px-3 text-xs font-medium",
+            "text-zinc-200 hover:bg-zinc-900",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+          ].join(" ")}
+        >
+          {t("metadataSources.configure.button")}
+        </button>
+        <button
+          type="button"
           onClick={runTest}
           disabled={test.isPending || !provider.is_configured}
           className={[
@@ -199,6 +213,13 @@ export function ProviderRow(props: ProviderRowProps): ReactElement {
             : t("metadataSources.test.button")}
         </button>
       </div>
+
+      {configureOpen && (
+        <ConfigureProviderModal
+          provider={provider}
+          onClose={() => setConfigureOpen(false)}
+        />
+      )}
     </li>
   );
 }

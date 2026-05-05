@@ -716,6 +716,17 @@
       "enable": "Activer",
       "disable": "Désactiver"
     },
+    "configure": {
+      "button": "Configurer",
+      "title": "Configurer {{provider}}",
+      "subtitle": "Les identifiants sont chiffrés avec Fernet avant d'être stockés.",
+      "noCreds": "Ce fournisseur ne nécessite pas d'identifiants — il est public ou gratuit.",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "cancel": "Annuler",
+      "close": "Fermer",
+      "required": "Champ(s) requis : {{fields}}"
+    },
     "fieldPriorityHint": "L'ordre par champ se configure via /api/v3/metadata/field-priority — l'éditeur drag-and-drop arrive dans un slice à venir."
   },
   "indexers": {

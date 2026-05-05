@@ -716,6 +716,17 @@
       "enable": "Enable",
       "disable": "Disable"
     },
+    "configure": {
+      "button": "Configure",
+      "title": "Configure {{provider}}",
+      "subtitle": "Credentials are Fernet-encrypted before being persisted.",
+      "noCreds": "This provider needs no credentials — it's public or free.",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "close": "Close",
+      "required": "Required field(s): {{fields}}"
+    },
     "fieldPriorityHint": "Per-field provider order is configured at /api/v3/metadata/field-priority — the drag-and-drop editor lands in a follow-up slice."
   },
   "indexers": {
