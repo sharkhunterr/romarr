@@ -75,6 +75,18 @@ export function VirtualGrid<T>(props: VirtualGridProps<T>): ReactElement {
     return () => window.removeEventListener("resize", recompute);
   }, []);
 
+  // ``useVirtualizer`` MUST be called unconditionally per the
+  // rules of hooks. We call it on every render with the
+  // computed row count; below the threshold the rendered
+  // output simply ignores the virtualizer's output.
+  const rowCount = Math.ceil(items.length / Math.max(columns, 1));
+  const rowVirtualizer = useVirtualizer({
+    count: rowCount,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => estimatedRowHeight,
+    overscan: 4,
+  });
+
   // Below the threshold, render a plain CSS grid — the
   // virtualization overhead isn't worth it for small libraries.
   if (items.length < virtualizeThreshold) {
@@ -89,14 +101,6 @@ export function VirtualGrid<T>(props: VirtualGridProps<T>): ReactElement {
       </ul>
     );
   }
-
-  const rowCount = Math.ceil(items.length / columns);
-  const rowVirtualizer = useVirtualizer({
-    count: rowCount,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => estimatedRowHeight,
-    overscan: 4,
-  });
 
   return (
     <div

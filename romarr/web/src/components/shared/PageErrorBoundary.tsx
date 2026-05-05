@@ -65,7 +65,6 @@ export class PageErrorBoundary extends Component<
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     // Console-only — FR-038b prohibits remote error reporting.
-    // eslint-disable-next-line no-console
     console.error(
       "[PageErrorBoundary]",
       error.message,

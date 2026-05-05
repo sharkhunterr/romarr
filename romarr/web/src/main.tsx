@@ -16,11 +16,9 @@ void registerServiceWorker();
 // SDK (FR-038b).
 if (typeof window !== "undefined") {
   window.addEventListener("error", (event) => {
-    // eslint-disable-next-line no-console
     console.error("[romarr:unhandled]", event.error ?? event.message);
   });
   window.addEventListener("unhandledrejection", (event) => {
-    // eslint-disable-next-line no-console
     console.error("[romarr:unhandled-rejection]", event.reason);
   });
 }
