@@ -63,7 +63,7 @@ from romarr.importer.api import (
 )
 from romarr.importer.webhook import router as importer_webhook_router
 from romarr.indexers.api import applications_router, indexers_router
-from romarr.libraries.api import libraries_router
+from romarr.libraries.api import exporters_router, libraries_router
 from romarr.metadata.api import (
     field_priority_router,
     providers_router,
@@ -502,6 +502,8 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     app.include_router(applications_router)
     app.include_router(indexers_router)
     app.include_router(libraries_router)
+    # Spec 009 T082 (slice 279) — read-only exporter catalog.
+    app.include_router(exporters_router)
     # Schema router goes before the {client_id} catch-all so /schema
     # doesn't get pattern-matched as an integer id.
     app.include_router(download_clients_schema_router)

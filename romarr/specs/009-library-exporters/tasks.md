@@ -576,12 +576,22 @@ correctly.
       — POST scan + scan/incremental return command IDs; full + incr
       scans run. *(Deferred to the SCAN slice — needs the scan
       orchestrator that lands with SCAN-FULL / SCAN-INC.)*
-- [ ] T077 [P] [API] `tests/libraries/api/test_exporter_endpoints.py::test_list_returns_status`
-      — GET exporter status; per-exporter last-run + count. *(Deferred
-      to the first EXP-* slice — needs the exporter registry.)*
-- [ ] T078 [P] [API] `tests/libraries/api/test_exporter_endpoints.py::test_run_on_demand`
-      — POST `/exporters/{name}/run`; the named exporter executes.
-      *(Deferred to the first EXP-* slice.)*
+- [~] T077 [P] [API] **Slice 279 — partial.** GET catalog
+      shipped (lists the four documented exporters with name +
+      description + format + available flag). 5 tests in
+      ``tests/libraries/api/test_exporter_endpoints.py`` cover
+      list, single-read, unknown-name 404, format metadata,
+      unauthenticated 401. The "per-exporter last-run + count"
+      tracking the spec wants needs runtime persistence — lands
+      with the per-import dispatch when the spec 008 importer's
+      fan-out arrives.
+- [~] T078 [P] [API] POST ``/exporters/{name}/run`` —
+      **deferred to the per-import-dispatch slice**. Each
+      exporter has its own value type (EsdeGame / PegasusGame /
+      LaunchBoxGame) with different fields; running on demand
+      requires materialising all four from the (library,
+      platform_slug) tuple's Game/Release/Dump rows. Ships
+      together with the importer's per-import fan-out.
 - [ ] T079 [P] [API] `tests/libraries/api/test_manual_import_endpoints.py`
       — GET listing + POST bulk happy paths. *(Deferred to the
       MANUAL slice — needs the candidate-listing helper that
@@ -596,9 +606,20 @@ correctly.
       Wired into the application factory in `api/app.py`.
 - [ ] T081 [P] [API] Create `src/romarr/libraries/api/scan.py` —
       scan trigger endpoints. *(Deferred — same dependency as T076.)*
-- [ ] T082 [P] [API] Create `src/romarr/libraries/api/exporters.py`
-      — exporter status + manual-run endpoints. *(Deferred — same
-      dependency as T077/T078.)*
+- [X] T082 [P] [API] **Slice 279.** Shipped
+      ``src/romarr/libraries/api/exporters.py`` with the read-only
+      catalog surface:
+
+        * GET ``/api/v3/rom/exporters`` — full list
+        * GET ``/api/v3/rom/exporters/{name}`` — one descriptor
+          (404 with ``errorCode=exporter_not_found`` for unknown)
+
+      Backed by the new ``src/romarr/libraries/exporters/registry.py``
+      static catalog (``ExporterDescriptor`` dataclass +
+      ``list_exporters`` / ``get_exporter`` helpers). Wired into
+      ``api/app.py`` via ``libraries.api.exporters_router``.
+      Manual-run endpoints land with T078's per-import dispatch
+      slice.
 - [ ] T083 [P] [API] Create `src/romarr/libraries/api/manual_import.py`
       — `/api/v3/rom/manual-import*` endpoints. *(Deferred — same
       dependency as T079.)*
