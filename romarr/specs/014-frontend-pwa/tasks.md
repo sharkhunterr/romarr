@@ -557,10 +557,27 @@ invalidations.
       help line. Already-installed (display-mode standalone)
       flips the store's `isInstalled` flag so the section
       renders a ✓ acknowledgement instead of the button.
-- [ ] T057 [PWA] Web Push registration scaffolding in
-      `src/lib/pwa/push.ts`. Lands when the spec 012
-      notification surface ships the VAPID key + push
-      subscription endpoint.
+- [X] T057 [PWA] **Slice 309 — frontend scaffolding shipped.**
+      ``web/src/lib/pwa/push.ts`` ships three exports:
+      ``isWebPushSupported`` (browser-feature gate);
+      ``useWebPushSupport`` (reactive hook surfacing isSupported
+      + Notification.permission); ``useWebPushSubscription``
+      (reactive subscription state + ``subscribe``/``unsubscribe``
+      mutation pair). The ``subscribe`` flow walks
+      ``Notification.requestPermission`` → fetch VAPID public
+      key → ``PushManager.subscribe`` → POST subscription to
+      backend. Backend wiring targets two yet-to-ship endpoints
+      (``GET /api/v3/notification/webpush/config`` for the VAPID
+      key, ``POST /api/v3/notification/webpush/subscribe`` for
+      the persistence) — when the config endpoint 404s, the
+      hook returns ``"backend_unavailable"`` so the UI shows a
+      "configure backend first" hint rather than crashing.
+      Tests at ``web/src/lib/pwa/push.test.ts`` (5 tests):
+      jsdom-env returns isSupported=false, getNotificationPermission
+      returns "denied" sans the API, useWebPushSupport returns
+      false-permission tuple in jsdom, ``subscribe()`` returns
+      ``"unsupported"`` when PushManager is missing, fresh hook
+      starts with no endpoint.
 - [X] T058 [PWA] `src/pages/Offline.tsx` ships an i18n'd
       offline fallback. Title + body resolve through
       `common:offline.*`; the "Try again" button triggers
