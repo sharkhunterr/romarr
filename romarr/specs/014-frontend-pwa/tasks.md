@@ -975,9 +975,22 @@ viewport; SC-002 (60 fps on 10 000 items) is met in a perf test.
       paths from spec 013 T046 retry / spec 005 reconciler will
       add ``upserted`` envelopes alongside the existing
       ``deleted`` one.
-- [~] T092 [P] [P-ACT] Swipe-to-remove **deferred** — needs
-      `@use-gesture/react` plus the spec 013 queue DELETE
-      endpoint (T045).
+- [X] T092 [P] [P-ACT] **Slice 304.** Swipe-to-remove wired
+      into ``QueueRow`` via ``@use-gesture/react``'s
+      ``useDrag`` (touch-only — mouse users hit the explicit
+      Remove button). Drag the row left past
+      ``SWIPE_THRESHOLD_PX`` (100 px) and release →
+      ``useDeleteQueueEntry.mutate({removeFromClient:true})``,
+      same path the Remove button uses (slice 251). Below
+      the threshold the row springs back. ``data-swipe``
+      attribute toggles ``idle``/``active`` so the test layer
+      + e2e can observe state. ``touch-pan-y`` keeps native
+      vertical scrolling available within the list.
+      Tests at
+      ``web/src/pages/Activity/QueueList.test.tsx`` (2 tests)
+      pin the Remove-button surface + data-swipe initial state;
+      the threshold-crossing trigger lands at the E2E layer
+      with Playwright.
 
 ### Implementation
 

@@ -13,8 +13,9 @@
  * are contract values, not operator copy.
  */
 
-import { type ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { type TFunction } from "i18next";
+import { useDrag } from "@use-gesture/react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
@@ -88,6 +89,10 @@ function formatEta(seconds: number | null | undefined, t: TFunction): string {
   });
 }
 
+// Distance (px) the row must travel left before release fires
+// the remove. Below the threshold the row springs back.
+const SWIPE_THRESHOLD_PX = 100;
+
 function QueueRow(props: {
   entry: QueueEntry;
   clientName: string | null;
@@ -100,6 +105,39 @@ function QueueRow(props: {
     "bg-zinc-800 text-zinc-300 ring-zinc-700";
   const progressPct = Math.round(Math.min(1, entry.progress) * 100);
 
+  // Swipe-to-remove (T092 / spec 014 P-ACT). Touch-only — mouse
+  // users hit the explicit Remove button instead. Drag the row
+  // left past SWIPE_THRESHOLD_PX and release → fires the same
+  // mutation the button does.
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const swipeBind = useDrag(
+    ({ down, movement: [mx], last }) => {
+      if (remove.isPending) {
+        return;
+      }
+      // Right-direction swipes are no-ops; only left-swipe
+      // (negative mx) triggers the remove gesture.
+      const clamped = Math.min(0, Math.max(mx, -160));
+      if (down) {
+        setSwipeOffset(clamped);
+        return;
+      }
+      if (last) {
+        if (clamped <= -SWIPE_THRESHOLD_PX) {
+          setSwipeOffset(0);
+          remove.mutate({ id: entry.id, removeFromClient: true });
+        } else {
+          setSwipeOffset(0);
+        }
+      }
+    },
+    {
+      axis: "x",
+      filterTaps: true,
+      pointer: { touch: true },
+    },
+  );
+
   function onRemove(): void {
     if (
       typeof window !== "undefined" &&
@@ -111,7 +149,15 @@ function QueueRow(props: {
   }
 
   return (
-    <li className="rounded-md border border-zinc-800 bg-zinc-900/40 p-3">
+    <li
+      {...swipeBind()}
+      data-swipe={swipeOffset < 0 ? "active" : "idle"}
+      className="relative overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/40 p-3 touch-pan-y"
+      style={{
+        transform: `translateX(${swipeOffset}px)`,
+        transition: swipeOffset === 0 ? "transform 200ms ease" : "none",
+      }}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="truncate font-mono text-xs text-zinc-300">
