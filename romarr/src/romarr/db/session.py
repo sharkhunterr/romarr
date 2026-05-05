@@ -27,10 +27,25 @@ from romarr.config import get_settings
 
 
 def _enable_sqlite_fk(dbapi_connection: Any, _connection_record: Any) -> None:
-    """Enable foreign-key enforcement on every new SQLite connection."""
+    """Per-connection SQLite hardening pragmas:
+
+    * ``foreign_keys=ON`` — Romarr's domain depends on cascade rules
+      (FR-002, FR-005) which SQLite disables by default.
+    * ``journal_mode=WAL`` — concurrent readers + one writer without
+      whole-database locks. The bootstrap path (seed defaults +
+      platform pack + setup token) runs three near-simultaneous
+      transactions; without WAL it hits ``database is locked``.
+    * ``busy_timeout=5000`` — when a writer holds the lock, queue
+      pending writers up to 5 s instead of failing immediately.
+    * ``synchronous=NORMAL`` — safe under WAL and noticeably faster
+      than the FULL default for the bootstrap workload.
+    """
     cursor = dbapi_connection.cursor()
     try:
         cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA busy_timeout=5000")
+        cursor.execute("PRAGMA synchronous=NORMAL")
     finally:
         cursor.close()
 

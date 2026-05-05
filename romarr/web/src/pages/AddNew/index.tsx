@@ -70,9 +70,16 @@ function LookupRow(props: {
       ].join(" ")}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-100">
-          {row.title}
-        </p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-zinc-100">
+            {row.title}
+          </p>
+          {(row.platformName || row.platformSlug) && (
+            <p className="mt-0.5 truncate text-[0.7rem] text-brand">
+              {row.platformName ?? row.platformSlug}
+            </p>
+          )}
+        </div>
         <ConfidenceBar value={row.confidence} />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 text-[0.65rem] text-zinc-500">

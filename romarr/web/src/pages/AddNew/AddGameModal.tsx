@@ -34,15 +34,21 @@ export function AddGameModal(props: AddGameModalProps): ReactElement {
   const [platformId, setPlatformId] = useState<number | null>(null);
   const [monitored, setMonitored] = useState(true);
 
-  // Default-pick the first platform once the list loads so the
-  // operator can submit immediately for the common case where
-  // they only have one platform configured.
+  // Pre-fill the platform from the lookup candidate when IGDB
+  // (or another platform-aware provider) returned a slug. Falls
+  // back to the first platform when the candidate has no slug or
+  // its slug isn't in the configured Platform table — that keeps
+  // the modal submittable for the common single-platform setup.
   useEffect(() => {
-    const first = platforms.data?.[0];
-    if (platformId === null && first !== undefined) {
-      setPlatformId(first.id);
-    }
-  }, [platforms.data, platformId]);
+    if (platformId !== null) return;
+    const list = platforms.data ?? [];
+    if (list.length === 0) return;
+    const candidateSlug = props.candidate.platformSlug ?? null;
+    const matched = candidateSlug
+      ? list.find((p) => p.slug === candidateSlug)
+      : undefined;
+    setPlatformId((matched ?? list[0]).id);
+  }, [platforms.data, platformId, props.candidate.platformSlug]);
 
   function submit(): void {
     if (platformId === null) return;

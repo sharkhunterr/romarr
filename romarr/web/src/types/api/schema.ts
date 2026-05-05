@@ -3021,6 +3021,10 @@ export interface components {
         GameLookupRow: {
             /** Confidence */
             confidence: number;
+            /** Platformname */
+            platformName?: string | null;
+            /** Platformslug */
+            platformSlug?: string | null;
             /** Providergameid */
             providerGameId: string;
             /** Providername */

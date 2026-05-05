@@ -40,7 +40,14 @@ class ProviderField(StrEnum):
 
 
 class GameSearchResult(BaseModel):
-    """One row of a provider's "search games by title" response."""
+    """One row of a provider's "search games by title" response.
+
+    Romarr's domain binds a Game to exactly one Platform, so providers
+    that know the platform of a candidate emit one row per (game,
+    platform) pair. Providers without that knowledge leave both
+    ``platform_slug`` and ``platform_name`` ``None`` and the operator
+    picks the platform manually in the AddGame modal.
+    """
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
@@ -51,6 +58,18 @@ class GameSearchResult(BaseModel):
         ge=0.0,
         le=1.0,
         description="Match strength in [0, 1]; provider-supplied or fuzz-derived.",
+    )
+    platform_slug: str | None = Field(
+        default=None,
+        description=(
+            "Romarr platform slug the candidate maps to, when the "
+            "provider knows. Resolved server-side via the per-provider "
+            "platform_mapping config."
+        ),
+    )
+    platform_name: str | None = Field(
+        default=None,
+        description="Human-readable platform name (e.g. 'Mega Drive').",
     )
 
 

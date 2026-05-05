@@ -124,6 +124,8 @@ class GameLookupRow(BaseModel):
     provider_game_id: str = Field(alias="providerGameId")
     title: str
     confidence: float
+    platform_slug: str | None = Field(default=None, alias="platformSlug")
+    platform_name: str | None = Field(default=None, alias="platformName")
 
 
 @router.get(
@@ -190,6 +192,20 @@ async def lookup_games(
     merged.sort(key=lambda r: r.confidence, reverse=True)
     truncated = merged[:limit]
 
+    # Enrich platform_name from the Platform table for any row that
+    # carries a slug. Single bulk SELECT keeps it cheap.
+    slugs_needed = {r.platform_slug for r in truncated if r.platform_slug}
+    name_by_slug: dict[str, str] = {}
+    if slugs_needed:
+        rows_p = (
+            await db.execute(
+                select(Platform.slug, Platform.name).where(
+                    Platform.slug.in_(slugs_needed)
+                )
+            )
+        ).all()
+        name_by_slug = {slug: name for slug, name in rows_p}
+
     return [
         GameLookupRow(
             rank=index,
@@ -197,6 +213,12 @@ async def lookup_games(
             providerGameId=row.provider_game_id,
             title=row.title,
             confidence=row.confidence,
+            platformSlug=row.platform_slug,
+            platformName=(
+                name_by_slug.get(row.platform_slug)
+                if row.platform_slug
+                else None
+            ),
         )
         for index, row in enumerate(truncated)
     ]

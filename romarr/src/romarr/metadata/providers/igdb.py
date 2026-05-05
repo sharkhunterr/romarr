@@ -148,13 +148,14 @@ class IGDBProvider(MetadataProvider):
     async def search_games(
         self, query: str, *, platform_slug: str | None = None
     ) -> list[GameSearchResult]:
-        # IGDB's search-with-where forbids the ``search "..."`` clause
-        # combined with ``where`` filters in the same query — but we
-        # still want to scope by platform when we can. The classic
-        # workaround is to use ``where name ~ *"<q>"*`` (case-insensitive
-        # substring) plus a where-platforms filter.
+        # IGDB returns each Game once with a list of platform IDs
+        # (a single Game can ship on multiple platforms). Romarr's
+        # domain model binds a Game to exactly one Platform, so we
+        # explode each IGDB hit into one row per (game, platform)
+        # pair so the operator picks both the title AND the
+        # platform from the search results.
         body = (
-            'fields id, name, slug;'
+            "fields id, name, slug, platforms;"
             f' where name ~ *"{_escape(query)}"*'
         )
         if platform_slug:
@@ -164,19 +165,48 @@ class IGDBProvider(MetadataProvider):
         body += "; limit 20;"
 
         rows = await self._authed_post("/games", body)
+
+        # Reverse the operator-configured platform_mapping so we can
+        # turn IGDB's numeric platform ids back into Romarr slugs.
+        # Slugs not in the mapping fall through with platform_slug=None
+        # so the AddGame modal's platform picker still surfaces.
+        igdb_id_to_slug = {
+            int(igdb_id): slug
+            for slug, igdb_id in self._platform_mapping.items()
+        }
+
         out: list[GameSearchResult] = []
         for row in rows:
             name = row.get("name") or ""
             if not name:
                 continue
-            out.append(
-                GameSearchResult(
-                    provider_name=self.name,
-                    provider_game_id=str(row["id"]),
-                    title=name,
-                    confidence=_substring_confidence(query, name),
+            confidence = _substring_confidence(query, name)
+            platform_ids = row.get("platforms") or []
+            if not platform_ids:
+                # IGDB row with no platform metadata — emit one
+                # generic row.
+                out.append(
+                    GameSearchResult(
+                        provider_name=self.name,
+                        provider_game_id=str(row["id"]),
+                        title=name,
+                        confidence=confidence,
+                    )
                 )
-            )
+                continue
+            for igdb_pid in platform_ids:
+                slug = igdb_id_to_slug.get(int(igdb_pid))
+                if slug is None:
+                    continue  # unmapped IGDB platform — skip silently
+                out.append(
+                    GameSearchResult(
+                        provider_name=self.name,
+                        provider_game_id=str(row["id"]),
+                        title=name,
+                        confidence=confidence,
+                        platform_slug=slug,
+                    )
+                )
         return out
 
     async def get_game(self, provider_game_id: str) -> GameMetadata:
