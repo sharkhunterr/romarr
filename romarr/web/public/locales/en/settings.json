@@ -701,6 +701,10 @@
     },
     "configured": "Configured",
     "needsCredentials": "Needs credentials",
+    "liveBadge": {
+      "label": "Active and healthy",
+      "title": "Enabled, credentials valid, last health check OK"
+    },
     "disabled": "Disabled",
     "priority": {
       "label": "Priority",

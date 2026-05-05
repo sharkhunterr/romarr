@@ -36,11 +36,64 @@ from romarr.metadata.types import GameMetadata, GameSearchResult, ProviderField
 # The configure() call may override this via the ``platform_mapping``
 # config key — operators with extra platforms should pass the full map.
 _DEFAULT_PLATFORM_MAPPING: dict[str, int] = {
+    # Aligned with the 2026.05.001 built-in pack so an out-of-the-
+    # box IGDB lookup maps every shipped platform back to its
+    # Romarr slug. Operators can override per-slug via
+    # ``config.platform_mapping`` for forks or custom packs.
     "nes": 18,
+    "fds": 51,
     "snes": 19,
-    "megadrive": 29,
+    "virtualboy": 87,
+    "n64": 4,
+    "gamecube": 21,
+    "wii": 5,
+    "wiiu": 41,
+    "switch": 130,
     "gameboy": 33,
+    "gbc": 22,
     "gba": 24,
+    "nds": 20,
+    "3ds": 37,
+    "pokemon-mini": 166,
+    "master-system": 64,
+    "gamegear": 35,
+    "megadrive": 29,
+    "segacd": 78,
+    "sega32x": 30,
+    "saturn": 32,
+    "dreamcast": 23,
+    "psx": 7,
+    "ps2": 8,
+    "ps3": 9,
+    "psp": 38,
+    "psvita": 46,
+    "xbox": 11,
+    "xbox360": 12,
+    "atari-2600": 59,
+    "atari-5200": 66,
+    "atari-7800": 60,
+    "atari-jaguar": 62,
+    "atari-lynx": 61,
+    "neogeo": 80,
+    "ngp": 119,
+    "ngpc": 120,
+    "pcengine": 86,
+    "pce-cd": 150,
+    "pcfx": 274,
+    "wonderswan": 57,
+    "wonderswan-color": 123,
+    "colecovision": 68,
+    "intellivision": 67,
+    "threedo": 50,
+    "vectrex": 70,
+    "amiga": 16,
+    "c64": 15,
+    "msx": 27,
+    "msx2": 53,
+    "zx-spectrum": 26,
+    "dos": 13,
+    "apple-ii": 75,
+    "arcade": 52,
 }
 
 _TWITCH_TOKEN_URL = "https://id.twitch.tv/oauth2/token"
@@ -207,7 +260,8 @@ class IGDBProvider(MetadataProvider):
             platform_ids = row.get("platforms") or []
             if not platform_ids:
                 # IGDB row with no platform metadata — emit one
-                # generic row.
+                # generic row so the operator can still pick a
+                # platform manually in the AddGame modal.
                 out.append(
                     GameSearchResult(
                         provider_name=self.name,
@@ -219,10 +273,28 @@ class IGDBProvider(MetadataProvider):
                     )
                 )
                 continue
-            for igdb_pid in platform_ids:
-                slug = igdb_id_to_slug.get(int(igdb_pid))
-                if slug is None:
-                    continue  # unmapped IGDB platform — skip silently
+            mapped_slugs = [
+                igdb_id_to_slug.get(int(pid)) for pid in platform_ids
+            ]
+            mapped_slugs = [s for s in mapped_slugs if s is not None]
+            if not mapped_slugs:
+                # IGDB returned platforms but none of them are in
+                # the operator's mapping (custom pack / DLC-only
+                # platform). Emit one generic row so the candidate
+                # still surfaces and the operator picks the
+                # platform manually in the modal.
+                out.append(
+                    GameSearchResult(
+                        provider_name=self.name,
+                        provider_game_id=str(row["id"]),
+                        title=name,
+                        confidence=confidence,
+                        release_year=release_year,
+                        cover_url=cover_url,
+                    )
+                )
+                continue
+            for slug in mapped_slugs:
                 out.append(
                     GameSearchResult(
                         provider_name=self.name,

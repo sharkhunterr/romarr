@@ -109,14 +109,35 @@ export function ProviderRow(props: ProviderRowProps): ReactElement {
     });
   }
 
+  // The "live & healthy" indicator: enabled + last test passed.
+  // Surfaces as a green status ring around the icon (more visible
+  // than a 2px dot) plus a small green dot in the corner.
+  const isLive = provider.enabled && health === "ok";
+  const iconRingClass = isLive
+    ? "ring-2 ring-brand"
+    : "ring-1 ring-zinc-800/60";
+
   return (
     <li className="rounded-md border border-zinc-800 bg-zinc-900/40 p-3">
       <div className="flex items-start gap-3">
-        <div
-          aria-hidden="true"
-          className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-800/60 text-zinc-300"
-        >
-          <Icon size={14} />
+        <div className="relative mt-0.5 shrink-0">
+          <div
+            aria-hidden="true"
+            className={[
+              "flex h-9 w-9 items-center justify-center rounded-md",
+              "bg-zinc-800/60 text-zinc-300",
+              iconRingClass,
+            ].join(" ")}
+          >
+            <Icon size={16} />
+          </div>
+          {isLive && (
+            <span
+              aria-label={t("metadataSources.liveBadge.label")}
+              className="absolute -right-1 -top-1 inline-flex h-3 w-3 items-center justify-center rounded-full bg-brand ring-2 ring-zinc-950"
+              title={t("metadataSources.liveBadge.title")}
+            />
+          )}
         </div>
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex flex-wrap items-center gap-2">

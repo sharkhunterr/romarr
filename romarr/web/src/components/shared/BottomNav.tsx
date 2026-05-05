@@ -52,11 +52,11 @@ const ENTRIES: readonly NavEntry[] = [
 function entryClass(isActive: boolean): string {
   return [
     "flex h-full min-w-[44px] flex-1 flex-col items-center justify-center",
-    "gap-0.5 py-1.5 text-[0.65rem] font-medium",
+    "gap-0.5 py-1.5",
     "transition-colors",
     isActive
       ? "text-brand"
-      : "text-zinc-500 hover:text-zinc-200",
+      : "text-zinc-400 hover:text-zinc-100",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
     "focus-visible:rounded",
   ].join(" ");
@@ -66,6 +66,7 @@ function NavEntryNode(props: { entry: NavEntry; index: number }): ReactElement {
   const { t } = useTranslation();
   const openSearch = useSearchStore((s) => s.openModal);
   const { entry } = props;
+  const label = t(`nav.${entry.i18nKey}`);
 
   if (entry.kind === "action") {
     return (
@@ -73,10 +74,11 @@ function NavEntryNode(props: { entry: NavEntry; index: number }): ReactElement {
         key={`search-${props.index}`}
         type="button"
         onClick={openSearch}
+        aria-label={label}
+        title={label}
         className={entryClass(false)}
       >
-        <entry.Icon size={20} aria-hidden="true" />
-        <span>{t(`nav.${entry.i18nKey}`)}</span>
+        <entry.Icon size={24} strokeWidth={2} aria-hidden="true" />
       </button>
     );
   }
@@ -86,10 +88,17 @@ function NavEntryNode(props: { entry: NavEntry; index: number }): ReactElement {
       key={`${entry.to}-${props.index}`}
       to={entry.to}
       end={entry.to === "/library"}
+      aria-label={label}
+      title={label}
       className={({ isActive }) => entryClass(isActive)}
     >
-      <entry.Icon size={20} aria-hidden="true" />
-      <span>{t(`nav.${entry.i18nKey}`)}</span>
+      {({ isActive }) => (
+        <entry.Icon
+          size={24}
+          strokeWidth={isActive ? 2.4 : 2}
+          aria-hidden="true"
+        />
+      )}
     </NavLink>
   );
 }
