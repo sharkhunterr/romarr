@@ -763,9 +763,16 @@ auto-blocklist, perf, coverage, ruff.
       calls ``DELETE /api/v3/rom/unidentified/{id}``, asserts
       the DB row is gone AND the source file is still present
       (FR-038, US8.2). 12 unidentified endpoint tests passing.
-- [ ] T087 [P] [HARD] `tests/importer/test_manual_flow.py::test_retry_creates_new_history_row`
-      — POST retry on a failed import; new history row is created; the
-      original row is preserved.
+- [X] T087 [P] [HARD] **Slice 291.** Test ships at
+      ``tests/importer/test_manual_flow.py::test_retry_creates_new_history_row``.
+      Drives the orchestrator twice against the same source
+      path with a fresh ``correlation_id`` per run; asserts
+      two distinct ``import_history`` rows exist (original
+      preserved, new row inserted), each carries its own
+      correlation id, AND the parked ``unidentified_dump``
+      row is the SAME row across runs (FR-038 idempotent-on-
+      path retain). The HTTP retry endpoint is a thin façade
+      over ``run_import`` and ships with T088.
 - [ ] T088 [P] [HARD] `tests/importer/api/test_manual_endpoints.py` —
       full CRUD-style round trip on the manual import endpoints.
       *(Deferred — manual / retry / match endpoints depend on the
