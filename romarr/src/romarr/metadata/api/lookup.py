@@ -126,6 +126,9 @@ class GameLookupRow(BaseModel):
     confidence: float
     platform_slug: str | None = Field(default=None, alias="platformSlug")
     platform_name: str | None = Field(default=None, alias="platformName")
+    platform_manufacturer: str | None = Field(
+        default=None, alias="platformManufacturer"
+    )
     release_year: int | None = Field(default=None, alias="releaseYear")
     cover_url: str | None = Field(default=None, alias="coverUrl")
 
@@ -194,38 +197,62 @@ async def lookup_games(
     merged.sort(key=lambda r: r.confidence, reverse=True)
     truncated = merged[:limit]
 
-    # Enrich platform_name from the Platform table for any row that
-    # carries a slug. Single bulk SELECT keeps it cheap.
+    # Enrich platform_name + manufacturer from the Platform table
+    # for any row that carries a Romarr slug. Single bulk SELECT
+    # keeps it cheap. When the slug isn't in the operator's
+    # configured Platform table, we fall back to the
+    # provider-supplied platform_name (e.g. IGDB's display name)
+    # so the row still surfaces context.
     slugs_needed = {r.platform_slug for r in truncated if r.platform_slug}
-    name_by_slug: dict[str, str] = {}
+    enrichment_by_slug: dict[str, tuple[str, str | None]] = {}
     if slugs_needed:
         rows_p = (
             await db.execute(
-                select(Platform.slug, Platform.name).where(
+                select(Platform.slug, Platform.name, Platform.manufacturer).where(
                     Platform.slug.in_(slugs_needed)
                 )
             )
         ).all()
-        name_by_slug = {slug: name for slug, name in rows_p}
+        enrichment_by_slug = {
+            slug: (name, manufacturer)
+            for slug, name, manufacturer in rows_p
+        }
 
-    return [
-        GameLookupRow(
-            rank=index,
-            providerName=row.provider_name,
-            providerGameId=row.provider_game_id,
-            title=row.title,
-            confidence=row.confidence,
-            platformSlug=row.platform_slug,
-            platformName=(
-                name_by_slug.get(row.platform_slug)
-                if row.platform_slug
-                else None
-            ),
-            releaseYear=row.release_year,
-            coverUrl=row.cover_url,
+    out_rows: list[GameLookupRow] = []
+    for index, row in enumerate(truncated):
+        # Romarr-side enrichment wins over provider-supplied names
+        # so the operator sees their own naming convention. When
+        # the slug isn't configured locally, fall back to the
+        # provider name (e.g. IGDB's "Linux" / "Game & Watch").
+        local_enrichment = (
+            enrichment_by_slug.get(row.platform_slug)
+            if row.platform_slug
+            else None
         )
-        for index, row in enumerate(truncated)
-    ]
+        if local_enrichment is not None:
+            display_name, manufacturer = local_enrichment
+        else:
+            display_name = row.platform_name
+            manufacturer = None
+        out_rows.append(
+            GameLookupRow(
+                rank=index,
+                providerName=row.provider_name,
+                providerGameId=row.provider_game_id,
+                title=row.title,
+                confidence=row.confidence,
+                platformSlug=(
+                    row.platform_slug
+                    if row.platform_slug in enrichment_by_slug
+                    else None
+                ),
+                platformName=display_name,
+                platformManufacturer=manufacturer,
+                releaseYear=row.release_year,
+                coverUrl=row.cover_url,
+            )
+        )
+    return out_rows
 
 
 class LookupAddRequest(BaseModel):

@@ -18,6 +18,7 @@ import { useEffect, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
+  useTestMetadataProvider,
   useUpdateMetadataProvider,
   type MetadataProvider,
 } from "@/lib/api/queries/metadata-sources";
@@ -76,6 +77,7 @@ export function ConfigureProviderModal(
   const { provider, onClose } = props;
   const { t } = useTranslation("settings");
   const update = useUpdateMetadataProvider();
+  const test = useTestMetadataProvider();
 
   const fields = FIELDS_BY_PROVIDER[provider.provider_name] ?? [];
   const noCreds = NO_CREDS_PROVIDERS.has(provider.provider_name);
@@ -105,7 +107,15 @@ export function ConfigureProviderModal(
         payload: { config: values },
       },
       {
-        onSuccess: () => onClose(),
+        onSuccess: () => {
+          // Auto-fire a health probe so the operator gets the
+          // green "live" badge immediately after saving valid
+          // credentials, without an extra click on "Test".
+          // Failures here just leave the badge in the
+          // "untested/active" amber state — not blocking.
+          test.mutate(provider.provider_name);
+          onClose();
+        },
         onError: (err) => setError(err.message),
       },
     );

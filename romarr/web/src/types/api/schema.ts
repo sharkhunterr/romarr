@@ -3023,6 +3023,8 @@ export interface components {
             confidence: number;
             /** Coverurl */
             coverUrl?: string | null;
+            /** Platformmanufacturer */
+            platformManufacturer?: string | null;
             /** Platformname */
             platformName?: string | null;
             /** Platformslug */

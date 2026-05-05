@@ -73,11 +73,18 @@ export function useTestMetadataProvider(): UseMutationResult<
   ApiError,
   string
 > {
+  const qc = useQueryClient();
   return useMutation<MetadataProviderTestResult, ApiError, string>({
     mutationFn: (providerName) =>
       apiFetch<MetadataProviderTestResult>(
         `/api/v3/metadata/provider/${providerName}/test`,
         { method: "POST" },
       ),
+    // The test endpoint persists last_health_check_at +
+    // last_health_check_ok server-side; refresh the list query so
+    // the live badge in the row picks up the new status.
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: PROVIDERS_KEY });
+    },
   });
 }

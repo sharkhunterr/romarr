@@ -71,6 +71,14 @@ class GameSearchResult(BaseModel):
         default=None,
         description="Human-readable platform name (e.g. 'Mega Drive').",
     )
+    platform_manufacturer: str | None = Field(
+        default=None,
+        description=(
+            "Platform manufacturer name (e.g. 'Nintendo'). The "
+            "frontend uses it to colour the platform pill so the "
+            "operator can spot families at a glance."
+        ),
+    )
     release_year: int | None = Field(
         default=None,
         description="First-release year for the candidate (provider-supplied).",

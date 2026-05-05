@@ -209,9 +209,12 @@ class IGDBProvider(MetadataProvider):
         # platform from the search results. We also pull
         # ``first_release_date`` + ``cover.image_id`` so the AddNew
         # page can render year + thumbnail per row.
+        # ``platforms.name`` returns each platform as a {id, name}
+        # object so we can show IGDB's display name even when the
+        # platform isn't in the operator's slug mapping.
         body = (
-            "fields id, name, slug, platforms, first_release_date, "
-            "cover.image_id;"
+            "fields id, name, slug, platforms.id, platforms.name, "
+            "first_release_date, cover.image_id;"
             f' where name ~ *"{_escape(query)}"*'
         )
         if platform_slug:
@@ -224,8 +227,6 @@ class IGDBProvider(MetadataProvider):
 
         # Reverse the operator-configured platform_mapping so we can
         # turn IGDB's numeric platform ids back into Romarr slugs.
-        # Slugs not in the mapping fall through with platform_slug=None
-        # so the AddGame modal's platform picker still surfaces.
         igdb_id_to_slug = {
             int(igdb_id): slug
             for slug, igdb_id in self._platform_mapping.items()
@@ -257,11 +258,23 @@ class IGDBProvider(MetadataProvider):
                         "https://images.igdb.com/igdb/image/upload/"
                         f"t_cover_small/{image_id}.jpg"
                     )
-            platform_ids = row.get("platforms") or []
-            if not platform_ids:
-                # IGDB row with no platform metadata — emit one
-                # generic row so the operator can still pick a
-                # platform manually in the AddGame modal.
+            # IGDB returns ``platforms`` as either a list of ints
+            # (older queries) or a list of {id, name} objects when
+            # ``platforms.name`` is in the field list. Normalize.
+            raw_platforms = row.get("platforms") or []
+            platform_pairs: list[tuple[int, str | None]] = []
+            for entry in raw_platforms:
+                if isinstance(entry, dict):
+                    platform_pairs.append(
+                        (int(entry.get("id") or 0), entry.get("name"))
+                    )
+                else:
+                    platform_pairs.append((int(entry), None))
+
+            if not platform_pairs:
+                # Game with no platform metadata — emit one generic
+                # row so the operator picks the platform manually
+                # in the AddGame modal.
                 out.append(
                     GameSearchResult(
                         provider_name=self.name,
@@ -273,28 +286,17 @@ class IGDBProvider(MetadataProvider):
                     )
                 )
                 continue
-            mapped_slugs = [
-                igdb_id_to_slug.get(int(pid)) for pid in platform_ids
-            ]
-            mapped_slugs = [s for s in mapped_slugs if s is not None]
-            if not mapped_slugs:
-                # IGDB returned platforms but none of them are in
-                # the operator's mapping (custom pack / DLC-only
-                # platform). Emit one generic row so the candidate
-                # still surfaces and the operator picks the
-                # platform manually in the modal.
-                out.append(
-                    GameSearchResult(
-                        provider_name=self.name,
-                        provider_game_id=str(row["id"]),
-                        title=name,
-                        confidence=confidence,
-                        release_year=release_year,
-                        cover_url=cover_url,
-                    )
-                )
-                continue
-            for slug in mapped_slugs:
+
+            for igdb_pid, igdb_pname in platform_pairs:
+                slug = igdb_id_to_slug.get(igdb_pid)
+                # When the slug isn't in the operator's mapping, we
+                # still want to surface the candidate — and we can
+                # display IGDB's own platform name so the operator
+                # sees "Sonic the Hedgehog (Sega Genesis 32X)" even
+                # if Romarr's pack doesn't ship that platform yet.
+                # ``platform_slug=None`` keeps the AddGame modal's
+                # picker visible so the operator can still pick the
+                # closest Romarr platform manually.
                 out.append(
                     GameSearchResult(
                         provider_name=self.name,
@@ -302,6 +304,7 @@ class IGDBProvider(MetadataProvider):
                         title=name,
                         confidence=confidence,
                         platform_slug=slug,
+                        platform_name=igdb_pname,
                         release_year=release_year,
                         cover_url=cover_url,
                     )

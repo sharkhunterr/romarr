@@ -109,13 +109,29 @@ export function ProviderRow(props: ProviderRowProps): ReactElement {
     });
   }
 
-  // The "live & healthy" indicator: enabled + last test passed.
-  // Surfaces as a green status ring around the icon (more visible
-  // than a 2px dot) plus a small green dot in the corner.
-  const isLive = provider.enabled && health === "ok";
-  const iconRingClass = isLive
-    ? "ring-2 ring-brand"
-    : "ring-1 ring-zinc-800/60";
+  // "Active" means: configured + enabled. The badge always shows
+  // when active so the operator gets immediate feedback after
+  // saving credentials and flipping the toggle, even before the
+  // first health probe runs.
+  // Tinted by last-probe outcome:
+  //   * ok       → bright brand-green ring + dot
+  //   * fail     → red ring + dot (config wrong / provider down)
+  //   * untested → green ring + amber dot (active, unverified)
+  const isActive = provider.enabled && provider.is_configured;
+  let iconRingClass = "ring-1 ring-zinc-800/60";
+  let cornerDotClass = "";
+  if (isActive) {
+    if (health === "ok") {
+      iconRingClass = "ring-2 ring-brand";
+      cornerDotClass = "bg-brand";
+    } else if (health === "fail") {
+      iconRingClass = "ring-2 ring-red-500";
+      cornerDotClass = "bg-red-500";
+    } else {
+      iconRingClass = "ring-2 ring-brand/60";
+      cornerDotClass = "bg-amber-400";
+    }
+  }
 
   return (
     <li className="rounded-md border border-zinc-800 bg-zinc-900/40 p-3">
@@ -131,10 +147,15 @@ export function ProviderRow(props: ProviderRowProps): ReactElement {
           >
             <Icon size={16} />
           </div>
-          {isLive && (
+          {isActive && (
             <span
               aria-label={t("metadataSources.liveBadge.label")}
-              className="absolute -right-1 -top-1 inline-flex h-3 w-3 items-center justify-center rounded-full bg-brand ring-2 ring-zinc-950"
+              className={[
+                "absolute -right-1 -top-1 inline-flex h-3 w-3",
+                "items-center justify-center rounded-full",
+                "ring-2 ring-zinc-950",
+                cornerDotClass,
+              ].join(" ")}
               title={t("metadataSources.liveBadge.title")}
             />
           )}
