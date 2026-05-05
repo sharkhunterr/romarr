@@ -274,6 +274,82 @@ async def run_import(
 
             release_id = int(candidates[0])
             file_format = _classify_file_format(source_path)
+            from romarr.importer.errors import MoveError
+
+            # MOVE step (FR-007 / CL003) — when the picked Release
+            # is bound to a Library whose path exists on disk, move
+            # the source file into the library tree before the DB
+            # update. Hardlink-first per FR-015 of spec 009; cross-
+            # fs falls back to copy+verify. Destination-collision
+            # (different SHA-1 already at dest, no force) → park
+            # with ``destination_collision`` rejection reason
+            # (CL003).
+            move_dest: "Path | None" = None
+            destination_collision_failure: MoveError | None = None
+            try:
+                move_dest = await _maybe_move_to_library(
+                    session=session,
+                    release_id=release_id,
+                    source_path=source_path,
+                    sha1=sha1,
+                    force=context.force,
+                )
+            except MoveError as exc:
+                if exc.rejection_reason == "destination_collision":
+                    destination_collision_failure = exc
+                    move_dest = None
+                else:
+                    move_dest = None  # other move errors → in-place
+            if destination_collision_failure is not None:
+                # CL003 — park with destination_collision; auto-
+                # blocklist fires from the failure-handling block
+                # below since this rejection is in
+                # _BLOCKLIST_WORTHY_REASONS.
+                try:
+                    await park_in_unidentified(
+                        session=session,
+                        source_path=context.source_path,
+                        size_bytes=size_bytes,
+                        rejection_reason="destination_collision",
+                        sha1=sha1,
+                        library_id=context.library_id,
+                        suggested_platform_id=suggested_platform_id,
+                        suggested_game_id=monitored_game_id,
+                        last_error=str(destination_collision_failure),
+                    )
+                except Exception:
+                    pass
+                duration_ms = max(
+                    0,
+                    int(
+                        (
+                            asyncio.get_event_loop().time()
+                            - monotonic_start
+                        )
+                        * 1000
+                    ),
+                )
+                failure_outcome = await make_failure_outcome(
+                    session=session,
+                    context=context,
+                    started_at=started_at,
+                    exception=destination_collision_failure,
+                    duration_ms=duration_ms,
+                    source_hash_sha1=sha1,
+                )
+                # Auto-blocklist on destination collision.
+                try:
+                    await _auto_blocklist(
+                        session=session,
+                        release_title=context.source_path.name,
+                        reason="destination_collision",
+                        hash_sha1=sha1,
+                    )
+                except Exception:
+                    pass
+                await session.commit()
+                return failure_outcome
+            dest_path = move_dest if move_dest is not None else source_path
 
             # T084 / FR-021 / US4.2 — PROFILE-GATE. When the
             # picked Release is bound to a Library, evaluate the
@@ -344,7 +420,7 @@ async def run_import(
                     context=context,
                     release_id=release_id,
                     game_id=monitored_game_id,
-                    dest_path=source_path,
+                    dest_path=dest_path,
                     file_format=file_format,
                     original_filename=source_path.name,
                     hashes=hash_result,
@@ -523,6 +599,79 @@ async def run_import(
     )
     await session.commit()
     return outcome
+
+
+async def _maybe_move_to_library(
+    *,
+    session: AsyncSession,
+    release_id: int,
+    source_path: "Path",
+    sha1: str | None,
+    force: bool,
+) -> "Path | None":
+    """FR-007 / CL003 — move ``source_path`` into the owning
+    Library's tree. Returns the new dest path, or None when
+    the move couldn't be performed and the caller should
+    keep the in-place ``source_path``.
+
+    Skip cases (return None):
+      * Release has no library binding;
+      * Library row missing;
+      * Library.path doesn't exist on disk (test-fixture / pre-
+        deployment scenario — the Dump stays in-place rather
+        than failing);
+      * Source path doesn't exist;
+      * No SHA-1 (can't verify post-move).
+
+    Raises ``MoveError`` on destination collision or other
+    move-step failures the caller routes to the structured
+    rejection_reason taxonomy.
+
+    Destination layout: ``<library.path>/<platform.slug>/<source_filename>``.
+    The naming-template-driven RENDER step (FR-008) lands
+    later — this is the simple structural placement.
+    """
+    from pathlib import Path as _Path
+
+    from romarr.importer.steps.move import move_atomic
+    from romarr.libraries.models import Library
+
+    if sha1 is None or not source_path.exists():
+        return None
+
+    release = await session.get(Release, release_id)
+    if release is None or release.library_id is None:
+        return None
+
+    library = await session.get(Library, release.library_id)
+    if library is None:
+        return None
+
+    library_path = _Path(library.path)
+    if not library_path.exists():
+        # Test fixture / pre-deployment — keep the file in-place.
+        return None
+
+    # Resolve platform via Game.platform_id (avoid the
+    # ORM relationship which would trigger lazy load on the
+    # session's connection — async-incompatible).
+    platform_slug_row = (
+        await session.execute(
+            select(Platform.slug)
+            .join(Game, Game.platform_id == Platform.id)
+            .where(Game.id == release.game_id)
+        )
+    ).scalar_one_or_none()
+    platform_slug = platform_slug_row or "unknown"
+
+    dest_path = library_path / platform_slug / source_path.name
+    result = await move_atomic(
+        source=source_path,
+        dest=dest_path,
+        expected_sha1=sha1,
+        force=force,
+    )
+    return result.dest
 
 
 async def _evaluate_profile_gate(

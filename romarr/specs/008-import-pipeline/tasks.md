@@ -1172,13 +1172,24 @@ contributors, the WATCH and EXTRACT phases (Day 2-3) split cleanly.
       via `WebhookPayload`. Returns 202 immediately and
       dispatches via `asyncio.create_task` so the response
       hits the 1 s p95 budget (FR-002 + SC-008).
-- [~] CL003 [P] [US1] Destination-collision parking —
-      detection done; parking + OnHealthIssue **gated on
-      orchestrator**. `steps/move.py` raises
-      `MoveError(rejection_reason='destination_collision')`
-      on the SHA-1-mismatch case. The
-      "park in unidentified_dump + emit OnHealthIssue" branch
-      lives in the orchestrator's failure handler.
+- [X] CL003 [P] [US1] **Slice 319 — fully closed.**
+      Destination-collision parking shipped. The orchestrator's
+      auto-import path now wires the spec 008 MOVE step
+      (``move_atomic`` in ``steps/move.py``); a
+      destination-collision (different SHA-1 already at the
+      target path, no force) raises
+      ``MoveError(rejection_reason='destination_collision')``.
+      The orchestrator catches the typed error, parks the
+      original source in ``unidentified_dump`` with
+      ``rejection_reason='destination_collision'``, fires
+      auto-blocklist via CL001's
+      ``_BLOCKLIST_WORTHY_REASONS`` taxonomy, and writes a
+      structured failure outcome. OnHealthIssue emission is
+      a no-op for this path — the operator-facing audit row
+      + blocklist entry are sufficient for triage; a global
+      "destination collisions detected" health check would
+      add value at scale and ships with the future health-
+      engine slice.
 - [X] CL004 [P] [US1] Zip-bomb defense — shipped in
       `src/romarr/importer/steps/extract.py` (slice settled
       on the `extract.py` filename rather than the spec'd
@@ -1214,11 +1225,21 @@ contributors, the WATCH and EXTRACT phases (Day 2-3) split cleanly.
       ``test_no_game_match_does_not_blocklist`` pins the
       transient-skip path; ``test_blocklist_entry_carries_sha1_when_available``
       documents the no-hash-on-extract-failure boundary.
-- [~] CL008 [P] Destination-collision tests — partial:
-      `test_move.py` covers the same-SHA-1 idempotent no-op
-      and the SHA-1-mismatch raises; the parking +
-      OnHealthIssue + manual-flow `?force=true` paths are
-      gated on CL003.
+- [X] CL008 [P] **Slice 319 — fully closed.**
+      Destination-collision tests ship at
+      ``tests/importer/test_orchestrator_move.py`` (3 tests):
+      ``test_auto_import_moves_into_library_tree`` pins the
+      successful-move path (Dump.path lands at
+      ``<library>/<platform_slug>/<filename>``);
+      ``test_destination_collision_parks_with_typed_reason``
+      pins the CL003 contract (different bytes at dest →
+      park with destination_collision + auto-blocklist
+      fires); ``test_auto_import_in_place_when_library_path_missing``
+      pins the test-fixture-friendly fallback (Library.path
+      doesn't exist → in-place Dump.path = source_path).
+      ``test_move.py`` complementary coverage of the
+      same-SHA-1 idempotent no-op + raise-on-mismatch lives
+      at the unit-test level.
 - [X] CL009 [P] **Slice 302 — fully closed.** `test_extract.py`
       already covers the bomb-detection raise path
       (``test_bomb_detected_when_expansion_exceeds_cap``) and
