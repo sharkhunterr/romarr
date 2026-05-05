@@ -387,6 +387,37 @@
       "title": "Aucune ludothèque configurée",
       "body": "Ajoutez une ludothèque pour pointer Romarr vers un répertoire de destination. La première ludothèque est la cible d'acquisition principale de l'opérateur."
     },
+    "create": {
+      "openButton": "+ Ajouter une ludothèque",
+      "modalTitle": "Ajouter une ludothèque",
+      "subhead": "Une ligne par répertoire de destination. Les choix de profils lient la ludothèque à sa matrice de décision ; la politique de cycle de vie contrôle ce qui arrive à la source après import.",
+      "nameLabel": "Nom",
+      "namePlaceholder": "ex. Mega Drive USA",
+      "pathLabel": "Chemin (absolu)",
+      "pathHint": "Chemin absolu sur l'hôte Romarr. L'utilisateur Romarr doit avoir lecture/écriture + exécution sur le répertoire.",
+      "qualityLabel": "Profil qualité",
+      "regionLabel": "Profil région",
+      "dumpLabel": "Profil dump",
+      "languageLabel": "Profil langue",
+      "namingLabel": "Profil nommage",
+      "lifecycleLabel": "Cycle de vie",
+      "lifecycleValue": {
+        "hardlink_and_seed": "Hardlink + seed (défaut)",
+        "move_and_remove": "Move + suppression",
+        "copy_and_keep": "Copy + conservation"
+      },
+      "flagsLabel": "Drapeaux",
+      "flags": {
+        "useHardlinks": "Utiliser les hardlinks quand possible (fallback copy en cross-FS)",
+        "monitoredDefault": "Les nouveaux jeux sont suivis par défaut"
+      },
+      "cancel": "Annuler",
+      "submit": "Ajouter la ludothèque",
+      "submitting": "Ajout…",
+      "successTitle": "Ludothèque ajoutée",
+      "successBody": "{{name}} est prête pour les imports.",
+      "errorTitle": "Impossible d'ajouter la ludothèque"
+    },
     "lifecycle": {
       "hardlink_and_seed": "Hardlink + seed",
       "move_and_remove": "Move + suppression",

@@ -8,29 +8,44 @@
  * editor lands.
  */
 
-import { type ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useLibraries } from "@/lib/api/queries/libraries";
 
+import { CreateLibraryModal } from "./CreateLibraryModal";
 import { LibraryRow } from "./LibraryRow";
 
 export function MediaManagementPage(): ReactElement {
   const { t } = useTranslation("settings");
   const libraries = useLibraries();
+  const [createOpen, setCreateOpen] = useState(false);
 
   return (
     <div className="space-y-4">
-      <header>
-        <h2 className="text-base font-medium text-zinc-100">
-          {t("mediaManagement.title")}
-        </h2>
-        <p className="mt-1 text-sm text-zinc-400">
-          {t("mediaManagement.subtitle")}
-        </p>
+      <header className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-base font-medium text-zinc-100">
+            {t("mediaManagement.title")}
+          </h2>
+          <p className="mt-1 text-sm text-zinc-400">
+            {t("mediaManagement.subtitle")}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setCreateOpen(true)}
+          className="shrink-0 rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          {t("mediaManagement.create.openButton")}
+        </button>
       </header>
+
+      {createOpen && (
+        <CreateLibraryModal onClose={() => setCreateOpen(false)} />
+      )}
 
       {libraries.isLoading && <ListSkeleton rows={3} />}
       {libraries.isError && (

@@ -387,6 +387,37 @@
       "title": "No libraries configured",
       "body": "Add a library to point Romarr at a destination directory. The first library is the operator's primary acquisition target."
     },
+    "create": {
+      "openButton": "+ Add library",
+      "modalTitle": "Add a library",
+      "subhead": "One row per destination directory. Profile picks bind the library to its decision matrix; lifecycle policy controls what happens to the source after import.",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. Mega Drive USA",
+      "pathLabel": "Path (absolute)",
+      "pathHint": "Absolute path on the Romarr host. Make sure Romarr's user has read/write + execute on the directory.",
+      "qualityLabel": "Quality profile",
+      "regionLabel": "Region profile",
+      "dumpLabel": "Dump profile",
+      "languageLabel": "Language profile",
+      "namingLabel": "Naming profile",
+      "lifecycleLabel": "Lifecycle policy",
+      "lifecycleValue": {
+        "hardlink_and_seed": "Hardlink + seed (default)",
+        "move_and_remove": "Move + remove",
+        "copy_and_keep": "Copy + keep"
+      },
+      "flagsLabel": "Flags",
+      "flags": {
+        "useHardlinks": "Use hardlinks where possible (cross-FS falls back to copy)",
+        "monitoredDefault": "New games default to monitored"
+      },
+      "cancel": "Cancel",
+      "submit": "Add library",
+      "submitting": "Adding…",
+      "successTitle": "Library added",
+      "successBody": "{{name}} is now ready for imports.",
+      "errorTitle": "Couldn't add the library"
+    },
     "lifecycle": {
       "hardlink_and_seed": "Hardlink + seed",
       "move_and_remove": "Move + remove",
