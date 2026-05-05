@@ -8,6 +8,7 @@
  * vocabulary as the Wanted page.
  */
 
+import { Search } from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -165,13 +166,14 @@ function ReleaseRow(props: ReleaseRowProps): ReactElement {
           type="button"
           onClick={() => setSearchOpen(true)}
           className={[
-            "rounded-md px-2.5 py-1 text-[0.65rem] font-medium",
+            "inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[0.65rem] font-medium",
             "bg-zinc-800 text-zinc-200 ring-1 ring-inset ring-zinc-700",
             "hover:bg-zinc-700",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
           ].join(" ")}
         >
-          🔎 {t("search.button")}
+          <Search size={12} aria-hidden="true" />
+          {t("search.button")}
         </button>
       </div>
       <ReleaseSearchModal

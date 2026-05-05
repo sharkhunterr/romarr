@@ -11,6 +11,7 @@
  * since the row no longer exists.
  */
 
+import { Search, Trash2 } from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -25,6 +26,7 @@ import { HistoryTab } from "./HistoryTab";
 import { NotesTab } from "./NotesTab";
 import { OverviewTab } from "./OverviewTab";
 import { PendingDownloads } from "./PendingDownloads";
+import { ReleaseSearchModal } from "./ReleaseSearchModal";
 import { ReleasesTab } from "./ReleasesTab";
 
 type Tab = "overview" | "releases" | "history" | "files" | "notes";
@@ -79,6 +81,7 @@ export function GameDetailPage(): ReactElement {
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = parseTabParam(searchParams.get("tab"));
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const setTab = (next: Tab): void => {
     setSearchParams(
@@ -113,13 +116,21 @@ export function GameDetailPage(): ReactElement {
       {game.isSuccess && (
         <>
           <PendingDownloads gameId={gameId} />
-          <div className="mb-3 flex items-center justify-end">
+          <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-md border border-brand/60 bg-brand/10 px-2 py-1 text-[0.65rem] font-medium text-brand hover:bg-brand/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              <Search size={12} aria-hidden="true" />
+              {t("search.headerButton")}
+            </button>
             <button
               type="button"
               onClick={() => setDeleteOpen(true)}
               className="inline-flex items-center gap-1.5 rounded-md border border-red-700/60 px-2 py-1 text-[0.65rem] font-medium text-red-300 hover:bg-red-900/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
             >
-              <span aria-hidden="true">🗑️</span>
+              <Trash2 size={12} aria-hidden="true" />
               {t("delete.button")}
             </button>
           </div>
@@ -157,6 +168,14 @@ export function GameDetailPage(): ReactElement {
               onSuccess={() => navigate("/library")}
             />
           )}
+
+          <ReleaseSearchModal
+            open={searchOpen}
+            onClose={() => setSearchOpen(false)}
+            initialQuery={game.data.title}
+            platformId={game.data.platform_id}
+            releaseId={null}
+          />
         </>
       )}
     </div>

@@ -26,14 +26,18 @@ import {
 interface ReleaseSearchModalProps {
   open: boolean;
   onClose: () => void;
-  /** Initial query — typically the Release.name. */
+  /** Initial query — typically the Release.name (per-release
+   * mode) or the Game.title (game-level manual search). */
   initialQuery: string;
   /** Pinned to the game's platform so the search builder uses
    * the right newznab category set. */
   platformId: number;
   /** Pre-bound to the candidate via /grab so import-time can
-   * resolve the right Release without a re-match. */
-  releaseId: number;
+   * resolve the right Release without a re-match. ``null`` for
+   * game-level manual search where no Release exists yet — the
+   * importer will resolve the release via the spec 008 fuzzy
+   * match when the file lands. */
+  releaseId: number | null;
 }
 
 function formatBytes(bytes: number | null | undefined): string | null {
@@ -49,7 +53,7 @@ function formatBytes(bytes: number | null | undefined): string | null {
 
 function CandidateRow(props: {
   candidate: Candidate;
-  releaseId: number;
+  releaseId: number | null;
   force: boolean;
   indexerName: string | null;
   onGrabSuccess: () => void;
@@ -64,7 +68,7 @@ function CandidateRow(props: {
         indexerGuid: candidate.indexer_guid,
         downloadUrl: candidate.download_url,
         title: candidate.title,
-        releaseId,
+        releaseId: releaseId ?? undefined,
         force,
       },
       { onSuccess: onGrabSuccess },
@@ -175,6 +179,11 @@ export function ReleaseSearchModal(
   const [force, setForce] = useState(false);
   const search = useManualSearch();
   const indexersById = useIndexersById();
+  // Spec 004: indexer rows are stored in the same map. An empty
+  // map means the operator has no indexer configured yet, so the
+  // round can't return anything — surface a clear hint with a
+  // link to Settings rather than a silent "no candidates".
+  const noIndexersConfigured = indexersById.size === 0;
 
   useEffect(() => {
     if (props.open) {
@@ -231,6 +240,12 @@ export function ReleaseSearchModal(
             ×
           </button>
         </header>
+
+        {noIndexersConfigured && (
+          <p className="rounded-md border border-amber-900/60 bg-amber-950/30 p-3 text-xs text-amber-200">
+            {t("search.noIndexers")}
+          </p>
+        )}
 
         <form onSubmit={onSubmit} className="flex flex-col gap-2">
           <label className="block">

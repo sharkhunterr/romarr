@@ -167,9 +167,11 @@
   },
   "search": {
     "button": "Rechercher",
+    "headerButton": "Recherche manuelle",
     "title": "Recherche manuelle",
     "close": "Fermer",
     "empty": "Aucun candidat. Essayez une autre requête ou vérifiez que des indexers sont activés.",
+    "noIndexers": "Aucun indexer configuré — la recherche ne renverra rien tant qu'au moins un indexer Newznab/Torznab n'est pas activé dans Réglages → Indexers.",
     "query": {
       "label": "Requête de recherche",
       "placeholder": "Requête de recherche…"

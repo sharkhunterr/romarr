@@ -167,9 +167,11 @@
   },
   "search": {
     "button": "Search",
+    "headerButton": "Manual search",
     "title": "Manual search",
     "close": "Close",
     "empty": "No candidates returned. Try a different query or check that indexers are enabled.",
+    "noIndexers": "No indexer configured — the search will return nothing until you enable at least one Newznab/Torznab indexer in Settings → Indexers.",
     "query": {
       "label": "Search query",
       "placeholder": "Search query…"
