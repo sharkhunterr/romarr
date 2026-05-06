@@ -620,19 +620,38 @@
       "neverUsed": "jamais utilisée",
       "timestamps": "Créée le {{created}} · dernière utilisation {{lastUsed}}",
       "create": {
+        "openButton": "Nouvelle clé API",
         "title": "Créer une nouvelle clé",
+        "subtitle": "Choisissez un nom et cochez les permissions à accorder. La clé en clair ne sera affichée qu'une seule fois.",
         "nameLabel": "Nom",
         "namePlaceholder": "Notifiarr / Homepage / dashboard…",
-        "scopesLabel": "Scopes (optionnel)",
-        "scopesPlaceholder": "read:queue, read:games",
-        "scopesHint": "Séparés par des virgules. Laissez vide pour un accès lecture + écriture complet.",
+        "scopesLegend": "Permissions",
+        "scopesNote": "Le modèle est un ladder de 3 niveaux : admin implique write qui implique read. Cochez le niveau le plus haut requis (les plus bas sont implicites côté serveur).",
+        "scope": {
+          "read": {
+            "label": "Lecture",
+            "hint": "Lister les jeux, releases, queue, history. Lecture seule sur tous les endpoints GET."
+          },
+          "write": {
+            "label": "Écriture",
+            "hint": "Créer / modifier des jeux, releases, profils, indexers, download clients. Inclut Lecture."
+          },
+          "admin": {
+            "label": "Administration",
+            "hint": "Gestion utilisateurs, applications Prowlarr, suppression de bibliothèques, configuration système. Inclut Écriture."
+          }
+        },
         "submit": "Créer la clé",
-        "pending": "Création…"
+        "pending": "Création…",
+        "cancel": "Annuler",
+        "close": "Fermer"
       },
       "created": {
         "title": "Clé créée — copiez-la maintenant",
         "body": "{{name}} — le texte en clair n'est affiché qu'UNE SEULE FOIS et ne sera plus récupérable. Stockez-le dans votre gestionnaire de secrets.",
-        "copy": "Copier"
+        "warn": "Cette clé ne sera plus affichée. Copiez-la maintenant.",
+        "copy": "Copier",
+        "done": "Terminé"
       },
       "revoke": {
         "button": "Révoquer",

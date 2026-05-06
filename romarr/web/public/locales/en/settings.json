@@ -620,19 +620,38 @@
       "neverUsed": "never used",
       "timestamps": "Created {{created}} · last used {{lastUsed}}",
       "create": {
+        "openButton": "New API key",
         "title": "Mint a new key",
+        "subtitle": "Pick a name and tick the permissions you want to grant. The plaintext is shown exactly once.",
         "nameLabel": "Name",
         "namePlaceholder": "Notifiarr / Homepage / dashboard…",
-        "scopesLabel": "Scopes (optional)",
-        "scopesPlaceholder": "read:queue, read:games",
-        "scopesHint": "Comma-separated. Leave blank for full read+write scope.",
+        "scopesLegend": "Permissions",
+        "scopesNote": "Three-tier ladder: admin implies write implies read. Tick the highest tier you need (lower tiers are implied server-side).",
+        "scope": {
+          "read": {
+            "label": "Read",
+            "hint": "List games, releases, queue, history. Read-only access to every GET endpoint."
+          },
+          "write": {
+            "label": "Write",
+            "hint": "Create / edit games, releases, profiles, indexers, download clients. Implies Read."
+          },
+          "admin": {
+            "label": "Admin",
+            "hint": "User management, Prowlarr applications, library deletion, system config. Implies Write."
+          }
+        },
         "submit": "Mint key",
-        "pending": "Minting…"
+        "pending": "Minting…",
+        "cancel": "Cancel",
+        "close": "Close"
       },
       "created": {
         "title": "Key minted — copy it now",
         "body": "{{name}} — the plaintext is shown ONCE and will not be retrievable later. Store it in your secrets manager.",
-        "copy": "Copy"
+        "warn": "This key will not be shown again. Copy it now.",
+        "copy": "Copy",
+        "done": "Done"
       },
       "revoke": {
         "button": "Revoke",
