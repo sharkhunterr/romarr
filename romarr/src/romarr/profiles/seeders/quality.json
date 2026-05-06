@@ -4,7 +4,7 @@
     "name": "Preservation",
     "allowed_formats": ["raw", "zip", "7z"],
     "preferred_format": "7z",
-    "require_dat_verified": true,
+    "require_dat_verified": false,
     "allow_archive_double_compression": false,
     "upgrade_until_format": "7z"
   },

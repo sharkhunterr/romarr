@@ -292,7 +292,7 @@ async def test_seed_runs_clean_when_factory_row_freshly_inserted(
             name="Preservation",
             allowed_formats=["raw", "zip", "7z"],
             preferred_format="7z",
-            require_dat_verified=True,
+            require_dat_verified=False,
             allow_archive_double_compression=False,
             upgrade_until_format="7z",
             is_factory_default=True,
