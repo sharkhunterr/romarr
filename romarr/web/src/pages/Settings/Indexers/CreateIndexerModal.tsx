@@ -25,13 +25,21 @@ import { useTranslation } from "react-i18next";
 
 import {
   useCreateIndexer,
+  useUpdateIndexer,
+  type Indexer,
   type IndexerCreate,
   type IndexerImplementation,
+  type IndexerUpdate,
 } from "@/lib/api/queries/indexers";
 import { useToastStore } from "@/lib/store/toast";
 
 interface CreateIndexerModalProps {
   onClose: () => void;
+  /** Pre-fill from this row → modal switches to edit mode and
+   * uses PUT instead of POST. Leaving the API key blank
+   * preserves the existing key (the backend skips re-encrypt
+   * when the field is omitted). */
+  indexer?: Indexer | null;
 }
 
 const _IMPLEMENTATIONS: ReadonlyArray<IndexerImplementation> = [
@@ -44,23 +52,73 @@ export function CreateIndexerModal(
 ): ReactElement {
   const { t } = useTranslation("settings");
   const create = useCreateIndexer();
+  const update = useUpdateIndexer();
   const pushToast = useToastStore((s) => s.push);
 
-  const [implementation, setImplementation] =
-    useState<IndexerImplementation>("torznab");
-  const [name, setName] = useState("");
-  const [url, setUrl] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [enableRss, setEnableRss] = useState(true);
-  const [enableAutomatic, setEnableAutomatic] = useState(true);
-  const [enableInteractive, setEnableInteractive] = useState(true);
+  const editing = props.indexer ?? null;
+  const isEdit = editing !== null;
 
-  const submitting = create.isPending;
-  const canSubmit =
-    name.trim().length > 0 && url.trim().length > 0;
+  const [implementation, setImplementation] =
+    useState<IndexerImplementation>(
+      (editing?.implementation as IndexerImplementation | undefined) ??
+        "torznab",
+    );
+  const [name, setName] = useState(editing?.name ?? "");
+  const [url, setUrl] = useState(editing?.url ?? "");
+  const [apiKey, setApiKey] = useState("");
+  const [enableRss, setEnableRss] = useState(editing?.enable_rss ?? true);
+  const [enableAutomatic, setEnableAutomatic] = useState(
+    editing?.enable_automatic_search ?? true,
+  );
+  const [enableInteractive, setEnableInteractive] = useState(
+    editing?.enable_interactive_search ?? true,
+  );
+
+  const submitting = create.isPending || update.isPending;
+  const canSubmit = name.trim().length > 0 && url.trim().length > 0;
 
   function commit(): void {
     if (!canSubmit) return;
+    if (isEdit && editing) {
+      const payload: IndexerUpdate = {
+        name: name.trim(),
+        implementation,
+        url: url.trim(),
+        enable_rss: enableRss,
+        enable_automatic_search: enableAutomatic,
+        enable_interactive_search: enableInteractive,
+      };
+      const trimmedKey = apiKey.trim();
+      if (trimmedKey.length > 0) {
+        // Only re-encrypt when the operator actually typed a new key.
+        // Leaving the field blank preserves the existing one.
+        (payload as IndexerUpdate & { api_key?: string | null }).api_key =
+          trimmedKey;
+      }
+      update.mutate(
+        { id: editing.id, payload },
+        {
+          onSuccess: (saved) => {
+            pushToast({
+              kind: "success",
+              title: t("indexers.edit.successTitle"),
+              description: t("indexers.edit.successBody", {
+                name: saved.name,
+              }),
+            });
+            props.onClose();
+          },
+          onError: (err) => {
+            pushToast({
+              kind: "error",
+              title: t("indexers.edit.errorTitle"),
+              description: err.message,
+            });
+          },
+        },
+      );
+      return;
+    }
     const payload: IndexerCreate = {
       name: name.trim(),
       implementation,
@@ -105,7 +163,11 @@ export function CreateIndexerModal(
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={t("indexers.create.modalTitle")}
+      aria-label={
+        isEdit
+          ? t("indexers.edit.modalTitle", { name: editing.name })
+          : t("indexers.create.modalTitle")
+      }
       className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/70 px-4 pt-[8vh] backdrop-blur-sm"
       onClick={props.onClose}
     >
@@ -115,10 +177,14 @@ export function CreateIndexerModal(
       >
         <header className="border-b border-zinc-800 px-4 py-3">
           <h2 className="text-sm font-semibold text-zinc-100">
-            {t("indexers.create.modalTitle")}
+            {isEdit
+              ? t("indexers.edit.modalTitle", { name: editing.name })
+              : t("indexers.create.modalTitle")}
           </h2>
           <p className="mt-0.5 text-[0.65rem] text-zinc-500">
-            {t("indexers.create.subhead")}
+            {isEdit
+              ? t("indexers.edit.subhead")
+              : t("indexers.create.subhead")}
           </p>
         </header>
 
@@ -183,10 +249,20 @@ export function CreateIndexerModal(
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder={t("indexers.create.apiKeyPlaceholder")}
+              placeholder={
+                isEdit
+                  ? t("indexers.edit.apiKeyPlaceholder")
+                  : t("indexers.create.apiKeyPlaceholder")
+              }
               disabled={submitting}
+              autoComplete="new-password"
               className="w-full rounded-md bg-zinc-950 px-3 py-2 font-mono text-xs text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
             />
+            {isEdit && (
+              <p className="mt-1 text-[0.65rem] text-zinc-500">
+                {t("indexers.edit.apiKeyHint")}
+              </p>
+            )}
           </label>
 
           <fieldset className="space-y-1.5">
@@ -252,8 +328,12 @@ export function CreateIndexerModal(
             className="rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting
-              ? t("indexers.create.submitting")
-              : t("indexers.create.submit")}
+              ? isEdit
+                ? t("indexers.edit.submitting")
+                : t("indexers.create.submitting")
+              : isEdit
+                ? t("indexers.edit.submit")
+                : t("indexers.create.submit")}
           </button>
         </footer>
       </div>

@@ -149,3 +149,46 @@ async def unregister_application(
     await db.delete(row)
     await db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/{application_id}/rotate-token",
+    response_model=ApplicationCreateResult,
+    summary=(
+        "Mint a fresh app_token for an existing application (admin only). "
+        "The previous token stops authenticating immediately. "
+        "Returns the new plaintext token EXACTLY ONCE."
+    ),
+)
+async def rotate_application_token(
+    application_id: int,
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ApplicationCreateResult:
+    """Operator lost the original token (we only kept the BLAKE2b
+    hash); rotate to mint a new one instead of re-registering. The
+    Prowlarr URL + API key stay unchanged so the inverse channel
+    keeps working until the operator pastes the new token into
+    Prowlarr → Apps → Romarr → Application Token.
+    """
+    row = (
+        await db.execute(
+            select(Application).where(Application.id == application_id)
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "errorMessage": "application_not_found",
+                "errorCode": "not_found",
+            },
+        )
+    new_token = generate_token()
+    row.app_token_hash = hash_token(new_token)
+    await db.commit()
+    await db.refresh(row)
+
+    base = _to_read(row).model_dump()
+    base["app_token"] = new_token
+    return ApplicationCreateResult.model_validate(base)

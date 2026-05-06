@@ -781,6 +781,15 @@
       "lastSync": "Last sync {{when}}",
       "unregister": "Unregister",
       "unregisterConfirm": "Unregister Prowlarr application \"{{name}}\"? Indexers it pushed will remain but won't receive future updates.",
+      "rotate": "Rotate token",
+      "rotating": "Rotating…",
+      "rotateConfirm": "Rotate the token for \"{{name}}\"? The old token stops working immediately; paste the new one into Prowlarr → Settings → Apps.",
+      "rotated": {
+        "title": "New token minted — copy it now",
+        "body": "The old token is revoked. Paste this into Prowlarr → Settings → Apps → Romarr → Application Token.",
+        "copy": "Copy",
+        "dismiss": "Close"
+      },
       "register": {
         "button": "Register Prowlarr",
         "title": "Register a Prowlarr instance",
@@ -791,10 +800,11 @@
         "tokenLabel": "Application token (paste into Prowlarr)",
         "afterTitle": "Next steps",
         "after": {
-          "step1": "In Prowlarr → Settings → Apps → click \"+\" → Romarr.",
+          "step1": "In Prowlarr → Settings → Apps → click \"+\" → choose **Sonarr** (Romarr is Sonarr v3 compatible).",
           "step2": "Romarr URL: http://romarr:8585 (or the network URL of Romarr).",
           "step3": "Application Token: paste the token above. Sync Categories: pick the ones you want pushed."
         },
+        "sonarrCompatNote": "ℹ Why \"Sonarr\"? Prowlarr doesn't natively know about Romarr yet, but Romarr exposes a Sonarr v3 compatible API (constitution Article VII), so picking \"Sonarr\" as the application type works.",
         "howTo": {
           "title": "Where do I find the Prowlarr API key?",
           "step1": "Open Prowlarr → Settings → General.",
@@ -858,6 +868,18 @@
       "successTitle": "Indexer added",
       "successBody": "{{name}} is now wired up.",
       "errorTitle": "Couldn't add the indexer"
+    },
+    "edit": {
+      "button": "Edit",
+      "modalTitle": "Edit {{name}}",
+      "subhead": "Update the name, URL, or search modes. Leave the API key blank to keep the existing one.",
+      "apiKeyPlaceholder": "Leave blank to keep the existing key",
+      "apiKeyHint": "Enter a new key only if you want to rotate the stored one.",
+      "submit": "Save",
+      "submitting": "Saving…",
+      "successTitle": "Indexer updated",
+      "successBody": "{{name}} has been saved.",
+      "errorTitle": "Couldn't save the indexer"
     },
     "table": {
       "name": "Name",

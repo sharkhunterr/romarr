@@ -79,3 +79,27 @@ export function useCreateApplication(): UseMutationResult<
     },
   });
 }
+
+/**
+ * POST /api/v3/applications/{id}/rotate-token — mint a fresh
+ * app_token for an existing registration. Used when the operator
+ * lost the original (we only kept the hash) and needs a new one
+ * to paste into Prowlarr → Apps → Romarr → Application Token.
+ */
+export function useRotateApplicationToken(): UseMutationResult<
+  ApplicationCreateResult,
+  ApiError,
+  number
+> {
+  const qc = useQueryClient();
+  return useMutation<ApplicationCreateResult, ApiError, number>({
+    mutationFn: (id) =>
+      apiFetch<ApplicationCreateResult>(
+        `/api/v3/applications/${id}/rotate-token`,
+        { method: "POST" },
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: KEY });
+    },
+  });
+}

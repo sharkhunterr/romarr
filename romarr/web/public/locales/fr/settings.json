@@ -781,6 +781,15 @@
       "lastSync": "Dernière synchro {{when}}",
       "unregister": "Désinscrire",
       "unregisterConfirm": "Désinscrire l'application Prowlarr « {{name}} » ? Les indexeurs déjà poussés resteront mais ne recevront plus de mises à jour.",
+      "rotate": "Régénérer le jeton",
+      "rotating": "Régénération…",
+      "rotateConfirm": "Régénérer le jeton de « {{name}} » ? L'ancien jeton cessera immédiatement de fonctionner ; vous devrez coller le nouveau dans Prowlarr → Settings → Apps.",
+      "rotated": {
+        "title": "Nouveau jeton créé — copiez-le maintenant",
+        "body": "L'ancien jeton est révoqué. Collez celui-ci dans Prowlarr → Settings → Apps → Romarr → Application Token.",
+        "copy": "Copier",
+        "dismiss": "Fermer"
+      },
       "register": {
         "button": "Enregistrer Prowlarr",
         "title": "Enregistrer une instance Prowlarr",
@@ -791,10 +800,11 @@
         "tokenLabel": "Jeton d'application (à coller dans Prowlarr)",
         "afterTitle": "Étapes suivantes",
         "after": {
-          "step1": "Dans Prowlarr → Settings → Apps → cliquez « + » → Romarr.",
+          "step1": "Dans Prowlarr → Settings → Apps → cliquez « + » → choisissez **Sonarr** (Romarr est compatible Sonarr v3).",
           "step2": "URL Romarr : http://romarr:8585 (ou l'URL réseau de Romarr).",
           "step3": "Application Token : collez le jeton ci-dessus. Sync Categories : choisissez celles que vous voulez pousser."
         },
+        "sonarrCompatNote": "ℹ Pourquoi « Sonarr » ? Prowlarr ne connaît pas encore Romarr nativement, mais Romarr expose une API compatible Sonarr v3 (constitution Article VII), donc « Sonarr » fonctionne comme type d'application.",
         "howTo": {
           "title": "Où trouver la clé API Prowlarr ?",
           "step1": "Ouvrez Prowlarr → Settings → General.",
@@ -858,6 +868,18 @@
       "successTitle": "Indexeur ajouté",
       "successBody": "{{name}} est branché.",
       "errorTitle": "Impossible d'ajouter l'indexeur"
+    },
+    "edit": {
+      "button": "Modifier",
+      "modalTitle": "Modifier {{name}}",
+      "subhead": "Mettez à jour le nom, l'URL ou les modes de recherche. Laissez la clé API vide pour conserver l'existante.",
+      "apiKeyPlaceholder": "Laissez vide pour conserver la clé existante",
+      "apiKeyHint": "Saisissez une nouvelle clé seulement si vous voulez la remplacer.",
+      "submit": "Enregistrer",
+      "submitting": "Enregistrement…",
+      "successTitle": "Indexeur modifié",
+      "successBody": "{{name}} a été mis à jour.",
+      "errorTitle": "Impossible de modifier l'indexeur"
     },
     "table": {
       "name": "Nom",

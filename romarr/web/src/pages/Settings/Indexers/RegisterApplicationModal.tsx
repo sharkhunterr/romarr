@@ -294,6 +294,9 @@ export function RegisterApplicationModal(
                 <li>{t("indexers.applications.register.after.step2")}</li>
                 <li>{t("indexers.applications.register.after.step3")}</li>
               </ol>
+              <p className="mt-2 rounded-sm bg-amber-950/40 px-2 py-1 text-[0.65rem] text-amber-200">
+                {t("indexers.applications.register.sonarrCompatNote")}
+              </p>
             </div>
 
             <div className="flex justify-end">

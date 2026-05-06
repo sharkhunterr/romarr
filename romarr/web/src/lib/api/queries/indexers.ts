@@ -27,6 +27,7 @@ import type { components } from "@/types/api/schema";
 
 export type Indexer = components["schemas"]["IndexerRead"];
 export type IndexerCreate = components["schemas"]["IndexerCreate"];
+export type IndexerUpdate = components["schemas"]["IndexerUpdate"];
 export type IndexerImplementation = "newznab" | "torznab";
 export type IndexerTestResult =
   components["schemas"][
@@ -134,6 +135,35 @@ export function useToggleIndexer(): UseMutationResult<
       apiFetch<Indexer>(`/api/v3/indexer/${id}`, {
         method: "PUT",
         json: body,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: INDEXERS_KEY });
+    },
+  });
+}
+
+/**
+ * PUT /api/v3/indexer/{id} — full edit. Pass any subset of
+ * IndexerUpdate fields; the backend re-encrypts ``api_key`` only
+ * when present in the body, so leaving it omitted preserves the
+ * existing key (operator can edit name/url without re-typing).
+ */
+export interface UpdateIndexerVariables {
+  id: number;
+  payload: IndexerUpdate;
+}
+
+export function useUpdateIndexer(): UseMutationResult<
+  Indexer,
+  ApiError,
+  UpdateIndexerVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<Indexer, ApiError, UpdateIndexerVariables>({
+    mutationFn: ({ id, payload }) =>
+      apiFetch<Indexer>(`/api/v3/indexer/${id}`, {
+        method: "PUT",
+        json: payload,
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: INDEXERS_KEY });

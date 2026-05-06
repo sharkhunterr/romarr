@@ -12,8 +12,11 @@
  * categories.
  */
 
+import { Pencil } from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
+
+import { CreateIndexerModal } from "./CreateIndexerModal";
 
 import {
   useDeleteIndexer,
@@ -75,6 +78,7 @@ export function IndexerRow(props: IndexerRowProps): ReactElement {
   const toggle = useToggleIndexer();
 
   const [confirming, setConfirming] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [testResult, setTestResult] = useState<IndexerTestResult | null>(null);
 
   const health = deriveHealth(indexer);
@@ -197,6 +201,18 @@ export function IndexerRow(props: IndexerRowProps): ReactElement {
         </button>
         <button
           type="button"
+          onClick={() => setEditing(true)}
+          className={[
+            "inline-flex min-h-[36px] items-center gap-1 rounded-md border border-zinc-700 px-3 text-xs font-medium",
+            "text-zinc-200 hover:bg-zinc-900",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+          ].join(" ")}
+        >
+          <Pencil size={12} aria-hidden="true" />
+          {t("indexers.edit.button")}
+        </button>
+        <button
+          type="button"
           onClick={() => setConfirming(true)}
           className={[
             "min-h-[36px] rounded-md border border-red-900/50 px-3 text-xs font-medium",
@@ -207,6 +223,13 @@ export function IndexerRow(props: IndexerRowProps): ReactElement {
           {t("indexers.delete.button")}
         </button>
       </div>
+
+      {editing && (
+        <CreateIndexerModal
+          indexer={indexer}
+          onClose={() => setEditing(false)}
+        />
+      )}
 
       {confirming && (
         <div className="mt-3 rounded-md border border-red-900/50 bg-red-950/20 p-3">
