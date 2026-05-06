@@ -1,10 +1,10 @@
 [
   {
     "seed_key": "fr-or-en",
-    "name": "FR or EN",
-    "required_languages": ["fr", "en"],
+    "name": "FR/EN preferred",
+    "required_languages": [],
     "preferred_languages": ["fr", "en"],
-    "exclude_japanese_only": true
+    "exclude_japanese_only": false
   },
   {
     "seed_key": "en-only",

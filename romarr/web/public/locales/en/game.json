@@ -190,6 +190,7 @@
     },
     "seeders_one": "{{count}} seeder",
     "seeders_other": "{{count}} seeders",
+    "rejected": "Rejected",
     "rejection": {
       "blocklisted": "Already blocklisted",
       "below_quality_floor": "Below quality floor",

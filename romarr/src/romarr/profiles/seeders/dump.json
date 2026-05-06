@@ -1,8 +1,8 @@
 [
   {
     "seed_key": "preservation-strict",
-    "name": "Preservation Strict",
-    "allowed_dump_status": ["verified"],
+    "name": "Preservation",
+    "allowed_dump_status": ["verified", "good", "unknown"],
     "allow_proto_beta": false,
     "allow_hacks": false,
     "allow_trainers": false,

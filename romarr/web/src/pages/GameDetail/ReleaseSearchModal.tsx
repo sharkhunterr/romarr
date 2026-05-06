@@ -51,6 +51,29 @@ function formatBytes(bytes: number | null | undefined): string | null {
   return `${(bytes / Math.pow(k, i)).toFixed(i === 0 ? 0 : 2)} ${sizes[i]}`;
 }
 
+function _scoreOf(c: Candidate): number | null {
+  if (c.score_breakdown === null || c.score_breakdown === undefined) {
+    return null;
+  }
+  return (c.score_breakdown as { total?: number }).total ?? null;
+}
+
+function _scoreContributions(
+  c: Candidate,
+): readonly { source: string; name: string; value: number }[] {
+  const breakdown = c.score_breakdown as
+    | {
+        contributions?: readonly {
+          source: string;
+          name: string;
+          value: number;
+        }[];
+      }
+    | null
+    | undefined;
+  return breakdown?.contributions ?? [];
+}
+
 function CandidateRow(props: {
   candidate: Candidate;
   releaseId: number | null;
@@ -75,12 +98,15 @@ function CandidateRow(props: {
     );
   };
 
-  const score =
-    candidate.score_breakdown !== null &&
-    candidate.score_breakdown !== undefined
-      ? (candidate.score_breakdown as { total?: number }).total ?? null
-      : null;
+  const score = _scoreOf(candidate);
   const sizeLabel = formatBytes(candidate.size_bytes);
+  // The breakdown tooltip surfaces the per-source contributions
+  // so the operator sees *why* this candidate scored what it did
+  // — region match, language preferred, custom-format hits, DAT
+  // verified bonus, size penalty.
+  const breakdownTooltip = _scoreContributions(candidate)
+    .map((c) => `${c.name}: ${c.value >= 0 ? "+" : ""}${c.value}`)
+    .join("\n");
 
   return (
     <li
@@ -95,27 +121,54 @@ function CandidateRow(props: {
         <p className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-100">
           {candidate.title}
         </p>
-        <button
-          type="button"
-          onClick={onClick}
-          disabled={grab.isPending || grab.isSuccess}
-          className={[
-            "shrink-0 rounded-md px-3 py-1 text-xs font-medium",
-            "bg-brand/20 text-brand ring-1 ring-inset ring-brand/40",
-            "hover:bg-brand/30",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-            "disabled:cursor-not-allowed disabled:opacity-60",
-          ].join(" ")}
-          title={
-            grab.isError && grab.error?.message ? grab.error.message : undefined
-          }
-        >
-          {grab.isSuccess
-            ? t("search.grab.dispatched")
-            : grab.isPending
-              ? t("search.grab.pending")
-              : t("search.grab.button")}
-        </button>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          {/* Match-quality column: profile score for accepted
+              candidates, "Rejected" badge for rejected ones. The
+              parent list sorts by score desc so the best match
+              floats to the top. */}
+          {score !== null ? (
+            <span title={breakdownTooltip || undefined}>
+              <ScoreBadge
+                score={score}
+                className="px-2.5 py-1 text-sm tabular-nums"
+              />
+            </span>
+          ) : (
+            <span
+              className={[
+                "inline-flex items-center rounded-md px-2 py-0.5",
+                "text-[0.65rem] font-mono uppercase tracking-wider",
+                "bg-red-950/30 text-red-300 ring-1 ring-inset ring-red-900/50",
+              ].join(" ")}
+              title={candidate.rejection?.message ?? undefined}
+            >
+              {t("search.rejected")}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={onClick}
+            disabled={grab.isPending || grab.isSuccess}
+            className={[
+              "rounded-md px-3 py-1 text-xs font-medium",
+              "bg-brand/20 text-brand ring-1 ring-inset ring-brand/40",
+              "hover:bg-brand/30",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+              "disabled:cursor-not-allowed disabled:opacity-60",
+            ].join(" ")}
+            title={
+              grab.isError && grab.error?.message
+                ? grab.error.message
+                : undefined
+            }
+          >
+            {grab.isSuccess
+              ? t("search.grab.dispatched")
+              : grab.isPending
+                ? t("search.grab.pending")
+                : t("search.grab.button")}
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5 text-[0.65rem] text-zinc-400">
@@ -132,12 +185,6 @@ function CandidateRow(props: {
           <>
             <span>·</span>
             <span>{t("search.seeders", { count: candidate.seeders })}</span>
-          </>
-        )}
-        {score !== null && (
-          <>
-            <span>·</span>
-            <ScoreBadge score={score} />
           </>
         )}
         {candidate.pre_grab_dat_match !== "skipped" && (
@@ -305,16 +352,30 @@ export function ReleaseSearchModal(
 
           {search.isSuccess && (search.data.candidates ?? []).length > 0 && (
             <ul className="space-y-2">
-              {(search.data.candidates ?? []).map((c) => (
-                <CandidateRow
-                  key={`${c.indexer_id}-${c.indexer_guid}`}
-                  candidate={c}
-                  releaseId={props.releaseId}
-                  force={force}
-                  indexerName={indexersById.get(c.indexer_id)?.name ?? null}
-                  onGrabSuccess={props.onClose}
-                />
-              ))}
+              {[...(search.data.candidates ?? [])]
+                .sort((a, b) => {
+                  // Match-quality first: accepted candidates (with a
+                  // numeric profile score) ranked desc by score;
+                  // rejected ones (score=null) sink to the bottom in
+                  // their original order so the operator can still
+                  // see what was filtered and why.
+                  const sa = _scoreOf(a);
+                  const sb = _scoreOf(b);
+                  if (sa === null && sb === null) return 0;
+                  if (sa === null) return 1;
+                  if (sb === null) return -1;
+                  return sb - sa;
+                })
+                .map((c) => (
+                  <CandidateRow
+                    key={`${c.indexer_id}-${c.indexer_guid}`}
+                    candidate={c}
+                    releaseId={props.releaseId}
+                    force={force}
+                    indexerName={indexersById.get(c.indexer_id)?.name ?? null}
+                    onGrabSuccess={props.onClose}
+                  />
+                ))}
             </ul>
           )}
         </div>
