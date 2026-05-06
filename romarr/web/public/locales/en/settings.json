@@ -795,14 +795,14 @@
         "title": "Register a Prowlarr instance",
         "subtitle": "Romarr will pull the indexer list from Prowlarr. You'll get an app token to paste into Prowlarr for the reverse-sync channel.",
         "successTitle": "Prowlarr registered!",
-        "successBody": "Copy the token below then paste it into Prowlarr — Settings → Apps → Romarr → Application Token.",
-        "tokenWarn": "This token is shown EXACTLY ONCE. Copy it now. If you lose it, delete the registration and create a new one.",
-        "tokenLabel": "Application token (paste into Prowlarr)",
+        "successBody": "Copy the Romarr API key below then paste it into Prowlarr — Settings → Apps → Sonarr → API Key.",
+        "tokenWarn": "This Romarr API key is shown EXACTLY ONCE. Copy it now. If you lose it, use \"Rotate token\" on the row to mint a fresh one.",
+        "tokenLabel": "Romarr API key (paste into Prowlarr's \"API Key\" field)",
         "afterTitle": "Next steps",
         "after": {
           "step1": "In Prowlarr → Settings → Apps → click \"+\" → choose **Sonarr** (Romarr is Sonarr v3 compatible).",
-          "step2": "Romarr URL: http://romarr:8585 (or the network URL of Romarr).",
-          "step3": "Application Token: paste the token above. Sync Categories: pick the ones you want pushed."
+          "step2": "Sonarr URL: http://romarr:8585 (or the network URL of Romarr). Prowlarr URL: leave Prowlarr's own.",
+          "step3": "API Key: paste the Romarr key above. Sync Categories: pick what you want pushed. Test → Save."
         },
         "sonarrCompatNote": "ℹ Why \"Sonarr\"? Prowlarr doesn't natively know about Romarr yet, but Romarr exposes a Sonarr v3 compatible API (constitution Article VII), so picking \"Sonarr\" as the application type works.",
         "howTo": {
@@ -853,6 +853,7 @@
       "nameLabel": "Name",
       "namePlaceholder": "e.g. NZBgeek",
       "urlLabel": "Base URL",
+      "urlHint": "For Prowlarr: a specific indexer's URL (e.g. http://prowlarr:9696/5). Romarr appends /api?t=caps automatically. For a direct Newznab/Torznab: the service's root URL.",
       "apiKeyLabel": "API key",
       "apiKeyPlaceholder": "Paste the indexer's API key",
       "flagsLabel": "Search modes",
@@ -907,7 +908,8 @@
       "running": "Testing…",
       "successCaps": "Caps OK",
       "successSearch": "Search OK",
-      "failure": "{{message}}"
+      "failure": "{{message}}",
+      "emptyCapsHint": "The indexer returned an empty response. If this is Prowlarr, the URL must be a specific indexer's path (e.g. http://prowlarr:9696/5) — not the root URL. Find it in Prowlarr → Indexers → click the indexer → the Newznab/Torznab URL is shown there."
     },
     "delete": {
       "button": "Delete",

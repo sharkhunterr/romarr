@@ -21,6 +21,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from romarr.api.dependencies import get_db, require_admin
 from romarr.auth import Principal
+from romarr.auth.api_keys import create_api_key
+from romarr.auth.constants import SCOPE_ADMIN
+from romarr.auth.models import ApiKey, User
 from romarr.indexers.models import Application
 from romarr.indexers.schemas import (
     ApplicationCreate,
@@ -88,18 +91,44 @@ async def read_application(
 )
 async def register_application(
     payload: ApplicationCreate,
-    _admin: Annotated[Principal, Depends(require_admin)],
+    admin: Annotated[Principal, Depends(require_admin)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ApplicationCreateResult:
-    app_token = generate_token()
     encrypted_api_key = encrypt(json.dumps(payload.prowlarr_api_key).encode())
+
+    # Mint a real Romarr API key (admin scope) so Prowlarr can
+    # authenticate to Romarr's REST surface via the standard
+    # ``X-Api-Key`` header — that's what Prowlarr's Sonarr-app
+    # client expects in its "API Key" field. The custom
+    # ``app_token`` design didn't survive contact with Prowlarr's
+    # Sonarr-compat client; we keep the field name on the wire
+    # for backward compat, but the value IS now a Romarr API
+    # key plaintext.
+    admin_user = await db.get(User, admin.user_id)
+    if admin_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "errorMessage": "user_not_found",
+                "errorCode": "forbidden",
+            },
+        )
+    minted = await create_api_key(
+        db,
+        user=admin_user,
+        name=f"Prowlarr — {payload.name}",
+        scopes=[SCOPE_ADMIN],
+    )
 
     row = Application(
         name=payload.name,
         sync_level=payload.sync_level,
         prowlarr_url=payload.prowlarr_url,
         prowlarr_api_key_encrypted=encrypted_api_key,
-        app_token_hash=hash_token(app_token),
+        # Track the api_key row in the existing token-hash column
+        # so rotate / unregister can revoke the right key without
+        # a new schema migration. Format: ``apikey:{id}``.
+        app_token_hash=f"apikey:{minted.api_key_id}",
         enabled=True,
         created_at=datetime.now(UTC),
     )
@@ -107,7 +136,10 @@ async def register_application(
     try:
         await db.commit()
     except IntegrityError as exc:
+        # Roll back the minted API key too so we don't leave
+        # an orphan row when the application insert collides.
         await db.rollback()
+        await _revoke_api_key(db, minted.api_key_id)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={
@@ -119,8 +151,33 @@ async def register_application(
     await db.refresh(row)
 
     base = _to_read(row).model_dump()
-    base["app_token"] = app_token
+    base["app_token"] = minted.plaintext
     return ApplicationCreateResult.model_validate(base)
+
+
+async def _revoke_api_key(db: AsyncSession, api_key_id: int) -> None:
+    """Best-effort delete of a previously-minted application API key."""
+    row = (
+        await db.execute(select(ApiKey).where(ApiKey.id == api_key_id))
+    ).scalar_one_or_none()
+    if row is not None:
+        await db.delete(row)
+        await db.commit()
+
+
+def _api_key_id_from_token_hash(token_hash: str) -> int | None:
+    """Extract the api_key_id encoded in ``app_token_hash``.
+
+    New rows store ``apikey:{id}``; legacy rows (pre-rework) have a
+    BLAKE2b hex hash with no prefix. The latter return ``None`` so
+    we fall through to the legacy revoke path (drop the row only).
+    """
+    if not token_hash.startswith("apikey:"):
+        return None
+    try:
+        return int(token_hash.removeprefix("apikey:"))
+    except ValueError:
+        return None
 
 
 @router.delete(
@@ -146,6 +203,15 @@ async def unregister_application(
                 "errorCode": "not_found",
             },
         )
+    # Revoke the API key the registration minted so Prowlarr loses
+    # access at the same time the row goes.
+    key_id = _api_key_id_from_token_hash(row.app_token_hash)
+    if key_id is not None:
+        key_row = (
+            await db.execute(select(ApiKey).where(ApiKey.id == key_id))
+        ).scalar_one_or_none()
+        if key_row is not None:
+            await db.delete(key_row)
     await db.delete(row)
     await db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -155,22 +221,20 @@ async def unregister_application(
     "/{application_id}/rotate-token",
     response_model=ApplicationCreateResult,
     summary=(
-        "Mint a fresh app_token for an existing application (admin only). "
-        "The previous token stops authenticating immediately. "
-        "Returns the new plaintext token EXACTLY ONCE."
+        "Mint a fresh API key for an existing application (admin only). "
+        "The previous key stops authenticating immediately. "
+        "Returns the new plaintext key EXACTLY ONCE."
     ),
 )
 async def rotate_application_token(
     application_id: int,
-    _admin: Annotated[Principal, Depends(require_admin)],
+    admin: Annotated[Principal, Depends(require_admin)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ApplicationCreateResult:
-    """Operator lost the original token (we only kept the BLAKE2b
-    hash); rotate to mint a new one instead of re-registering. The
-    Prowlarr URL + API key stay unchanged so the inverse channel
-    keeps working until the operator pastes the new token into
-    Prowlarr → Apps → Romarr → Application Token.
-    """
+    """Operator lost the original API key (we only kept the hash);
+    rotate to mint a fresh one. The Prowlarr URL + Prowlarr-side
+    API key stay unchanged — only the Romarr key Prowlarr uses to
+    call back changes."""
     row = (
         await db.execute(
             select(Application).where(Application.id == application_id)
@@ -184,11 +248,36 @@ async def rotate_application_token(
                 "errorCode": "not_found",
             },
         )
-    new_token = generate_token()
-    row.app_token_hash = hash_token(new_token)
+
+    # Revoke the prior API key.
+    old_key_id = _api_key_id_from_token_hash(row.app_token_hash)
+    if old_key_id is not None:
+        old_key = (
+            await db.execute(select(ApiKey).where(ApiKey.id == old_key_id))
+        ).scalar_one_or_none()
+        if old_key is not None:
+            await db.delete(old_key)
+
+    # Mint a fresh one.
+    admin_user = await db.get(User, admin.user_id)
+    if admin_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "errorMessage": "user_not_found",
+                "errorCode": "forbidden",
+            },
+        )
+    minted = await create_api_key(
+        db,
+        user=admin_user,
+        name=f"Prowlarr — {row.name}",
+        scopes=[SCOPE_ADMIN],
+    )
+    row.app_token_hash = f"apikey:{minted.api_key_id}"
     await db.commit()
     await db.refresh(row)
 
     base = _to_read(row).model_dump()
-    base["app_token"] = new_token
+    base["app_token"] = minted.plaintext
     return ApplicationCreateResult.model_validate(base)

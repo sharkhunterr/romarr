@@ -235,10 +235,13 @@ export function CreateIndexerModal(
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://prowlarr.local/12/api"
+              placeholder="http://prowlarr:9696/5"
               disabled={submitting}
               className="w-full rounded-md bg-zinc-950 px-3 py-2 font-mono text-xs text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
             />
+            <p className="mt-1 text-[0.65rem] text-zinc-500">
+              {t("indexers.create.urlHint")}
+            </p>
           </label>
 
           <label className="block">

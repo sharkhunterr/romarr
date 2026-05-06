@@ -167,15 +167,33 @@ export function IndexerRow(props: IndexerRowProps): ReactElement {
       </div>
 
       {testResult !== null && (
-        <p className="mt-2 text-xs text-zinc-400">
-          {testResult.ok
-            ? `✓ ${t("indexers.test.successCaps")}${
-                testResult.search_ok === true ? ` · ${t("indexers.test.successSearch")}` : ""
-              }`
-            : `✗ ${
-                testResult.message ?? t(`indexers.health.${testResult.category ?? "connectivity"}`)
-              }`}
-        </p>
+        <div
+          className={[
+            "mt-2 space-y-1 text-xs",
+            testResult.ok ? "text-zinc-400" : "text-red-300",
+          ].join(" ")}
+        >
+          <p>
+            {testResult.ok
+              ? `✓ ${t("indexers.test.successCaps")}${
+                  testResult.search_ok === true
+                    ? ` · ${t("indexers.test.successSearch")}`
+                    : ""
+                }`
+              : `✗ ${
+                  testResult.message ??
+                  t(`indexers.health.${testResult.category ?? "connectivity"}`)
+                }`}
+          </p>
+          {!testResult.ok &&
+            (testResult.message ?? "")
+              .toLowerCase()
+              .includes("caps response was empty") && (
+              <p className="rounded-md bg-amber-950/40 px-2 py-1 text-[0.7rem] text-amber-200">
+                {t("indexers.test.emptyCapsHint")}
+              </p>
+            )}
+        </div>
       )}
       {test.isError && (
         <p role="alert" className="mt-2 text-xs text-red-400">

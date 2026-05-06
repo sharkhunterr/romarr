@@ -795,14 +795,14 @@
         "title": "Enregistrer une instance Prowlarr",
         "subtitle": "Romarr lira la liste des indexeurs depuis Prowlarr. Vous récupérerez à la fin un jeton (app token) à coller dans Prowlarr pour la synchro inverse.",
         "successTitle": "Prowlarr enregistré !",
-        "successBody": "Copiez le jeton ci-dessous puis collez-le dans Prowlarr — Settings → Apps → Romarr → Application Token.",
-        "tokenWarn": "Ce jeton ne sera affiché qu'UNE SEULE FOIS. Copiez-le maintenant. En cas de perte, supprimez l'enregistrement et recréez-le.",
-        "tokenLabel": "Jeton d'application (à coller dans Prowlarr)",
+        "successBody": "Copiez la clé API Romarr ci-dessous puis collez-la dans Prowlarr — Settings → Apps → Sonarr → API Key.",
+        "tokenWarn": "Cette clé Romarr ne sera affichée qu'UNE SEULE FOIS. Copiez-la maintenant. En cas de perte, utilisez « Régénérer le jeton » sur la ligne pour en créer une nouvelle.",
+        "tokenLabel": "Clé API Romarr (à coller dans le champ « API Key » de Prowlarr)",
         "afterTitle": "Étapes suivantes",
         "after": {
           "step1": "Dans Prowlarr → Settings → Apps → cliquez « + » → choisissez **Sonarr** (Romarr est compatible Sonarr v3).",
-          "step2": "URL Romarr : http://romarr:8585 (ou l'URL réseau de Romarr).",
-          "step3": "Application Token : collez le jeton ci-dessus. Sync Categories : choisissez celles que vous voulez pousser."
+          "step2": "Sonarr URL : http://romarr:8585 (ou l'URL réseau de Romarr). Prowlarr URL : laissez celui de Prowlarr lui-même.",
+          "step3": "API Key : collez la clé Romarr ci-dessus. Sync Categories : choisissez celles que vous voulez pousser. Test → Save."
         },
         "sonarrCompatNote": "ℹ Pourquoi « Sonarr » ? Prowlarr ne connaît pas encore Romarr nativement, mais Romarr expose une API compatible Sonarr v3 (constitution Article VII), donc « Sonarr » fonctionne comme type d'application.",
         "howTo": {
@@ -853,6 +853,7 @@
       "nameLabel": "Nom",
       "namePlaceholder": "ex. NZBgeek",
       "urlLabel": "URL de base",
+      "urlHint": "Pour Prowlarr : URL d'un indexeur précis (ex. http://prowlarr:9696/5). Romarr ajoute /api?t=caps automatiquement. Pour un Newznab/Torznab direct : URL racine du service.",
       "apiKeyLabel": "Clé API",
       "apiKeyPlaceholder": "Collez la clé API de l'indexeur",
       "flagsLabel": "Modes de recherche",
@@ -907,7 +908,8 @@
       "running": "Test…",
       "successCaps": "Caps OK",
       "successSearch": "Search OK",
-      "failure": "{{message}}"
+      "failure": "{{message}}",
+      "emptyCapsHint": "L'indexeur a renvoyé une réponse vide. Si c'est Prowlarr, l'URL doit être celle d'un indexeur précis (ex. http://prowlarr:9696/5) — pas l'URL racine. Trouvez-la dans Prowlarr → Indexers → cliquez sur l'indexeur → URL Newznab/Torznab affichée."
     },
     "delete": {
       "button": "Supprimer",
