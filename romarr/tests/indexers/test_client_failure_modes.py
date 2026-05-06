@@ -105,3 +105,31 @@ async def test_timeout_raises_protocol_error() -> None:
     assert any(
         i.category == "connectivity" for i in client.health_issues
     )
+
+
+@pytest.mark.asyncio
+async def test_redirect_to_login_on_200_raises_protocol_error() -> None:
+    """A 302→200 chain that lands on a /login URL is the silent
+    failure mode behind the ``/api`` double-suffix bug: status was
+    200, the body was HTML, the parser found zero <item>s and the
+    operator saw a passing call with no results. Detect the login
+    landing URL up front so the operator gets a clear error
+    instead."""
+    async with httpx.AsyncClient() as transport:
+        client = _make_client(client=transport)
+        with respx.mock:
+            respx.get("https://indexer.test/api").mock(
+                return_value=httpx.Response(
+                    302,
+                    headers={"location": "https://indexer.test/login"},
+                )
+            )
+            respx.get("https://indexer.test/login").mock(
+                return_value=httpx.Response(
+                    200, content=b"<html>login form</html>"
+                )
+            )
+            with pytest.raises(IndexerProtocolError, match="login"):
+                await client.caps()
+
+    assert any(i.category == "auth" for i in client.health_issues)

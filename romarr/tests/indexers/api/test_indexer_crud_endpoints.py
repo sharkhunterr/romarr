@@ -248,3 +248,126 @@ async def test_unauthenticated_returns_401(
 ) -> None:
     response = await api_client.get("/api/v3/indexer")
     assert response.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# Slice 344: input sanitisation — paste guards
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_create_strips_trailing_api_from_url(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """A pasted Prowlarr feed URL ending in ``/api`` is normalised so
+    the client's own ``/api`` suffix doesn't double up and bounce
+    through Prowlarr's login redirect."""
+    await seed_admin_and_login(api_engine, api_client)
+    payload = {
+        **_VALID_PAYLOAD,
+        "url": "https://nznb.test/5/api/",
+    }
+    response = await api_client.post("/api/v3/indexer", json=payload)
+    assert response.status_code == 201
+    assert response.json()["url"] == "https://nznb.test/5"
+
+
+@pytest.mark.asyncio
+async def test_create_round_trips_api_key_without_quotes(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Decrypting the persisted blob yields the raw key — no JSON
+    quoting layer that would be sent verbatim to the upstream and
+    produce a silent 401."""
+    from romarr.metadata.encryption import decrypt_secret
+
+    await seed_admin_and_login(api_engine, api_client)
+    response = await api_client.post(
+        "/api/v3/indexer",
+        json={**_VALID_PAYLOAD, "api_key": "plain-secret-key"},
+    )
+    assert response.status_code == 201
+    indexer_id = response.json()["id"]
+
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        row = (
+            await session.execute(
+                select(Indexer).where(Indexer.id == indexer_id)
+            )
+        ).scalar_one()
+        assert row.api_key_encrypted is not None
+        assert decrypt_secret(row.api_key_encrypted) == "plain-secret-key"
+
+
+@pytest.mark.asyncio
+async def test_create_strips_quotes_around_api_key(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Operators sometimes copy a key with the surrounding double or
+    single quotes from a logs/UI snippet; the create handler trims
+    one balanced layer before encryption."""
+    from romarr.metadata.encryption import decrypt_secret
+
+    await seed_admin_and_login(api_engine, api_client)
+    response = await api_client.post(
+        "/api/v3/indexer",
+        json={**_VALID_PAYLOAD, "api_key": '"abcdef0123456789"'},
+    )
+    assert response.status_code == 201
+    indexer_id = response.json()["id"]
+
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        row = (
+            await session.execute(
+                select(Indexer).where(Indexer.id == indexer_id)
+            )
+        ).scalar_one()
+        assert decrypt_secret(row.api_key_encrypted) == "abcdef0123456789"
+
+
+@pytest.mark.asyncio
+async def test_put_normalises_url_and_strips_api_key_quotes(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    from romarr.metadata.encryption import decrypt_secret
+
+    await seed_admin_and_login(api_engine, api_client)
+    create = await api_client.post("/api/v3/indexer", json=_VALID_PAYLOAD)
+    indexer_id = create.json()["id"]
+
+    response = await api_client.put(
+        f"/api/v3/indexer/{indexer_id}",
+        json={
+            "url": "https://nznb.test/5/api",
+            "api_key": "  '  rotated-key  '  ",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["url"] == "https://nznb.test/5"
+
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        row = (
+            await session.execute(
+                select(Indexer).where(Indexer.id == indexer_id)
+            )
+        ).scalar_one()
+        assert decrypt_secret(row.api_key_encrypted) == "rotated-key"
+
+
+def test_decrypt_secret_strips_legacy_json_quotes() -> None:
+    """Blobs persisted before the encrypt-side fix were wrapped via
+    ``json.dumps`` and decode to ``'"…"'``. ``decrypt_secret`` peels
+    off one balanced layer so existing rows decode cleanly without
+    a data migration."""
+    import json as _json
+
+    from romarr.metadata.encryption import decrypt_secret, encrypt
+
+    legacy_blob = encrypt(_json.dumps("hex-key-32").encode("utf-8"))
+    assert decrypt_secret(legacy_blob) == "hex-key-32"
+
+    new_blob = encrypt(b"hex-key-32")
+    assert decrypt_secret(new_blob) == "hex-key-32"

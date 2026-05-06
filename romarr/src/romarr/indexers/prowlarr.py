@@ -10,13 +10,12 @@ upstream — the local mutation has already happened (FR-016 isolation).
 
 from __future__ import annotations
 
-import json
 import logging
 from typing import TYPE_CHECKING, Literal
 
 import httpx
 
-from romarr.metadata.encryption import decrypt
+from romarr.metadata.encryption import decrypt_secret
 
 if TYPE_CHECKING:
     from romarr.indexers.models import Application
@@ -39,14 +38,7 @@ async def notify_prowlarr_change(
     (the caller does not retry — Prowlarr's reconciliation loop will
     pick up the divergence on its next sync cycle).
     """
-    try:
-        api_key = json.loads(
-            decrypt(application.prowlarr_api_key_encrypted).decode("utf-8")
-        )
-    except (json.JSONDecodeError, ValueError):
-        api_key = decrypt(application.prowlarr_api_key_encrypted).decode(
-            "utf-8"
-        )
+    api_key = decrypt_secret(application.prowlarr_api_key_encrypted)
 
     url = (
         f"{application.prowlarr_url.rstrip('/')}/api/v1/applications/notify"

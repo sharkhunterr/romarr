@@ -10,7 +10,6 @@ All endpoints require the admin role from spec 010 (FR-013a, FR-026a).
 
 from __future__ import annotations
 
-import json
 from datetime import UTC, datetime
 from typing import Annotated
 
@@ -94,7 +93,11 @@ async def register_application(
     admin: Annotated[Principal, Depends(require_admin)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ApplicationCreateResult:
-    encrypted_api_key = encrypt(json.dumps(payload.prowlarr_api_key).encode())
+    from romarr.indexers.api.indexers import _clean_secret, _normalize_indexer_url
+
+    cleaned_key = _clean_secret(payload.prowlarr_api_key) or ""
+    encrypted_api_key = encrypt(cleaned_key.encode("utf-8"))
+    normalized_prowlarr_url = _normalize_indexer_url(payload.prowlarr_url)
 
     # Mint a real Romarr API key (admin scope) so Prowlarr can
     # authenticate to Romarr's REST surface via the standard
@@ -123,7 +126,7 @@ async def register_application(
     row = Application(
         name=payload.name,
         sync_level=payload.sync_level,
-        prowlarr_url=payload.prowlarr_url,
+        prowlarr_url=normalized_prowlarr_url,
         prowlarr_api_key_encrypted=encrypted_api_key,
         # Track the api_key row in the existing token-hash column
         # so rotate / unregister can revoke the right key without

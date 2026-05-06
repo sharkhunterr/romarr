@@ -17,7 +17,7 @@ from romarr.downloaders.factory import build_client_from_row
 from romarr.downloaders.models import DownloadClient as DownloadClientRow
 from romarr.indexers.client import NewznabClient
 from romarr.indexers.models import Indexer
-from romarr.metadata.encryption import decrypt
+from romarr.metadata.encryption import decrypt_secret
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,7 +42,7 @@ def make_indexer_client_factory(
             await session.execute(select(Indexer).where(Indexer.id == indexer_id))
         ).scalar_one()
         api_key = (
-            decrypt(row.api_key_encrypted).decode("utf-8")
+            decrypt_secret(row.api_key_encrypted)
             if row.api_key_encrypted
             else None
         )

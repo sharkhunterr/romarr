@@ -13,7 +13,6 @@ All endpoints require the admin role (FR-026a).
 
 from __future__ import annotations
 
-import json
 from typing import Annotated, Any, Literal
 
 import httpx
@@ -44,6 +43,33 @@ from romarr.metadata.encryption import encrypt
 router = APIRouter(prefix="/api/v3/indexer", tags=["Indexers"])
 
 _REGISTRY = IndexerRegistry()
+
+
+def _normalize_indexer_url(url: str) -> str:
+    """Drop a trailing ``/api`` (or ``/api/``) so the client's
+    own ``/api`` suffix doesn't double-up. Operators frequently paste
+    the full Prowlarr feed URL ``http://prowlarr:9696/<id>/api``; the
+    extra segment silently redirects to the login page and produces
+    ``HTTP 200`` with zero results."""
+    cleaned = url.strip().rstrip("/")
+    if cleaned.endswith("/api"):
+        cleaned = cleaned[: -len("/api")]
+    return cleaned
+
+
+def _clean_secret(value: str | None) -> str | None:
+    """Trim whitespace and a single layer of surrounding quotes from a
+    pasted credential. Operators sometimes copy keys with the JSON
+    quotes around them (e.g. from a logs/UI snippet)."""
+    if value is None:
+        return None
+    cleaned = value.strip()
+    if len(cleaned) >= 2 and cleaned[0] == cleaned[-1] and cleaned[0] in (
+        '"',
+        "'",
+    ):
+        cleaned = cleaned[1:-1].strip()
+    return cleaned or None
 
 
 def _to_read(row: Indexer) -> IndexerRead:
@@ -194,8 +220,14 @@ async def create_indexer(
     db: Annotated[AsyncSession, Depends(get_db)],
     test: bool = False,
 ) -> IndexerRead:
+    normalized_url = _normalize_indexer_url(payload.url)
+    cleaned_key = _clean_secret(payload.api_key)
     if test:
-        client = _client_from_create(payload)
+        client = _client_from_create(
+            payload.model_copy(
+                update={"url": normalized_url, "api_key": cleaned_key}
+            )
+        )
         try:
             result = await test_connectivity(client)
         finally:
@@ -211,15 +243,13 @@ async def create_indexer(
             )
 
     encrypted = (
-        encrypt(json.dumps(payload.api_key).encode())
-        if payload.api_key
-        else None
+        encrypt(cleaned_key.encode("utf-8")) if cleaned_key else None
     )
 
     row = Indexer(
         name=payload.name,
         implementation=payload.implementation,
-        url=payload.url,
+        url=normalized_url,
         api_key_encrypted=encrypted,
         categories=payload.categories,
         priority=payload.priority,
@@ -275,6 +305,8 @@ async def update_indexer(
 ) -> IndexerRead:
     row = await _get_or_404(db, indexer_id)
     fields = payload.model_dump(exclude_unset=True)
+    if "url" in fields and fields["url"] is not None:
+        fields["url"] = _normalize_indexer_url(fields["url"])
     for key in (
         "name",
         "implementation",
@@ -298,9 +330,9 @@ async def update_indexer(
         if key in fields:
             setattr(row, key, fields[key])
     if "api_key" in fields:
-        new_key = fields["api_key"]
+        new_key = _clean_secret(fields["api_key"])
         row.api_key_encrypted = (
-            encrypt(json.dumps(new_key).encode()) if new_key else None
+            encrypt(new_key.encode("utf-8")) if new_key else None
         )
     try:
         await db.commit()

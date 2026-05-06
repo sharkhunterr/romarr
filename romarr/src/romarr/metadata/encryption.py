@@ -66,3 +66,21 @@ def encrypt(plaintext: bytes) -> bytes:
 def decrypt(ciphertext: bytes) -> bytes:
     """Unwrap a Fernet token. Raises ``InvalidToken`` on tampering."""
     return _fernet().decrypt(ciphertext)
+
+
+def decrypt_secret(ciphertext: bytes) -> str:
+    """Decode a stored secret string and trim legacy JSON quoting.
+
+    Earlier slices wrapped the plaintext in ``json.dumps`` before
+    encrypting, which left every secret (indexer api_key, application
+    prowlarr_api_key, downloader password) with literal ``"…"`` chars
+    around the value. Those quotes were sent verbatim to the upstream
+    service and produced silent 401s. The encrypt path no longer adds
+    them, but blobs persisted before the fix still carry them — strip
+    one balanced layer of double or single quotes on read so existing
+    rows decode cleanly without a migration.
+    """
+    plain = _fernet().decrypt(ciphertext).decode("utf-8")
+    if len(plain) >= 2 and plain[0] == plain[-1] and plain[0] in ('"', "'"):
+        return plain[1:-1]
+    return plain

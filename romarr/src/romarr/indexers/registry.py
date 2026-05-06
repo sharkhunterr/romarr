@@ -9,7 +9,6 @@ registry so the same in-memory limiter/breaker persists across calls.
 
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING
 
 from sqlalchemy import select
@@ -18,7 +17,7 @@ from romarr.identification.circuit_breaker import CircuitBreaker
 from romarr.indexers.client import NewznabClient
 from romarr.indexers.models import Indexer
 from romarr.indexers.rate_limiter import RateLimiter
-from romarr.metadata.encryption import decrypt
+from romarr.metadata.encryption import decrypt_secret
 
 if TYPE_CHECKING:
     import httpx
@@ -81,14 +80,7 @@ class IndexerRegistry:
     def _build_client(self, indexer: Indexer) -> NewznabClient:
         api_key: str | None = None
         if indexer.api_key_encrypted is not None:
-            try:
-                api_key = json.loads(
-                    decrypt(indexer.api_key_encrypted).decode("utf-8")
-                )
-            except (json.JSONDecodeError, ValueError):
-                # Older format: stored as raw plaintext bytes inside
-                # the Fernet token.
-                api_key = decrypt(indexer.api_key_encrypted).decode("utf-8")
+            api_key = decrypt_secret(indexer.api_key_encrypted)
         return self._client_factory(
             indexer_id=indexer.id,
             name=indexer.name,

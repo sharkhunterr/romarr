@@ -853,10 +853,10 @@
       "nameLabel": "Name",
       "namePlaceholder": "e.g. NZBgeek",
       "urlLabel": "Base URL",
-      "urlHint": "For Prowlarr: a specific indexer's URL (e.g. http://prowlarr:9696/5). Romarr appends /api?t=caps automatically. For a direct Newznab/Torznab: the service's root URL.",
+      "urlHint": "For Prowlarr: a specific indexer's URL with NO trailing /api (e.g. http://prowlarr:9696/5, not http://prowlarr:9696/5/api). Romarr appends /api automatically; otherwise the 200 silently redirects to the login page. For a direct Newznab/Torznab: the service's root URL.",
       "apiKeyLabel": "API key",
       "apiKeyPlaceholder": "Paste the indexer's API key",
-      "apiKeyHint": "For Prowlarr: the same Prowlarr API key (Prowlarr → Settings → General → API Key, 32-char hex). For a direct Newznab/Torznab: the key your indexer gave you.",
+      "apiKeyHint": "32-char hex, no quotes or whitespace. For Prowlarr: the same Prowlarr API key (Prowlarr → Settings → General → API Key). For a direct Newznab/Torznab: the key your indexer gave you.",
       "flagsLabel": "Search modes",
       "flags": {
         "enableRss": "Enable RSS sync (auto-grab feed)",
