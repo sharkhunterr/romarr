@@ -83,6 +83,17 @@ class CircuitBreaker:
         ):
             self._state = CircuitState.HALF_OPEN
 
+    def reset(self) -> None:
+        """Force the breaker back to CLOSED.
+
+        Used by operator-driven retry surfaces (e.g. the "Test"
+        button on an indexer row) so a manual probe doesn't sit
+        out the cooldown after an automatic failure burst.
+        """
+        self._state = CircuitState.CLOSED
+        self._failure_times.clear()
+        self._opened_at = None
+
     def record_success(self) -> None:
         """Record a successful call.
 

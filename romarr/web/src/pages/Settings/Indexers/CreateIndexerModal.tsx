@@ -25,10 +25,12 @@ import { useTranslation } from "react-i18next";
 
 import {
   useCreateIndexer,
+  useProbeIndexer,
   useUpdateIndexer,
   type Indexer,
   type IndexerCreate,
   type IndexerImplementation,
+  type IndexerTestResult,
   type IndexerUpdate,
 } from "@/lib/api/queries/indexers";
 import { useToastStore } from "@/lib/store/toast";
@@ -53,7 +55,12 @@ export function CreateIndexerModal(
   const { t } = useTranslation("settings");
   const create = useCreateIndexer();
   const update = useUpdateIndexer();
+  const probe = useProbeIndexer();
   const pushToast = useToastStore((s) => s.push);
+
+  const [probeResult, setProbeResult] = useState<IndexerTestResult | null>(
+    null,
+  );
 
   const editing = props.indexer ?? null;
   const isEdit = editing !== null;
@@ -261,11 +268,11 @@ export function CreateIndexerModal(
               autoComplete="new-password"
               className="w-full rounded-md bg-zinc-950 px-3 py-2 font-mono text-xs text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
             />
-            {isEdit && (
-              <p className="mt-1 text-[0.65rem] text-zinc-500">
-                {t("indexers.edit.apiKeyHint")}
-              </p>
-            )}
+            <p className="mt-1 text-[0.65rem] text-zinc-500">
+              {isEdit
+                ? t("indexers.edit.apiKeyHint")
+                : t("indexers.create.apiKeyHint")}
+            </p>
           </label>
 
           <fieldset className="space-y-1.5">
@@ -313,9 +320,65 @@ export function CreateIndexerModal(
           <p className="rounded-md border border-dashed border-zinc-800 bg-zinc-900/40 px-3 py-2 text-[0.65rem] text-zinc-500">
             {t("indexers.create.prowlarrHint")}
           </p>
+
+          {probeResult !== null && (
+            <div
+              className={[
+                "rounded-md border px-3 py-2 text-xs",
+                probeResult.ok
+                  ? "border-brand/40 bg-brand/10 text-brand"
+                  : "border-red-900/60 bg-red-950/30 text-red-300",
+              ].join(" ")}
+            >
+              {probeResult.ok
+                ? `✓ ${t("indexers.test.successCaps")}${
+                    probeResult.search_ok === true
+                      ? ` · ${t("indexers.test.successSearch")}`
+                      : ""
+                  }`
+                : `✗ ${
+                    probeResult.message ??
+                    t(
+                      `indexers.health.${probeResult.category ?? "connectivity"}`,
+                    )
+                  }`}
+            </div>
+          )}
         </div>
 
-        <footer className="flex items-center justify-end gap-2 border-t border-zinc-800 px-4 py-3">
+        <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-zinc-800 px-4 py-3">
+          <button
+            type="button"
+            onClick={() => {
+              if (!canSubmit) return;
+              setProbeResult(null);
+              probe.mutate(
+                {
+                  implementation,
+                  url: url.trim(),
+                  api_key: apiKey.trim() || null,
+                },
+                {
+                  onSuccess: setProbeResult,
+                  onError: (err) =>
+                    setProbeResult({
+                      ok: false,
+                      caps_ok: false,
+                      search_ok: null,
+                      server: null,
+                      category: "connectivity",
+                      message: err.message,
+                    }),
+                },
+              );
+            }}
+            disabled={!canSubmit || submitting || probe.isPending}
+            className="mr-auto rounded-md border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {probe.isPending
+              ? t("indexers.test.running")
+              : t("indexers.test.button")}
+          </button>
           <button
             type="button"
             onClick={props.onClose}

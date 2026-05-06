@@ -109,6 +109,31 @@ export function useTestIndexer(): UseMutationResult<
 }
 
 /**
+ * POST /api/v3/indexer/test — probe an unsaved (URL, api_key)
+ * pair. Lets the operator validate connectivity from inside the
+ * Create / Edit modal without having to save first.
+ */
+export interface IndexerProbePayload {
+  implementation: IndexerImplementation;
+  url: string;
+  api_key: string | null;
+}
+
+export function useProbeIndexer(): UseMutationResult<
+  IndexerTestResult,
+  ApiError,
+  IndexerProbePayload
+> {
+  return useMutation<IndexerTestResult, ApiError, IndexerProbePayload>({
+    mutationFn: (payload) =>
+      apiFetch<IndexerTestResult>("/api/v3/indexer/test", {
+        method: "POST",
+        json: payload,
+      }),
+  });
+}
+
+/**
  * PUT /api/v3/indexer/{id} — narrow toggle subset (slice 122).
  *
  * The IndexerUpdate body is broad; this hook only exposes the

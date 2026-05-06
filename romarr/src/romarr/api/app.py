@@ -35,8 +35,10 @@ from romarr.api.routers.calendar import router as calendar_router
 from romarr.api.routers.cover import router as cover_router
 from romarr.api.routers.game import router as game_router
 from romarr.api.routers.history import router as history_router
+from romarr.api.routers.language import router as language_router
 from romarr.api.routers.log import router as log_router
 from romarr.api.routers.dat_sources import router as dat_sources_router
+from romarr.api.routers.rootfolder import router as rootfolder_router
 from romarr.api.routers.quality_definitions import (
     router as quality_definitions_router,
 )
@@ -510,6 +512,10 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     app.include_router(users_router)
     # Spec 013 — Sonarr-compat /api/v3/system/status (FR-031, US1).
     app.include_router(system_status_router)
+    # Sonarr-compat shims so Prowlarr's "Test" against an
+    # Apps → Sonarr registration populates without errors.
+    app.include_router(rootfolder_router)
+    app.include_router(language_router)
     # Spec 013 — Tag CRUD (T060). The /detail/{id} sub-route is
     # registered before the {tag_id} catch-all in the router so
     # FastAPI's path matcher hits the literal first.

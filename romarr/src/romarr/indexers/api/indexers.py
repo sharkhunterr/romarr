@@ -14,10 +14,11 @@ All endpoints require the admin role (FR-026a).
 from __future__ import annotations
 
 import json
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Response, status
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -362,6 +363,11 @@ async def test_indexer(
     _admin: Annotated[Principal, Depends(require_admin)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ConnectivityTestResult:
+    # Manual operator probes always start with a fresh breaker so
+    # an earlier automatic-failure burst doesn't gate the retry —
+    # otherwise the operator sees ``circuit_open`` indefinitely
+    # without a way to recover.
+    _REGISTRY.reset_breaker(indexer_id)
     client = await _REGISTRY.get(db, indexer_id=indexer_id)
     if client is None:
         raise HTTPException(
@@ -371,6 +377,52 @@ async def test_indexer(
                 "errorCode": "not_found",
             },
         )
+    try:
+        return await test_connectivity(client)
+    finally:
+        await client.aclose()
+
+
+class _TestProbePayload(BaseModel):
+    """Body for ``POST /api/v3/indexer/test`` — probes a transient
+    set of values without persisting an Indexer row first.
+
+    Used by the Create / Edit modals so the operator validates
+    the URL + key combo before saving.
+    """
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    implementation: Literal["newznab", "torznab"]
+    url: Annotated[str, Field(min_length=1)]
+    api_key: str | None = None
+
+
+@router.post(
+    "/test",
+    response_model=ConnectivityTestResult,
+    summary=(
+        "Probe an unsaved (URL, api_key) pair without persisting an "
+        "Indexer row. Used by the Create / Edit modals so operators "
+        "validate connectivity before saving."
+    ),
+)
+async def probe_indexer_payload(
+    payload: _TestProbePayload,
+    _admin: Annotated[Principal, Depends(require_admin)],
+    _db: Annotated[AsyncSession, Depends(get_db)],
+) -> ConnectivityTestResult:
+    from romarr.identification.circuit_breaker import CircuitBreaker
+    from romarr.indexers.rate_limiter import RateLimiter
+
+    client = NewznabClient(
+        indexer_id=0,
+        name="probe",
+        base_url=payload.url.rstrip("/"),
+        api_key=payload.api_key,
+        rate_limiter=RateLimiter(seconds=0.0),
+        breaker=CircuitBreaker("probe"),
+    )
     try:
         return await test_connectivity(client)
     finally:

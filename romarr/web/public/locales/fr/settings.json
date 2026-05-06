@@ -856,6 +856,7 @@
       "urlHint": "Pour Prowlarr : URL d'un indexeur précis (ex. http://prowlarr:9696/5). Romarr ajoute /api?t=caps automatiquement. Pour un Newznab/Torznab direct : URL racine du service.",
       "apiKeyLabel": "Clé API",
       "apiKeyPlaceholder": "Collez la clé API de l'indexeur",
+      "apiKeyHint": "Pour Prowlarr : la même clé API que Prowlarr (Prowlarr → Settings → General → API Key, 32 caractères hex). Pour un Newznab/Torznab direct : la clé fournie par votre indexeur.",
       "flagsLabel": "Modes de recherche",
       "flags": {
         "enableRss": "Activer le sync RSS (auto-grab feed)",

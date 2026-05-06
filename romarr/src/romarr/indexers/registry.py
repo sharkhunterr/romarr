@@ -67,6 +67,17 @@ class IndexerRegistry:
         self._breakers[indexer.id] = breaker
         return breaker
 
+    def reset_breaker(self, indexer_id: int) -> None:
+        """Force the named indexer's circuit breaker back to CLOSED.
+
+        Operator-driven retries (the Test button) call this so the
+        probe doesn't sit out an active cooldown from an earlier
+        automatic burst of failures.
+        """
+        existing = self._breakers.get(indexer_id)
+        if existing is not None:
+            existing.reset()
+
     def _build_client(self, indexer: Indexer) -> NewznabClient:
         api_key: str | None = None
         if indexer.api_key_encrypted is not None:

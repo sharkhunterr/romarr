@@ -856,6 +856,7 @@
       "urlHint": "For Prowlarr: a specific indexer's URL (e.g. http://prowlarr:9696/5). Romarr appends /api?t=caps automatically. For a direct Newznab/Torznab: the service's root URL.",
       "apiKeyLabel": "API key",
       "apiKeyPlaceholder": "Paste the indexer's API key",
+      "apiKeyHint": "For Prowlarr: the same Prowlarr API key (Prowlarr → Settings → General → API Key, 32-char hex). For a direct Newznab/Torznab: the key your indexer gave you.",
       "flagsLabel": "Search modes",
       "flags": {
         "enableRss": "Enable RSS sync (auto-grab feed)",
