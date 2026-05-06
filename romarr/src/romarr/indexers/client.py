@@ -266,8 +266,16 @@ class NewznabClient:
 
     async def _do_request(self, params: dict[str, Any]) -> bytes:
         try:
+            # Follow redirects: Prowlarr's per-indexer URLs sometimes
+            # redirect (trailing slash, base-path setups) and the
+            # apikey query param survives the redirect. Without
+            # follow_redirects=True the 302 surfaces as "unexpected
+            # HTTP 302" and the operator sees a confusing error
+            # instead of the actual indexer caps.
             response = await self._client.get(
-                f"{self.base_url}/api", params=params
+                f"{self.base_url}/api",
+                params=params,
+                follow_redirects=True,
             )
         except httpx.TimeoutException as exc:
             self._record_issue("connectivity", "timeout")
@@ -288,6 +296,21 @@ class NewznabClient:
             )
         if response.status_code != 200:
             self._record_issue("protocol", f"HTTP {response.status_code}")
+            # When the indexer redirected to a login page (302 → 200
+            # at the login URL), the body is HTML, not Newznab XML.
+            # Surface a clearer message so the operator knows it's
+            # an auth gate rather than a "weird HTTP code".
+            final_url = str(response.url)
+            if (
+                response.status_code in (302, 303, 307, 308)
+                or "login" in final_url.lower()
+            ):
+                raise IndexerProtocolError(
+                    f"indexer redirected to {final_url} — apikey may be "
+                    "wrong or auth-gated; double-check the URL ends with "
+                    "the per-indexer path (e.g. /5) and the apikey is "
+                    "the indexer's own"
+                )
             raise IndexerProtocolError(
                 f"indexer unexpected HTTP {response.status_code}"
             )
