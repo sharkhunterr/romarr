@@ -26,6 +26,8 @@ export interface RegionProfileCreate {
   allow_fallback_outside_priorities?: boolean;
 }
 
+export type RegionProfileUpdate = Partial<RegionProfileCreate>;
+
 const KEY = ["settings", "region-profiles"] as const;
 
 export function useRegionProfiles(): UseQueryResult<
@@ -50,6 +52,28 @@ export function useCreateRegionProfile(): UseMutationResult<
     mutationFn: (payload) =>
       apiFetch<RegionProfile>("/api/v3/rom/regionprofile", {
         method: "POST",
+        json: payload,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: KEY });
+    },
+  });
+}
+
+export function useUpdateRegionProfile(): UseMutationResult<
+  RegionProfile,
+  ApiError,
+  { id: number; payload: RegionProfileUpdate }
+> {
+  const qc = useQueryClient();
+  return useMutation<
+    RegionProfile,
+    ApiError,
+    { id: number; payload: RegionProfileUpdate }
+  >({
+    mutationFn: ({ id, payload }) =>
+      apiFetch<RegionProfile>(`/api/v3/rom/regionprofile/${id}`, {
+        method: "PUT",
         json: payload,
       }),
     onSuccess: () => {

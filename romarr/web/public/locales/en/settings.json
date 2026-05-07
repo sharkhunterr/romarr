@@ -364,15 +364,42 @@
         "cancel": "Cancel",
         "factoryBlocked": "Factory-default profiles can't be deleted; reset them with the seed migration if needed."
       },
-      "editorHint": "Drag-list editor for priorities + multi-select for excluded regions lands in a follow-up slice.",
+      "editorHint": "Click Edit to adjust the priorities and excluded regions of an existing profile.",
+      "catalogue": {
+        "europe": "Europe",
+        "worldwide": "Worldwide",
+        "usa": "USA",
+        "japan": "Japan",
+        "france": "France",
+        "germany": "Germany",
+        "italy": "Italy",
+        "spain": "Spain",
+        "uk": "United Kingdom",
+        "brazil": "Brazil",
+        "australia": "Australia",
+        "korea": "Korea",
+        "china": "China",
+        "taiwan": "Taiwan"
+      },
+      "picker": {
+        "selectedOrdered": "Selected regions (highest priority first)",
+        "selectedSet": "Selected regions",
+        "available": "Available regions",
+        "emptySelected": "No region selected yet — pick from the list below.",
+        "allSelected": "Every catalogue region is already selected.",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "remove": "Remove from list",
+        "legacy": "Off-catalogue codes preserved: {{codes}}"
+      },
       "create": {
         "openButton": "+ Add region profile",
         "modalTitle": "Add a Region profile",
-        "subhead": "Priorities are most-preferred first. Excluded regions are dropped outright. Comma-separated, ISO 3-letter codes (USA, EUR, JPN, …).",
+        "subhead": "Pick the regions to favour (top of the list = strongest priority). Excluded regions are dropped outright. Romarr recognises common spellings automatically (eu/eur/Europe, us/usa/United States, …).",
         "nameLabel": "Name",
         "namePlaceholder": "e.g. Western priority",
         "prioritiesLabel": "Priorities (most-preferred first)",
-        "prioritiesHint": "Comma-separated. e.g. ``USA, EUR, JPN``.",
+        "prioritiesHint": "Pick the regions then use ↑/↓ to order them.",
         "excludeLabel": "Exclude regions",
         "allowFallback": "Allow fallback outside priorities",
         "errors": {
@@ -386,6 +413,16 @@
         "successTitle": "Region profile added",
         "successBody": "{{name}} is ready.",
         "errorTitle": "Couldn't add the profile"
+      },
+      "edit": {
+        "button": "Edit",
+        "modalTitle": "Edit {{name}}",
+        "submit": "Save",
+        "submitting": "Saving…",
+        "cancel": "Cancel",
+        "successTitle": "Region profile updated",
+        "successBody": "{{name}} is up to date.",
+        "errorTitle": "Couldn't update the profile"
       }
     },
     "language": {

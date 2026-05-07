@@ -1,17 +1,12 @@
 /**
- * CreateRegionProfileModal (slice 287).
+ * EditRegionProfileModal (slice 350).
  *
- * Single-step Add-new flow for the spec 006 Region Profile.
- * Operator types a name + comma-separated priorities (most-
- * preferred first) + optional comma-separated exclude list +
- * the fallback toggle.
- *
- * Cross-field validation:
- *   * priorities cannot be empty when fallback is disabled
- *     (the profile would reject every release);
- *   * priorities and exclude_regions cannot overlap.
- *
- * Strings resolve through ``settings:profiles.region.create.*``.
+ * Mirrors :class:`CreateRegionProfileModal` but pre-fills from an
+ * existing :type:`RegionProfile` and PUTs the diff. Same
+ * :class:`RegionMultiSelect` for priorities + exclude_regions so
+ * operators stop having to remember whether to type ``EU``,
+ * ``EUR`` or ``Europe`` (the catalogue surfaces every alias the
+ * backend accepts).
  */
 
 import { useState, type ReactElement } from "react";
@@ -19,29 +14,34 @@ import { useTranslation } from "react-i18next";
 
 import { RegionMultiSelect } from "@/components/profiles/RegionMultiSelect";
 import {
-  useCreateRegionProfile,
-  type RegionProfileCreate,
+  useUpdateRegionProfile,
+  type RegionProfile,
 } from "@/lib/api/queries/region-profiles";
 import { useToastStore } from "@/lib/store/toast";
 
-interface CreateRegionProfileModalProps {
+interface Props {
+  profile: RegionProfile;
   onClose: () => void;
 }
 
-export function CreateRegionProfileModal(
-  props: CreateRegionProfileModalProps,
-): ReactElement {
+export function EditRegionProfileModal(props: Props): ReactElement {
   const { t } = useTranslation("settings");
-  const create = useCreateRegionProfile();
+  const { profile, onClose } = props;
+  const update = useUpdateRegionProfile();
   const pushToast = useToastStore((s) => s.push);
 
-  const [name, setName] = useState("");
-  const [priorities, setPriorities] = useState<string[]>(["EU", "WW", "US", "JP"]);
-  const [excludeRegions, setExcludeRegions] = useState<string[]>([]);
-  const [allowFallback, setAllowFallback] = useState(true);
+  const [name, setName] = useState(profile.name);
+  const [priorities, setPriorities] = useState<string[]>([
+    ...profile.priorities,
+  ]);
+  const [excludeRegions, setExcludeRegions] = useState<string[]>([
+    ...profile.exclude_regions,
+  ]);
+  const [allowFallback, setAllowFallback] = useState(
+    profile.allow_fallback_outside_priorities,
+  );
 
-  const submitting = create.isPending;
-
+  const submitting = update.isPending;
   const validationError: string | null = (() => {
     if (name.trim().length === 0)
       return t("profiles.region.create.errors.name");
@@ -58,40 +58,45 @@ export function CreateRegionProfileModal(
 
   function commit(): void {
     if (!canSubmit) return;
-    const payload: RegionProfileCreate = {
-      name: name.trim(),
-      priorities,
-      exclude_regions: excludeRegions,
-      allow_fallback_outside_priorities: allowFallback,
-    };
-    create.mutate(payload, {
-      onSuccess: (created) => {
-        pushToast({
-          kind: "success",
-          title: t("profiles.region.create.successTitle"),
-          description: t("profiles.region.create.successBody", {
-            name: created.name,
-          }),
-        });
-        props.onClose();
+    update.mutate(
+      {
+        id: profile.id,
+        payload: {
+          name: name.trim(),
+          priorities,
+          exclude_regions: excludeRegions,
+          allow_fallback_outside_priorities: allowFallback,
+        },
       },
-      onError: (err) => {
-        pushToast({
-          kind: "error",
-          title: t("profiles.region.create.errorTitle"),
-          description: err.message,
-        });
+      {
+        onSuccess: (updated) => {
+          pushToast({
+            kind: "success",
+            title: t("profiles.region.edit.successTitle"),
+            description: t("profiles.region.edit.successBody", {
+              name: updated.name,
+            }),
+          });
+          onClose();
+        },
+        onError: (err) => {
+          pushToast({
+            kind: "error",
+            title: t("profiles.region.edit.errorTitle"),
+            description: err.message,
+          });
+        },
       },
-    });
+    );
   }
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={t("profiles.region.create.modalTitle")}
+      aria-label={t("profiles.region.edit.modalTitle", { name: profile.name })}
       className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/70 px-4 pt-[8vh] backdrop-blur-sm"
-      onClick={props.onClose}
+      onClick={onClose}
     >
       <div
         className="w-full max-w-md overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xl"
@@ -99,11 +104,8 @@ export function CreateRegionProfileModal(
       >
         <header className="border-b border-zinc-800 px-4 py-3">
           <h2 className="text-sm font-semibold text-zinc-100">
-            {t("profiles.region.create.modalTitle")}
+            {t("profiles.region.edit.modalTitle", { name: profile.name })}
           </h2>
-          <p className="mt-0.5 text-[0.65rem] text-zinc-500">
-            {t("profiles.region.create.subhead")}
-          </p>
         </header>
 
         <div className="space-y-3 p-4">
@@ -115,7 +117,6 @@ export function CreateRegionProfileModal(
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={t("profiles.region.create.namePlaceholder")}
               autoFocus
               disabled={submitting}
               className="w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
@@ -164,7 +165,7 @@ export function CreateRegionProfileModal(
             />
           </label>
 
-          {validationError !== null && name.length > 0 && (
+          {validationError !== null && (
             <p
               role="status"
               className="rounded-md border border-amber-700/40 bg-amber-950/30 px-3 py-1.5 text-[0.65rem] text-amber-200"
@@ -177,11 +178,11 @@ export function CreateRegionProfileModal(
         <footer className="flex items-center justify-end gap-2 border-t border-zinc-800 px-4 py-3">
           <button
             type="button"
-            onClick={props.onClose}
+            onClick={onClose}
             disabled={submitting}
             className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {t("profiles.region.create.cancel")}
+            {t("profiles.region.edit.cancel")}
           </button>
           <button
             type="button"
@@ -190,8 +191,8 @@ export function CreateRegionProfileModal(
             className="rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting
-              ? t("profiles.region.create.submitting")
-              : t("profiles.region.create.submit")}
+              ? t("profiles.region.edit.submitting")
+              : t("profiles.region.edit.submit")}
           </button>
         </footer>
       </div>

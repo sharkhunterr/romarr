@@ -17,8 +17,10 @@ import {
   useRegionProfiles,
   type RegionProfile,
 } from "@/lib/api/queries/region-profiles";
+import { regionLabelKey } from "@/lib/regions/catalogue";
 
 import { CreateRegionProfileModal } from "./CreateRegionProfileModal";
+import { EditRegionProfileModal } from "./EditRegionProfileModal";
 
 interface RowProps {
   profile: RegionProfile;
@@ -38,11 +40,20 @@ function Pill(props: { label: string; tone?: "muted" | "amber" }): ReactElement 
   );
 }
 
+function _regionPillLabel(t: (k: string) => string, code: string): string {
+  // Catalogue codes get the localised label; legacy / custom codes
+  // fall back to the raw code so nothing renders as a missing key.
+  const key = regionLabelKey(code);
+  if (key === code) return code;
+  return t(`profiles.region.catalogue.${key}`);
+}
+
 function RegionProfileRow(props: RowProps): ReactElement {
   const { t } = useTranslation("settings");
   const { profile } = props;
   const del = useDeleteRegionProfile();
   const [confirming, setConfirming] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   return (
     <li className="rounded-md border border-zinc-800 bg-zinc-900/40 p-3">
@@ -66,7 +77,9 @@ function RegionProfileRow(props: RowProps): ReactElement {
           {profile.priorities.length === 0 ? (
             <span className="text-zinc-600">—</span>
           ) : (
-            profile.priorities.map((code) => <Pill key={code} label={code} />)
+            profile.priorities.map((code) => (
+              <Pill key={code} label={_regionPillLabel(t, code)} />
+            ))
           )}
         </div>
 
@@ -76,7 +89,7 @@ function RegionProfileRow(props: RowProps): ReactElement {
               {t("profiles.region.excluded")}:
             </span>
             {profile.exclude_regions.map((code) => (
-              <Pill key={code} label={code} tone="amber" />
+              <Pill key={code} label={_regionPillLabel(t, code)} tone="amber" />
             ))}
           </div>
         )}
@@ -88,7 +101,18 @@ function RegionProfileRow(props: RowProps): ReactElement {
         </p>
       </div>
 
-      <div className="mt-3">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className={[
+            "min-h-[36px] rounded-md border border-zinc-700 px-3 text-xs font-medium",
+            "text-zinc-200 hover:bg-zinc-800",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+          ].join(" ")}
+        >
+          {t("profiles.region.edit.button")}
+        </button>
         <button
           type="button"
           onClick={() => setConfirming(true)}
@@ -108,6 +132,13 @@ function RegionProfileRow(props: RowProps): ReactElement {
           {t("profiles.region.delete.button")}
         </button>
       </div>
+
+      {editing && (
+        <EditRegionProfileModal
+          profile={profile}
+          onClose={() => setEditing(false)}
+        />
+      )}
 
       {confirming && (
         <div className="mt-3 rounded-md border border-red-900/50 bg-red-950/20 p-3">

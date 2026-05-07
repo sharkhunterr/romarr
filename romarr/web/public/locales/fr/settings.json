@@ -364,15 +364,42 @@
         "cancel": "Annuler",
         "factoryBlocked": "Les profils factory ne peuvent pas être supprimés ; relancez la migration de seed pour les réinitialiser."
       },
-      "editorHint": "L'éditeur drag-list pour les priorités + multi-select pour les régions exclues arrivera dans un slice à venir.",
+      "editorHint": "Cliquez sur Modifier pour ajuster les priorités et les régions exclues d'un profil existant.",
+      "catalogue": {
+        "europe": "Europe",
+        "worldwide": "Mondial",
+        "usa": "USA",
+        "japan": "Japon",
+        "france": "France",
+        "germany": "Allemagne",
+        "italy": "Italie",
+        "spain": "Espagne",
+        "uk": "Royaume-Uni",
+        "brazil": "Brésil",
+        "australia": "Australie",
+        "korea": "Corée",
+        "china": "Chine",
+        "taiwan": "Taïwan"
+      },
+      "picker": {
+        "selectedOrdered": "Régions sélectionnées (de la plus prioritaire à la moins prioritaire)",
+        "selectedSet": "Régions sélectionnées",
+        "available": "Régions disponibles",
+        "emptySelected": "Aucune région sélectionnée — cochez ci-dessous pour ajouter.",
+        "allSelected": "Toutes les régions du catalogue sont sélectionnées.",
+        "moveUp": "Monter d'un cran",
+        "moveDown": "Descendre d'un cran",
+        "remove": "Retirer de la liste",
+        "legacy": "Codes hors-catalogue conservés : {{codes}}"
+      },
       "create": {
         "openButton": "+ Ajouter un profil région",
         "modalTitle": "Ajouter un profil Région",
-        "subhead": "Les priorités sont par préférence décroissante. Les régions exclues sont rejetées d'office. Codes ISO 3 lettres, séparés par virgules (USA, EUR, JPN, …).",
+        "subhead": "Choisissez les régions à privilégier (la première compte le plus). Les régions exclues sont rejetées d'office. Romarr reconnaît automatiquement les variantes (eu/eur/Europe, us/usa/United States, …).",
         "nameLabel": "Nom",
         "namePlaceholder": "ex. Priorité occidentale",
         "prioritiesLabel": "Priorités (préférée en premier)",
-        "prioritiesHint": "Séparées par virgules. ex. ``USA, EUR, JPN``.",
+        "prioritiesHint": "Cochez les régions et utilisez ↑/↓ pour les ordonner.",
         "excludeLabel": "Régions exclues",
         "allowFallback": "Autoriser le fallback hors priorités",
         "errors": {
@@ -386,6 +413,16 @@
         "successTitle": "Profil région ajouté",
         "successBody": "{{name}} est prêt.",
         "errorTitle": "Impossible d'ajouter le profil"
+      },
+      "edit": {
+        "button": "Modifier",
+        "modalTitle": "Modifier {{name}}",
+        "submit": "Enregistrer",
+        "submitting": "Enregistrement…",
+        "cancel": "Annuler",
+        "successTitle": "Profil région mis à jour",
+        "successBody": "{{name}} est à jour.",
+        "errorTitle": "Impossible de mettre à jour le profil"
       }
     },
     "language": {
