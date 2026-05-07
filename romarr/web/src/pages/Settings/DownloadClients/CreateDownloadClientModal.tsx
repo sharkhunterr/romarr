@@ -1,20 +1,20 @@
 /**
- * CreateDownloadClientModal (slice 283).
+ * CreateDownloadClientModal — also handles Edit (slice 356).
  *
- * Single-step Add-new flow for the spec 005 download-client
- * surface. Operator picks the implementation type, host, port,
- * and either an API key (qBittorrent / SAB) or
- * username/password (qBit). Submits a ``DownloadClientCreate``
- * payload to ``POST /api/v3/downloadclient``.
+ * Single component covering both flows:
+ *   * ``editing`` undefined → POST /api/v3/downloadclient
+ *   * ``editing`` set       → PUT  /api/v3/downloadclient/{id}
  *
- * The remaining ``DownloadClientCreate`` fields (priority,
- * remove-completed/failed flags, SSL cert validation,
- * url_base, tags) inherit the documented schema defaults so
- * the form stays focused on the bare minimum the operator
- * needs to wire a fresh client; full edit lives in the
- * follow-up edit-modal slice.
+ * The form embeds an in-modal ``Test`` button that probes the
+ * current values via POST /api/v3/downloadclient/test (no
+ * persistence) so the operator can iterate on host / port /
+ * credentials before saving — slice 005's
+ * ``?test=true`` flag on create only ran *after* persistence
+ * decisions, which made password fixes a save-delete-save loop.
  *
- * Strings resolve through ``settings:downloadClients.create.*``.
+ * Strings resolve through ``settings:downloadClients.create.*``
+ * for the Add flow and ``settings:downloadClients.edit.*`` for
+ * the Edit flow.
  */
 
 import { useState, type ReactElement } from "react";
@@ -22,6 +22,9 @@ import { useTranslation } from "react-i18next";
 
 import {
   useCreateDownloadClient,
+  useProbeDownloadClient,
+  useUpdateDownloadClient,
+  type DownloadClient,
   type DownloadClientCreate,
   type DownloadClientType,
 } from "@/lib/api/queries/download-clients";
@@ -29,6 +32,8 @@ import { useToastStore } from "@/lib/store/toast";
 
 interface CreateDownloadClientModalProps {
   onClose: () => void;
+  /** When set, the modal pre-fills + PUTs to this client's id. */
+  editing?: DownloadClient;
 }
 
 const _CLIENT_TYPES: ReadonlyArray<DownloadClientType> = [
@@ -44,25 +49,35 @@ export function CreateDownloadClientModal(
 ): ReactElement {
   const { t } = useTranslation("settings");
   const create = useCreateDownloadClient();
+  const update = useUpdateDownloadClient();
+  const probe = useProbeDownloadClient();
   const pushToast = useToastStore((s) => s.push);
+  const isEdit = props.editing !== undefined;
 
-  const [type, setType] = useState<DownloadClientType>("qbittorrent");
-  const [name, setName] = useState("");
-  const [host, setHost] = useState("");
-  const [port, setPort] = useState<number>(8080);
-  const [username, setUsername] = useState("");
+  const [type, setType] = useState<DownloadClientType>(
+    (props.editing?.type as DownloadClientType | undefined) ?? "qbittorrent",
+  );
+  const [name, setName] = useState(props.editing?.name ?? "");
+  const [host, setHost] = useState(props.editing?.host ?? "");
+  const [port, setPort] = useState<number>(props.editing?.port ?? 8080);
+  const [username, setUsername] = useState(props.editing?.username ?? "");
   const [password, setPassword] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [useSsl, setUseSsl] = useState(false);
-  const [enabled, setEnabled] = useState(true);
-  const [enableTorrents, setEnableTorrents] = useState(true);
-  const [enableUsenet, setEnableUsenet] = useState(false);
+  const [useSsl, setUseSsl] = useState(props.editing?.use_ssl ?? false);
+  const [enabled, setEnabled] = useState(props.editing?.enabled ?? true);
+  const [enableTorrents, setEnableTorrents] = useState(
+    props.editing?.enable_for_torrents ?? true,
+  );
+  const [enableUsenet, setEnableUsenet] = useState(
+    props.editing?.enable_for_usenet ?? false,
+  );
 
-  // Show the API-key field for SAB / NZBGet (Newznab clients);
-  // show username + password for qBit / Transmission / Deluge.
+  // qBittorrent / Transmission / Deluge: username + password.
+  // SAB / NZBGet (Newznab): api_key.
   const usesApiKey = type === "sabnzbd" || type === "nzbget";
 
-  const submitting = create.isPending;
+  const submitting = create.isPending || update.isPending;
+  const probing = probe.isPending;
   const canSubmit =
     name.trim().length > 0 &&
     host.trim().length > 0 &&
@@ -70,9 +85,15 @@ export function CreateDownloadClientModal(
     port > 0 &&
     port <= 65535;
 
-  function commit(): void {
-    if (!canSubmit) return;
-    const payload: DownloadClientCreate = {
+  // Build the same payload the backend's create / probe / update
+  // endpoints all consume. For edit-without-secret-rewrite we
+  // *omit* password / api_key from the PUT body (the backend's
+  // contract: only re-encrypt when present), but the probe
+  // payload still needs them — we don't have the plaintext
+  // post-encryption, so the operator must retype the secret
+  // before testing in edit mode. That's surfaced as a hint.
+  function buildPayload(includeSecrets: boolean): DownloadClientCreate {
+    return {
       name: name.trim(),
       type,
       host: host.trim(),
@@ -81,16 +102,70 @@ export function CreateDownloadClientModal(
       enabled,
       enable_for_torrents: enableTorrents,
       enable_for_usenet: enableUsenet,
-      remove_completed_downloads: false,
-      remove_failed_downloads: true,
-      category_default: "romarr",
-      priority: 1,
-      ssl_cert_validation: "enabled",
-      api_key: usesApiKey ? (apiKey.trim() || null) : null,
-      username: !usesApiKey ? (username.trim() || null) : null,
-      password: !usesApiKey ? (password.trim() || null) : null,
+      remove_completed_downloads: props.editing
+        ? props.editing.remove_completed_downloads
+        : false,
+      remove_failed_downloads: props.editing
+        ? props.editing.remove_failed_downloads
+        : true,
+      category_default: props.editing?.category_default ?? "romarr",
+      priority: props.editing?.priority ?? 1,
+      ssl_cert_validation: props.editing?.ssl_cert_validation ?? "enabled",
+      api_key: includeSecrets && usesApiKey ? apiKey.trim() || null : null,
+      username: !usesApiKey ? username.trim() || null : null,
+      password:
+        includeSecrets && !usesApiKey ? password.trim() || null : null,
     } as DownloadClientCreate;
-    create.mutate(payload, {
+  }
+
+  function commit(): void {
+    if (!canSubmit) return;
+    if (isEdit && props.editing) {
+      // Send a PUT with every editable field. Secrets are only
+      // included when the operator re-typed them so we don't
+      // null out the existing credentials.
+      const payload: Record<string, unknown> = {
+        name: name.trim(),
+        type,
+        host: host.trim(),
+        port,
+        use_ssl: useSsl,
+        enabled,
+        enable_for_torrents: enableTorrents,
+        enable_for_usenet: enableUsenet,
+        username: !usesApiKey ? username.trim() || null : null,
+      };
+      if (!usesApiKey && password.trim().length > 0) {
+        payload.password = password.trim();
+      }
+      if (usesApiKey && apiKey.trim().length > 0) {
+        payload.api_key = apiKey.trim();
+      }
+      update.mutate(
+        { id: props.editing.id, payload: payload },
+        {
+          onSuccess: (updated) => {
+            pushToast({
+              kind: "success",
+              title: t("downloadClients.edit.successTitle"),
+              description: t("downloadClients.edit.successBody", {
+                name: updated.name,
+              }),
+            });
+            props.onClose();
+          },
+          onError: (err) => {
+            pushToast({
+              kind: "error",
+              title: t("downloadClients.edit.errorTitle"),
+              description: err.message,
+            });
+          },
+        },
+      );
+      return;
+    }
+    create.mutate(buildPayload(true), {
       onSuccess: (created) => {
         pushToast({
           kind: "success",
@@ -111,11 +186,23 @@ export function CreateDownloadClientModal(
     });
   }
 
+  function runTest(): void {
+    if (!canSubmit) return;
+    probe.reset();
+    probe.mutate(buildPayload(true));
+  }
+
+  const probeResult = probe.data;
+  const probeError = probe.isError ? probe.error : null;
+  const titleKey = isEdit
+    ? "downloadClients.edit.modalTitle"
+    : "downloadClients.create.modalTitle";
+
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={t("downloadClients.create.modalTitle")}
+      aria-label={t(titleKey, { name: props.editing?.name ?? "" })}
       className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/70 px-4 pt-[8vh] backdrop-blur-sm"
       onClick={props.onClose}
     >
@@ -125,10 +212,14 @@ export function CreateDownloadClientModal(
       >
         <header className="border-b border-zinc-800 px-4 py-3">
           <h2 className="text-sm font-semibold text-zinc-100">
-            {t("downloadClients.create.modalTitle")}
+            {t(titleKey, { name: props.editing?.name ?? "" })}
           </h2>
           <p className="mt-0.5 text-[0.65rem] text-zinc-500">
-            {t("downloadClients.create.subhead")}
+            {t(
+              isEdit
+                ? "downloadClients.edit.subhead"
+                : "downloadClients.create.subhead",
+            )}
           </p>
         </header>
 
@@ -140,8 +231,8 @@ export function CreateDownloadClientModal(
             <select
               value={type}
               onChange={(e) => setType(e.target.value as DownloadClientType)}
-              disabled={submitting}
-              className="w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              disabled={submitting || isEdit}
+              className="w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
             >
               {_CLIENT_TYPES.map((option) => (
                 <option key={option} value={option}>
@@ -207,10 +298,19 @@ export function CreateDownloadClientModal(
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder={t("downloadClients.create.apiKeyPlaceholder")}
+                placeholder={
+                  isEdit
+                    ? t("downloadClients.edit.apiKeyPlaceholder")
+                    : t("downloadClients.create.apiKeyPlaceholder")
+                }
                 disabled={submitting}
                 className="w-full rounded-md bg-zinc-950 px-3 py-2 font-mono text-xs text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
               />
+              {isEdit && (
+                <p className="mt-1 text-[0.6rem] text-zinc-500">
+                  {t("downloadClients.edit.apiKeyHint")}
+                </p>
+              )}
             </label>
           ) : (
             <div className="grid grid-cols-2 gap-2">
@@ -234,10 +334,20 @@ export function CreateDownloadClientModal(
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  placeholder={
+                    isEdit
+                      ? t("downloadClients.edit.passwordPlaceholder")
+                      : ""
+                  }
                   disabled={submitting}
                   className="w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
                 />
               </label>
+              {isEdit && (
+                <p className="col-span-2 -mt-1 text-[0.6rem] text-zinc-500">
+                  {t("downloadClients.edit.passwordHint")}
+                </p>
+              )}
             </div>
           )}
 
@@ -294,9 +404,54 @@ export function CreateDownloadClientModal(
               />
             </label>
           </fieldset>
+
+          {(probeResult || probeError) && (
+            <div
+              className={[
+                "rounded-md px-3 py-2 text-xs ring-1 ring-inset",
+                probeError
+                  ? "bg-red-950/30 text-red-200 ring-red-900/50"
+                  : probeResult?.ok
+                    ? "bg-emerald-950/30 text-emerald-200 ring-emerald-900/50"
+                    : "bg-red-950/30 text-red-200 ring-red-900/50",
+              ].join(" ")}
+              role={probeResult?.ok && !probeError ? "status" : "alert"}
+            >
+              {probeError && (
+                <span>{probeError.message}</span>
+              )}
+              {!probeError && probeResult?.ok && (
+                <span>
+                  {probeResult.client_version
+                    ? t("downloadClients.test.success", {
+                        version: probeResult.client_version,
+                      })
+                    : t("downloadClients.test.successNoVersion")}
+                </span>
+              )}
+              {!probeError && probeResult && !probeResult.ok && (
+                <span>
+                  {probeResult.error_message ??
+                    t(
+                      `downloadClients.health.${probeResult.error_code ?? "internal"}`,
+                    )}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
-        <footer className="flex items-center justify-end gap-2 border-t border-zinc-800 px-4 py-3">
+        <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-zinc-800 px-4 py-3">
+          <button
+            type="button"
+            onClick={runTest}
+            disabled={!canSubmit || submitting || probing}
+            className="mr-auto rounded-md border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {probing
+              ? t("downloadClients.test.running")
+              : t("downloadClients.test.button")}
+          </button>
           <button
             type="button"
             onClick={props.onClose}
@@ -312,8 +467,16 @@ export function CreateDownloadClientModal(
             className="rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting
-              ? t("downloadClients.create.submitting")
-              : t("downloadClients.create.submit")}
+              ? t(
+                  isEdit
+                    ? "downloadClients.edit.submitting"
+                    : "downloadClients.create.submitting",
+                )
+              : t(
+                  isEdit
+                    ? "downloadClients.edit.submit"
+                    : "downloadClients.create.submit",
+                )}
           </button>
         </footer>
       </div>

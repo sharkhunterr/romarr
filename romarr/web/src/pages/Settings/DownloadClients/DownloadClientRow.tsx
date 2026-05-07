@@ -21,6 +21,8 @@ import {
   type ToggleDownloadClientVariables,
 } from "@/lib/api/queries/download-clients";
 
+import { CreateDownloadClientModal } from "./CreateDownloadClientModal";
+
 type Health =
   | "ok"
   | "auth"
@@ -81,6 +83,7 @@ export function DownloadClientRow(props: DownloadClientRowProps): ReactElement {
   const toggle = useToggleDownloadClient();
 
   const [confirming, setConfirming] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [testResult, setTestResult] = useState<
     DownloadClientTestResult | null
   >(null);
@@ -223,6 +226,17 @@ export function DownloadClientRow(props: DownloadClientRowProps): ReactElement {
         </button>
         <button
           type="button"
+          onClick={() => setEditing(true)}
+          className={[
+            "min-h-[36px] rounded-md border border-zinc-700 px-3 text-xs font-medium",
+            "text-zinc-200 hover:bg-zinc-900",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+          ].join(" ")}
+        >
+          {t("downloadClients.edit.button")}
+        </button>
+        <button
+          type="button"
           onClick={() => setConfirming(true)}
           className={[
             "min-h-[36px] rounded-md border border-red-900/50 px-3 text-xs font-medium",
@@ -233,6 +247,13 @@ export function DownloadClientRow(props: DownloadClientRowProps): ReactElement {
           {t("downloadClients.delete.button")}
         </button>
       </div>
+
+      {editing && (
+        <CreateDownloadClientModal
+          editing={client}
+          onClose={() => setEditing(false)}
+        />
+      )}
 
       {confirming && (
         <div className="mt-3 rounded-md border border-red-900/50 bg-red-950/20 p-3">

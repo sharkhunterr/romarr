@@ -110,6 +110,60 @@ export function useTestDownloadClient(): UseMutationResult<
 }
 
 /**
+ * Probe a freshly-typed payload before persisting (slice 356).
+ *
+ * Lets the Create / Edit modals run the same connectivity probe
+ * the existing-row Test button uses, but against the values
+ * currently in the form — operators can iterate on host / port /
+ * credentials without saving + deleting + re-saving each time.
+ */
+export function useProbeDownloadClient(): UseMutationResult<
+  DownloadClientTestResult,
+  ApiError,
+  DownloadClientCreate
+> {
+  return useMutation<DownloadClientTestResult, ApiError, DownloadClientCreate>({
+    mutationFn: (payload) =>
+      apiFetch<DownloadClientTestResult>("/api/v3/downloadclient/test", {
+        method: "POST",
+        json: payload,
+      }),
+  });
+}
+
+export type DownloadClientUpdate =
+  components["schemas"]["DownloadClientUpdate"];
+
+/**
+ * Full PUT for the edit modal — every column the
+ * ``DownloadClientUpdate`` schema allows. Mirrors
+ * ``useUpdateRegionProfile`` (slice 350): pass an id + a partial
+ * payload; the backend re-encrypts ``password`` / ``api_key``
+ * only when present in the body.
+ */
+export function useUpdateDownloadClient(): UseMutationResult<
+  DownloadClient,
+  ApiError,
+  { id: number; payload: DownloadClientUpdate }
+> {
+  const qc = useQueryClient();
+  return useMutation<
+    DownloadClient,
+    ApiError,
+    { id: number; payload: DownloadClientUpdate }
+  >({
+    mutationFn: ({ id, payload }) =>
+      apiFetch<DownloadClient>(`/api/v3/downloadclient/${id}`, {
+        method: "PUT",
+        json: payload,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: CLIENTS_KEY });
+    },
+  });
+}
+
+/**
  * PUT /api/v3/downloadclient/{id} — narrow toggle subset (slice 123).
  *
  * The DownloadClientUpdate body is broad; this hook only exposes

@@ -368,3 +368,21 @@ async def test_client(
     row = await _get_or_404(db, client_id)
     impl = build_client_from_row(row)
     return await test_connectivity(impl)
+
+
+@router.post(
+    "/test",
+    response_model=ConnectivityTestResult,
+    summary=(
+        "Probe an unsaved download-client payload without persisting "
+        "a row. Used by the Create / Edit modals so operators can "
+        "validate connectivity before saving."
+    ),
+)
+async def probe_client_payload(
+    payload: DownloadClientCreate,
+    _admin: Annotated[Principal, Depends(require_admin)],
+    _db: Annotated[AsyncSession, Depends(get_db)],
+) -> ConnectivityTestResult:
+    impl = _ephemeral_client_from_create(payload)
+    return await test_connectivity(impl)

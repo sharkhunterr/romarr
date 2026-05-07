@@ -1606,6 +1606,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/downloadclient/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Probe an unsaved download-client payload without persisting a row. Used by the Create / Edit modals so operators can validate connectivity before saving. */
+        post: operations["probe_client_payload_api_v3_downloadclient_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/qualityprofile/schema": {
         parameters: {
             query?: never;
@@ -9419,6 +9436,39 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["romarr__downloaders__types__ConnectivityTestResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    probe_client_payload_api_v3_downloadclient_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DownloadClientCreate"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

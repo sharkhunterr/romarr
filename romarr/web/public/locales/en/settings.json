@@ -146,6 +146,20 @@
       "successBody": "{{name}} is now wired up.",
       "errorTitle": "Couldn't add the download client"
     },
+    "edit": {
+      "button": "Edit",
+      "modalTitle": "Edit {{name}}",
+      "subhead": "Update host, port, or credentials. Leave the secret fields blank to keep the existing value.",
+      "passwordPlaceholder": "Leave blank to keep current",
+      "passwordHint": "Type a new password only to replace it. To Test below, retype it — the stored password isn't readable back.",
+      "apiKeyPlaceholder": "Leave blank to keep current",
+      "apiKeyHint": "Type a new key only to replace it. To Test below, retype it — the stored key isn't readable back.",
+      "submit": "Save",
+      "submitting": "Saving…",
+      "successTitle": "Download client updated",
+      "successBody": "{{name}} is up to date.",
+      "errorTitle": "Couldn't update the download client"
+    },
     "type": {
       "qbittorrent": "qBittorrent",
       "sabnzbd": "SABnzbd",

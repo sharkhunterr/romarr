@@ -146,6 +146,20 @@
       "successBody": "{{name}} est branché.",
       "errorTitle": "Impossible d'ajouter le client"
     },
+    "edit": {
+      "button": "Modifier",
+      "modalTitle": "Modifier {{name}}",
+      "subhead": "Mettez à jour l'hôte, le port ou les identifiants. Laissez les secrets vides pour conserver les valeurs actuelles.",
+      "passwordPlaceholder": "Laisser vide pour ne pas changer",
+      "passwordHint": "Saisissez un nouveau mot de passe seulement pour le remplacer. Pour tester ci-dessous, retapez-le car le mot de passe stocké n'est pas relisible.",
+      "apiKeyPlaceholder": "Laisser vide pour ne pas changer",
+      "apiKeyHint": "Saisissez une nouvelle clé seulement pour la remplacer. Pour tester ci-dessous, retapez-la car la clé stockée n'est pas relisible.",
+      "submit": "Enregistrer",
+      "submitting": "Enregistrement…",
+      "successTitle": "Client mis à jour",
+      "successBody": "{{name}} est à jour.",
+      "errorTitle": "Impossible de mettre à jour le client"
+    },
     "type": {
       "qbittorrent": "qBittorrent",
       "sabnzbd": "SABnzbd",
