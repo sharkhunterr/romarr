@@ -7,12 +7,13 @@ records its :class:`FieldProvenance` so the operator UI can show
 "this region came from the indexer's extended attrs" vs "this
 region came from filename parsing".
 
-ISO normalisation:
+Region normalisation:
 
   - region codes are coerced to two-letter ISO 3166-1 alpha-2
-    where we recognize the input (``USA`` → ``US``, ``EUR`` →
-    ``EU``, etc.); unknown values return ``None`` and the caller
-    drops the attribute with a structured warning.
+    where we recognize the input (``USA`` → ``US``, ``Europe`` →
+    ``EU``, ``WORLD`` → ``WW`` …). That matches the foundation
+    filename parser's output shape so the pipeline sees a single
+    vocabulary regardless of which surface produced the region.
   - language codes are coerced to two-letter ISO 639-1.
 """
 
@@ -30,6 +31,8 @@ logger = logging.getLogger(__name__)
 
 
 # Region inputs we know how to translate. Anything else is dropped.
+# Output: two-letter ISO 3166-1 alpha-2 (with ``WW`` for worldwide,
+# matching the foundation no-intro parser's convention).
 _REGION_TO_ISO: dict[str, str] = {
     # ISO-style passthrough.
     "us": "US",
@@ -43,7 +46,7 @@ _REGION_TO_ISO: dict[str, str] = {
     "au": "AU",
     "uk": "UK",
     "gb": "UK",
-    # No-Intro / Redump / TOSEC long forms.
+    # No-Intro / Redump three-letter forms.
     "usa": "US",
     "eur": "EU",
     "jpn": "JP",
@@ -61,8 +64,31 @@ _REGION_TO_ISO: dict[str, str] = {
     "it": "IT",
     "spa": "ES",
     "es": "ES",
-    "world": "WORLD",
-    "wor": "WORLD",
+    # Long-form spellings the parser hands us when an indexer doesn't
+    # canonicalise (``Sonic the Hedgehog (Europe)`` etc.). Without
+    # these the long forms returned ``None`` and the region_profile
+    # gate sat at score=0 / fallback for every result that wasn't
+    # already a 2- or 3-letter code.
+    "united states": "US",
+    "america": "US",
+    "europe": "EU",
+    "european": "EU",
+    "japan": "JP",
+    "japanese": "JP",
+    "korea": "KR",
+    "china": "CN",
+    "taiwan": "TW",
+    "brazil": "BR",
+    "australia": "AU",
+    "united kingdom": "UK",
+    "france": "FR",
+    "germany": "DE",
+    "italy": "IT",
+    "spain": "ES",
+    # Worldwide → ``WW`` to match the foundation parser.
+    "world": "WW",
+    "wor": "WW",
+    "ww": "WW",
 }
 
 _LANGUAGE_TO_ISO: dict[str, str] = {

@@ -65,8 +65,11 @@ def test_unknown_region_value_dropped(
         ("USA", "US"),
         ("USA ", "US"),
         ("eur", "EU"),
-        ("WORLD", "WORLD"),
+        ("Europe", "EU"),
+        ("Japan", "JP"),
+        ("WORLD", "WW"),
         ("FR", "FR"),
+        ("france", "FR"),
         ("Deutsch", None),  # not in our dictionary
         ("ZZ", None),
     ],
