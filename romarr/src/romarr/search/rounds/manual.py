@@ -79,6 +79,31 @@ async def run_manual_search(
     profiles = await preload_default_profiles(session)
     custom_formats = await preload_custom_formats(session)
 
+    # FR-006 platform scoping: when the operator searches from a
+    # game's detail page, the modal hands us the parent platform_id.
+    # The matcher then only considers monitored games on that
+    # platform — without this scope, a fuzzy "Mario Kart" hit would
+    # bind a result to whatever Mario Kart game scored highest
+    # across the entire library, even on the wrong platform.
+    if platform_id is not None:
+        scoped_games = tuple(
+            g
+            for g in library_state.monitored_games
+            if g.platform_id == platform_id
+        )
+        scoped_game_ids = {g.id for g in scoped_games}
+        scoped_releases = tuple(
+            r
+            for r in library_state.monitored_releases
+            if r.game_id in scoped_game_ids
+        )
+        library_state = library_state.model_copy(
+            update={
+                "monitored_games": scoped_games,
+                "monitored_releases": scoped_releases,
+            }
+        )
+
     quality = profiles.get("quality")
     region = profiles.get("region")
     dump = profiles.get("dump")

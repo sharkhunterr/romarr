@@ -15,7 +15,6 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ScoreBadge } from "@/components/rom";
 import { useIndexersById } from "@/lib/api/queries/indexers";
 import {
   useManualGrab,
@@ -74,15 +73,54 @@ function _scoreContributions(
   return breakdown?.contributions ?? [];
 }
 
+function _matchPercent(score: number, maxScore: number): number {
+  // Best result of this round = 100%; others are a ratio against
+  // it. Negative scores clamp to 0 — the breakdown tooltip still
+  // surfaces *why* the score went negative for the operator. When
+  // every accepted candidate scores the same (or all scores are
+  // ≤0), maxScore=0 and the percent floors at 0; the sort already
+  // guarantees uniform-score ties order arbitrarily by indexer.
+  if (maxScore <= 0) return 0;
+  const clamped = Math.max(0, score);
+  return Math.round((clamped / maxScore) * 100);
+}
+
+function MatchPercentBadge(props: {
+  pct: number;
+  tooltip?: string;
+}): ReactElement {
+  const { pct, tooltip } = props;
+  let palette = "bg-zinc-700/30 text-zinc-300 ring-zinc-500/40";
+  if (pct >= 80) {
+    palette = "bg-emerald-700/30 text-emerald-200 ring-emerald-500/40";
+  } else if (pct >= 40) {
+    palette = "bg-amber-700/30 text-amber-200 ring-amber-500/40";
+  }
+  return (
+    <span
+      title={tooltip}
+      className={[
+        "inline-flex items-center rounded-md px-2.5 py-1",
+        "text-sm font-mono font-medium tabular-nums ring-1 ring-inset",
+        palette,
+      ].join(" ")}
+    >
+      {pct}%
+    </span>
+  );
+}
+
 function CandidateRow(props: {
   candidate: Candidate;
+  maxScore: number;
   releaseId: number | null;
   force: boolean;
   indexerName: string | null;
   onGrabSuccess: () => void;
 }): ReactElement {
   const { t } = useTranslation("game");
-  const { candidate, releaseId, force, indexerName, onGrabSuccess } = props;
+  const { candidate, maxScore, releaseId, force, indexerName, onGrabSuccess } =
+    props;
   const grab = useManualGrab();
   const onClick = (): void => {
     grab.mutate(
@@ -127,12 +165,10 @@ function CandidateRow(props: {
               parent list sorts by score desc so the best match
               floats to the top. */}
           {score !== null ? (
-            <span title={breakdownTooltip || undefined}>
-              <ScoreBadge
-                score={score}
-                className="px-2.5 py-1 text-sm tabular-nums"
-              />
-            </span>
+            <MatchPercentBadge
+              pct={_matchPercent(score, maxScore)}
+              tooltip={breakdownTooltip || undefined}
+            />
           ) : (
             <span
               className={[
@@ -351,32 +387,51 @@ export function ReleaseSearchModal(
           )}
 
           {search.isSuccess && (search.data.candidates ?? []).length > 0 && (
-            <ul className="space-y-2">
-              {[...(search.data.candidates ?? [])]
-                .sort((a, b) => {
-                  // Match-quality first: accepted candidates (with a
-                  // numeric profile score) ranked desc by score;
-                  // rejected ones (score=null) sink to the bottom in
-                  // their original order so the operator can still
-                  // see what was filtered and why.
-                  const sa = _scoreOf(a);
-                  const sb = _scoreOf(b);
-                  if (sa === null && sb === null) return 0;
-                  if (sa === null) return 1;
-                  if (sb === null) return -1;
-                  return sb - sa;
-                })
-                .map((c) => (
-                  <CandidateRow
-                    key={`${c.indexer_id}-${c.indexer_guid}`}
-                    candidate={c}
-                    releaseId={props.releaseId}
-                    force={force}
-                    indexerName={indexersById.get(c.indexer_id)?.name ?? null}
-                    onGrabSuccess={props.onClose}
-                  />
-                ))}
-            </ul>
+            (() => {
+              // Normalise the % display against the best score
+              // returned by THIS round so the operator reads
+              // "100% = best match Romarr found", not "100% = some
+              // theoretical max". Recomputed on each render — the
+              // candidate list is small (≤ 200/indexer per FR-029)
+              // so there's no win in memoising.
+              const acceptedScores = (search.data.candidates ?? [])
+                .map((c) => _scoreOf(c))
+                .filter((s): s is number => s !== null);
+              const maxScore = acceptedScores.length
+                ? Math.max(0, ...acceptedScores)
+                : 0;
+              return (
+                <ul className="space-y-2">
+                  {[...(search.data.candidates ?? [])]
+                    .sort((a, b) => {
+                      // Match-quality first: accepted candidates (with
+                      // a numeric profile score) ranked desc by score;
+                      // rejected ones (score=null) sink to the bottom
+                      // in their original order so the operator can
+                      // still see what was filtered and why.
+                      const sa = _scoreOf(a);
+                      const sb = _scoreOf(b);
+                      if (sa === null && sb === null) return 0;
+                      if (sa === null) return 1;
+                      if (sb === null) return -1;
+                      return sb - sa;
+                    })
+                    .map((c) => (
+                      <CandidateRow
+                        key={`${c.indexer_id}-${c.indexer_guid}`}
+                        candidate={c}
+                        maxScore={maxScore}
+                        releaseId={props.releaseId}
+                        force={force}
+                        indexerName={
+                          indexersById.get(c.indexer_id)?.name ?? null
+                        }
+                        onGrabSuccess={props.onClose}
+                      />
+                    ))}
+                </ul>
+              );
+            })()
           )}
         </div>
       </div>
