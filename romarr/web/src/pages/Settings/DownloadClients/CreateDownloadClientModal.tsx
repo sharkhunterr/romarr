@@ -121,12 +121,15 @@ export function CreateDownloadClientModal(
   function commit(): void {
     if (!canSubmit) return;
     if (isEdit && props.editing) {
-      // Send a PUT with every editable field. Secrets are only
-      // included when the operator re-typed them so we don't
-      // null out the existing credentials.
+      // Send a PUT with every editable field. ``type`` is
+      // intentionally omitted — DownloadClientUpdate forbids
+      // changing the implementation after creation, so the
+      // select stays disabled in edit mode and we never put
+      // it on the wire (extra='forbid' would 422 otherwise).
+      // Secrets are only included when the operator re-typed
+      // them so we don't null out the existing credentials.
       const payload: Record<string, unknown> = {
         name: name.trim(),
-        type,
         host: host.trim(),
         port,
         use_ssl: useSsl,
