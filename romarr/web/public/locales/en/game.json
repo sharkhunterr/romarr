@@ -196,7 +196,14 @@
       "region": "Region",
       "languages": "Languages",
       "dumpStatus": "Dump status",
-      "naming": "Naming convention"
+      "naming": "Naming convention",
+      "unknownLabel": {
+        "platform": "Platform ?",
+        "region": "Region ?",
+        "languages": "Language ?",
+        "dumpStatus": "Type ?",
+        "naming": "Format ?"
+      }
     },
     "dumpStatus": {
       "verified": "Verified",

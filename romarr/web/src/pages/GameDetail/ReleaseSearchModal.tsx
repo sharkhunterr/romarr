@@ -285,58 +285,80 @@ function CandidateRow(props: {
           dump status / naming convention with semantic colours so
           the operator sees at a glance whether each dimension is
           consistent with the matched game (or flagged as the
-          rejection cause). */}
+          rejection cause). Every facet renders unconditionally —
+          a missing / unknown value shows as ``?`` in zinc so the
+          row layout stays predictable and the operator notices
+          which dimensions the parser couldn't recover. */}
       <div className="flex flex-wrap items-center gap-1">
-        {platformShortName && (
-          <FacetChip
-            label={platformShortName}
-            tone="neutral"
-            title={t("search.facet.platform")}
-          />
-        )}
-        {candidate.region && (
-          <FacetChip
-            label={(() => {
-              const key = regionLabelKey(candidate.region);
-              return key === candidate.region
-                ? candidate.region
-                : t(`settings:profiles.region.catalogue.${key}` as never, {
-                    defaultValue: candidate.region,
-                  });
-            })()}
-            tone={_toneFor(candidate, "region", "good")}
-            title={t("search.facet.region")}
-          />
-        )}
-        {candidate.languages.length > 0 && (
-          <FacetChip
-            label={candidate.languages.join(" · ").toUpperCase()}
-            tone={_toneFor(candidate, "languages", "good")}
-            title={t("search.facet.languages")}
-          />
-        )}
-        {candidate.dump_status && (
-          <FacetChip
-            label={t(
-              `search.dumpStatus.${candidate.dump_status}` as never,
-              { defaultValue: candidate.dump_status },
-            )}
-            tone={_toneFor(
-              candidate,
-              "dump_status",
-              _DUMP_TONE[candidate.dump_status] ?? "neutral",
-            )}
-            title={t("search.facet.dumpStatus")}
-          />
-        )}
-        {candidate.naming_convention &&
-          candidate.naming_convention !== "unknown" && (
-            <FacetChip
-              label={candidate.naming_convention}
-              tone="neutral"
-              title={t("search.facet.naming")}
-            />
+        <FacetChip
+          label={
+            platformShortName ??
+            t("search.facet.unknownLabel.platform")
+          }
+          tone={platformShortName ? "neutral" : "neutral"}
+          title={t("search.facet.platform")}
+        />
+        <FacetChip
+          label={(() => {
+            if (!candidate.region)
+              return t("search.facet.unknownLabel.region");
+            const key = regionLabelKey(candidate.region);
+            return key === candidate.region
+              ? candidate.region
+              : t(`settings:profiles.region.catalogue.${key}` as never, {
+                  defaultValue: candidate.region,
+                });
+          })()}
+          tone={
+            candidate.region
+              ? _toneFor(candidate, "region", "good")
+              : _toneFor(candidate, "region", "neutral")
+          }
+          title={t("search.facet.region")}
+        />
+        <FacetChip
+          label={
+            candidate.languages.length > 0
+              ? candidate.languages.join(" · ").toUpperCase()
+              : t("search.facet.unknownLabel.languages")
+          }
+          tone={
+            candidate.languages.length > 0
+              ? _toneFor(candidate, "languages", "good")
+              : _toneFor(candidate, "languages", "neutral")
+          }
+          title={t("search.facet.languages")}
+        />
+        <FacetChip
+          label={
+            candidate.dump_status
+              ? t(
+                  `search.dumpStatus.${candidate.dump_status}` as never,
+                  { defaultValue: candidate.dump_status },
+                )
+              : t("search.facet.unknownLabel.dumpStatus")
+          }
+          tone={_toneFor(
+            candidate,
+            "dump_status",
+            candidate.dump_status
+              ? (_DUMP_TONE[candidate.dump_status] ?? "neutral")
+              : "neutral",
           )}
+          title={t("search.facet.dumpStatus")}
+        />
+        <FacetChip
+          label={
+            candidate.naming_convention &&
+            candidate.naming_convention !== "unknown"
+              ? candidate.naming_convention
+              : t("search.facet.unknownLabel.naming")
+          }
+          tone={
+            candidate.naming_convention === "scene" ? "warn" : "neutral"
+          }
+          title={t("search.facet.naming")}
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5 text-[0.65rem] text-zinc-400">

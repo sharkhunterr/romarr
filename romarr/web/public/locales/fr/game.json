@@ -196,7 +196,14 @@
       "region": "Région",
       "languages": "Langues",
       "dumpStatus": "Statut du dump",
-      "naming": "Convention de nommage"
+      "naming": "Convention de nommage",
+      "unknownLabel": {
+        "platform": "Plateforme ?",
+        "region": "Région ?",
+        "languages": "Langue ?",
+        "dumpStatus": "Type ?",
+        "naming": "Format ?"
+      }
     },
     "dumpStatus": {
       "verified": "Verified",
