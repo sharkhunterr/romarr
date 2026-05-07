@@ -16,11 +16,13 @@ import { useEffect, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useIndexersById } from "@/lib/api/queries/indexers";
+import { usePlatformsById } from "@/lib/api/queries/platforms";
 import {
   useManualGrab,
   useManualSearch,
   type Candidate,
 } from "@/lib/api/queries/search";
+import { regionLabelKey } from "@/lib/regions/catalogue";
 
 interface ReleaseSearchModalProps {
   open: boolean;
@@ -91,6 +93,64 @@ function _matchPercent(
   return Math.round(titleHalf * 0.5 + profileHalf * 0.5);
 }
 
+type FacetTone = "good" | "neutral" | "warn" | "bad";
+
+const _FACET_PALETTE: Record<FacetTone, string> = {
+  good: "bg-emerald-700/30 text-emerald-200 ring-emerald-500/40",
+  neutral: "bg-zinc-800 text-zinc-300 ring-zinc-600",
+  warn: "bg-amber-700/30 text-amber-200 ring-amber-500/40",
+  bad: "bg-red-700/30 text-red-200 ring-red-500/40",
+};
+
+function FacetChip(props: {
+  label: string;
+  tone: FacetTone;
+  title?: string;
+}): ReactElement {
+  return (
+    <span
+      title={props.title}
+      className={[
+        "inline-flex items-center rounded-md px-2 py-0.5",
+        "text-[0.65rem] font-medium ring-1 ring-inset",
+        _FACET_PALETTE[props.tone],
+      ].join(" ")}
+    >
+      {props.label}
+    </span>
+  );
+}
+
+const _DUMP_TONE: Record<string, FacetTone> = {
+  verified: "good",
+  good: "good",
+  proto: "warn",
+  beta: "warn",
+  demo: "warn",
+  sample: "warn",
+  trainer: "warn",
+  translation: "warn",
+  hack: "bad",
+  baddump: "bad",
+  overdump: "bad",
+  unknown: "neutral",
+};
+
+function _toneFor(
+  candidate: Candidate,
+  field: string,
+  whenPresent: FacetTone,
+): FacetTone {
+  // If the pipeline rejected on this exact field, paint it red so
+  // the operator's eye lands on the failing facet immediately.
+  // Other rejection fields stay in their natural tone — a
+  // language-rejected row still shows its region in green.
+  if (candidate.rejection && candidate.rejection.field === field) {
+    return "bad";
+  }
+  return whenPresent;
+}
+
 function MatchPercentBadge(props: {
   pct: number;
   tooltip?: string;
@@ -122,11 +182,19 @@ function CandidateRow(props: {
   releaseId: number | null;
   force: boolean;
   indexerName: string | null;
+  platformShortName: string | null;
   onGrabSuccess: () => void;
 }): ReactElement {
   const { t } = useTranslation("game");
-  const { candidate, maxScore, releaseId, force, indexerName, onGrabSuccess } =
-    props;
+  const {
+    candidate,
+    maxScore,
+    releaseId,
+    force,
+    indexerName,
+    platformShortName,
+    onGrabSuccess,
+  } = props;
   const grab = useManualGrab();
   const onClick = (): void => {
     grab.mutate(
@@ -213,6 +281,64 @@ function CandidateRow(props: {
         </div>
       </div>
 
+      {/* Per-facet identity row: platform / region / language /
+          dump status / naming convention with semantic colours so
+          the operator sees at a glance whether each dimension is
+          consistent with the matched game (or flagged as the
+          rejection cause). */}
+      <div className="flex flex-wrap items-center gap-1">
+        {platformShortName && (
+          <FacetChip
+            label={platformShortName}
+            tone="neutral"
+            title={t("search.facet.platform")}
+          />
+        )}
+        {candidate.region && (
+          <FacetChip
+            label={(() => {
+              const key = regionLabelKey(candidate.region);
+              return key === candidate.region
+                ? candidate.region
+                : t(`settings:profiles.region.catalogue.${key}` as never, {
+                    defaultValue: candidate.region,
+                  });
+            })()}
+            tone={_toneFor(candidate, "region", "good")}
+            title={t("search.facet.region")}
+          />
+        )}
+        {candidate.languages.length > 0 && (
+          <FacetChip
+            label={candidate.languages.join(" · ").toUpperCase()}
+            tone={_toneFor(candidate, "languages", "good")}
+            title={t("search.facet.languages")}
+          />
+        )}
+        {candidate.dump_status && (
+          <FacetChip
+            label={t(
+              `search.dumpStatus.${candidate.dump_status}` as never,
+              { defaultValue: candidate.dump_status },
+            )}
+            tone={_toneFor(
+              candidate,
+              "dump_status",
+              _DUMP_TONE[candidate.dump_status] ?? "neutral",
+            )}
+            title={t("search.facet.dumpStatus")}
+          />
+        )}
+        {candidate.naming_convention &&
+          candidate.naming_convention !== "unknown" && (
+            <FacetChip
+              label={candidate.naming_convention}
+              tone="neutral"
+              title={t("search.facet.naming")}
+            />
+          )}
+      </div>
+
       <div className="flex flex-wrap items-center gap-1.5 text-[0.65rem] text-zinc-400">
         <span className="font-mono">
           {indexerName ?? `indexer #${candidate.indexer_id}`}
@@ -268,6 +394,7 @@ export function ReleaseSearchModal(
   const [force, setForce] = useState(false);
   const search = useManualSearch();
   const indexersById = useIndexersById();
+  const platformsById = usePlatformsById();
   // Spec 004: indexer rows are stored in the same map. An empty
   // map means the operator has no indexer configured yet, so the
   // round can't return anything — surface a clear hint with a
@@ -425,19 +552,28 @@ export function ReleaseSearchModal(
                       const pb = _matchPercent(b, sb, maxScore);
                       return pb - pa;
                     })
-                    .map((c) => (
-                      <CandidateRow
-                        key={`${c.indexer_id}-${c.indexer_guid}`}
-                        candidate={c}
-                        maxScore={maxScore}
-                        releaseId={props.releaseId}
-                        force={force}
-                        indexerName={
-                          indexersById.get(c.indexer_id)?.name ?? null
-                        }
-                        onGrabSuccess={props.onClose}
-                      />
-                    ))}
+                    .map((c) => {
+                      const platform =
+                        c.platform_id !== null && c.platform_id !== undefined
+                          ? platformsById.get(c.platform_id)
+                          : undefined;
+                      return (
+                        <CandidateRow
+                          key={`${c.indexer_id}-${c.indexer_guid}`}
+                          candidate={c}
+                          maxScore={maxScore}
+                          releaseId={props.releaseId}
+                          force={force}
+                          indexerName={
+                            indexersById.get(c.indexer_id)?.name ?? null
+                          }
+                          platformShortName={
+                            platform?.short_name ?? platform?.name ?? null
+                          }
+                          onGrabSuccess={props.onClose}
+                        />
+                      );
+                    })}
                 </ul>
               );
             })()

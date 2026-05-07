@@ -2950,6 +2950,14 @@ export interface components {
             matched_game_id?: number | null;
             /** Matched Release Id */
             matched_release_id?: number | null;
+            /** Platform Id */
+            platform_id?: number | null;
+            /** Region */
+            region?: string | null;
+            /** Languages */
+            languages?: string[];
+            dump_status?: components["schemas"]["DumpStatus"] | null;
+            naming_convention?: components["schemas"]["NamingConvention"] | null;
             score_breakdown?: components["schemas"]["ScoreBreakdown"] | null;
             rejection?: components["schemas"]["Rejection"] | null;
             /**

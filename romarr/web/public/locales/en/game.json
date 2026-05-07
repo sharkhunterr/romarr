@@ -191,6 +191,27 @@
     "seeders_one": "{{count}} seeder",
     "seeders_other": "{{count}} seeders",
     "rejected": "Rejected",
+    "facet": {
+      "platform": "Platform",
+      "region": "Region",
+      "languages": "Languages",
+      "dumpStatus": "Dump status",
+      "naming": "Naming convention"
+    },
+    "dumpStatus": {
+      "verified": "Verified",
+      "good": "Good",
+      "proto": "Proto",
+      "beta": "Beta",
+      "demo": "Demo",
+      "sample": "Sample",
+      "hack": "Hack",
+      "trainer": "Trainer",
+      "translation": "Translation",
+      "baddump": "Bad dump",
+      "overdump": "Overdump",
+      "unknown": "Unknown"
+    },
     "rejection": {
       "blocklisted": "Already blocklisted",
       "below_quality_floor": "Below quality floor",

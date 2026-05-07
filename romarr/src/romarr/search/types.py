@@ -18,6 +18,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from romarr.domain.enums import DumpStatus, NamingConvention  # noqa: TC001
+
 
 class RejectionCode(StrEnum):
     """Why a candidate was rejected by the 13-step pipeline.
@@ -111,6 +113,17 @@ class Candidate(_Base):
     seeders: int | None = None
     matched_game_id: int | None = None
     matched_release_id: int | None = None
+    # Resolved facets surfaced on the manual-search row so the
+    # operator sees *what* this candidate is (platform, region,
+    # languages, dump status, naming convention) without scraping
+    # the title. Filled by the pipeline from the SearchResult after
+    # the foundation filename parser has run; ``None`` / ``[]``
+    # when the parser couldn't recover the field.
+    platform_id: int | None = None
+    region: str | None = None
+    languages: list[str] = Field(default_factory=list)
+    dump_status: DumpStatus | None = None
+    naming_convention: NamingConvention | None = None
     score_breakdown: ScoreBreakdown | None = None
     rejection: Rejection | None = None
     would_auto_reject: bool = False

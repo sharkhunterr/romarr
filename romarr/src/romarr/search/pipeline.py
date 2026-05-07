@@ -60,6 +60,7 @@ def _reject(
     matched_release_id: int | None = None,
     pre_grab_dat_match: str = "skipped",
     title_match_score: int | None = None,
+    platform_id: int | None = None,
 ) -> Candidate:
     return Candidate(
         indexer_id=result.indexer_id,
@@ -70,6 +71,11 @@ def _reject(
         seeders=result.seeders,
         matched_game_id=matched_game_id,
         matched_release_id=matched_release_id,
+        platform_id=platform_id,
+        region=result.region,
+        languages=list(result.languages or ()),
+        dump_status=result.dump_status,
+        naming_convention=result.naming_convention,
         score_breakdown=None,
         rejection=Rejection(code=code, field=field, message=message),
         would_auto_reject=True,
@@ -86,6 +92,7 @@ def _accept(
     breakdown: ScoreBreakdown,
     pre_grab_dat_match: str,
     title_match_score: int | None = None,
+    platform_id: int | None = None,
 ) -> Candidate:
     return Candidate(
         indexer_id=result.indexer_id,
@@ -96,6 +103,11 @@ def _accept(
         seeders=result.seeders,
         matched_game_id=matched_game_id,
         matched_release_id=matched_release_id,
+        platform_id=platform_id,
+        region=result.region,
+        languages=list(result.languages or ()),
+        dump_status=result.dump_status,
+        naming_convention=result.naming_convention,
         score_breakdown=breakdown,
         rejection=None,
         would_auto_reject=False,
@@ -257,6 +269,7 @@ def run_pipeline(
                 message=block.reason,
                 matched_game_id=matched_game.id,
                 matched_release_id=matched_release_id,
+                platform_id=matched_game.platform_id,
                 title_match_score=title_match_score,
             )
         return _reject(
@@ -266,6 +279,7 @@ def run_pipeline(
             message=block.reason,
             matched_game_id=matched_game.id,
             matched_release_id=matched_release_id,
+            platform_id=matched_game.platform_id,
             title_match_score=title_match_score,
         )
 
@@ -300,6 +314,7 @@ def run_pipeline(
             message=region_outcome.reason.message if region_outcome.reason else "",
             matched_game_id=matched_game.id,
             matched_release_id=matched_release_id,
+            platform_id=matched_game.platform_id,
             pre_grab_dat_match=dat_outcome,
             title_match_score=title_match_score,
         )
@@ -329,6 +344,7 @@ def run_pipeline(
             message=language_outcome.reason.message if language_outcome.reason else "",
             matched_game_id=matched_game.id,
             matched_release_id=matched_release_id,
+            platform_id=matched_game.platform_id,
             pre_grab_dat_match=dat_outcome,
             title_match_score=title_match_score,
         )
@@ -343,6 +359,7 @@ def run_pipeline(
             message=dump_outcome.reason.message if dump_outcome.reason else "",
             matched_game_id=matched_game.id,
             matched_release_id=matched_release_id,
+            platform_id=matched_game.platform_id,
             pre_grab_dat_match=dat_outcome,
             title_match_score=title_match_score,
         )
@@ -362,6 +379,7 @@ def run_pipeline(
             message=quality_outcome.reason.message if quality_outcome.reason else "",
             matched_game_id=matched_game.id,
             matched_release_id=matched_release_id,
+            platform_id=matched_game.platform_id,
             pre_grab_dat_match=dat_outcome,
             title_match_score=title_match_score,
         )
@@ -376,6 +394,7 @@ def run_pipeline(
             message=f"custom format score {cf_score} below rejector threshold",
             matched_game_id=matched_game.id,
             matched_release_id=matched_release_id,
+            platform_id=matched_game.platform_id,
             pre_grab_dat_match=dat_outcome,
             title_match_score=title_match_score,
         )
@@ -404,6 +423,7 @@ def run_pipeline(
                 message=reason or "",
                 matched_game_id=matched_game.id,
                 matched_release_id=matched_release_id,
+                platform_id=matched_game.platform_id,
                 pre_grab_dat_match=dat_outcome,
             )
 
@@ -427,6 +447,7 @@ def run_pipeline(
             ),
             matched_game_id=matched_game.id,
             matched_release_id=matched_release_id,
+            platform_id=matched_game.platform_id,
             pre_grab_dat_match=dat_outcome,
             title_match_score=title_match_score,
         )
