@@ -1,8 +1,8 @@
 [
   {
     "seed_key": "usa-first",
-    "name": "USA First",
-    "priorities": ["USA", "EUR", "World", "JPN"],
+    "name": "EUR First",
+    "priorities": ["EUR", "World", "USA", "JPN"],
     "allow_fallback_outside_priorities": true,
     "exclude_regions": []
   },

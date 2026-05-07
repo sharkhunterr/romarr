@@ -59,6 +59,7 @@ def _reject(
     matched_game_id: int | None = None,
     matched_release_id: int | None = None,
     pre_grab_dat_match: str = "skipped",
+    title_match_score: int | None = None,
 ) -> Candidate:
     return Candidate(
         indexer_id=result.indexer_id,
@@ -73,6 +74,7 @@ def _reject(
         rejection=Rejection(code=code, field=field, message=message),
         would_auto_reject=True,
         pre_grab_dat_match=pre_grab_dat_match,
+        title_match_score=title_match_score,
     )
 
 
@@ -83,6 +85,7 @@ def _accept(
     matched_release_id: int | None,
     breakdown: ScoreBreakdown,
     pre_grab_dat_match: str,
+    title_match_score: int | None = None,
 ) -> Candidate:
     return Candidate(
         indexer_id=result.indexer_id,
@@ -97,6 +100,7 @@ def _accept(
         rejection=None,
         would_auto_reject=False,
         pre_grab_dat_match=pre_grab_dat_match,
+        title_match_score=title_match_score,
     )
 
 
@@ -222,20 +226,21 @@ def run_pipeline(
     # ---- 1: Resolve to a monitored Game --------------------------------------
     from romarr.search.matching import resolve_to_game  # local to avoid cycle
 
-    matched_game = resolve_to_game(
+    match = resolve_to_game(
         title=result.title,
         hash_sha1=result.hash_sha1,
         hash_crc32=result.hash_crc32,
         monitored_games=library_state.monitored_games,
         dat_lookup=dat_lookup,
     )
-    if matched_game is None:
+    if match is None:
         return _reject(
             result=result,
             code=RejectionCode.NO_GAME_MATCH,
             field="title",
             message=f"no monitored game matches {result.title!r}",
         )
+    matched_game, title_match_score = match
 
     # ---- 2: Resolve to a monitored Release -----------------------------------
     matched_release = _resolve_release(matched_game, library_state.monitored_releases)
@@ -252,6 +257,7 @@ def run_pipeline(
                 message=block.reason,
                 matched_game_id=matched_game.id,
                 matched_release_id=matched_release_id,
+                title_match_score=title_match_score,
             )
         return _reject(
             result=result,
@@ -260,6 +266,7 @@ def run_pipeline(
             message=block.reason,
             matched_game_id=matched_game.id,
             matched_release_id=matched_release_id,
+            title_match_score=title_match_score,
         )
 
     contributions: list[ScoreContribution] = []
@@ -294,6 +301,7 @@ def run_pipeline(
             matched_game_id=matched_game.id,
             matched_release_id=matched_release_id,
             pre_grab_dat_match=dat_outcome,
+            title_match_score=title_match_score,
         )
     if region_outcome.score:
         contributions.append(
@@ -322,6 +330,7 @@ def run_pipeline(
             matched_game_id=matched_game.id,
             matched_release_id=matched_release_id,
             pre_grab_dat_match=dat_outcome,
+            title_match_score=title_match_score,
         )
 
     # ---- 8: Dump --------------------------------------------------------------
@@ -335,6 +344,7 @@ def run_pipeline(
             matched_game_id=matched_game.id,
             matched_release_id=matched_release_id,
             pre_grab_dat_match=dat_outcome,
+            title_match_score=title_match_score,
         )
 
     # ---- 9: Quality / format --------------------------------------------------
@@ -353,6 +363,7 @@ def run_pipeline(
             matched_game_id=matched_game.id,
             matched_release_id=matched_release_id,
             pre_grab_dat_match=dat_outcome,
+            title_match_score=title_match_score,
         )
 
     # ---- 10: Custom Format scoring -------------------------------------------
@@ -366,6 +377,7 @@ def run_pipeline(
             matched_game_id=matched_game.id,
             matched_release_id=matched_release_id,
             pre_grab_dat_match=dat_outcome,
+            title_match_score=title_match_score,
         )
     if cf_score:
         contributions.append(
@@ -416,6 +428,7 @@ def run_pipeline(
             matched_game_id=matched_game.id,
             matched_release_id=matched_release_id,
             pre_grab_dat_match=dat_outcome,
+            title_match_score=title_match_score,
         )
 
     # ---- 13: Aggregate --------------------------------------------------------
@@ -427,6 +440,7 @@ def run_pipeline(
         matched_release_id=matched_release_id,
         breakdown=breakdown,
         pre_grab_dat_match=dat_outcome,
+        title_match_score=title_match_score,
     )
 
 
@@ -448,11 +462,15 @@ def _release_facts_from_result(
     if matched_release is not None and not regions and matched_release.region:
         regions = (matched_release.region,)
 
-    dump_status = (
-        matched_release.dump_status
-        if matched_release is not None
-        else DumpStatus.UNKNOWN
-    )
+    # Prefer the matched_release's persisted dump_status (the
+    # foundation has more context); else trust the SearchResult's
+    # filename-parsed dump_status; else UNKNOWN.
+    if matched_release is not None:
+        dump_status = matched_release.dump_status
+    elif result.dump_status is not None:
+        dump_status = result.dump_status
+    else:
+        dump_status = DumpStatus.UNKNOWN
     naming_convention = (
         result.naming_convention or NamingConvention.UNKNOWN
     )

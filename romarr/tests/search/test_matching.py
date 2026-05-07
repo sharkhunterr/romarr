@@ -44,7 +44,8 @@ def test_hash_present_dat_verified_does_not_block_match() -> None:
         dat_lookup=_verified_dat,  # type: ignore[arg-type]
     )
     assert match is not None
-    assert match.id == 1
+    assert match[0].id == 1
+    assert 0 <= match[1] <= 100
 
 
 # ---------------------------------------------------------------------------
@@ -65,7 +66,9 @@ def test_fuzzy_match_typo_above_threshold() -> None:
         dat_lookup=_none_dat,  # type: ignore[arg-type]
     )
     assert match is not None
-    assert match.id == 1
+    assert match[0].id == 1
+    # WRatio with the canonical substring present → high confidence.
+    assert match[1] >= 85
 
 
 def test_fuzzy_match_alt_name() -> None:
@@ -78,7 +81,7 @@ def test_fuzzy_match_alt_name() -> None:
         dat_lookup=_none_dat,  # type: ignore[arg-type]
     )
     assert match is not None
-    assert match.id == 3
+    assert match[0].id == 3
 
 
 # ---------------------------------------------------------------------------
@@ -118,7 +121,7 @@ def test_case_insensitive_match() -> None:
         dat_lookup=_none_dat,  # type: ignore[arg-type]
     )
     assert match is not None
-    assert match.id == 1
+    assert match[0].id == 1
 
 
 def test_picks_a_match_among_close_titles() -> None:
@@ -142,4 +145,4 @@ def test_picks_a_match_among_close_titles() -> None:
         dat_lookup=_none_dat,  # type: ignore[arg-type]
     )
     assert match is not None
-    assert match.id in {1, 2, 3}
+    assert match[0].id in {1, 2, 3}

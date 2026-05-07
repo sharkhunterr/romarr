@@ -73,16 +73,22 @@ function _scoreContributions(
   return breakdown?.contributions ?? [];
 }
 
-function _matchPercent(score: number, maxScore: number): number {
-  // Best result of this round = 100%; others are a ratio against
-  // it. Negative scores clamp to 0 — the breakdown tooltip still
-  // surfaces *why* the score went negative for the operator. When
-  // every accepted candidate scores the same (or all scores are
-  // ≤0), maxScore=0 and the percent floors at 0; the sort already
-  // guarantees uniform-score ties order arbitrarily by indexer.
-  if (maxScore <= 0) return 0;
-  const clamped = Math.max(0, score);
-  return Math.round((clamped / maxScore) * 100);
+function _matchPercent(
+  candidate: Candidate,
+  profileScore: number,
+  maxProfileScore: number,
+): number {
+  // Composite score: 50% identification (title fuzzy match against
+  // the monitored Game; platform already filtered upstream so
+  // every accepted candidate scores 100% on platform) + 50%
+  // profile match (round-relative — the best profile score in
+  // this round = 100% on this half).
+  const titleHalf = candidate.title_match_score ?? 100;
+  const profileHalf =
+    maxProfileScore > 0
+      ? Math.max(0, profileScore) / maxProfileScore * 100
+      : 0;
+  return Math.round(titleHalf * 0.5 + profileHalf * 0.5);
 }
 
 function MatchPercentBadge(props: {
@@ -166,7 +172,7 @@ function CandidateRow(props: {
               floats to the top. */}
           {score !== null ? (
             <MatchPercentBadge
-              pct={_matchPercent(score, maxScore)}
+              pct={_matchPercent(candidate, score, maxScore)}
               tooltip={breakdownTooltip || undefined}
             />
           ) : (
@@ -404,17 +410,20 @@ export function ReleaseSearchModal(
                 <ul className="space-y-2">
                   {[...(search.data.candidates ?? [])]
                     .sort((a, b) => {
-                      // Match-quality first: accepted candidates (with
-                      // a numeric profile score) ranked desc by score;
-                      // rejected ones (score=null) sink to the bottom
-                      // in their original order so the operator can
-                      // still see what was filtered and why.
+                      // Match-quality first: accepted candidates rank
+                      // desc by the same composite the badge shows
+                      // (title + profile, 50/50). Rejected ones
+                      // (score=null) sink to the bottom in their
+                      // original order so the operator can still see
+                      // what was filtered and why.
                       const sa = _scoreOf(a);
                       const sb = _scoreOf(b);
                       if (sa === null && sb === null) return 0;
                       if (sa === null) return 1;
                       if (sb === null) return -1;
-                      return sb - sa;
+                      const pa = _matchPercent(a, sa, maxScore);
+                      const pb = _matchPercent(b, sb, maxScore);
+                      return pb - pa;
                     })
                     .map((c) => (
                       <CandidateRow

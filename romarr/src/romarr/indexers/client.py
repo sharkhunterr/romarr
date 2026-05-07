@@ -43,11 +43,14 @@ from tenacity import (
     wait_exponential_jitter,
 )
 
+from romarr.domain.enums import DumpStatus
 from romarr.identification.circuit_breaker import (
     CircuitBreaker,
     CircuitOpenError,
 )
 from romarr.identification.parsers import default_dispatcher
+
+_DUMP_UNKNOWN = DumpStatus.UNKNOWN
 from romarr.indexers.errors import (
     IndexerAuthError,
     IndexerProtocolError,
@@ -215,6 +218,18 @@ class NewznabClient:
         if item.dump_tags_provenance is None and parsed.tags:
             update["dump_tags"] = list(parsed.tags)
             update["dump_tags_provenance"] = FieldProvenance.FILENAME
+        # Project the parser's bracketed-tag dump_status through to the
+        # SearchResult so the pipeline's dump-profile gate can reject
+        # ``[Hack]`` / ``[Proto]`` / ``[Demo]`` titles even when the
+        # indexer didn't fill the extended attr — without this the
+        # dump_status sat at UNKNOWN regardless of what the title said.
+        if (
+            item.dump_status_provenance is None
+            and parsed.dump_status is not None
+            and parsed.dump_status != _DUMP_UNKNOWN
+        ):
+            update["dump_status"] = parsed.dump_status
+            update["dump_status_provenance"] = FieldProvenance.FILENAME
 
         if not update:
             return item

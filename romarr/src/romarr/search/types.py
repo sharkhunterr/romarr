@@ -115,6 +115,11 @@ class Candidate(_Base):
     rejection: Rejection | None = None
     would_auto_reject: bool = False
     pre_grab_dat_match: _DatMatchOutcome = "skipped"
+    # Identification confidence (0-100). 100 = exact title hit or
+    # hash match, ≥ FUZZY_THRESHOLD (85) = fuzzy hit. Surfaces in
+    # the manual-search UI as the "title match" half of the
+    # operator-facing % score.
+    title_match_score: int | None = None
 
 
 _IndexerOutcome = Literal["ok", "failed", "cache-hit", "cache-miss"]

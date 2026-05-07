@@ -14,7 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 # Pydantic v2 introspects type annotations at runtime to build the
 # model, so NamingConvention MUST be a live import.
-from romarr.domain.enums import NamingConvention  # noqa: TC001
+from romarr.domain.enums import DumpStatus, NamingConvention  # noqa: TC001
 
 
 class FieldProvenance(StrEnum):
@@ -88,6 +88,8 @@ class SearchResult(_Base):
     revision_provenance: FieldProvenance | None = None
     dump_tags: list[str] = Field(default_factory=list)
     dump_tags_provenance: FieldProvenance | None = None
+    dump_status: DumpStatus | None = None
+    dump_status_provenance: FieldProvenance | None = None
     hash_sha1: str | None = None
     hash_sha1_provenance: FieldProvenance | None = None
     hash_crc32: str | None = None

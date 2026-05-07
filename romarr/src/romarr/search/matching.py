@@ -47,8 +47,14 @@ def resolve_to_game(
     hash_crc32: str | None,
     monitored_games: tuple[MonitoredGame, ...],
     dat_lookup: DatLookup,
-) -> MonitoredGame | None:
-    """Pure: return the matched :class:`MonitoredGame` or None.
+) -> tuple[MonitoredGame, int] | None:
+    """Pure: return the matched ``(MonitoredGame, score)`` or None.
+
+    The score is the RapidFuzz WRatio (0-100) for fuzzy hits, or
+    100 when a verified hash short-circuits to a known Game
+    (handled by the future DAT→Game join). The orchestrator
+    surfaces it on the Candidate as ``title_match_score`` so the
+    operator UI can blend it with the profile score.
 
     The DAT lookup is consulted first so a verified hash can pull
     a Game match even when the indexer's title is unrecognisable.
@@ -87,7 +93,7 @@ def resolve_to_game(
 
     if best is None:
         return None
-    return monitored_games[best[0]]
+    return monitored_games[best[0]], int(round(best[1]))
 
 
 def fuzzy_match_query(
@@ -102,13 +108,14 @@ def fuzzy_match_query(
     def _none_dat(_a: str | None, _b: str | None) -> str:
         return "none"
 
-    return resolve_to_game(
+    match = resolve_to_game(
         title=query.text,
         hash_sha1=None,
         hash_crc32=None,
         monitored_games=monitored_games,
         dat_lookup=_none_dat,  # type: ignore[arg-type]
     )
+    return match[0] if match is not None else None
 
 
 __all__ = ["FUZZY_THRESHOLD", "fuzzy_match_query", "resolve_to_game"]
