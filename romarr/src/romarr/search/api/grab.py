@@ -19,6 +19,8 @@ from romarr.api.dependencies import get_db, require_admin
 from romarr.auth import Principal
 from romarr.downloaders.models import DownloadClient
 from romarr.downloaders.routing import RoutingCandidate
+from romarr.downloaders.types import SourceKind
+from romarr.indexers.models import Indexer
 from romarr.indexers.types import SearchResult
 from romarr.search._clients import make_download_client_factory
 from romarr.search.blocklist import is_blocklisted
@@ -98,11 +100,29 @@ async def manual_grab(
     candidates_for_routing = await _routing_candidates(db)
     factory = make_download_client_factory(db)
 
+    # Derive the source kind from the originating indexer's
+    # ``implementation``. Prowlarr's download URL is opaque
+    # (``/<id>/download?apikey=…&link=…``) so the URL sniffer
+    # in ``dispatch_winner`` can't tell torrent from nzb — we
+    # used to default everything to USENET, which broke routing
+    # the moment an operator only had a qBittorrent configured.
+    indexer_row = (
+        await db.execute(select(Indexer).where(Indexer.id == body.indexer_id))
+    ).scalar_one_or_none()
+    source_kind = (
+        SourceKind.TORRENT
+        if indexer_row is not None and indexer_row.implementation == "torznab"
+        else SourceKind.USENET
+        if indexer_row is not None and indexer_row.implementation == "newznab"
+        else None  # falls back to URL sniffing
+    )
+
     started_at = datetime.now(UTC)
     outcome = await dispatch_winner(
         candidate=candidate,
         candidates=candidates_for_routing,
         client_factory=factory,
+        source_kind=source_kind,
     )
     finished_at = datetime.now(UTC)
 

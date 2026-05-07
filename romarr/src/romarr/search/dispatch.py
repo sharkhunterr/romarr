@@ -92,6 +92,7 @@ async def dispatch_winner(
     indexer_pin: int | None = None,
     client_factory: Callable[[int], Awaitable[DownloadClient]],
     standard_tags: list[str] | None = None,
+    source_kind: SourceKind | None = None,
 ) -> DispatchOutcome:
     """Pick a download client + hand the source to it.
 
@@ -99,10 +100,19 @@ async def dispatch_winner(
     clients (usually preloaded from the round); ``indexer_pin`` is
     the originating indexer's optional ``download_client_id``.
 
+    ``source_kind`` overrides the URL-sniffing heuristic. Callers
+    that know the originating indexer's protocol (Torznab → torrent,
+    Newznab → usenet) should pass it explicitly — Prowlarr proxies
+    every download through ``/{id}/download?apikey=…&link=…``,
+    which exposes neither ``magnet:`` nor ``.torrent`` to the
+    sniffer and used to default to USENET (= no eligible client
+    when only a torrent client is configured).
+
     Returns a :class:`DispatchOutcome` the caller threads into the
     ``search_history`` row's ``no_grab_reason`` / ``score`` / etc.
     """
-    source_kind = _infer_source_kind(candidate)
+    if source_kind is None:
+        source_kind = _infer_source_kind(candidate)
     decision = route_release(
         source_kind=source_kind,
         indexer_download_client_id=indexer_pin,
