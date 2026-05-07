@@ -19,9 +19,13 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Literal
 from uuid import uuid4
 
+from sqlalchemy import select
+
+from romarr.domain.models import Platform
 from romarr.indexers.errors import IndexerAuthError, IndexerProtocolError
 from romarr.search.history import record_round
 from romarr.search.pipeline import run_pipeline
+from romarr.search.platform_match import match_platform_in_title
 from romarr.search.preload import (
     preload_custom_formats,
     preload_default_profiles,
@@ -78,6 +82,13 @@ async def run_manual_search(
     library_state = await preload_library_state(session)
     profiles = await preload_default_profiles(session)
     custom_formats = await preload_custom_formats(session)
+    # Pre-cache the full platform catalogue so the per-candidate
+    # ``match_platform_in_title`` call below stays fully in memory
+    # — we run it on every accepted/rejected row in the round and
+    # the catalogue rarely tops a few dozen entries.
+    platforms_all = tuple(
+        (await session.execute(select(Platform))).scalars().all()
+    )
 
     # FR-006 platform scoping: when the operator searches from a
     # game's detail page, the modal hands us the parent platform_id.
@@ -164,6 +175,20 @@ async def run_manual_search(
                 # what the title carries (slice 353).
                 file_format=result.file_format or "",
             )
+            # Override platform_id with what the *title* spells out
+            # (Mario Kart … (Game Boy Advance) → gba) when we can
+            # detect it. The pipeline initially stamps the matched
+            # game's platform_id; surfacing the title-parsed value
+            # is what lets the modal flag a candidate that bound to
+            # a GBA library row but advertises GameCube in its
+            # title. Falls back to whatever the pipeline already
+            # set when the title doesn't mention any catalogue
+            # platform.
+            detected = match_platform_in_title(result.title, platforms_all)
+            if detected is not None:
+                candidate = candidate.model_copy(
+                    update={"platform_id": detected.id}
+                )
             per_indexer_candidates.append(candidate)
         return indexer_id, per_indexer_candidates, "ok", was_overcap
 

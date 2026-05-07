@@ -183,6 +183,10 @@ function CandidateRow(props: {
   force: boolean;
   indexerName: string | null;
   platformShortName: string | null;
+  /** Platform id the modal opened for (the matched_game's
+   * platform). When the candidate's detected ``platform_id``
+   * disagrees with this, the platform chip turns red. */
+  expectedPlatformId: number;
   onGrabSuccess: () => void;
 }): ReactElement {
   const { t } = useTranslation("game");
@@ -193,6 +197,7 @@ function CandidateRow(props: {
     force,
     indexerName,
     platformShortName,
+    expectedPlatformId,
     onGrabSuccess,
   } = props;
   const grab = useManualGrab();
@@ -290,14 +295,36 @@ function CandidateRow(props: {
           row layout stays predictable and the operator notices
           which dimensions the parser couldn't recover. */}
       <div className="flex flex-wrap items-center gap-1">
-        <FacetChip
-          label={
-            platformShortName ??
-            t("search.facet.unknownLabel.platform")
+        {(() => {
+          // Detected platform vs expected (modal's platform_id).
+          // - mismatch  → red, surfaces a candidate that bound to
+          //   a fuzzy game on this platform but advertises another
+          //   platform in its title;
+          // - match     → green, the title and the matched game
+          //   agree;
+          // - unknown   → zinc with the matched-game's short name
+          //   if available, else "Plateforme ?".
+          const detectedId = candidate.platform_id ?? null;
+          let tone: FacetTone = "neutral";
+          let label: string;
+          if (detectedId === null) {
+            label =
+              platformShortName ?? t("search.facet.unknownLabel.platform");
+          } else if (detectedId === expectedPlatformId) {
+            label = platformShortName ?? "";
+            tone = "good";
+          } else {
+            label = platformShortName ?? `#${detectedId}`;
+            tone = "bad";
           }
-          tone={platformShortName ? "neutral" : "neutral"}
-          title={t("search.facet.platform")}
-        />
+          return (
+            <FacetChip
+              label={label}
+              tone={tone}
+              title={t("search.facet.platform")}
+            />
+          );
+        })()}
         <FacetChip
           label={(() => {
             if (!candidate.region)
@@ -584,6 +611,11 @@ export function ReleaseSearchModal(
                       return pb - pa;
                     })
                     .map((c) => {
+                      // Detected platform = round-time match against
+                      // the catalogue (slice 354). The chip label
+                      // pulls its short_name from the platforms
+                      // store; the colour comparison happens inside
+                      // CandidateRow against ``expectedPlatformId``.
                       const platform =
                         c.platform_id !== null && c.platform_id !== undefined
                           ? platformsById.get(c.platform_id)
@@ -601,6 +633,7 @@ export function ReleaseSearchModal(
                           platformShortName={
                             platform?.short_name ?? platform?.name ?? null
                           }
+                          expectedPlatformId={props.platformId}
                           onGrabSuccess={props.onClose}
                         />
                       );
