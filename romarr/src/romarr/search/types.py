@@ -124,6 +124,7 @@ class Candidate(_Base):
     languages: list[str] = Field(default_factory=list)
     dump_status: DumpStatus | None = None
     naming_convention: NamingConvention | None = None
+    file_format: str | None = None
     score_breakdown: ScoreBreakdown | None = None
     rejection: Rejection | None = None
     would_auto_reject: bool = False

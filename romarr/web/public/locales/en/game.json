@@ -197,12 +197,14 @@
       "languages": "Languages",
       "dumpStatus": "Dump status",
       "naming": "Naming convention",
+      "fileFormat": "File format",
       "unknownLabel": {
         "platform": "Platform ?",
         "region": "Region ?",
         "languages": "Language ?",
         "dumpStatus": "Type ?",
-        "naming": "Format ?"
+        "naming": "Convention ?",
+        "fileFormat": "Format ?"
       }
     },
     "dumpStatus": {

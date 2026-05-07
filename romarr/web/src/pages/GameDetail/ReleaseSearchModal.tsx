@@ -359,6 +359,15 @@ function CandidateRow(props: {
           }
           title={t("search.facet.naming")}
         />
+        <FacetChip
+          label={
+            candidate.file_format
+              ? candidate.file_format.toUpperCase()
+              : t("search.facet.unknownLabel.fileFormat")
+          }
+          tone={_toneFor(candidate, "format", "neutral")}
+          title={t("search.facet.fileFormat")}
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5 text-[0.65rem] text-zinc-400">

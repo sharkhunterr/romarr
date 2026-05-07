@@ -158,7 +158,11 @@ async def run_manual_search(
                 dump_profile=dump,
                 language_profile=language,
                 custom_formats=custom_formats,
-                file_format="",
+                # Use the filename-parsed format when present so the
+                # quality gate can evaluate ``allowed_formats`` and
+                # the manual-search row's "Format" facet reflects
+                # what the title carries (slice 353).
+                file_format=result.file_format or "",
             )
             per_indexer_candidates.append(candidate)
         return indexer_id, per_indexer_candidates, "ok", was_overcap

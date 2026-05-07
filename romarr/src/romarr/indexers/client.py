@@ -43,6 +43,8 @@ from tenacity import (
     wait_exponential_jitter,
 )
 
+import re
+
 from romarr.domain.enums import DumpStatus
 from romarr.identification.circuit_breaker import (
     CircuitBreaker,
@@ -51,6 +53,37 @@ from romarr.identification.circuit_breaker import (
 from romarr.identification.parsers import default_dispatcher
 
 _DUMP_UNKNOWN = DumpStatus.UNKNOWN
+
+_BRACKET_RE = re.compile(r"\[([^\[\]]+)\]")
+"""Match every square-bracketed segment in an indexer title."""
+
+# Common ROM container / archive / image extensions seen in
+# Prowlarr-Game-shaped titles (``Mario Kart [ZIP]``). We stay close
+# to the formats Romarr's quality_profile.allowed_formats already
+# enumerates so the file-format facet matches what the gate
+# downstream is actually evaluating.
+_KNOWN_FILE_FORMATS = frozenset(
+    {
+        "zip", "7z", "rar", "gz", "tar",
+        "iso", "cue", "bin", "img", "mdf", "nrg", "gdi", "chd",
+        "rvz", "wbfs", "wia", "nkit", "ciso",
+        "rom", "nes", "sfc", "smc", "md", "smd", "gb", "gbc", "gba",
+        "nds", "3ds", "cci", "cxi", "nsp", "xci", "n64", "z64", "v64",
+        "vb", "ws", "wsc", "ngp", "ngc", "lnx", "pce", "sgx",
+        "raw", "file",
+    }
+)
+
+
+def _looks_like_file_format(token: str) -> bool:
+    t = token.strip()
+    if not (2 <= len(t) <= 5):
+        return False
+    if not t.replace(" ", "").isalnum():
+        return False
+    if not any(c.isalpha() for c in t):
+        return False
+    return t.lower() in _KNOWN_FILE_FORMATS
 from romarr.indexers.errors import (
     IndexerAuthError,
     IndexerProtocolError,
@@ -184,14 +217,15 @@ class NewznabClient:
         UI can show "this region was inferred from the filename, not
         from the indexer's extended attrs".
         """
-        # If every fillable field already has provenance, skip the parse.
-        if (
-            item.region_provenance is not None
-            and item.languages_provenance is not None
-            and item.revision_provenance is not None
-            and item.naming_convention_provenance is not None
-        ):
-            return item
+        # The provenance check used to short-circuit when every
+        # fillable field had a value, but Prowlarr-Game-shaped titles
+        # of the form ``[Source] [Platform] [Region] [LANG] Title
+        # [Format]`` need the bracket scanner below even after the
+        # foundation parser bailed (no_intro requires a title before
+        # the first bracket — these titles open with a bracket so
+        # confidence falls to 0). Scan unconditionally; the
+        # provenance guards inside still stop us from clobbering
+        # values an upstream extended-attr already filled.
 
         parsed = self._dispatcher.parse(item.title)
 
@@ -230,6 +264,57 @@ class NewznabClient:
         ):
             update["dump_status"] = parsed.dump_status
             update["dump_status_provenance"] = FieldProvenance.FILENAME
+
+        # Prowlarr-Game-shaped titles open with a chain of square
+        # brackets (``[Source] [Platform] [Region] [LANG] Title
+        # [Format]``) and the foundation no_intro parser doesn't
+        # recover region / languages / file format from those —
+        # ``has_title=False`` makes its confidence fall to 0 because
+        # the first character is ``[``. Scan the brackets ourselves:
+        # try each unfilled bucket in turn and stamp ``FILENAME``
+        # provenance on whatever we recover. Single-char tags
+        # already handled by no_intro (``[h]`` / ``[p]`` / ``[!]``)
+        # are skipped — those overlap with the dump-status logic.
+        title_brackets = _BRACKET_RE.findall(item.title)
+        for raw in title_brackets:
+            inner = raw.strip()
+            if len(inner) <= 1:
+                continue
+            # Region: try the catalogue (Europe, USA, World, …)
+            if "region" not in update and item.region_provenance is None:
+                iso = normalize_region(inner)
+                if iso is not None:
+                    update["region"] = iso
+                    update["region_provenance"] = FieldProvenance.FILENAME
+                    continue
+            # Languages: short codes only (``EN`` / ``EN, FR`` /
+            # ``en/fr``); reject the whole bucket if a token doesn't
+            # normalise so multi-word brackets like ``[Disc 1]``
+            # don't get partial-mapped.
+            if (
+                "languages" not in update
+                and item.languages_provenance is None
+            ):
+                langs = normalize_languages(inner)
+                tokens = [
+                    t for t in inner.replace(";", ",").replace("/", ",").split(",") if t.strip()
+                ]
+                if langs and len(langs) == len(tokens):
+                    update["languages"] = langs
+                    update["languages_provenance"] = FieldProvenance.FILENAME
+                    continue
+            # File format: short uppercase token (ZIP / 7Z / CHD /
+            # RVZ / ROM / NSP / GBA / …). Stay strict — 2-5 chars,
+            # all alphanumeric, at least one letter, no spaces — so
+            # ``[Disc 1]`` or ``[Rev A]`` don't masquerade as
+            # formats.
+            if (
+                "file_format" not in update
+                and item.file_format_provenance is None
+                and _looks_like_file_format(inner)
+            ):
+                update["file_format"] = inner.lower()
+                update["file_format_provenance"] = FieldProvenance.FILENAME
 
         if not update:
             return item

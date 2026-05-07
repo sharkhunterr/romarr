@@ -2958,6 +2958,8 @@ export interface components {
             languages?: string[];
             dump_status?: components["schemas"]["DumpStatus"] | null;
             naming_convention?: components["schemas"]["NamingConvention"] | null;
+            /** File Format */
+            file_format?: string | null;
             score_breakdown?: components["schemas"]["ScoreBreakdown"] | null;
             rejection?: components["schemas"]["Rejection"] | null;
             /**

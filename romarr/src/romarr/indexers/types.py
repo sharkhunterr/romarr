@@ -98,6 +98,8 @@ class SearchResult(_Base):
     naming_convention_provenance: FieldProvenance | None = None
     dat_source: DatSource | None = None
     dat_source_provenance: FieldProvenance | None = None
+    file_format: str | None = None
+    file_format_provenance: FieldProvenance | None = None
 
 
 class RssResult(_Base):
