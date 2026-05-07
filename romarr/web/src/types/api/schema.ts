@@ -3709,6 +3709,10 @@ export interface components {
             releaseId?: number | null;
             /** Successful */
             successful: boolean;
+            /** Summary */
+            summary?: string | null;
+            /** Reason */
+            reason?: string | null;
         };
         /**
          * ImportHistoryRead

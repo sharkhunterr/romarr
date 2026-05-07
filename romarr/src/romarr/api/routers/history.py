@@ -78,6 +78,15 @@ class HistoryEvent(BaseModel):
     game_id: int | None = Field(alias="gameId", default=None)
     release_id: int | None = Field(alias="releaseId", default=None)
     successful: bool
+    # Operator-facing summary so the row reads more than "event #N":
+    #   * search   → the manual query / search type label
+    #   * import   → the source basename (or ``None`` if the row
+    #                doesn't carry one)
+    #   * job_run  → the runner name
+    summary: str | None = None
+    # Why the event ended up ``successful=false`` (or a hint for the
+    # search rows that returned 0 candidates: ``no_grab_reason``).
+    reason: str | None = None
 
 
 def _build_union_subquery() -> Any:
@@ -101,6 +110,8 @@ def _build_union_subquery() -> Any:
         ImportHistory.game_id.label("game_id"),
         ImportHistory.release_id.label("release_id"),
         ImportHistory.success.label("successful"),
+        ImportHistory.source_path.label("summary"),
+        ImportHistory.error_msg.label("reason"),
     )
 
     search_q = select(
@@ -109,7 +120,22 @@ def _build_union_subquery() -> Any:
         SearchHistory.started_at.label("date"),
         SearchHistory.game_id.label("game_id"),
         SearchHistory.release_id.label("release_id"),
-        (SearchHistory.results_count > 0).label("successful"),
+        # A search row counts as successful when something was
+        # routed (``chosen_indexer_guid`` not null) AND no
+        # ``no_grab_reason`` was recorded. This catches the manual
+        # grab path that records ``results_count=1`` even when
+        # dispatch failed (no routable client) — which previously
+        # made the row look green in history despite the queue
+        # never receiving anything.
+        (
+            (SearchHistory.results_count > 0)
+            & SearchHistory.no_grab_reason.is_(None)
+        ).label("successful"),
+        # Distinguish the search subtype (manual / rss / cutoff /
+        # missing / auto_added) so the operator-facing label can
+        # say "Manual grab" instead of just "Search".
+        SearchHistory.search_type.label("summary"),
+        SearchHistory.no_grab_reason.label("reason"),
     )
 
     job_q = select(
@@ -119,6 +145,8 @@ def _build_union_subquery() -> Any:
         literal(None).label("game_id"),
         literal(None).label("release_id"),
         (JobRun.status == "success").label("successful"),
+        JobRun.job_id.label("summary"),
+        JobRun.error_message.label("reason"),
     )
 
     return import_q.union_all(search_q, job_q).subquery()
@@ -126,6 +154,13 @@ def _build_union_subquery() -> Any:
 
 def _adapt(row: Any) -> HistoryEvent:
     """Adapt a Row from the union subquery into the envelope schema."""
+    summary = getattr(row, "summary", None)
+    # Import rows ship a ``source_path`` — keep the basename only so
+    # the row stays readable on a phone screen.
+    if row.event_type == "import" and summary:
+        from os.path import basename
+
+        summary = basename(summary) or summary
     return HistoryEvent.model_validate(
         {
             "eventType": row.event_type,
@@ -134,6 +169,8 @@ def _adapt(row: Any) -> HistoryEvent:
             "gameId": row.game_id,
             "releaseId": row.release_id,
             "successful": bool(row.successful),
+            "summary": summary,
+            "reason": getattr(row, "reason", None),
         }
     )
 

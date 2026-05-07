@@ -250,49 +250,73 @@ export function HistoryList(): ReactElement {
       )}
 
       <ul className="space-y-2">
-        {data.records.map((event) => (
-          <li
-            key={`${event.eventType}-${event.id}`}
-            className={[
-              "flex items-center justify-between rounded-md",
-              "border border-zinc-800 bg-zinc-900/40 px-3 py-2",
-              "text-sm",
-            ].join(" ")}
-          >
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-zinc-100">
-                <span className="font-mono text-[0.65rem] uppercase tracking-wider text-zinc-500">
-                  {t(`history.eventLabel.${event.eventType}`, {
-                    defaultValue: event.eventType,
-                  })}
-                </span>
-                <span className="ml-2 text-zinc-300">
-                  {event.gameId
-                    ? t("history.subjectGame", { id: event.gameId })
-                    : event.releaseId
-                      ? t("history.subjectRelease", { id: event.releaseId })
-                      : t("history.subjectEvent", { id: event.id })}
-                </span>
-              </p>
-              <p className="text-[0.7rem] text-zinc-500">
-                {formatDate(event.date)}
-              </p>
-            </div>
-            <span
+        {data.records.map((event) => {
+          const summary = (event as { summary?: string | null }).summary;
+          const reason = (event as { reason?: string | null }).reason;
+          // For search rows the backend ships ``search_type`` as
+          // summary (manual / rss / cutoff_scheduled / …); turn
+          // that into a localised label like "Manual grab".
+          const labelKey =
+            event.eventType === "search" && summary
+              ? `history.searchType.${summary}`
+              : `history.eventLabel.${event.eventType}`;
+          const eventLabel = t(labelKey, { defaultValue: event.eventType });
+          // For non-search rows the summary IS the human-readable
+          // hint (basename for imports, runner name for jobs).
+          const showSummary =
+            event.eventType !== "search" && summary && summary.length > 0;
+          return (
+            <li
+              key={`${event.eventType}-${event.id}`}
               className={[
-                "ml-3 shrink-0 rounded-full px-2 py-0.5",
-                "text-[0.65rem] font-medium ring-1 ring-inset",
-                event.successful
-                  ? "bg-emerald-700/30 text-emerald-200 ring-emerald-500/40"
-                  : "bg-red-700/30 text-red-200 ring-red-500/40",
+                "flex items-start justify-between gap-3 rounded-md",
+                "border border-zinc-800 bg-zinc-900/40 px-3 py-2",
+                "text-sm",
               ].join(" ")}
             >
-              {event.successful
-                ? t("history.statusOk")
-                : t("history.statusFailed")}
-            </span>
-          </li>
-        ))}
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <p className="truncate text-zinc-100">
+                  <span className="font-mono text-[0.65rem] uppercase tracking-wider text-zinc-500">
+                    {eventLabel}
+                  </span>
+                  <span className="ml-2 text-zinc-300">
+                    {event.gameId
+                      ? t("history.subjectGame", { id: event.gameId })
+                      : event.releaseId
+                        ? t("history.subjectRelease", { id: event.releaseId })
+                        : t("history.subjectEvent", { id: event.id })}
+                  </span>
+                </p>
+                {showSummary && (
+                  <p className="truncate text-[0.7rem] text-zinc-300">
+                    {summary}
+                  </p>
+                )}
+                {reason && (
+                  <p className="truncate text-[0.7rem] text-red-300">
+                    {reason}
+                  </p>
+                )}
+                <p className="text-[0.7rem] text-zinc-500">
+                  {formatDate(event.date)}
+                </p>
+              </div>
+              <span
+                className={[
+                  "shrink-0 rounded-full px-2 py-0.5",
+                  "text-[0.65rem] font-medium ring-1 ring-inset",
+                  event.successful
+                    ? "bg-emerald-700/30 text-emerald-200 ring-emerald-500/40"
+                    : "bg-red-700/30 text-red-200 ring-red-500/40",
+                ].join(" ")}
+              >
+                {event.successful
+                  ? t("history.statusOk")
+                  : t("history.statusFailed")}
+              </span>
+            </li>
+          );
+        })}
       </ul>
 
       {totalPages > 1 && (

@@ -15,6 +15,7 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useDownloadClients } from "@/lib/api/queries/download-clients";
 import { useIndexersById } from "@/lib/api/queries/indexers";
 import { usePlatformsById } from "@/lib/api/queries/platforms";
 import {
@@ -23,6 +24,7 @@ import {
   type Candidate,
 } from "@/lib/api/queries/search";
 import { regionLabelKey } from "@/lib/regions/catalogue";
+import { useToastStore } from "@/lib/store/toast";
 
 interface ReleaseSearchModalProps {
   open: boolean;
@@ -201,6 +203,7 @@ function CandidateRow(props: {
     onGrabSuccess,
   } = props;
   const grab = useManualGrab();
+  const pushToast = useToastStore((s) => s.push);
   const onClick = (): void => {
     grab.mutate(
       {
@@ -211,7 +214,46 @@ function CandidateRow(props: {
         releaseId: releaseId ?? undefined,
         force,
       },
-      { onSuccess: onGrabSuccess },
+      {
+        // The backend returns HTTP 200 even when dispatch falls
+        // short of a real grab (no routable client, all clients
+        // failed, etc.) — the body's ``status`` carries the real
+        // outcome. Surface it as a toast so the operator sees why
+        // nothing landed in the queue, and only close the modal
+        // on an actual successful grab.
+        onSuccess: (data) => {
+          const status =
+            (data as { status?: string }).status ?? "unknown";
+          const reason = (data as { reason?: string | null }).reason;
+          if (status === "grabbed") {
+            pushToast({
+              kind: "success",
+              title: t("search.grab.toast.successTitle"),
+              description: t("search.grab.toast.successBody", {
+                title: candidate.title,
+              }),
+            });
+            onGrabSuccess();
+            return;
+          }
+          pushToast({
+            kind: "error",
+            title: t("search.grab.toast.failedTitle"),
+            description:
+              reason ||
+              t(`search.grab.toast.failedReasons.${status}` as never, {
+                defaultValue: status,
+              }),
+          });
+        },
+        onError: (err) => {
+          pushToast({
+            kind: "error",
+            title: t("search.grab.toast.failedTitle"),
+            description: err.message,
+          });
+        },
+      },
     );
   };
 
@@ -453,11 +495,18 @@ export function ReleaseSearchModal(
   const search = useManualSearch();
   const indexersById = useIndexersById();
   const platformsById = usePlatformsById();
+  const downloadClients = useDownloadClients();
   // Spec 004: indexer rows are stored in the same map. An empty
   // map means the operator has no indexer configured yet, so the
   // round can't return anything — surface a clear hint with a
   // link to Settings rather than a silent "no candidates".
   const noIndexersConfigured = indexersById.size === 0;
+  // Mirror banner for download clients: search returns candidates
+  // happily but every Grab will fall to ``no_routable_indexer``
+  // because dispatch_winner has nothing to hand the source to.
+  const noDownloadClientConfigured =
+    downloadClients.isSuccess &&
+    (downloadClients.data ?? []).filter((c) => c.enabled).length === 0;
 
   useEffect(() => {
     if (props.open) {
@@ -518,6 +567,12 @@ export function ReleaseSearchModal(
         {noIndexersConfigured && (
           <p className="rounded-md border border-amber-900/60 bg-amber-950/30 p-3 text-xs text-amber-200">
             {t("search.noIndexers")}
+          </p>
+        )}
+
+        {noDownloadClientConfigured && (
+          <p className="rounded-md border border-amber-900/60 bg-amber-950/30 p-3 text-xs text-amber-200">
+            {t("search.noDownloadClient")}
           </p>
         )}
 

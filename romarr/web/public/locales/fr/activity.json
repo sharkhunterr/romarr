@@ -52,9 +52,16 @@
       "body": "Imports, recherches et tâches planifiées apparaîtront ici dès qu'elles tournent."
     },
     "eventLabel": {
-      "import": "Importé",
-      "search": "Recherché",
-      "job_run": "Tâche exécutée"
+      "import": "Import",
+      "search": "Recherche",
+      "job_run": "Tâche"
+    },
+    "searchType": {
+      "manual": "Grab manuel",
+      "rss": "Sync RSS",
+      "auto_added": "Recherche auto",
+      "missing_scheduled": "Recherche manquants",
+      "cutoff_scheduled": "Recherche cutoff"
     },
     "subjectGame": "jeu n°{{id}}",
     "subjectRelease": "release n°{{id}}",

@@ -52,9 +52,16 @@
       "body": "Imports, searches, and scheduled tasks land here as they happen."
     },
     "eventLabel": {
-      "import": "Imported",
-      "search": "Searched",
-      "job_run": "Task ran"
+      "import": "Import",
+      "search": "Search",
+      "job_run": "Task"
+    },
+    "searchType": {
+      "manual": "Manual grab",
+      "rss": "RSS sync",
+      "auto_added": "Auto search",
+      "missing_scheduled": "Missing search",
+      "cutoff_scheduled": "Cutoff search"
     },
     "subjectGame": "game #{{id}}",
     "subjectRelease": "release #{{id}}",

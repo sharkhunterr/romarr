@@ -126,6 +126,13 @@
       "search": "Search",
       "job_run": "Job"
     },
+    "searchType": {
+      "manual": "Manual grab",
+      "rss": "RSS sync",
+      "auto_added": "Auto search",
+      "missing_scheduled": "Missing search",
+      "cutoff_scheduled": "Cutoff search"
+    },
     "subjectRelease": "release #{{id}}",
     "subjectGame": "this game",
     "statusOk": "OK",
@@ -186,8 +193,20 @@
     "grab": {
       "button": "Grab",
       "pending": "Grabbing…",
-      "dispatched": "Sent"
+      "dispatched": "Sent",
+      "toast": {
+        "successTitle": "Grab dispatched",
+        "successBody": "“{{title}}” was sent to the download client.",
+        "failedTitle": "Grab didn't complete",
+        "failedReasons": {
+          "no_routable_indexer": "No enabled download client accepts this source type. Configure one in Settings → Download Clients.",
+          "client_failed": "The download client refused the source.",
+          "blocklisted": "This release is on the blocklist. Toggle ‘force’ to override.",
+          "unknown": "Unexpected status — check the activity history for details."
+        }
+      }
     },
+    "noDownloadClient": "No enabled download client — manual grab will fall through until at least one client (qBittorrent / SABnzbd) is configured in Settings → Download Clients.",
     "seeders_one": "{{count}} seeder",
     "seeders_other": "{{count}} seeders",
     "rejected": "Rejected",

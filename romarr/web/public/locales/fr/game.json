@@ -126,6 +126,13 @@
       "search": "Recherche",
       "job_run": "Tâche"
     },
+    "searchType": {
+      "manual": "Grab manuel",
+      "rss": "Sync RSS",
+      "auto_added": "Recherche auto",
+      "missing_scheduled": "Recherche manquants",
+      "cutoff_scheduled": "Recherche cutoff"
+    },
     "subjectRelease": "release #{{id}}",
     "subjectGame": "ce jeu",
     "statusOk": "OK",
@@ -186,8 +193,20 @@
     "grab": {
       "button": "Grab",
       "pending": "Envoi…",
-      "dispatched": "Envoyé"
+      "dispatched": "Envoyé",
+      "toast": {
+        "successTitle": "Grab envoyé",
+        "successBody": "« {{title}} » a été envoyé au client de téléchargement.",
+        "failedTitle": "Le grab n'a pas abouti",
+        "failedReasons": {
+          "no_routable_indexer": "Aucun client de téléchargement actif n'accepte ce type de source. Configurez-en un dans Réglages → Clients de téléchargement.",
+          "client_failed": "Le client de téléchargement a refusé la source.",
+          "blocklisted": "Cette release est sur la blocklist. Cochez « ignorer la blocklist » pour forcer.",
+          "unknown": "Statut inattendu — voir l'historique d'activité pour les détails."
+        }
+      }
     },
+    "noDownloadClient": "Aucun client de téléchargement actif — un grab manuel échouera tant qu'au moins un client (qBittorrent / SABnzbd) n'est pas configuré dans Réglages → Clients de téléchargement.",
     "seeders_one": "{{count}} seeder",
     "seeders_other": "{{count}} seeders",
     "rejected": "Rejeté",
