@@ -216,6 +216,30 @@ async def run_import(
             monitored_game_id,
         ) = await _identify_suggestions(session, source_path, sha1=sha1)
 
+    # Slice 369: when the dispatcher carried a pre-resolved game
+    # id from the parent ``queue_entry`` (manual-grab path),
+    # trust it and override the filename-fuzzy result. The
+    # operator already told us which game this download is for;
+    # re-running the fuzzy step against torrent names like
+    # ``Harry Potter and the Goblet of Fire _axekin.com_`` would
+    # just lose the answer because the foundation parser can't
+    # recover the canonical title.
+    if context.pre_matched_game_id is not None:
+        suggested_game_id = context.pre_matched_game_id
+        monitored_game_id = context.pre_matched_game_id
+        if suggested_platform_id is None:
+            from romarr.domain.models import Game as _Game
+
+            row = (
+                await session.execute(
+                    select(_Game.platform_id).where(
+                        _Game.id == context.pre_matched_game_id
+                    )
+                )
+            ).scalar_one_or_none()
+            if row is not None:
+                suggested_platform_id = int(row)
+
     # Step 2b — AUTO-IMPORT: when GAMEMATCH resolved to a
     # monitored Game AND that Game has exactly one wanted
     # Release, we have enough confidence to bypass parking and

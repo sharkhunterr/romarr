@@ -71,6 +71,14 @@ class ImportContext(BaseModel):
     imported_via: ImportSource
     imported_by: str = "system"
     force: bool = False
+    # Slice 369: pre-resolved game / release ids carried from
+    # the ``queue_entry`` row when the import comes from a
+    # manual grab. Skips the filename-fuzzy game-match step —
+    # the operator already told us which game this download
+    # was for, and parsing free-form torrent filenames against
+    # the catalogue is brittle.
+    pre_matched_game_id: int | None = None
+    pre_matched_release_id: int | None = None
 
 
 class MultiDiscGroup(BaseModel):

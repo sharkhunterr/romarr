@@ -82,12 +82,38 @@ def build_managed_download_dispatcher(
             )
             return
 
+        # Look up the parent queue_entry so we thread the
+        # operator's pre-resolved game / release ids into the
+        # import. Skips the filename-fuzzy game-match step when
+        # we already know the answer from the manual grab.
+        pre_game_id: int | None = None
+        pre_release_id: int | None = None
+        async with sessionmaker() as lookup_session:
+            from sqlalchemy import select as _select
+
+            from romarr.api.models import QueueEntry
+
+            qrow = (
+                await lookup_session.execute(
+                    _select(QueueEntry).where(
+                        QueueEntry.download_client_id == item.client_id,
+                        QueueEntry.download_client_native_id
+                        == item.client_native_id,
+                    )
+                )
+            ).scalar_one_or_none()
+            if qrow is not None:
+                pre_game_id = qrow.game_id
+                pre_release_id = qrow.release_id
+
         context = ImportContext(
             source_path=Path(save_path),
             correlation_id=uuid4(),
             imported_via="automatic",
             download_client_id=item.client_id,
             download_client_native_id=item.client_native_id,
+            pre_matched_game_id=pre_game_id,
+            pre_matched_release_id=pre_release_id,
         )
 
         async with sessionmaker() as session:

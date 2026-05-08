@@ -60,18 +60,22 @@ _ACTIVE_STATES = ("queued", "downloading", "paused", "stuck", "pending_retry")
 them now, polling them again would just churn write traffic."""
 
 
-# qBit / SAB free-form state strings → the canonical
-# ``queue_entry.state`` enum the API + UI render. Anything we
-# can't map keeps the existing row state to avoid lying to the
-# operator.
+# Canonical ``DownloadState`` (the implementation's normalised
+# enum from ``romarr.downloaders.types``) → ``queue_entry.state``
+# vocabulary. ``seeding`` collapses to ``completed`` because as
+# far as the operator's queue UI is concerned the file is on
+# disk; the torrent client may keep seeding but the next stage
+# (import) only cares about the on-disk state. ``stalled`` maps
+# to ``stuck`` since that's the operator-facing label the API
+# router whitelists.
 _STATE_MAP: dict[str, str] = {
     "queued": "queued",
     "downloading": "downloading",
     "paused": "paused",
     "completed": "completed",
+    "seeding": "completed",
+    "stalled": "stuck",
     "failed": "failed",
-    "stuck": "stuck",
-    "pending_retry": "pending_retry",
 }
 
 
