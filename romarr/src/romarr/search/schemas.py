@@ -152,6 +152,12 @@ class GrabRequest(_Base):
     indexer_guid: Annotated[str, Field(min_length=1, max_length=255)]
     download_url: Annotated[str, Field(min_length=1)]
     title: Annotated[str, Field(min_length=1, max_length=512)]
+    # The game this grab targets (the modal opened from a game
+    # detail page). Persisted on the search_history row so the
+    # per-game History tab surfaces the grab — without it the
+    # row is detached and only shows up under the global Activity
+    # → History list.
+    game_id: int | None = None
     release_id: int | None = None
 
 

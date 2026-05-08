@@ -35,6 +35,13 @@ interface ReleaseSearchModalProps {
   /** Pinned to the game's platform so the search builder uses
    * the right newznab category set. */
   platformId: number;
+  /** The game the modal was opened from. Threaded into the
+   * grab payload so ``search_history.game_id`` is filled and
+   * the per-game History tab actually surfaces this manual
+   * grab. ``null`` when the modal is opened from a context
+   * without a parent game (none today, but kept open for
+   * future global-search flows). */
+  gameId: number | null;
   /** Pre-bound to the candidate via /grab so import-time can
    * resolve the right Release without a re-match. ``null`` for
    * game-level manual search where no Release exists yet — the
@@ -181,6 +188,7 @@ function MatchPercentBadge(props: {
 function CandidateRow(props: {
   candidate: Candidate;
   maxScore: number;
+  gameId: number | null;
   releaseId: number | null;
   force: boolean;
   indexerName: string | null;
@@ -195,6 +203,7 @@ function CandidateRow(props: {
   const {
     candidate,
     maxScore,
+    gameId,
     releaseId,
     force,
     indexerName,
@@ -211,6 +220,7 @@ function CandidateRow(props: {
         indexerGuid: candidate.indexer_guid,
         downloadUrl: candidate.download_url,
         title: candidate.title,
+        gameId: gameId ?? undefined,
         releaseId: releaseId ?? undefined,
         force,
       },
@@ -680,6 +690,7 @@ export function ReleaseSearchModal(
                           key={`${c.indexer_id}-${c.indexer_guid}`}
                           candidate={c}
                           maxScore={maxScore}
+                          gameId={props.gameId}
                           releaseId={props.releaseId}
                           force={force}
                           indexerName={

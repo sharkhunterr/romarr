@@ -178,6 +178,7 @@ async def manual_grab(
         indexer_results=[
             {
                 "indexer_id": body.indexer_id,
+                "game_id": body.game_id,
                 "release_id": body.release_id,
                 "results_count": 1,
                 "grabbed_release_id": (

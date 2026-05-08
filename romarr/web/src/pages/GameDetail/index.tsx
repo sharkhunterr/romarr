@@ -174,6 +174,7 @@ export function GameDetailPage(): ReactElement {
             onClose={() => setSearchOpen(false)}
             initialQuery={game.data.title}
             platformId={game.data.platform_id}
+            gameId={gameId}
             releaseId={null}
           />
         </>

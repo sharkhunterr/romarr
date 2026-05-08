@@ -60,6 +60,10 @@ export interface ManualGrabVariables {
   indexerGuid: string;
   downloadUrl: string;
   title: string;
+  /** The game the modal opened for (game-level manual search).
+   * Filled into ``search_history.game_id`` so the per-game
+   * History tab surfaces this manual grab. */
+  gameId?: number;
   releaseId?: number;
   /** Override the blocklist gate (FR-022). */
   force?: boolean;
@@ -72,7 +76,7 @@ export function useManualGrab(): UseMutationResult<
 > {
   const qc = useQueryClient();
   return useMutation<Record<string, unknown>, ApiError, ManualGrabVariables>({
-    mutationFn: ({ force, releaseId, ...body }) =>
+    mutationFn: ({ force, releaseId, gameId, ...body }) =>
       apiFetch<Record<string, unknown>>(
         `/api/v3/rom/release/grab${force ? "?force=true" : ""}`,
         {
@@ -82,6 +86,7 @@ export function useManualGrab(): UseMutationResult<
             indexer_guid: body.indexerGuid,
             download_url: body.downloadUrl,
             title: body.title,
+            game_id: gameId,
             release_id: releaseId,
           },
         },
