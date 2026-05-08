@@ -74,6 +74,13 @@ class QueueEntryRead(BaseModel):
 
     id: int
     release_id: int | None = Field(alias="releaseId", default=None)
+    game_id: int | None = Field(alias="gameId", default=None)
+    # Operator-facing torrent / NZB title (slice 367) + parent
+    # game's title joined post-paginate so the Queue list shows
+    # "Mario Kart Super Circuit · Mario Kart Super Circuit
+    # (USA).gba" instead of the bare info-hash.
+    title: str | None = None
+    game_title: str | None = Field(alias="gameTitle", default=None)
     download_client_id: int = Field(alias="downloadClientId")
     download_client_native_id: str = Field(alias="downloadClientNativeId")
     state: str
@@ -89,6 +96,49 @@ class QueueEntryRead(BaseModel):
 
 def _adapt(row: QueueEntry) -> QueueEntryRead:
     return QueueEntryRead.model_validate(row)
+
+
+async def _enrich_with_game_titles(
+    db: AsyncSession, records: list[QueueEntryRead]
+) -> None:
+    """Batch-fill ``gameTitle`` on a page of queue rows.
+
+    Two routes to a parent game: the direct ``queue_entry.game_id``
+    column (filled by the manual-grab flow since slice 367), and
+    the older release → game join. Collect both sets of ids,
+    look the titles up in one query, and stamp them back.
+    """
+    from romarr.domain.models import Game
+
+    direct_ids = {r.game_id for r in records if r.game_id is not None}
+    release_ids = {r.release_id for r in records if r.release_id is not None}
+    release_to_game: dict[int, int] = {}
+    if release_ids:
+        rows = (
+            await db.execute(
+                select(Release.id, Release.game_id).where(
+                    Release.id.in_(release_ids)
+                )
+            )
+        ).all()
+        release_to_game = {rid: gid for (rid, gid) in rows if gid is not None}
+    all_ids = direct_ids | set(release_to_game.values())
+    titles: dict[int, str] = {}
+    if all_ids:
+        rows = (
+            await db.execute(
+                select(Game.id, Game.title).where(Game.id.in_(all_ids))
+            )
+        ).all()
+        titles = {gid: title for (gid, title) in rows}
+    for r in records:
+        gid = r.game_id
+        if gid is None and r.release_id is not None:
+            gid = release_to_game.get(r.release_id)
+        if gid is not None:
+            r.game_title = titles.get(gid)
+            if r.game_id is None:
+                r.game_id = gid
 
 
 # Sortable column whitelist — endpoint declares its operator-facing
@@ -167,18 +217,30 @@ async def list_queue(
     if release_id is not None:
         base = base.where(QueueEntry.release_id == release_id)
     if game_id is not None:
-        base = base.join(
+        # Match either the direct ``queue_entry.game_id`` (slice
+        # 367 — game-level grabs without a release yet) or the
+        # legacy join through release.game_id.
+        from sqlalchemy import or_
+
+        base = base.outerjoin(
             Release, Release.id == QueueEntry.release_id
-        ).where(Release.game_id == game_id)
+        ).where(
+            or_(
+                QueueEntry.game_id == game_id,
+                Release.game_id == game_id,
+            )
+        )
     if state is not None:
         base = base.where(QueueEntry.state == state)
-    return await paginate(
+    envelope = await paginate(
         session=db,
         base_query=base,
         page_request=page_req,
         sortable_keys=_SORTABLE_KEYS,
         record_adapter=_adapt,
     )
+    await _enrich_with_game_titles(db, envelope.records)
+    return envelope
 
 
 # ---------------------------------------------------------------------------

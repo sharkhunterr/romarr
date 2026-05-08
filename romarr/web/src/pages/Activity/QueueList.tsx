@@ -160,14 +160,20 @@ function QueueRow(props: {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="truncate font-mono text-xs text-zinc-300">
-            {entry.downloadClientNativeId}
+          {/* Slice 367: prefer the operator-readable torrent
+              title and the parent game's name; fall back to
+              the bare native id (info-hash) only when neither
+              is on the row. */}
+          <p className="truncate text-xs font-medium text-zinc-100">
+            {entry.title ?? entry.downloadClientNativeId}
           </p>
+          {entry.gameTitle && (
+            <p className="truncate text-[0.7rem] text-zinc-300">
+              {entry.gameTitle}
+            </p>
+          )}
           <p className="text-[0.7rem] text-zinc-500">
-            {t("queue.subtitle", {
-              releaseId: entry.releaseId,
-              clientId: clientName ?? `#${entry.downloadClientId}`,
-            })}
+            {clientName ?? `client #${entry.downloadClientId}`}
             {entry.attemptCount > 0 &&
               t("queue.attempt", { count: entry.attemptCount })}
           </p>

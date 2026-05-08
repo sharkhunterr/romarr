@@ -417,9 +417,61 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
             app.state.watcher = watcher
             bootstrap_log.info("lifespan.watcher_started")
 
+    # Slice 367 — start the queue reconciler loop alongside
+    # the importer watcher. The watcher only fires on completed
+    # downloads; this loop polls every active queue_entry row
+    # for live progress / state / eta updates so the Activity →
+    # Queue UI doesn't sit at 0% while qBit happily downloads.
+    queue_reconciler = None
+    if enable_watcher:
+        from romarr.downloaders.queue_reconciler import (
+            QueueReconcilerLoop,
+        )
+        from romarr.search._clients import (
+            make_download_client_factory,
+        )
+
+        sessionmaker = app.state.db_sessionmaker
+
+        async def _client_factory(client_id: int) -> Any:
+            # ``make_download_client_factory`` wants a session;
+            # open a short-lived one per build so we don't share
+            # a session across the loop's per-row calls.
+            from romarr.downloaders.factory import build_client_from_row
+            from romarr.downloaders.models import (
+                DownloadClient as DownloadClientRow,
+            )
+            from sqlalchemy import select as _select
+
+            async with sessionmaker() as s:
+                row = (
+                    await s.execute(
+                        _select(DownloadClientRow).where(
+                            DownloadClientRow.id == client_id
+                        )
+                    )
+                ).scalar_one()
+                return build_client_from_row(row)
+
+        try:
+            queue_reconciler = QueueReconcilerLoop(
+                session_factory=sessionmaker,
+                client_factory=_client_factory,
+            )
+            await queue_reconciler.start()
+            app.state.queue_reconciler = queue_reconciler
+            bootstrap_log.info("lifespan.queue_reconciler_started")
+        except Exception:
+            bootstrap_log.warning(
+                "lifespan.queue_reconciler_start_failed", exc_info=True
+            )
+            queue_reconciler = None
+
     try:
         yield
     finally:
+        if queue_reconciler is not None:
+            await queue_reconciler.stop()
         if watcher is not None:
             from romarr.importer.orchestrator import stop_watcher
 

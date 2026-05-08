@@ -162,6 +162,8 @@ async def manual_grab(
             db.add(
                 QueueEntry(
                     release_id=body.release_id,
+                    game_id=body.game_id,
+                    title=body.title,
                     download_client_id=outcome.client_id,
                     download_client_native_id=outcome.client_native_id,
                     state="downloading",

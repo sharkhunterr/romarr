@@ -143,6 +143,16 @@ class QueueEntry(Base):
         ForeignKey("release.id", ondelete="CASCADE"),
         nullable=True,
     )
+    # Slice 367: operator-readable title (torrent / NZB name)
+    # and the parent game's id so the Activity → Queue tab can
+    # show "Mario Kart · Super Circuit (USA).gba" instead of the
+    # bare info-hash.
+    title: Mapped[str | None] = mapped_column(String, nullable=True)
+    game_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("game.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     download_client_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("download_client.id", ondelete="CASCADE"),

@@ -5222,6 +5222,12 @@ export interface components {
             id: number;
             /** Releaseid */
             releaseId?: number | null;
+            /** Gameid */
+            gameId?: number | null;
+            /** Title */
+            title?: string | null;
+            /** Gametitle */
+            gameTitle?: string | null;
             /** Downloadclientid */
             downloadClientId: number;
             /** Downloadclientnativeid */
