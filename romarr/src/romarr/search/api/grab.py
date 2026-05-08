@@ -138,15 +138,14 @@ async def manual_grab(
     # table so the Activity → Queue page picks it up
     # immediately. The reconciler / poll loop owns subsequent
     # progress updates; we only insert the initial row in the
-    # ``downloading`` state. Skipped when there's no release id
-    # (game-level manual search) — the queue_entry FK is
-    # NOT NULL on release_id and a row without a release would
-    # have nothing to reconcile back to.
+    # ``downloading`` state. ``release_id`` is allowed NULL
+    # since slice 362 — game-level manual searches don't have
+    # a Release yet, the importer fills it in when the file
+    # lands.
     if (
         outcome.status is DispatchStatus.GRABBED
         and outcome.client_id is not None
         and outcome.client_native_id is not None
-        and body.release_id is not None
     ):
         # Upsert by (download_client_id, native_id) so reruns of
         # the same grab don't 409 on the unique constraint.

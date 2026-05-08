@@ -138,10 +138,10 @@ class QueueEntry(Base):
     __tablename__ = "queue_entry"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    release_id: Mapped[int] = mapped_column(
+    release_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("release.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
     download_client_id: Mapped[int] = mapped_column(
         Integer,

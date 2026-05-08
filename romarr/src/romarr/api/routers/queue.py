@@ -73,7 +73,7 @@ class QueueEntryRead(BaseModel):
     )
 
     id: int
-    release_id: int = Field(alias="releaseId")
+    release_id: int | None = Field(alias="releaseId", default=None)
     download_client_id: int = Field(alias="downloadClientId")
     download_client_native_id: str = Field(alias="downloadClientNativeId")
     state: str

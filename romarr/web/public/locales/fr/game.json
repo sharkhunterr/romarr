@@ -133,6 +133,28 @@
       "missing_scheduled": "Recherche manquants",
       "cutoff_scheduled": "Recherche cutoff"
     },
+    "detail": {
+      "query": "Requête",
+      "score": "Note",
+      "guid": "Indexer",
+      "dest": "Destination",
+      "source": "Source",
+      "client": "Client",
+      "via": "Via",
+      "reason": "Motif"
+    },
+    "importedVia": {
+      "webhook": "webhook",
+      "watcher": "polling",
+      "manual": "manuel"
+    },
+    "duration": {
+      "ms": "{{ms}} ms",
+      "s": "{{s}} s",
+      "m": "{{m}} min",
+      "h": "{{h}} h"
+    },
+    "subjectGame_legacy": "ce jeu",
     "subjectRelease": "release #{{id}}",
     "subjectGame": "ce jeu",
     "statusOk": "OK",

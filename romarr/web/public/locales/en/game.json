@@ -133,6 +133,28 @@
       "missing_scheduled": "Missing search",
       "cutoff_scheduled": "Cutoff search"
     },
+    "detail": {
+      "query": "Query",
+      "score": "Score",
+      "guid": "Indexer",
+      "dest": "Destination",
+      "source": "Source",
+      "client": "Client",
+      "via": "Via",
+      "reason": "Reason"
+    },
+    "importedVia": {
+      "webhook": "webhook",
+      "watcher": "polling",
+      "manual": "manual"
+    },
+    "duration": {
+      "ms": "{{ms}} ms",
+      "s": "{{s}} s",
+      "m": "{{m}} min",
+      "h": "{{h}} h"
+    },
+    "subjectGame_legacy": "this game",
     "subjectRelease": "release #{{id}}",
     "subjectGame": "this game",
     "statusOk": "OK",

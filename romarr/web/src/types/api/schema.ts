@@ -3698,6 +3698,8 @@ export interface components {
             download_url: string;
             /** Title */
             title: string;
+            /** Game Id */
+            game_id?: number | null;
             /** Release Id */
             release_id?: number | null;
         };
@@ -3720,8 +3722,14 @@ export interface components {
              * Format: date-time
              */
             date: string;
+            /** Finishedat */
+            finishedAt?: string | null;
+            /** Durationms */
+            durationMs?: number | null;
             /** Gameid */
             gameId?: number | null;
+            /** Gametitle */
+            gameTitle?: string | null;
             /** Releaseid */
             releaseId?: number | null;
             /** Successful */
@@ -3730,6 +3738,20 @@ export interface components {
             summary?: string | null;
             /** Reason */
             reason?: string | null;
+            /** Query */
+            query?: string | null;
+            /** Chosenindexerguid */
+            chosenIndexerGuid?: string | null;
+            /** Score */
+            score?: number | null;
+            /** Destpath */
+            destPath?: string | null;
+            /** Downloadclientid */
+            downloadClientId?: number | null;
+            /** Downloadclientname */
+            downloadClientName?: string | null;
+            /** Importedvia */
+            importedVia?: string | null;
         };
         /**
          * ImportHistoryRead
@@ -5199,7 +5221,7 @@ export interface components {
             /** Id */
             id: number;
             /** Releaseid */
-            releaseId: number;
+            releaseId?: number | null;
             /** Downloadclientid */
             downloadClientId: number;
             /** Downloadclientnativeid */
