@@ -14,7 +14,11 @@
       "Bash(grep -nA20 \"HistoryEvent: {\" web/src/types/api/schema.ts)",
       "Bash(python3 -c 'import json,glob *)",
       "Bash(grep -nA1 \"function EditableSummary\" web/src/pages/GameDetail/OverviewTab.tsx)",
-      "Bash(.venv/bin/pytest tests/api/routers/test_queue.py tests/search/api/test_grab_endpoint.py --no-cov -q)"
+      "Bash(.venv/bin/pytest tests/api/routers/test_queue.py tests/search/api/test_grab_endpoint.py --no-cov -q)",
+      "Bash(grep -nA20 \"class DownloadStatus\" src/romarr/downloaders/types.py)",
+      "Bash(grep -nA40 \"async def get_status\" src/romarr/downloaders/implementations/qbittorrent.py)",
+      "Bash(grep -nA20 \"def _build_status\\\\|^def _build_status\" src/romarr/downloaders/implementations/qbittorrent.py)",
+      "Bash(.venv/bin/pytest tests/downloaders/ --no-cov -q)"
     ]
   }
 }

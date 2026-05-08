@@ -659,6 +659,14 @@ def _build_status(
             ):
                 completed_paths.append(f"{save_path.rstrip('/')}/{name}")
 
+    # qBit's /torrents/info exposes ``size`` (selected-files
+    # byte count) and ``total_size`` (full torrent). Prefer
+    # ``size`` since that's what the operator chose to download;
+    # fall back to ``total_size`` so we never end up at 0.
+    total_bytes = (
+        _coerce_int(payload.get("size"))
+        or _coerce_int(payload.get("total_size"))
+    )
     return DownloadStatus(
         client_id=client_id,
         client_native_id=str(payload.get("hash", "")).lower(),
@@ -670,6 +678,7 @@ def _build_status(
         peers=_coerce_int(payload.get("num_leechs")),
         download_rate_bps=_coerce_int(payload.get("dlspeed")),
         upload_rate_bps=_coerce_int(payload.get("upspeed")),
+        total_bytes=total_bytes,
         save_path=save_path,
         completed_paths=completed_paths,
         fetched_at=fetched_at,

@@ -144,6 +144,12 @@ class DownloadStatus(_Base):
     peers: int | None = None
     download_rate_bps: int | None = None
     upload_rate_bps: int | None = None
+    # Total bytes of the download as reported by the client
+    # (qBit ``size`` / SAB ``mb`` × 1024²). NULL when the client
+    # hasn't surfaced it yet — the reconciler then leaves the
+    # row untouched. Slice 367 added the field; older
+    # implementations that don't fill it stay backward-compat.
+    total_bytes: int | None = None
     save_path: str | None = None
     completed_paths: list[str] = Field(default_factory=list)
     fetched_at: datetime

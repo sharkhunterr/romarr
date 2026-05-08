@@ -152,10 +152,12 @@ async def reconcile_once(
                         status.state, row.state
                     )
                     new_progress = float(status.progress)
+                    new_size = status.total_bytes
                     if (
                         row.progress == new_progress
                         and row.state == new_state
                         and row.eta_seconds == status.eta_seconds
+                        and (new_size is None or row.size_bytes == new_size)
                         and row.error_msg is None
                     ):
                         # Nothing moved — skip the write so we
@@ -165,15 +167,8 @@ async def reconcile_once(
                     row.state = new_state
                     row.progress = new_progress
                     row.eta_seconds = status.eta_seconds
-                    if row.size_bytes is None and status.completed_paths:
-                        # SAB / qBit only know the byte count
-                        # once content is on disk; first time we
-                        # see it, persist.
-                        row.size_bytes = None  # left untouched —
-                        # the size on the QueueEntry row mirrors
-                        # what the dispatcher captured at grab
-                        # time; the reconciler doesn't second-
-                        # guess that yet.
+                    if new_size is not None:
+                        row.size_bytes = new_size
                     row.error_msg = None
                     row.last_updated_at = now
                     updated += 1
