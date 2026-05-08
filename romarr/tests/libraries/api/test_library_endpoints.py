@@ -92,18 +92,51 @@ async def test_full_crud_round_trip(
 
 
 @pytest.mark.asyncio
-async def test_post_with_nonexistent_path_returns_400(
+async def test_post_with_nonexistent_path_creates_directory(
     api_client: httpx.AsyncClient,
     api_engine: AsyncEngine,
     tmp_path: Path,
 ) -> None:
+    """Slice 370: a missing target path is mkdir'd automatically
+    so operators don't have to shell into the host before
+    creating a library. The ``path_unwritable`` 400 still fires
+    when the parent directory is not actually writable — covered
+    by ``test_post_with_path_pointing_to_file_returns_400``."""
     await seed_user_and_login(api_engine, api_client, role="admin")
     profile_ids = await seed_profiles(api_engine)
+
+    target = tmp_path / "missing"
+    assert not target.exists()
+    resp = await api_client.post(
+        "/api/v3/rom/library",
+        json=_payload(
+            tmp_library_path=target,
+            profile_ids=profile_ids,
+        ),
+    )
+    assert resp.status_code == 201, resp.text
+    assert target.is_dir()
+
+
+@pytest.mark.asyncio
+async def test_post_with_path_pointing_to_file_returns_400(
+    api_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+    tmp_path: Path,
+) -> None:
+    """A path that points to a regular file (not a directory)
+    fails ``path_unwritable`` so the validator never overwrites
+    a user's data with a library checkpoint."""
+    await seed_user_and_login(api_engine, api_client, role="admin")
+    profile_ids = await seed_profiles(api_engine)
+
+    file_path = tmp_path / "regular-file.txt"
+    file_path.write_text("placeholder")
 
     resp = await api_client.post(
         "/api/v3/rom/library",
         json=_payload(
-            tmp_library_path=tmp_path / "missing",  # never mkdir'd
+            tmp_library_path=file_path,
             profile_ids=profile_ids,
         ),
     )

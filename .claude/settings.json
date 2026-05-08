@@ -18,7 +18,9 @@
       "Bash(grep -nA20 \"class DownloadStatus\" src/romarr/downloaders/types.py)",
       "Bash(grep -nA40 \"async def get_status\" src/romarr/downloaders/implementations/qbittorrent.py)",
       "Bash(grep -nA20 \"def _build_status\\\\|^def _build_status\" src/romarr/downloaders/implementations/qbittorrent.py)",
-      "Bash(.venv/bin/pytest tests/downloaders/ --no-cov -q)"
+      "Bash(.venv/bin/pytest tests/downloaders/ --no-cov -q)",
+      "Bash(.venv/bin/pytest tests/libraries/api/ --no-cov -q)",
+      "Bash(grep -nA15 \"test_post_with_nonexistent_path_returns_400\" tests/libraries/api/test_library_endpoints.py)"
     ]
   }
 }

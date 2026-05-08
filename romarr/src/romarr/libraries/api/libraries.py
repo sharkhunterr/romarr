@@ -42,26 +42,54 @@ router = APIRouter(prefix="/api/v3/rom/library", tags=["Libraries"])
 # Helpers
 
 
-def _path_unwritable_error(path: str) -> HTTPException:
+def _path_unwritable_error(path: str, *, reason: str) -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail={
             "errorMessage": "library_path_unwritable",
             "errorCode": "path_unwritable",
-            "details": (
-                f"library.path {path!r} must exist and be writable at save time"
-            ),
+            "details": f"library.path {path!r}: {reason}",
         },
     )
 
 
 def _validate_path_writable(raw_path: str) -> None:
-    """Raise HTTP 400 if ``raw_path`` does not exist or is not writable."""
+    """Resolve ``raw_path``, create it if missing, and assert that
+    the result is a writable directory. HTTP 400 on any failure
+    with a precise reason in ``details`` so the operator knows
+    whether the path is wrong, the parent isn't theirs, or the
+    file system is read-only.
+    """
     path = Path(raw_path)
-    if not path.exists() or not path.is_dir():
-        raise _path_unwritable_error(raw_path)
+    # Resolve relative paths against the backend's cwd. The
+    # exception path covers ``..`` traversal failures and
+    # extremely long names that resolve() rejects on some FS.
+    try:
+        path = path.resolve()
+    except OSError as exc:
+        raise _path_unwritable_error(
+            raw_path, reason=f"resolve failed ({exc})"
+        ) from exc
+    if path.exists() and not path.is_dir():
+        raise _path_unwritable_error(
+            raw_path, reason="path exists but is not a directory"
+        )
+    if not path.exists():
+        # Create the library directory tree so operators don't
+        # have to mkdir from a shell. Bubble up the underlying
+        # OSError verbatim — typical failure modes are
+        # ``Permission denied`` (parent owned by another user)
+        # or ``Read-only file system``.
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise _path_unwritable_error(
+                raw_path, reason=f"could not create ({exc.strerror or exc})"
+            ) from exc
     if not os.access(path, os.W_OK):
-        raise _path_unwritable_error(raw_path)
+        raise _path_unwritable_error(
+            raw_path, reason="exists but is not writable by the backend user"
+        )
 
 
 def _not_found(library_id: int) -> HTTPException:
