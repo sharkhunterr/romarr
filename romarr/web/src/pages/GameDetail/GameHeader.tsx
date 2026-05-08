@@ -63,7 +63,10 @@ export function GameHeader(props: GameHeaderProps): ReactElement {
     game.summary !== null &&
     game.summary !== undefined &&
     game.summary.trim().length > 0;
-  const summaryNeedsToggle = hasSummary && (game.summary?.length ?? 0) > 200;
+  // Lower threshold than slice 364's first cut — anything past
+  // ~120 chars overflows two lines at this typography, so we
+  // surface the "Show more" toggle eagerly.
+  const summaryNeedsToggle = hasSummary && (game.summary?.length ?? 0) > 120;
   const releaseYear = game.release_date
     ? new Date(game.release_date).getFullYear()
     : null;
@@ -156,14 +159,16 @@ export function GameHeader(props: GameHeaderProps): ReactElement {
 
           {/* Actions — Refresh, Monitor, Search, Delete — sit
               right under the title pills so they're the first
-              thing the operator's thumb reaches. */}
+              thing the operator's thumb reaches. All four
+              buttons share the same height/typography so the
+              row scans as a single control group. */}
           <div className="flex flex-wrap gap-1.5 pt-0.5">
             <RefreshMetadataButton game={game} />
             <MonitorToggle game={game} />
             <button
               type="button"
               onClick={onSearchClick}
-              className="inline-flex items-center gap-1 rounded-md border border-brand/60 bg-brand/10 px-2 py-1 text-[0.65rem] font-medium text-brand hover:bg-brand/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              className="inline-flex items-center gap-1 rounded-md border border-brand/60 bg-brand/10 px-2.5 py-1 text-[0.7rem] font-medium text-brand hover:bg-brand/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             >
               <Search size={12} aria-hidden="true" />
               {t("search.headerButton")}
@@ -171,7 +176,7 @@ export function GameHeader(props: GameHeaderProps): ReactElement {
             <button
               type="button"
               onClick={onDeleteClick}
-              className="inline-flex items-center gap-1 rounded-md border border-red-700/60 px-2 py-1 text-[0.65rem] font-medium text-red-300 hover:bg-red-900/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+              className="inline-flex items-center gap-1 rounded-md border border-red-700/60 px-2.5 py-1 text-[0.7rem] font-medium text-red-300 hover:bg-red-900/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
             >
               <Trash2 size={12} aria-hidden="true" />
               {t("delete.button")}
@@ -181,16 +186,17 @@ export function GameHeader(props: GameHeaderProps): ReactElement {
       </div>
 
       {/* Summary spans the full card width below the cover/rail
-          row. Tight typography (text-[0.7rem]) and a 2-line
-          clamp on mobile / 3 on desktop keeps the description
-          well under the tab bar. */}
+          row. ``line-clamp-1 sm:line-clamp-2`` + the small show-
+          more toggle keeps the description to a couple of lines
+          even on a phone — the operator can expand when they
+          actually want the full text. */}
       {hasSummary && (
         <div className="mt-3 space-y-1">
           <div
             className={
               summaryExpanded
                 ? "text-[0.7rem] leading-relaxed text-zinc-400"
-                : "line-clamp-2 text-[0.7rem] leading-relaxed text-zinc-400 sm:line-clamp-3"
+                : "line-clamp-1 text-[0.7rem] leading-relaxed text-zinc-400 sm:line-clamp-2"
             }
           >
             <EditableSummary game={game} />

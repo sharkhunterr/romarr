@@ -12,7 +12,7 @@
  * are the constitutional anti-RomM-#1770 mechanism.
  */
 
-import { Loader2, RefreshCw } from "lucide-react";
+import { Check, Eye, EyeOff, Loader2, Lock, LockOpen, Pencil, RefreshCw, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -77,7 +77,11 @@ function FieldLockButton(props: {
           : "text-zinc-600 hover:text-zinc-400",
       ].join(" ")}
     >
-      <span aria-hidden="true">{props.locked ? "🔒" : "🔓"}</span>
+      {props.locked ? (
+        <Lock size={11} aria-hidden="true" />
+      ) : (
+        <LockOpen size={11} aria-hidden="true" />
+      )}
     </button>
   );
 }
@@ -190,7 +194,7 @@ function EditableFactRow(props: EditableFactRowProps): ReactElement {
             aria-label={t("overview.edit.save")}
             className="rounded p-1 text-emerald-400 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
           >
-            <span aria-hidden="true">✓</span>
+            <Check size={14} aria-hidden="true" />
           </button>
           <button
             type="button"
@@ -199,7 +203,7 @@ function EditableFactRow(props: EditableFactRowProps): ReactElement {
             aria-label={t("overview.edit.cancel")}
             className="rounded p-1 text-zinc-400 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
           >
-            <span aria-hidden="true">✕</span>
+            <X size={14} aria-hidden="true" />
           </button>
         </dd>
       ) : (
@@ -213,7 +217,7 @@ function EditableFactRow(props: EditableFactRowProps): ReactElement {
             aria-label={t("overview.edit.openAria", { field: props.label })}
             className="rounded p-0.5 text-zinc-600 opacity-0 transition-opacity hover:text-zinc-300 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           >
-            <span aria-hidden="true">✎</span>
+            <Pencil size={12} aria-hidden="true" />
           </button>
         </dd>
       )}
@@ -322,7 +326,7 @@ export function EditableTitle(props: EditableHeadingProps): ReactElement {
           aria-label={t("overview.edit.save")}
           className="rounded p-1 text-emerald-400 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
         >
-          <span aria-hidden="true">✓</span>
+          <Check size={14} aria-hidden="true" />
         </button>
         <button
           type="button"
@@ -331,7 +335,7 @@ export function EditableTitle(props: EditableHeadingProps): ReactElement {
           aria-label={t("overview.edit.cancel")}
           className="rounded p-1 text-zinc-400 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-60"
         >
-          <span aria-hidden="true">✕</span>
+          <X size={14} aria-hidden="true" />
         </button>
       </div>
     );
@@ -346,9 +350,9 @@ export function EditableTitle(props: EditableHeadingProps): ReactElement {
         <span
           aria-hidden="true"
           title={t("overview.lock.lockedHint")}
-          className="text-amber-400"
+          className="inline-flex shrink-0 self-center text-amber-400"
         >
-          🔒
+          <Lock size={12} />
         </span>
       )}
       <button
@@ -357,7 +361,7 @@ export function EditableTitle(props: EditableHeadingProps): ReactElement {
         aria-label={t("overview.edit.openAria", { field: t("overview.fields.title") })}
         className="rounded p-0.5 text-zinc-600 opacity-0 transition-opacity hover:text-zinc-300 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
       >
-        <span aria-hidden="true">✎</span>
+        <Pencil size={12} aria-hidden="true" />
       </button>
     </div>
   );
@@ -486,7 +490,7 @@ export function EditableSummary(props: EditableHeadingProps): ReactElement {
         })}
         className="shrink-0 rounded p-0.5 text-zinc-600 opacity-0 transition-opacity hover:text-zinc-300 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
       >
-        <span aria-hidden="true">✎</span>
+        <Pencil size={12} aria-hidden="true" />
       </button>
     </div>
   );
@@ -513,10 +517,9 @@ export function RefreshMetadataButton(props: { game: Game }): ReactElement {
       onClick={onClick}
       disabled={refresh.isPending}
       className={[
-        "inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5",
-        "text-xs font-medium ring-1 ring-inset",
-        "bg-zinc-800 text-zinc-200 ring-zinc-700",
-        "transition-colors hover:bg-zinc-700",
+        "inline-flex shrink-0 items-center gap-1 rounded-md border px-2.5 py-1",
+        "text-[0.7rem] font-medium",
+        "border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
         "disabled:cursor-not-allowed disabled:opacity-60",
       ].join(" ")}
@@ -544,8 +547,8 @@ export function MonitorToggle(props: { game: Game }): ReactElement {
     toggle.mutate({ gameId: game.id, monitored: !game.monitored });
   };
   const tone = game.monitored
-    ? "bg-emerald-700/30 text-emerald-200 ring-emerald-500/40"
-    : "bg-zinc-800 text-zinc-400 ring-zinc-700";
+    ? "border-emerald-600/60 bg-emerald-700/20 text-emerald-200 hover:bg-emerald-700/30"
+    : "border-zinc-700 bg-zinc-800 text-zinc-400 hover:bg-zinc-700";
   return (
     <button
       type="button"
@@ -553,9 +556,8 @@ export function MonitorToggle(props: { game: Game }): ReactElement {
       disabled={toggle.isPending}
       aria-pressed={game.monitored}
       className={[
-        "inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5",
-        "text-xs font-medium ring-1 ring-inset",
-        "transition-colors hover:brightness-110",
+        "inline-flex shrink-0 items-center gap-1 rounded-md border px-2.5 py-1",
+        "text-[0.7rem] font-medium",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
         "disabled:cursor-not-allowed disabled:opacity-60",
         tone,
@@ -566,7 +568,11 @@ export function MonitorToggle(props: { game: Game }): ReactElement {
           : undefined
       }
     >
-      <span aria-hidden="true">{game.monitored ? "👁️" : "💤"}</span>
+      {game.monitored ? (
+        <Eye size={14} aria-hidden="true" />
+      ) : (
+        <EyeOff size={14} aria-hidden="true" />
+      )}
       <span>
         {game.monitored
           ? t("overview.monitor.on")
