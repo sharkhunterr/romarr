@@ -23,7 +23,10 @@
       "Bash(grep -nA15 \"test_post_with_nonexistent_path_returns_400\" tests/libraries/api/test_library_endpoints.py)",
       "Bash(.venv/bin/pytest tests/libraries/ --no-cov -q)",
       "Bash(grep -nA10 \"test_library_create_rejects_relative_path\" tests/libraries/test_models.py)",
-      "Bash(.venv/bin/pytest tests/libraries/test_models.py tests/libraries/api/ --no-cov -q)"
+      "Bash(.venv/bin/pytest tests/libraries/test_models.py tests/libraries/api/ --no-cov -q)",
+      "Bash(grep -nA20 \"class ApiError\\\\|export class ApiError\\\\|export.*ApiError\" web/src/lib/api/client.ts)",
+      "Bash(grep -nA30 \"ApiError\\\\|status: number, body\" web/src/lib/api/client.ts)",
+      "Bash(grep -nA10 \"parseErrorBody\\\\|response.json\\\\|new ApiError\" web/src/lib/api/client.ts)"
     ]
   }
 }

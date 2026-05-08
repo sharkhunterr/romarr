@@ -144,10 +144,18 @@ export function CreateLibraryModal(
         props.onClose();
       },
       onError: (err) => {
+        // Backend envelope ships the precise reason in ``details``
+        // (e.g. ``library.path 'X': could not create (Permission
+        // denied)``). Fall through to the bare ``message`` only
+        // when nothing more useful is on the row.
+        const apiDetails =
+          typeof err.details === "string"
+            ? (err.details as string)
+            : null;
         pushToast({
           kind: "error",
           title: t("mediaManagement.create.errorTitle"),
-          description: err.message,
+          description: apiDetails ?? err.message,
         });
       },
     });

@@ -14,9 +14,12 @@ schema layer must stay filesystem-free.
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import Annotated, Any
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response, status
 from pydantic import ValidationError
@@ -43,6 +46,12 @@ router = APIRouter(prefix="/api/v3/rom/library", tags=["Libraries"])
 
 
 def _path_unwritable_error(path: str, *, reason: str) -> HTTPException:
+    # Log the precise failure — the operator-facing toast shows
+    # the detail string, but a server-side log keeps a paper
+    # trail for cases where the toast vanishes too fast.
+    logger.warning(
+        "library.path_unwritable: path=%r reason=%s", path, reason
+    )
     return HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail={
