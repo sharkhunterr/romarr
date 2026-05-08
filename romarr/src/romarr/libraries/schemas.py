@@ -59,11 +59,16 @@ class _LibraryBase(BaseModel):
     heartbeat_seconds: Annotated[int, Field(ge=5)] = 30
 
     @model_validator(mode="after")
-    def _path_must_be_absolute(self) -> Self:
-        if not Path(self.path).is_absolute():
-            raise ValueError(
-                "library.path must be absolute; got a relative path"
-            )
+    def _normalise_path(self) -> Self:
+        # Accept both absolute and relative paths; the latter
+        # are resolved against the backend's cwd. Slice 370's
+        # API-side validator does the actual ``mkdir -p`` and
+        # writability check, so we just normalise here. The
+        # only path we reject outright is the empty string —
+        # everything else falls through to the create handler.
+        cleaned = self.path.strip()
+        if not cleaned:
+            raise ValueError("library.path must not be empty")
         return self
 
 

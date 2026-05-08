@@ -164,13 +164,26 @@ async def test_library_platform_m2m_round_trip(
 # ---------------------------------------------------------------------------
 
 
-def test_library_create_rejects_relative_path(
+def test_library_create_rejects_empty_path(
     make_library_create_payload: Callable[..., dict[str, object]],
 ) -> None:
-    payload = make_library_create_payload(path="relative/library")
+    """Slice 370: relative paths are now accepted and resolved
+    against the backend's cwd. Only the empty / whitespace-only
+    case still fails Pydantic validation."""
+    payload = make_library_create_payload(path="   ")
     with pytest.raises(ValidationError) as exc:
         LibraryCreate.model_validate(payload)
-    assert "absolute" in str(exc.value).lower()
+    assert "empty" in str(exc.value).lower()
+
+
+def test_library_create_accepts_relative_path(
+    make_library_create_payload: Callable[..., dict[str, object]],
+) -> None:
+    """Sister to the absolute-path test below. The API-side
+    ``_validate_path_writable`` runs the mkdir + writability
+    check once a session is in scope (slice 370)."""
+    payload = make_library_create_payload(path="relative/library")
+    LibraryCreate.model_validate(payload)
 
 
 def test_library_create_accepts_absolute_path(

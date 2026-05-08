@@ -145,16 +145,19 @@ async def test_post_with_path_pointing_to_file_returns_400(
 
 
 @pytest.mark.asyncio
-async def test_post_with_relative_path_returns_422(
+async def test_post_with_empty_path_returns_422(
     api_client: httpx.AsyncClient,
     api_engine: AsyncEngine,
 ) -> None:
+    """Slice 370: relative paths are accepted and resolved against
+    the backend's cwd. Only the empty / whitespace-only case
+    still fails Pydantic validation."""
     await seed_user_and_login(api_engine, api_client, role="admin")
     profile_ids = await seed_profiles(api_engine)
 
     resp = await api_client.post(
         "/api/v3/rom/library",
-        json={"name": "Bad", "path": "relative/library", **profile_ids},
+        json={"name": "Bad", "path": "", **profile_ids},
     )
     assert resp.status_code == 422
 
