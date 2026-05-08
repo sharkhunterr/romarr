@@ -301,12 +301,56 @@ async def test_add_torrent_url_discovers_hash_post_add() -> None:
             200, json=[{"hash": "DEADBEEF" * 5, "name": "x"}]
         )
     )
+    # The pre-resolve probe (slice 359) performs a no-redirect
+    # GET on the URL before handing it to qBit. Mock it to a 200
+    # with a non-torrent content type so the resolver returns
+    # None and falls back to the legacy "let qBit fetch the URL
+    # itself" path this test asserts on.
+    respx.get("https://example.test/x.torrent").mock(
+        return_value=httpx.Response(
+            200, headers={"content-type": "text/plain"}, content=b""
+        )
+    )
     nzo = await _client().add_torrent(
         TorrentUrl(url="https://example.test/x.torrent"),  # type: ignore[arg-type]
         category="romarr",
         tags=["romarr"],
     )
     assert nzo == ("deadbeef" * 5).lower()
+
+
+@respx.mock
+async def test_add_torrent_url_redirecting_to_magnet_uses_magnet_path() -> None:
+    """Slice 359 — Prowlarr-style 301 to ``magnet:?xt=…`` is folded
+    into a TorrentMagnet source so qBit gets a vocabulary it
+    understands. The post-add hash discovery is skipped because
+    the magnet's btih short-circuits to the canonical hash."""
+    info_hash = "abcdef0123456789abcdef0123456789abcdef01"
+    respx.post(f"{_BASE}/auth/login").mock(return_value=_login_ok())
+    respx.post(f"{_BASE}/torrents/add").mock(return_value=httpx.Response(200))
+    # No /torrents/info call should fire — the magnet hash takes over.
+    respx.get(
+        "https://prowlarr.test/12/download?apikey=K&link=opaque",
+    ).mock(
+        return_value=httpx.Response(
+            301,
+            headers={"location": f"magnet:?xt=urn:btih:{info_hash}&dn=demo"},
+        )
+    )
+    # Idempotency check for the magnet path also calls
+    # /torrents/info to look up an existing match — return [] so
+    # the add proceeds.
+    respx.get(f"{_BASE}/torrents/info").mock(
+        return_value=httpx.Response(200, json=[])
+    )
+    nzo = await _client().add_torrent(
+        TorrentUrl(  # type: ignore[arg-type]
+            url="https://prowlarr.test/12/download?apikey=K&link=opaque",
+        ),
+        category="romarr",
+        tags=["romarr"],
+    )
+    assert nzo == info_hash
 
 
 @respx.mock

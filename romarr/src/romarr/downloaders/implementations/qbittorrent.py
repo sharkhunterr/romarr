@@ -244,6 +244,24 @@ class QBittorrentClient(DownloadClient):
         async with self._new_client() as client:
             await self._login(client)
 
+            # Pre-resolve indexer-proxied URLs. Prowlarr (and a
+            # few private trackers) reply 301 with
+            # ``Location: magnet:?xt=…`` to the
+            # ``/<id>/download?apikey=…`` endpoint. Handing that
+            # raw URL to qBit's ``/torrents/add`` succeeds at the
+            # HTTP level but qBit can't follow ``magnet:`` from
+            # an HTTP redirect — the torrent never registers and
+            # the add silently no-ops, which used to surface as
+            # ``did not surface the just-added torrent`` from the
+            # post-add discovery step. We follow the redirect
+            # ourselves and substitute the resolved source so
+            # qBit gets a vocabulary it understands (a magnet URI
+            # or the .torrent bytes).
+            if isinstance(source, TorrentUrl):
+                resolved = await self._resolve_torrent_url(str(source.url))
+                if resolved is not None:
+                    source = resolved
+
             magnet_hash = _maybe_extract_magnet_hash(source)
             if magnet_hash:
                 existing = await self._fetch_torrent_by_hash(client, magnet_hash)
@@ -419,6 +437,56 @@ class QBittorrentClient(DownloadClient):
             raise TypeError(f"unsupported TorrentSource: {type(source)!r}")
 
         await self._post(client, "/torrents/add", data=data, files=files)
+
+    async def _resolve_torrent_url(
+        self, url: str
+    ) -> TorrentSource | None:
+        """Follow one redirect manually so we can swap a
+        ``magnet:`` Location for a ``TorrentMagnet`` source.
+
+        Returns:
+            * ``TorrentMagnet`` when the indexer 30x's to ``magnet:?xt=…``
+              (Prowlarr's torrent-private fallback);
+            * ``TorrentBytes`` when the indexer serves a 200 with a
+              ``.torrent`` payload directly;
+            * ``None`` when the URL is plain HTTP and qBit can
+              fetch it itself (the original behaviour).
+        """
+        try:
+            async with httpx.AsyncClient(
+                timeout=15.0,
+                verify=self._verify,
+                follow_redirects=False,
+            ) as probe:
+                response = await probe.get(url)
+        except httpx.HTTPError:
+            return None
+
+        if response.status_code in (301, 302, 303, 307, 308):
+            location = response.headers.get("location", "")
+            if location.startswith("magnet:"):
+                return TorrentMagnet(magnet_uri=location)
+            # HTTP→HTTP redirect → let qBit follow it itself.
+            return None
+
+        if response.status_code == 200:
+            content_type = (
+                response.headers.get("content-type", "").lower()
+            )
+            body = response.content
+            looks_like_torrent = (
+                "application/x-bittorrent" in content_type
+                or content_type.startswith("application/octet-stream")
+                # Bencoded torrent files start with ``d`` followed
+                # by a length-prefixed key — use the canonical
+                # ``announce`` / ``info`` first key as a sniff.
+                or body.startswith(b"d8:announce")
+                or body.startswith(b"d4:info")
+            )
+            if looks_like_torrent and body:
+                return TorrentBytes(data=body)
+
+        return None
 
     async def _discover_added_hash(
         self, client: httpx.AsyncClient, source: TorrentSource

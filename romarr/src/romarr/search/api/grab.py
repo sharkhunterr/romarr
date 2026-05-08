@@ -16,6 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from romarr.api.dependencies import get_db, require_admin
+from romarr.api.models import QueueEntry
 from romarr.auth import Principal
 from romarr.downloaders.models import DownloadClient
 from romarr.downloaders.routing import RoutingCandidate
@@ -132,6 +133,43 @@ async def manual_grab(
         if outcome.status is DispatchStatus.GRABBED
         else outcome.status.value
     )
+
+    # Mirror the just-accepted grab into the ``queue_entry``
+    # table so the Activity → Queue page picks it up
+    # immediately. The reconciler / poll loop owns subsequent
+    # progress updates; we only insert the initial row in the
+    # ``downloading`` state. Skipped when there's no release id
+    # (game-level manual search) — the queue_entry FK is
+    # NOT NULL on release_id and a row without a release would
+    # have nothing to reconcile back to.
+    if (
+        outcome.status is DispatchStatus.GRABBED
+        and outcome.client_id is not None
+        and outcome.client_native_id is not None
+        and body.release_id is not None
+    ):
+        # Upsert by (download_client_id, native_id) so reruns of
+        # the same grab don't 409 on the unique constraint.
+        existing = (
+            await db.execute(
+                select(QueueEntry).where(
+                    QueueEntry.download_client_id == outcome.client_id,
+                    QueueEntry.download_client_native_id
+                    == outcome.client_native_id,
+                )
+            )
+        ).scalar_one_or_none()
+        if existing is None:
+            db.add(
+                QueueEntry(
+                    release_id=body.release_id,
+                    download_client_id=outcome.client_id,
+                    download_client_native_id=outcome.client_native_id,
+                    state="downloading",
+                    progress=0.0,
+                )
+            )
+            await db.commit()
     await record_round(
         db,
         correlation_id=correlation_id,
