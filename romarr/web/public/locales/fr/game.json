@@ -12,6 +12,12 @@
   "delete": {
     "button": "Supprimer le jeu"
   },
+  "header": {
+    "summary": {
+      "showMore": "Afficher plus",
+      "showLess": "Réduire"
+    }
+  },
   "notes": {
     "heading": "Notes",
     "subhead": "Texte libre, géré uniquement par l'opérateur. L'agrégateur de métadonnées ne touche jamais à ce champ — vos notes survivent à chaque rafraîchissement.",

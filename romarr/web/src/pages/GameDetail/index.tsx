@@ -11,7 +11,6 @@
  * since the row no longer exists.
  */
 
-import { Search, Trash2 } from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -22,6 +21,7 @@ import { useGame } from "@/lib/api/queries/games";
 import { BulkDeleteModal } from "@/pages/Library/BulkDeleteModal";
 
 import { FilesTab } from "./FilesTab";
+import { GameHeader } from "./GameHeader";
 import { HistoryTab } from "./HistoryTab";
 import { NotesTab } from "./NotesTab";
 import { OverviewTab } from "./OverviewTab";
@@ -58,8 +58,8 @@ function TabButton(props: TabButtonProps): ReactElement {
       type="button"
       onClick={() => props.onClick(props.tab)}
       className={[
-        "flex-1 rounded-md px-3 py-2 text-sm font-medium",
-        "transition-colors",
+        "flex-1 rounded-md px-2 py-1.5 text-xs font-medium",
+        "transition-colors sm:text-sm",
         props.active
           ? "bg-zinc-800 text-zinc-100"
           : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200",
@@ -104,7 +104,7 @@ export function GameDetailPage(): ReactElement {
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-6 md:py-8">
+    <div className="mx-auto w-full max-w-5xl px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8">
       {game.isLoading && <DetailSkeleton />}
       {game.isError && (
         <EmptyState
@@ -116,28 +116,15 @@ export function GameDetailPage(): ReactElement {
       {game.isSuccess && (
         <>
           <PendingDownloads gameId={gameId} />
-          <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setSearchOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-brand/60 bg-brand/10 px-2 py-1 text-[0.65rem] font-medium text-brand hover:bg-brand/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-            >
-              <Search size={12} aria-hidden="true" />
-              {t("search.headerButton")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setDeleteOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-red-700/60 px-2 py-1 text-[0.65rem] font-medium text-red-300 hover:bg-red-900/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-            >
-              <Trash2 size={12} aria-hidden="true" />
-              {t("delete.button")}
-            </button>
-          </div>
+          <GameHeader
+            game={game.data}
+            onSearchClick={() => setSearchOpen(true)}
+            onDeleteClick={() => setDeleteOpen(true)}
+          />
           <div
             role="tablist"
             aria-label={t("tabs.ariaLabel")}
-            className="mb-4 grid grid-cols-5 gap-1 rounded-md border border-zinc-800 bg-zinc-900/40 p-1"
+            className="sticky top-0 z-10 mb-4 grid grid-cols-5 gap-1 rounded-md border border-zinc-800 bg-zinc-900/80 p-1 backdrop-blur"
           >
             {TABS.map((id) => (
               <TabButton

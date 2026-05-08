@@ -17,10 +17,7 @@ import { useEffect, useRef, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
-import { CoverImage } from "@/components/rom";
 import { BulkTagModal } from "@/pages/Library/BulkTagModal";
-
-import { CoverEditModal } from "./CoverEditModal";
 import {
   useEditGameField,
   useRefreshGameMetadata,
@@ -260,7 +257,7 @@ interface EditableHeadingProps {
  * backend rejects clearing the title (NOT NULL); we mirror that
  * by ignoring an empty submit. Auto-locks on save.
  */
-function EditableTitle(props: EditableHeadingProps): ReactElement {
+export function EditableTitle(props: EditableHeadingProps): ReactElement {
   const { t } = useTranslation("game");
   const pushToast = useToastStore((s) => s.push);
   const edit = useEditGameField();
@@ -374,7 +371,7 @@ function EditableTitle(props: EditableHeadingProps): ReactElement {
  * to start writing one. Auto-locks on save; clearing wipes the
  * field but keeps the lock so the aggregator stops trying.
  */
-function EditableSummary(props: EditableHeadingProps): ReactElement {
+export function EditableSummary(props: EditableHeadingProps): ReactElement {
   const { t } = useTranslation("game");
   const pushToast = useToastStore((s) => s.push);
   const edit = useEditGameField();
@@ -495,7 +492,7 @@ function EditableSummary(props: EditableHeadingProps): ReactElement {
   );
 }
 
-function RefreshMetadataButton(props: { game: Game }): ReactElement {
+export function RefreshMetadataButton(props: { game: Game }): ReactElement {
   const { t } = useTranslation("game");
   const { game } = props;
   const refresh = useRefreshGameMetadata();
@@ -539,7 +536,7 @@ function RefreshMetadataButton(props: { game: Game }): ReactElement {
   );
 }
 
-function MonitorToggle(props: { game: Game }): ReactElement {
+export function MonitorToggle(props: { game: Game }): ReactElement {
   const { t } = useTranslation("game");
   const { game } = props;
   const toggle = useToggleGameMonitor();
@@ -592,64 +589,16 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
     .map((id) => tagsById.get(id))
     .filter((tag): tag is NonNullable<typeof tag> => tag !== undefined);
 
-  const [coverEditOpen, setCoverEditOpen] = useState(false);
   const [tagsEditOpen, setTagsEditOpen] = useState(false);
-  const coverLocked = (game.locked_fields ?? []).includes("cover");
 
+  // Cover, title, summary, monitor toggle, refresh button and
+  // platform pill all live in ``GameHeader`` now (slice 364) —
+  // this tab focuses on the editable key facts + tags. Keeping
+  // the layout single-column on every breakpoint since the
+  // header already owns the cover-on-the-side layout.
   return (
-    <div className="grid gap-4 md:grid-cols-[10rem_minmax(0,1fr)]">
-      <div className="md:sticky md:top-20 md:self-start">
-        <button
-          type="button"
-          onClick={() => setCoverEditOpen(true)}
-          aria-label={t("overview.cover.changeAria")}
-          className="group relative block w-full rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        >
-          <CoverImage
-            gameId={game.id}
-            src={game.cover_path ?? null}
-            cacheKey={game.updated_at ?? null}
-            alt={game.title}
-            sizeClassName="aspect-[3/4] w-full md:w-40"
-          />
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-center rounded-b bg-zinc-950/70 py-1 text-[0.65rem] text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
-          >
-            ✎ {t("overview.cover.changeShort")}
-          </span>
-          {coverLocked && (
-            <span
-              aria-hidden="true"
-              title={t("overview.lock.lockedHint")}
-              className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-zinc-950/80 text-[0.7rem] text-amber-400 ring-1 ring-inset ring-zinc-700 backdrop-blur-sm"
-            >
-              🔒
-            </span>
-          )}
-        </button>
-      </div>
-
-      {coverEditOpen && (
-        <CoverEditModal
-          game={game}
-          onClose={() => setCoverEditOpen(false)}
-        />
-      )}
-
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <EditableTitle game={game} />
-            <EditableSummary game={game} />
-          </div>
-          <div className="flex shrink-0 flex-wrap gap-2">
-            <RefreshMetadataButton game={game} />
-            <MonitorToggle game={game} />
-          </div>
-        </div>
-
-        <dl className="rounded-md border border-zinc-800 bg-zinc-900/40 px-4">
+    <div className="space-y-4">
+      <dl className="rounded-md border border-zinc-800 bg-zinc-900/40 px-4">
           <EditableFactRow
             label={t("overview.fields.developer")}
             field="developer"
@@ -796,14 +745,13 @@ export function OverviewTab(props: OverviewTabProps): ReactElement {
           )}
         </div>
 
-        {tagsEditOpen && (
-          <BulkTagModal
-            games={[game]}
-            onClose={() => setTagsEditOpen(false)}
-            onSuccess={() => setTagsEditOpen(false)}
-          />
-        )}
-      </div>
+      {tagsEditOpen && (
+        <BulkTagModal
+          games={[game]}
+          onClose={() => setTagsEditOpen(false)}
+          onSuccess={() => setTagsEditOpen(false)}
+        />
+      )}
     </div>
   );
 }

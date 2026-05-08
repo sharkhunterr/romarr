@@ -20,6 +20,7 @@ import { fireEvent, screen } from "@testing-library/react";
 
 import { renderWithProviders } from "@/test/render";
 
+import { GameHeader } from "./GameHeader";
 import { OverviewTab } from "./OverviewTab";
 import * as gamesQuery from "@/lib/api/queries/games";
 import * as platformsQuery from "@/lib/api/queries/platforms";
@@ -123,9 +124,19 @@ describe("OverviewTab", () => {
   it("edit-in-place on the title fires useEditGameField.mutate (T078)", () => {
     const { edit } = _stubAll();
 
-    renderWithProviders(<OverviewTab game={_baseGame()} />, {
-      i18nResources: I18N_BUNDLE,
-    });
+    // Slice 364: title editing now lives in GameHeader (cover +
+    // title + summary moved out of OverviewTab to make room for
+    // the tab bar to slide below the header). The contract
+    // — click ✎ → input → Enter fires useEditGameField.mutate
+    // — is unchanged.
+    renderWithProviders(
+      <GameHeader
+        game={_baseGame()}
+        onSearchClick={() => undefined}
+        onDeleteClick={() => undefined}
+      />,
+      { i18nResources: I18N_BUNDLE },
+    );
 
     // Click the ✎ pencil next to the title to enter editing mode.
     fireEvent.click(screen.getByRole("button", { name: "Edit Title" }));

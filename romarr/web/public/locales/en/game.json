@@ -12,6 +12,12 @@
   "delete": {
     "button": "Delete game"
   },
+  "header": {
+    "summary": {
+      "showMore": "Show more",
+      "showLess": "Show less"
+    }
+  },
   "notes": {
     "heading": "Notes",
     "subhead": "Operator-owned free text. The metadata aggregator never touches this — your notes survive every refresh.",
