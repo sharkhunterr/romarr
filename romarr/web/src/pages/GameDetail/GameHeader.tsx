@@ -186,21 +186,24 @@ export function GameHeader(props: GameHeaderProps): ReactElement {
       </div>
 
       {/* Summary spans the full card width below the cover/rail
-          row. ``line-clamp-1 sm:line-clamp-2`` + the small show-
-          more toggle keeps the description to a couple of lines
-          even on a phone — the operator can expand when they
-          actually want the full text. */}
+          row. The line-clamp class is passed directly to the
+          ``<p>`` *inside* EditableSummary — applying it on a
+          wrapper ``<div>`` doesn't propagate because
+          ``-webkit-line-clamp`` only works on the text element
+          itself. ``line-clamp-1 sm:line-clamp-2`` keeps the
+          description to a couple of lines even on a phone; the
+          operator clicks "Show more" to expand. */}
       {hasSummary && (
         <div className="mt-3 space-y-1">
-          <div
-            className={
-              summaryExpanded
-                ? "text-[0.7rem] leading-relaxed text-zinc-400"
-                : "line-clamp-1 text-[0.7rem] leading-relaxed text-zinc-400 sm:line-clamp-2"
-            }
-          >
-            <EditableSummary game={game} />
-          </div>
+          <EditableSummary
+            game={game}
+            textClassName={[
+              "text-[0.7rem] leading-relaxed",
+              summaryExpanded ? "" : "line-clamp-1 sm:line-clamp-2",
+            ]
+              .join(" ")
+              .trim()}
+          />
           {summaryNeedsToggle && (
             <button
               type="button"

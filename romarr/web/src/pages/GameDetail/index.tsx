@@ -58,8 +58,8 @@ function TabButton(props: TabButtonProps): ReactElement {
       type="button"
       onClick={() => props.onClick(props.tab)}
       className={[
-        "flex-1 rounded-md px-2 py-1.5 text-xs font-medium",
-        "transition-colors sm:text-sm",
+        "flex-1 rounded-md px-2 py-0.5 text-[0.7rem] font-medium",
+        "transition-colors sm:py-1 sm:text-xs",
         props.active
           ? "bg-zinc-800 text-zinc-100"
           : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200",
@@ -124,7 +124,7 @@ export function GameDetailPage(): ReactElement {
           <div
             role="tablist"
             aria-label={t("tabs.ariaLabel")}
-            className="sticky top-0 z-10 mb-4 grid grid-cols-5 gap-1 rounded-md border border-zinc-800 bg-zinc-900/80 p-1 backdrop-blur"
+            className="sticky top-0 z-10 mb-4 grid grid-cols-5 gap-1 rounded-md border border-zinc-800 bg-zinc-900/80 p-0.5 backdrop-blur"
           >
             {TABS.map((id) => (
               <TabButton

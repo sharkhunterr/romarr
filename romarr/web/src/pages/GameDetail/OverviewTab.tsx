@@ -252,6 +252,13 @@ function formatList(items: readonly string[] | undefined): string | null {
 
 interface EditableHeadingProps {
   game: Game;
+  /** Optional className applied to the read-only ``<p>`` /
+   * ``<h2>`` element inside (slice 365). Lets the GameHeader
+   * caller line-clamp the summary directly on the text node;
+   * a className on the wrapper ``<div>`` would never propagate
+   * because ``-webkit-line-clamp`` only works when the clamped
+   * element IS the text container. */
+  textClassName?: string;
 }
 
 /**
@@ -464,10 +471,11 @@ export function EditableSummary(props: EditableHeadingProps): ReactElement {
     props.game.summary.trim().length > 0;
 
   return (
-    <div className="group mt-2 flex items-start gap-1.5">
+    <div className="group flex items-start gap-1.5">
       <p
         className={[
-          "min-w-0 flex-1 whitespace-pre-line text-sm",
+          "min-w-0 flex-1 whitespace-pre-line",
+          props.textClassName ?? "text-sm",
           hasSummary ? "text-zinc-400" : "text-zinc-600 italic",
         ].join(" ")}
       >

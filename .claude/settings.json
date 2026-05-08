@@ -12,7 +12,8 @@
       "Bash(grep -nA15 \"def paginate\\\\|async def paginate\" src/romarr/api/pagination.py)",
       "Bash(.venv/bin/pytest tests/api/routers/test_history.py tests/search/api/test_history_endpoint.py tests/search/api/test_grab_endpoint.py --no-cov -q)",
       "Bash(grep -nA20 \"HistoryEvent: {\" web/src/types/api/schema.ts)",
-      "Bash(python3 -c 'import json,glob *)"
+      "Bash(python3 -c 'import json,glob *)",
+      "Bash(grep -nA1 \"function EditableSummary\" web/src/pages/GameDetail/OverviewTab.tsx)"
     ]
   }
 }
