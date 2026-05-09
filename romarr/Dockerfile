@@ -40,9 +40,15 @@ FROM python:3.12-slim AS runtime
 # Tini is a tiny init that reaps zombies and forwards SIGTERM
 # correctly — important for graceful shutdown of the scheduler
 # subsystem.
+#
+# ``unar`` is The Unarchiver, a free RAR1/2/3/5 extractor.
+# Romarr's importer uses ``rarfile`` which auto-discovers
+# ``unrar`` / ``unar`` / ``bsdtar`` in that order — without
+# this binary every ``.rar`` torrent qBit hands us hits
+# ``extract:bad-archive`` (slice 382).
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       tini ca-certificates \
+       tini ca-certificates unar \
     && rm -rf /var/lib/apt/lists/*
 
 # Unprivileged runtime user. PUID/PGID get applied at runtime via
