@@ -155,16 +155,30 @@ async def test_unique_type_host_port(async_session: AsyncSession) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_qbit_requires_password() -> None:
+def test_qbit_username_without_password_rejected() -> None:
+    """Slice 379: qBit credentials are now optional (subnet
+    auth-bypass workflow), but if EITHER half is provided we
+    still require the OTHER half — half-credentials are a
+    setup mistake, never an intentional shape."""
     with pytest.raises(ValidationError) as exc:
         DownloadClientCreate(**_qbit_payload(password=None))
-    assert "qbittorrent requires a password" in str(exc.value)
+    assert "username and password must both be set" in str(exc.value)
 
 
-def test_qbit_requires_username() -> None:
+def test_qbit_password_without_username_rejected() -> None:
     with pytest.raises(ValidationError) as exc:
         DownloadClientCreate(**_qbit_payload(username=None))
-    assert "qbittorrent requires a username" in str(exc.value)
+    assert "username and password must both be set" in str(exc.value)
+
+
+def test_qbit_accepts_no_credentials() -> None:
+    """Slice 379: a qBit instance running with
+    ``WebUI\\AuthSubnetWhitelist`` ignores HTTP auth for LAN
+    subnets entirely, so leaving username + password unset is
+    the correct shape for that setup."""
+    DownloadClientCreate(
+        **_qbit_payload(username=None, password=None)
+    )
 
 
 def test_qbit_rejects_api_key() -> None:

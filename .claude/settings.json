@@ -40,7 +40,12 @@
       "Bash(curl -s -o /dev/null -w \"qbit /: %{http_code}\\\\n\" http://localhost:8088/)",
       "Bash(curl -s -i -X POST 'http://localhost:8088/api/v2/auth/login' -d 'username=admin&password=anything')",
       "Bash(curl -s -o /dev/null -w \"8088: %{http_code}\\\\n\" http://localhost:8088/)",
-      "Bash(ip -4 addr show)"
+      "Bash(ip -4 addr show)",
+      "Bash(grep -nA15 \"async def _login\" src/romarr/downloaders/implementations/qbittorrent.py)",
+      "Bash(.venv/bin/pytest tests/downloaders/api/ tests/downloaders/test_schemas.py --no-cov -q)",
+      "Bash(.venv/bin/pytest tests/downloaders/api/ -k \"qbit or username or password or credentials\" --no-cov -q)",
+      "Bash(grep -nA5 \"requires a username\\\\|requires a password\" tests/downloaders/test_models.py)",
+      "Bash(.venv/bin/pytest tests/downloaders/test_models.py tests/downloaders/api/ tests/downloaders/implementations/test_qbittorrent.py --no-cov -q)"
     ]
   }
 }

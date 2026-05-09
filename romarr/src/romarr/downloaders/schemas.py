@@ -42,18 +42,22 @@ def _validate_credentials(
 ) -> None:
     """Cross-field credential rules per data-model.md.
 
-    qbittorrent ⇒ username + password REQUIRED, api_key MUST be NULL.
+    qbittorrent ⇒ if any credential is present, username + password
+                  must both be set; api_key MUST stay NULL. Empty
+                  credentials are accepted (auth-bypass via qBit's
+                  ``WebUI\\AuthSubnetWhitelist``, slice 379).
     sabnzbd     ⇒ api_key REQUIRED, username + password MUST be NULL.
     Stubs (transmission/deluge/nzbget) accept anything — they'll
     refuse via NotImplementedError before any credential is used.
     """
     if type_ == "qbittorrent":
-        if not username:
-            raise ValueError("qbittorrent requires a username")
-        if not has_password:
-            raise ValueError("qbittorrent requires a password")
         if has_api_key:
             raise ValueError("qbittorrent must not carry an api_key")
+        if (username or has_password) and not (username and has_password):
+            raise ValueError(
+                "qbittorrent username and password must both be set, "
+                "or both empty (auth-bypass via subnet whitelist)"
+            )
     elif type_ == "sabnzbd":
         if username:
             raise ValueError("sabnzbd must not carry a username")
