@@ -11,6 +11,17 @@
 #   4. http://localhost:9696 → Prowlarr setup wizard
 #   5. http://localhost:8080 → admin / adminadmin (default qBit creds; change!)
 #
+# Shared volumes (slice 375):
+#   * ``./data/downloads`` is mounted at ``/downloads`` on BOTH qBit
+#     and Romarr so the importer's watcher can read the files qBit
+#     drops there. qBit's "save path" stays ``/downloads`` inside
+#     its container; Romarr sees the exact same absolute path
+#     because it's the same mount target.
+#   * ``./data/library`` is mounted at ``/library`` on Romarr —
+#     create one Library row per platform whose ``path`` points
+#     under ``/library`` (e.g. ``/library/gba``) and the importer
+#     will hardlink/move ROMs there.
+#
 # Persistence: every container's state lives under ./data/<service>/
 # (auto-created). Wipe with `docker compose down --volumes -v`.
 
@@ -32,10 +43,23 @@ services:
       ROMARR_AUTO_MIGRATE: "true"
       ROMARR_SCHEDULER_ENABLED: "true"
       ROMARR_SPA_ENABLED: "true"
+      # Slice 375 — turn the importer's poll watcher + queue
+      # reconciler on so qBit-completed downloads actually
+      # surface in Activity → Queue and trigger the import
+      # pipeline without a manual refresh.
+      ROMARR_IMPORTER_WATCHER_ENABLED: "true"
       # Logging — bumped to INFO so the setup-token mint surfaces.
       PYTHONUNBUFFERED: "1"
     volumes:
       - ./data/romarr:/data
+      # Shared with qBit so the importer can read what qBit
+      # writes — the absolute path is identical inside both
+      # containers (``/downloads/<file>``).
+      - ./data/downloads:/downloads
+      # Library destination — point a Library row's ``path`` at
+      # ``/library/<platform-slug>`` and the importer hardlinks
+      # the ROM here once the match resolves.
+      - ./data/library:/library
     depends_on:
       - prowlarr
       - qbittorrent
