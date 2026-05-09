@@ -345,7 +345,13 @@ class QBittorrentClient(DownloadClient):
                 continue
             tags_raw = str(entry.get("tags") or "")
             tag_set = {t.strip() for t in tags_raw.split(",") if t.strip()}
-            native_id = str(entry.get("hash") or "")
+            # qBit's ``hash`` field is the info-hash. Force
+            # lowercase so it always matches what
+            # ``_discover_added_hash`` / ``add_torrent`` persist
+            # on ``queue_entry.download_client_native_id``;
+            # without this normalisation the dispatcher's
+            # native-id lookup misses (slice 373).
+            native_id = str(entry.get("hash") or "").lower()
             if not native_id:
                 continue
             out.append(

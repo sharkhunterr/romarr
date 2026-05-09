@@ -272,10 +272,15 @@ async def run_import(
         # T040 / FR-014 — scanner-driven import: when the Game has no
         # wanted/imported Release yet but the filename has parseable
         # region/dump info, create a fresh wanted Release so the
-        # auto-import has a binding target. Limited to the scan path
-        # so an ambiguous downloaded file still parks instead of
-        # auto-creating a Release.
-        if not candidates and context.imported_via == "scan":
+        # auto-import has a binding target. Originally limited to
+        # the scan path; slice 373 also opens this to manual-grab
+        # downloads (``pre_matched_game_id`` set) — the operator
+        # already chose the game, so creating the matching Release
+        # is what they actually want.
+        if not candidates and (
+            context.imported_via == "scan"
+            or context.pre_matched_game_id is not None
+        ):
             try:
                 parsed_for_create = default_dispatcher().parse(source_path.name)
             except Exception:
