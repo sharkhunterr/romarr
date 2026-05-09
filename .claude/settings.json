@@ -30,7 +30,11 @@
       "Bash(.venv/bin/pytest tests/importer/ tests/downloaders/implementations/ --no-cov -q)",
       "Bash(grep -rn \"/games/\\\\|to={\\\\`/games\" web/src/)",
       "Bash(apt list *)",
-      "Bash(.venv/bin/pytest tests/importer/ --no-cov -q)"
+      "Bash(.venv/bin/pytest tests/importer/ --no-cov -q)",
+      "Bash(pnpm build *)",
+      "Bash(curl -s -o /dev/null -w \"romarr: %{http_code}\\\\n\" http://localhost:8585/api/v3/system/status)",
+      "Bash(curl -s -o /dev/null -w \"qbit  : %{http_code}\\\\n\" http://localhost:8088/)",
+      "Bash(curl -s -o /dev/null -w \"prowl : %{http_code}\\\\n\" http://localhost:9696/)"
     ]
   }
 }

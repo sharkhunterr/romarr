@@ -47,7 +47,9 @@ export function AddGameModal(props: AddGameModalProps): ReactElement {
     const matched = candidateSlug
       ? list.find((p) => p.slug === candidateSlug)
       : undefined;
-    setPlatformId((matched ?? list[0]).id);
+    const fallback = list[0];
+    if (matched === undefined && fallback === undefined) return;
+    setPlatformId((matched ?? fallback!).id);
   }, [platforms.data, platformId, props.candidate.platformSlug]);
 
   function submit(): void {

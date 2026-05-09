@@ -41,7 +41,7 @@ export function SettingsHome(): ReactElement {
                 to={entry.to}
                 className="flex items-center gap-2 text-sm text-zinc-100 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
               >
-                <span aria-hidden="true">{entry.emoji}</span>
+                <entry.Icon size={16} aria-hidden="true" />
                 <span className="font-medium">{t(`nav.${entry.slug}`)}</span>
                 <span className="ml-auto text-zinc-500" aria-hidden="true">
                   →
@@ -62,7 +62,7 @@ export function SettingsHome(): ReactElement {
               key={entry.to}
               className="flex items-center gap-2 rounded-md border border-dashed border-zinc-800 bg-zinc-900/20 px-3 py-2 text-sm text-zinc-500"
             >
-              <span aria-hidden="true">{entry.emoji}</span>
+              <entry.Icon size={16} aria-hidden="true" />
               <span>{t(`nav.${entry.slug}`)}</span>
             </li>
           ))}

@@ -79,12 +79,6 @@ function rangeToSinceIso(range: TimeRange): string | undefined {
   return new Date(now - ms).toISOString();
 }
 
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return dateStr;
-  return date.toLocaleString();
-}
-
 export function HistoryList(): ReactElement {
   const { t, i18n } = useTranslation("activity");
   const [searchParams, setSearchParams] = useSearchParams();

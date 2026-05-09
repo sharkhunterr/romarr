@@ -181,6 +181,7 @@ function ReleaseRow(props: ReleaseRowProps): ReactElement {
         onClose={() => setSearchOpen(false)}
         initialQuery={release.name}
         platformId={platformId}
+        gameId={gameId}
         releaseId={release.id}
       />
     </li>

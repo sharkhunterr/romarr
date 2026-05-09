@@ -14,18 +14,36 @@ from pathlib import Path
 from alembic import command
 from alembic.config import Config
 
-# Repo layout: src/romarr/db/migrations.py → repo root is two
-# levels up from this file (src/romarr/db) and then once more
-# to reach the project root that owns alembic.ini.
+# Repo layout: ``src/romarr/db/migrations.py`` → repo root is
+# three levels up. That holds when the package is run from a
+# checkout. After ``pip install`` the file lives under
+# ``site-packages/romarr/db/`` and the parent walk lands in
+# Python's lib dir — no ``alembic.ini`` there. Fall back to
+# the current working directory in that case (the Docker image
+# COPYs ``alembic.ini`` to ``/app/`` and sets ``WORKDIR /app``).
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _DEFAULT_INI = _REPO_ROOT / "alembic.ini"
+
+
+def _resolve_ini() -> Path:
+    if _DEFAULT_INI.is_file():
+        return _DEFAULT_INI
+    cwd_ini = Path.cwd() / "alembic.ini"
+    if cwd_ini.is_file():
+        return cwd_ini
+    # Last-resort: bundled migrations directory has no ini, but
+    # the package ships it next to ``alembic/`` for installed
+    # builds. Final fallback returns ``_DEFAULT_INI`` so the
+    # caller surfaces Alembic's own ``No 'script_location'``
+    # error with a meaningful path in the message.
+    return _DEFAULT_INI
 
 
 def _build_config(database_url: str | None = None) -> Config:
     """Construct an Alembic ``Config`` rooted at the repo's
     ``alembic.ini``. ``database_url`` overrides the ini value
     so tests can target an in-memory engine."""
-    cfg = Config(str(_DEFAULT_INI))
+    cfg = Config(str(_resolve_ini()))
     if database_url:
         cfg.set_main_option("sqlalchemy.url", database_url)
     return cfg

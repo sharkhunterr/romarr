@@ -397,12 +397,12 @@ function CandidateRow(props: {
         />
         <FacetChip
           label={
-            candidate.languages.length > 0
-              ? candidate.languages.join(" · ").toUpperCase()
+            (candidate.languages?.length ?? 0) > 0
+              ? (candidate.languages ?? []).join(" · ").toUpperCase()
               : t("search.facet.unknownLabel.languages")
           }
           tone={
-            candidate.languages.length > 0
+            (candidate.languages?.length ?? 0) > 0
               ? _toneFor(candidate, "languages", "good")
               : _toneFor(candidate, "languages", "neutral")
           }

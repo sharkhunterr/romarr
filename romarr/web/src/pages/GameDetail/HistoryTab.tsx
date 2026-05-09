@@ -81,12 +81,6 @@ interface HistoryTabProps {
   gameId: number;
 }
 
-function formatDate(dateStr: string, locale: string): string {
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return dateStr;
-  return date.toLocaleString(locale);
-}
-
 export function HistoryTab(props: HistoryTabProps): ReactElement {
   const { t, i18n } = useTranslation("game");
   const [searchParams, setSearchParams] = useSearchParams();

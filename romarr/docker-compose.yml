@@ -2,7 +2,10 @@
 #
 #   Romarr   → http://localhost:8585  (frontend + API + WebSocket)
 #   Prowlarr → http://localhost:9696  (indexer aggregator)
-#   qBittorrent → http://localhost:8080  (torrent client)
+#   qBittorrent → http://localhost:8088  (torrent client; remapped
+#                                          from the default 8080 to
+#                                          dodge a host-level
+#                                          conflict)
 #
 # First-boot:
 #   1. docker compose up -d
@@ -34,9 +37,12 @@ services:
     ports:
       - "8585:8585"
     environment:
-      # REQUIRED — Fernet master key for stored credentials. Replace with a
-      # 32+ char random string in production (or use docker secrets).
-      ROMARR_AUTH_SECRET_KEY: "dev-only-do-not-use-in-prod-replace-with-32-chars-+"
+      # REQUIRED — Fernet master key for stored credentials.
+      # Kept in sync with the dev .env so the compose stack
+      # opens the same database the local ``romarr serve``
+      # writes to (slice 376 — same key derives the same
+      # Fernet, otherwise existing rows decode garbage).
+      ROMARR_AUTH_SECRET_KEY: "dev-only-do-not-use-in-prod-replace-with-32-chars-please"
       # Lifespan toggles (Dockerfile defaults already set these but explicit
       # here makes overrides obvious).
       ROMARR_BOOTSTRAP_ENABLED: "true"
@@ -51,7 +57,12 @@ services:
       # Logging — bumped to INFO so the setup-token mint surfaces.
       PYTHONUNBUFFERED: "1"
     volumes:
-      - ./data/romarr:/data
+      # Slice 376 — share the entire ``./data`` dir with the
+      # container so ``romarr.db`` / ``covers/`` / etc. are the
+      # SAME files the dev ``romarr serve`` reads. Either
+      # process can run at any one time; never both at once
+      # (SQLite locks).
+      - ./data:/data
       # Shared with qBit so the importer can read what qBit
       # writes — the absolute path is identical inside both
       # containers (``/downloads/<file>``).
@@ -87,7 +98,11 @@ services:
       TZ: "UTC"
       WEBUI_PORT: "8080"
     ports:
-      - "8080:8080"
+      # Host 8088 → container 8080 — port 8080 is commonly
+      # taken on dev hosts (other qBit / Sonarr / random
+      # service). Inside the docker network, Romarr still
+      # talks to qBit on 8080 via the ``qbittorrent`` hostname.
+      - "8088:8080"
       - "6881:6881"
       - "6881:6881/udp"
     volumes:

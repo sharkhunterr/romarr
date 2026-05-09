@@ -63,7 +63,6 @@ function matchesSettings(
         group: "settings",
         label,
         hint: entry.to,
-        emoji: entry.emoji,
         to: entry.to,
       });
     }
