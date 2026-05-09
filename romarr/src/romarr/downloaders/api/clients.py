@@ -117,15 +117,19 @@ def _ephemeral_client_from_create(
     needs api_key); a stub-typed payload would have failed validation.
     """
     if payload.type is ClientType.QBITTORRENT:
-        assert payload.username is not None
-        assert payload.password is not None
+        # Slice 379 — qBit credentials are optional (subnet
+        # auth-bypass workflow). Empty strings POST to
+        # ``/auth/login`` and qBit returns 204 when the caller
+        # falls inside ``WebUI\AuthSubnetWhitelist``; the schema
+        # validator already rejected the half-set case so we
+        # only see "both" or "neither" here.
         return QBittorrentClient(
             client_id=0,
             name=payload.name,
             host=payload.host,
             port=payload.port,
-            username=payload.username,
-            password=payload.password,
+            username=payload.username or "",
+            password=payload.password or "",
             use_ssl=payload.use_ssl,
             url_base=payload.url_base,
             ssl_cert_validation=payload.ssl_cert_validation,

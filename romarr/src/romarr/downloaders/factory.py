@@ -36,17 +36,22 @@ def build_client_from_row(row: DownloadClientRow) -> DownloadClient:
     """
     ssl_setting = cast("SslCertValidation", row.ssl_cert_validation)
     if row.type == ClientType.QBITTORRENT.value:
-        if row.password_encrypted is None or row.username is None:
-            raise ValueError(
-                f"qBittorrent row {row.id} is missing username/password"
-            )
-        password = decrypt(row.password_encrypted).decode("utf-8")
+        # Slice 379 — credentials optional (subnet auth-bypass).
+        # The DB schema lets both columns be NULL; the
+        # ``DownloadClientCreate`` validator already enforces
+        # the "both or neither" invariant, so we only see one
+        # of the two configured shapes here.
+        password = (
+            decrypt(row.password_encrypted).decode("utf-8")
+            if row.password_encrypted is not None
+            else ""
+        )
         return QBittorrentClient(
             client_id=row.id,
             name=row.name,
             host=row.host,
             port=row.port,
-            username=row.username,
+            username=row.username or "",
             password=password,
             use_ssl=row.use_ssl,
             url_base=row.url_base,

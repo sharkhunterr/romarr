@@ -45,7 +45,8 @@
       "Bash(.venv/bin/pytest tests/downloaders/api/ tests/downloaders/test_schemas.py --no-cov -q)",
       "Bash(.venv/bin/pytest tests/downloaders/api/ -k \"qbit or username or password or credentials\" --no-cov -q)",
       "Bash(grep -nA5 \"requires a username\\\\|requires a password\" tests/downloaders/test_models.py)",
-      "Bash(.venv/bin/pytest tests/downloaders/test_models.py tests/downloaders/api/ tests/downloaders/implementations/test_qbittorrent.py --no-cov -q)"
+      "Bash(.venv/bin/pytest tests/downloaders/test_models.py tests/downloaders/api/ tests/downloaders/implementations/test_qbittorrent.py --no-cov -q)",
+      "Bash(grep -nA10 \"if payload.type is ClientType.QBITTORRENT\" src/romarr/downloaders/api/clients.py)"
     ]
   }
 }
