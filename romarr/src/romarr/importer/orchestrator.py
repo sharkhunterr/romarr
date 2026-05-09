@@ -152,6 +152,29 @@ async def run_import(
     # taxonomy hit (FR-005 / CL004).
     source_path = context.source_path
     extract_failure: ExtractError | None = None
+    # Slice 383: when qBit hands us a multi-file torrent, the
+    # save_path points at the torrent's top-level *directory*
+    # (e.g. ``Minerva_Myrient/No-Intro/.../Metroid.zip``). Walk
+    # the tree and pick the first archive or ROM-shaped file —
+    # that's the working source for the rest of the pipeline.
+    if source_path.exists() and source_path.is_dir():
+        nested = next(
+            (
+                p
+                for p in sorted(source_path.rglob("*"))
+                if p.is_file()
+                and (
+                    p.suffix.lower() in _ARCHIVE_SUFFIXES
+                    or p.suffix.lower()
+                    in {".gba", ".nds", ".sfc", ".smc", ".n64", ".z64",
+                        ".v64", ".gb", ".gbc", ".nes", ".md", ".smd",
+                        ".iso", ".cue", ".bin", ".chd", ".rvz"}
+                )
+            ),
+            None,
+        )
+        if nested is not None:
+            source_path = nested
     if (
         source_path.exists()
         and source_path.is_file()
