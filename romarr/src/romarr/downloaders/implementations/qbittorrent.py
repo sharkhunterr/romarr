@@ -137,7 +137,17 @@ class QBittorrentClient(DownloadClient):
         body = response.text.strip().lower()
         if body and body != "ok.":
             raise AuthError(f"qBittorrent rejected login: {response.text!r}")
-        if "SID" not in client.cookies:
+        # No SID cookie when qBit's ``WebUI\AuthSubnetWhitelist``
+        # accepts the caller (slice 380): the server doesn't
+        # bother minting a session because it'll bypass auth on
+        # every subsequent request anyway. We only treat the
+        # missing cookie as an error when the operator
+        # explicitly asked for credentials by setting a
+        # username/password — in that case the absence means
+        # qBit didn't login as expected.
+        if (
+            self._username or self._password
+        ) and "SID" not in client.cookies:
             raise AuthError("qBittorrent did not return an SID cookie")
 
     @property
