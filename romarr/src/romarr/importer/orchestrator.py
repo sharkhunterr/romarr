@@ -624,13 +624,18 @@ async def run_import(
 
     # Step 2b — park. The rejection reason picks the best signal
     # we have: an extract failure wins (bomb / bad-archive /
-    # depth-exceeded — CL004 + CL009), otherwise fall through to
-    # ``match:no_game`` until the full game-match path lands.
-    rejection_reason = (
-        extract_failure.rejection_reason
-        if extract_failure is not None
-        else "match:no_game"
-    )
+    # depth-exceeded — CL004 + CL009); a path that doesn't exist
+    # at all is its own diagnostic signal so the operator knows
+    # the download client and Romarr disagree on the file system
+    # (typical when qBit runs on another host and Romarr can't
+    # see ``/downloads`` locally); otherwise fall through to
+    # ``match:no_game``.
+    if extract_failure is not None:
+        rejection_reason = extract_failure.rejection_reason
+    elif not source_path.exists():
+        rejection_reason = "source:not_found"
+    else:
+        rejection_reason = "match:no_game"
     park_path = (
         context.source_path if extract_failure is not None else source_path
     )

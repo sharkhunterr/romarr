@@ -27,7 +27,10 @@
       "Bash(grep -nA20 \"class ApiError\\\\|export class ApiError\\\\|export.*ApiError\" web/src/lib/api/client.ts)",
       "Bash(grep -nA30 \"ApiError\\\\|status: number, body\" web/src/lib/api/client.ts)",
       "Bash(grep -nA10 \"parseErrorBody\\\\|response.json\\\\|new ApiError\" web/src/lib/api/client.ts)",
-      "Bash(.venv/bin/pytest tests/importer/ tests/downloaders/implementations/ --no-cov -q)"
+      "Bash(.venv/bin/pytest tests/importer/ tests/downloaders/implementations/ --no-cov -q)",
+      "Bash(grep -rn \"/games/\\\\|to={\\\\`/games\" web/src/)",
+      "Bash(apt list *)",
+      "Bash(.venv/bin/pytest tests/importer/ --no-cov -q)"
     ]
   }
 }

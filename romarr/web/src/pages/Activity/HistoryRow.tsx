@@ -80,7 +80,7 @@ export function HistoryRow(props: HistoryRowProps): ReactElement {
     if (gameTitle && gameId && !hideGameLink) {
       return (
         <Link
-          to={`/games/${gameId}`}
+          to={`/game/${gameId}`}
           className="truncate text-zinc-100 hover:text-brand hover:underline"
         >
           {gameTitle}
