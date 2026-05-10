@@ -190,10 +190,18 @@ async def run_import(
             # sets) defer to the MULTIDISC slice; for now the
             # single-file shape is enough for the audit chain to
             # exercise the extract path.
+            #
+            # Slice 393: skip the ``.romarr-extracted-from-<sha>``
+            # sentinel (and any other dotfile metadata) — sorted
+            # rglob puts dotfiles first lexically, so the old
+            # ``roms[0]`` would happily pick the 40-byte marker
+            # and the rest of the pipeline would park it as
+            # ``match:no_game``.
             roms = [
                 p
                 for p in result.extracted_paths
                 if p.suffix.lower() not in _ARCHIVE_SUFFIXES
+                and not p.name.startswith(".")
             ]
             if roms:
                 source_path = roms[0]
