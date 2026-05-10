@@ -70,7 +70,11 @@
   "count_other": "{{count}} jeux",
   "card": {
     "unmonitoredTooltip": "Non suivi — Romarr ne cherchera pas d'upgrade",
-    "unmonitoredAria": "{{title}} (non suivi)",
+    "unmonitoredAria": "Non suivi",
+    "acquiredTooltip": "Sur le disque — au moins une release importée",
+    "acquiredAria": "Sur le disque",
+    "wantedTooltip": "Souhaité — suivi mais le fichier n'est pas encore là",
+    "wantedAria": "Souhaité",
     "selectAria": "Sélectionner {{title}}",
     "deselectAria": "Désélectionner {{title}}",
     "tagsAria_one": "{{count}} étiquette",

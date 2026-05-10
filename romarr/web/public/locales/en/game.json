@@ -16,6 +16,12 @@
     "summary": {
       "showMore": "Show more",
       "showLess": "Show less"
+    },
+    "status": {
+      "acquired": "On disk",
+      "acquiredTooltip": "At least one Release imported and on disk.",
+      "wanted": "Wanted",
+      "wantedTooltip": "Monitored — Romarr will search until a Release lands."
     }
   },
   "notes": {

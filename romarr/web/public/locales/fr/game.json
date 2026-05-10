@@ -16,6 +16,12 @@
     "summary": {
       "showMore": "Afficher plus",
       "showLess": "Réduire"
+    },
+    "status": {
+      "acquired": "Sur disque",
+      "acquiredTooltip": "Au moins une release importée et présente sur le disque.",
+      "wanted": "Souhaité",
+      "wantedTooltip": "Suivi — Romarr cherchera jusqu'à ce qu'une release arrive."
     }
   },
   "notes": {

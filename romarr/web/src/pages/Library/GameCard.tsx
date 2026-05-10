@@ -16,6 +16,7 @@
  * "long-press for multi-select on Library and Wanted" rule.
  */
 
+import { Check, Clock } from "lucide-react";
 import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -110,7 +111,34 @@ export function GameCard(props: GameCardProps): ReactElement {
             {selected ? "✓" : ""}
           </span>
         )}
-        {!game.monitored && (
+        {/* Slice 395 — acquired / wanted / unmonitored badge.
+            Mutual ranking: acquired wins (file is there), then
+            wanted (monitored but missing), then unmonitored. */}
+        {game.acquired ? (
+          <span
+            title={t("card.acquiredTooltip")}
+            aria-label={t("card.acquiredAria")}
+            className={[
+              "absolute right-1 top-1 flex h-5 w-5 items-center justify-center",
+              "rounded-full bg-emerald-600/90 text-zinc-950 ring-1 ring-inset ring-emerald-400/60",
+              "backdrop-blur-sm",
+            ].join(" ")}
+          >
+            <Check size={11} strokeWidth={3} aria-hidden="true" />
+          </span>
+        ) : game.monitored ? (
+          <span
+            title={t("card.wantedTooltip")}
+            aria-label={t("card.wantedAria")}
+            className={[
+              "absolute right-1 top-1 flex h-5 w-5 items-center justify-center",
+              "rounded-full bg-amber-500/90 text-zinc-950 ring-1 ring-inset ring-amber-300/60",
+              "backdrop-blur-sm",
+            ].join(" ")}
+          >
+            <Clock size={11} strokeWidth={2.5} aria-hidden="true" />
+          </span>
+        ) : (
           <span
             aria-hidden="true"
             title={t("card.unmonitoredTooltip")}

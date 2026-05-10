@@ -70,7 +70,11 @@
   "count_other": "{{count}} games",
   "card": {
     "unmonitoredTooltip": "Not monitored — Romarr won't search for upgrades",
-    "unmonitoredAria": "{{title}} (not monitored)",
+    "unmonitoredAria": "Not monitored",
+    "acquiredTooltip": "On disk — at least one Release imported",
+    "acquiredAria": "On disk",
+    "wantedTooltip": "Wanted — monitored but the file isn't here yet",
+    "wantedAria": "Wanted",
     "selectAria": "Select {{title}}",
     "deselectAria": "Deselect {{title}}",
     "tagsAria_one": "{{count}} tag",

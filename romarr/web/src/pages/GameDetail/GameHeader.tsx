@@ -20,7 +20,7 @@
  * sticky-top so it stays in reach as the operator scrolls.
  */
 
-import { Search, Trash2 } from "lucide-react";
+import { Check, Clock, Search, Trash2 } from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -135,6 +135,24 @@ export function GameHeader(props: GameHeaderProps): ReactElement {
                 {releaseYear}
               </span>
             )}
+            {/* Slice 395 — acquired / wanted status pill. */}
+            {game.acquired ? (
+              <span
+                title={t("header.status.acquiredTooltip")}
+                className="inline-flex items-center gap-0.5 rounded-full bg-emerald-700/30 px-1.5 py-0.5 font-medium text-emerald-200 ring-1 ring-inset ring-emerald-500/40"
+              >
+                <Check size={10} strokeWidth={3} aria-hidden="true" />
+                {t("header.status.acquired")}
+              </span>
+            ) : game.monitored ? (
+              <span
+                title={t("header.status.wantedTooltip")}
+                className="inline-flex items-center gap-0.5 rounded-full bg-amber-700/30 px-1.5 py-0.5 font-medium text-amber-200 ring-1 ring-inset ring-amber-500/40"
+              >
+                <Clock size={10} strokeWidth={2.5} aria-hidden="true" />
+                {t("header.status.wanted")}
+              </span>
+            ) : null}
             {game.publisher && (
               <span className="truncate text-zinc-500">{game.publisher}</span>
             )}
