@@ -138,11 +138,19 @@ def build_managed_download_dispatcher(
             # ``import_history``). On failure the row flips to
             # ``failed`` with the rejection reason on
             # ``error_msg`` so the operator can see + retry.
+            #
+            # Slice 389 — also surface failures that have NO
+            # matching queue_entry (download added outside the
+            # manual-grab path, or hash mismatch between
+            # add-time and watcher-time): synthesize a
+            # ``state='failed'`` row so the Activity → Queue
+            # tab still shows the operator something is wrong.
             try:
                 await _settle_queue_entry(
                     session=session,
                     client_id=item.client_id,
                     native_id=item.client_native_id,
+                    title=item.name,
                     success=outcome.success,
                     error_msg=outcome.error_msg,
                 )
@@ -162,18 +170,24 @@ async def _settle_queue_entry(
     session: "AsyncSession",
     client_id: int,
     native_id: str,
+    title: str | None,
     success: bool,
     error_msg: str | None,
 ) -> None:
     """Reconcile the queue_entry mirror with the import outcome.
 
-    Success → delete the row so the Activity → Queue tab only
-    keeps in-flight or failed work visible.
+    Success + matching row → delete the row so the
+    Activity → Queue tab only keeps in-flight or failed work
+    visible. Success + no matching row → no-op (nothing to
+    surface).
 
-    Failure → set ``state='failed'`` + populate ``error_msg`` so
-    the operator's queue list surfaces the rejection reason
-    (e.g. ``extract:bad-archive``, ``match:no_game``) without
-    needing to dig into history.
+    Failure + matching row → set ``state='failed'`` + populate
+    ``error_msg`` so the queue list surfaces the rejection
+    reason (e.g. ``extract:bad-archive``, ``match:no_game``).
+    Failure + no matching row → insert a synthetic row in the
+    same state so the operator sees the failure even when the
+    download didn't go through ``manual_grab`` (Sonarr-compat
+    add, hash drift, etc.).
     """
     from sqlalchemy import select as _select
 
@@ -188,6 +202,19 @@ async def _settle_queue_entry(
         )
     ).scalar_one_or_none()
     if row is None:
+        if success:
+            return
+        session.add(
+            QueueEntry(
+                download_client_id=client_id,
+                download_client_native_id=native_id,
+                title=title,
+                state="failed",
+                progress=1.0,
+                error_msg=error_msg or "import_failed",
+            )
+        )
+        await session.commit()
         return
     if success:
         await session.delete(row)
