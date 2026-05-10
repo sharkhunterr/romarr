@@ -122,6 +122,7 @@ function CoverThumb(props: {
 function LookupRow(props: {
   row: GameLookupRow;
   onAdd: (row: GameLookupRow) => void;
+  onOpenDetail: (row: GameLookupRow) => void;
   isAdding?: boolean;
 }): ReactElement {
   const { t } = useTranslation("addNew");
@@ -137,14 +138,22 @@ function LookupRow(props: {
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-zinc-100">
+            {/* Slice 399 — title is now a button. Truncated for
+                layout, but the operator can tap to open a modal
+                with the full title + every extracted field. */}
+            <button
+              type="button"
+              onClick={() => props.onOpenDetail(row)}
+              title={row.title}
+              className="block w-full max-w-full truncate text-left text-sm font-medium text-zinc-100 hover:text-brand focus-visible:outline-none focus-visible:text-brand"
+            >
               {row.title}
               {row.releaseYear && (
                 <span className="ml-1.5 font-mono text-xs font-normal text-zinc-500">
                   ({row.releaseYear})
                 </span>
               )}
-            </p>
+            </button>
             {(row.platformName || row.platformSlug) && (
               <PlatformPill
                 name={row.platformName ?? row.platformSlug ?? ""}
@@ -292,6 +301,7 @@ export function AddNewPage(): ReactElement {
   const urlQuery = searchParams.get("q") ?? "";
   const [query, setQuery] = useState(urlQuery);
   const [pendingAdd, setPendingAdd] = useState<GameLookupRow | null>(null);
+  const [detailRow, setDetailRow] = useState<GameLookupRow | null>(null);
 
   // Slice 396 — client-side filters on the lookup results.
   // Platform / year are projected directly from the candidate
@@ -455,6 +465,7 @@ export function AddNewPage(): ReactElement {
                 key={`${row.providerName}-${row.providerGameId}-${row.platformSlug ?? "any"}`}
                 row={row}
                 onAdd={handleAdd}
+                onOpenDetail={setDetailRow}
                 isAdding={directAdd.isPending}
               />
             ))}
@@ -479,6 +490,147 @@ export function AddNewPage(): ReactElement {
           onClose={() => setPendingAdd(null)}
         />
       )}
+
+      {detailRow !== null && (
+        <CandidateDetailModal
+          row={detailRow}
+          onClose={() => setDetailRow(null)}
+          onAdd={(row) => {
+            setDetailRow(null);
+            handleAdd(row);
+          }}
+          onOpenAddModal={(row) => {
+            setDetailRow(null);
+            setPendingAdd(row);
+          }}
+          isAdding={directAdd.isPending}
+        />
+      )}
     </div>
+  );
+}
+
+function CandidateDetailModal(props: {
+  row: GameLookupRow;
+  onClose: () => void;
+  onAdd: (row: GameLookupRow) => void;
+  onOpenAddModal: (row: GameLookupRow) => void;
+  isAdding: boolean;
+}): ReactElement {
+  const { t } = useTranslation("addNew");
+  const { row } = props;
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("detail.modalTitle", { title: row.title })}
+      className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/70 px-4 pt-[6vh] backdrop-blur-sm"
+      onClick={props.onClose}
+    >
+      <div
+        className="w-full max-w-lg overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="flex items-start gap-3 border-b border-zinc-800 px-4 py-3">
+          <CoverThumb url={row.coverUrl} title={row.title} />
+          <div className="min-w-0 flex-1">
+            <h2 className="break-words text-sm font-semibold text-zinc-100">
+              {row.title}
+            </h2>
+            <p className="mt-0.5 text-[0.65rem] text-zinc-500">
+              {t("detail.subhead", {
+                provider: row.providerName,
+                id: row.providerGameId,
+              })}
+            </p>
+          </div>
+        </header>
+
+        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 px-4 py-4 text-xs">
+          <DetailField
+            label={t("detail.fields.platform")}
+            value={
+              row.platformName || row.platformSlug
+                ? `${row.platformName ?? row.platformSlug ?? ""}${row.platformSlug ? ` · ${row.platformSlug}` : ""}`
+                : null
+            }
+          />
+          <DetailField
+            label={t("detail.fields.manufacturer")}
+            value={row.platformManufacturer ?? null}
+          />
+          <DetailField
+            label={t("detail.fields.year")}
+            value={row.releaseYear ? String(row.releaseYear) : null}
+          />
+          <DetailField
+            label={t("detail.fields.confidence")}
+            value={`${Math.round(row.confidence * 100)} %`}
+          />
+          <DetailField
+            label={t("detail.fields.rank")}
+            value={`#${row.rank + 1}`}
+          />
+          {row.coverUrl && (
+            <>
+              <dt className="font-mono text-[0.6rem] uppercase tracking-widest text-zinc-500">
+                {t("detail.fields.coverUrl")}
+              </dt>
+              <dd className="min-w-0">
+                <a
+                  href={row.coverUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block truncate text-[0.65rem] text-brand hover:underline"
+                >
+                  {row.coverUrl}
+                </a>
+              </dd>
+            </>
+          )}
+        </dl>
+
+        <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-zinc-800 px-4 py-3">
+          <button
+            type="button"
+            onClick={props.onClose}
+            className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            {t("detail.actions.close")}
+          </button>
+          <button
+            type="button"
+            onClick={() => props.onOpenAddModal(row)}
+            className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            {t("detail.actions.openAddModal")}
+          </button>
+          <button
+            type="button"
+            onClick={() => props.onAdd(row)}
+            disabled={props.isAdding}
+            className="inline-flex items-center gap-1 rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Plus size={12} aria-hidden="true" />
+            {t("addButton")}
+          </button>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+function DetailField(props: {
+  label: string;
+  value: string | null;
+}): ReactElement | null {
+  if (props.value === null || props.value === "") return null;
+  return (
+    <>
+      <dt className="font-mono text-[0.6rem] uppercase tracking-widest text-zinc-500">
+        {props.label}
+      </dt>
+      <dd className="min-w-0 break-words text-zinc-200">{props.value}</dd>
+    </>
   );
 }

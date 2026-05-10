@@ -11,6 +11,22 @@
   },
   "loadError": "Couldn't run the lookup",
   "noResults": "No candidates returned for \"{{q}}\". Try a different spelling or check that providers are configured under Settings > Metadata Sources.",
+  "detail": {
+    "modalTitle": "{{title}} — details",
+    "subhead": "From {{provider}} (id {{id}})",
+    "fields": {
+      "platform": "Platform",
+      "manufacturer": "Manufacturer",
+      "year": "Release year",
+      "confidence": "Confidence",
+      "rank": "Rank",
+      "coverUrl": "Cover URL"
+    },
+    "actions": {
+      "close": "Close",
+      "openAddModal": "Pick library / platform…"
+    }
+  },
   "filters": {
     "title": "Filters",
     "summary": "{{count}} results",

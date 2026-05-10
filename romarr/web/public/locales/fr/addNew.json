@@ -11,6 +11,22 @@
   },
   "loadError": "La recherche a échoué",
   "noResults": "Aucun candidat pour « {{q}} ». Essayez une autre orthographe ou vérifiez la configuration des fournisseurs sous Paramètres > Sources de métadonnées.",
+  "detail": {
+    "modalTitle": "{{title}} — détails",
+    "subhead": "Depuis {{provider}} (id {{id}})",
+    "fields": {
+      "platform": "Plateforme",
+      "manufacturer": "Fabricant",
+      "year": "Année de sortie",
+      "confidence": "Confiance",
+      "rank": "Rang",
+      "coverUrl": "URL jaquette"
+    },
+    "actions": {
+      "close": "Fermer",
+      "openAddModal": "Choisir ludothèque / plateforme…"
+    }
+  },
   "filters": {
     "title": "Filtres",
     "summary": "{{count}} résultats",
