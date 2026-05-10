@@ -226,6 +226,13 @@ class GameRead(GameCreate):
     id: int
     created_at: datetime
     updated_at: datetime
+    # Slice 394 — derived "do we already have this game on disk?"
+    # flag, projected by the API list/read endpoints from the
+    # Release/Dump tables. ``True`` when at least one Release
+    # has ``status='imported'`` or ``'cutoff_met'``. Optional so
+    # the schema stays usable from contexts that don't enrich
+    # (writes, the lookup-add endpoint, …).
+    acquired: bool | None = None
 
 
 # ---------------------------------------------------------------------------

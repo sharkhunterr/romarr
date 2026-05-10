@@ -462,9 +462,41 @@ async def list_games(
     stmt = stmt.limit(limit).offset(offset)
 
     rows = (await db.execute(stmt)).scalars().all()
-    return [
-        GameRead.model_validate(row, from_attributes=True) for row in rows
-    ]
+    acquired_ids = await _games_with_imported_release(
+        db, [row.id for row in rows]
+    )
+    out: list[GameRead] = []
+    for row in rows:
+        read = GameRead.model_validate(row, from_attributes=True)
+        read.acquired = row.id in acquired_ids
+        out.append(read)
+    return out
+
+
+async def _games_with_imported_release(
+    db: AsyncSession, game_ids: list[int]
+) -> set[int]:
+    """Slice 394 — return the subset of ``game_ids`` that have at
+    least one Release whose status is ``imported`` or
+    ``cutoff_met`` (i.e. the game's file is on disk).
+
+    Single batched query: cheaper than per-row scalar() calls,
+    and the set lookup is O(1) when the caller projects each
+    GameRead.
+    """
+    if not game_ids:
+        return set()
+    rows = (
+        await db.execute(
+            select(Release.game_id)
+            .where(
+                Release.game_id.in_(game_ids),
+                Release.status.in_(("imported", "cutoff_met")),
+            )
+            .distinct()
+        )
+    ).scalars().all()
+    return {int(g) for g in rows}
 
 
 @router.post(
@@ -702,7 +734,10 @@ async def read_game(
                 "errorCode": "game_not_found",
             },
         )
-    return GameRead.model_validate(row, from_attributes=True)
+    read = GameRead.model_validate(row, from_attributes=True)
+    acquired = await _games_with_imported_release(db, [row.id])
+    read.acquired = row.id in acquired
+    return read
 
 
 @router.get(

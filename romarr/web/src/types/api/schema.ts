@@ -3589,6 +3589,8 @@ export interface components {
         };
         /** GameRead */
         GameRead: {
+            /** Acquired — derived: at least one Release on disk */
+            acquired?: boolean | null;
             /** Platform Id */
             platform_id: number;
             /** Slug */
