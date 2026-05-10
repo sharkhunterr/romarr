@@ -58,6 +58,36 @@ logger = logging.getLogger(__name__)
 _GAME_LOCKS: dict[int, asyncio.Lock] = {}
 
 
+# Slice 388 — provider canonical name → Game ORM column that
+# stores its primary id. Mirrors the LookupAdd table in
+# ``romarr.metadata.api.lookup`` so the refresh path honours the
+# same FK contract the add path writes.
+_PROVIDER_FK_COLUMN: dict[str, str] = {
+    "igdb": "igdb_id",
+    "mobygames": "mobygames_id",
+    "screenscraper": "screenscraper_id",
+    "launchbox": "launchbox_id",
+    "retroachievements": "retroachievements_id",
+}
+
+
+def _pinned_provider_id(game: Game, provider_name: str) -> str | None:
+    """Return the provider FK on ``game`` as a string, or None.
+
+    The lookup-add endpoint pins the chosen provider's id on the
+    matching FK column (igdb_id / mobygames_id / …). When that FK
+    is set we trust it: the refresh calls ``get_game(pinned)``
+    directly instead of re-running ``search_games(title)`` which
+    can stop on a title-collision sibling and overwrite the
+    operator's pick.
+    """
+    column = _PROVIDER_FK_COLUMN.get(provider_name.lower())
+    if column is None:
+        return None
+    raw = getattr(game, column, None)
+    return str(raw) if raw is not None else None
+
+
 def _lock_for(game_id: int) -> asyncio.Lock:
     lock = _GAME_LOCKS.get(game_id)
     if lock is None:
@@ -171,20 +201,28 @@ async def _ensure_provider_payload(
         if row is not None:
             return _meta_from_cache_row(provider, row)
 
+    # Slice 388 — when the Game already carries the provider's FK
+    # (because it was added from a lookup candidate that pinned
+    # the id), trust it and call ``get_game`` directly. Re-running
+    # ``search_games(title)`` and grabbing ``candidates[0]`` is a
+    # title-collision footgun: searching IGDB for "Sonic Advance"
+    # often returns "Combo Pack: Sonic Advance + Sonic Pinball
+    # Party" first, which then overwrites the operator's pick.
+    pinned_id = _pinned_provider_id(game, provider.name)
     try:
-        candidates = await provider.search_games(
-            game.title, platform_slug=platform_slug
-        )
-        if not candidates:
-            logger.info(
-                "metadata.refresh.no_match", extra={"provider": provider.name}
+        if pinned_id is not None:
+            meta = await provider.get_game(pinned_id)
+        else:
+            candidates = await provider.search_games(
+                game.title, platform_slug=platform_slug
             )
-            return None
-        # Take the first / best candidate. Smarter selection lives in
-        # the search/decision spec; for now the providers' own ranking
-        # is authoritative.
-        provider_game_id = candidates[0].provider_game_id
-        meta = await provider.get_game(provider_game_id)
+            if not candidates:
+                logger.info(
+                    "metadata.refresh.no_match", extra={"provider": provider.name}
+                )
+                return None
+            provider_game_id = candidates[0].provider_game_id
+            meta = await provider.get_game(provider_game_id)
     except NotFoundError:
         return None
     except NotImplementedError:
