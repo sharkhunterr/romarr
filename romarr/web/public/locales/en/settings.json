@@ -617,6 +617,16 @@
       "successBody": "{{name}} is now ready for imports.",
       "errorTitle": "Couldn't add the library"
     },
+    "edit": {
+      "button": "Edit",
+      "modalTitle": "Edit library",
+      "subhead": "Tweak the destination, profile bindings, or lifecycle policy. Existing Releases keep their library binding unless you reassign them.",
+      "submit": "Save changes",
+      "submitting": "Saving…",
+      "successTitle": "Library updated",
+      "successBody": "{{name}} saved.",
+      "errorTitle": "Couldn't save the library"
+    },
     "lifecycle": {
       "hardlink_and_seed": "Hardlink + seed",
       "move_and_remove": "Move + remove",

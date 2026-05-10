@@ -94,6 +94,29 @@ export function useCreateLibrary(): UseMutationResult<
   });
 }
 
+export interface UpdateLibraryVariables {
+  id: number;
+  payload: Partial<LibraryCreate>;
+}
+
+export function useUpdateLibrary(): UseMutationResult<
+  Library,
+  ApiError,
+  UpdateLibraryVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<Library, ApiError, UpdateLibraryVariables>({
+    mutationFn: ({ id, payload }) =>
+      apiFetch<Library>(`/api/v3/rom/library/${id}`, {
+        method: "PUT",
+        json: payload,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: KEY });
+    },
+  });
+}
+
 export interface DeleteLibraryVariables {
   id: number;
   /**

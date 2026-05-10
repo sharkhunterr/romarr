@@ -23,6 +23,8 @@ import { useTranslation } from "react-i18next";
 
 import {
   useCreateLibrary,
+  useUpdateLibrary,
+  type Library,
   type LibraryCreate,
   type LibraryLifecyclePolicy,
 } from "@/lib/api/queries/libraries";
@@ -35,6 +37,10 @@ import { useToastStore } from "@/lib/store/toast";
 
 interface CreateLibraryModalProps {
   onClose: () => void;
+  // Slice 398 — when set, the modal is in edit mode: form
+  // pre-fills from the library, the title says "Edit", and
+  // submit fires PUT instead of POST.
+  library?: Library;
 }
 
 const _LIFECYCLE_POLICIES: ReadonlyArray<LibraryLifecyclePolicy> = [
@@ -59,7 +65,9 @@ export function CreateLibraryModal(
 ): ReactElement {
   const { t } = useTranslation("settings");
   const create = useCreateLibrary();
+  const update = useUpdateLibrary();
   const pushToast = useToastStore((s) => s.push);
+  const editing = props.library ?? null;
 
   const qualityProfiles = useQualityProfiles();
   const regionProfiles = useRegionProfiles();
@@ -67,17 +75,34 @@ export function CreateLibraryModal(
   const languageProfiles = useLanguageProfiles();
   const namingProfiles = useNamingProfiles();
 
-  const [name, setName] = useState("");
-  const [path, setPath] = useState("");
-  const [qualityId, setQualityId] = useState<number | null>(null);
-  const [regionId, setRegionId] = useState<number | null>(null);
-  const [dumpId, setDumpId] = useState<number | null>(null);
-  const [languageId, setLanguageId] = useState<number | null>(null);
-  const [namingId, setNamingId] = useState<number | null>(null);
+  const [name, setName] = useState(editing?.name ?? "");
+  const [path, setPath] = useState(editing?.path ?? "");
+  const [qualityId, setQualityId] = useState<number | null>(
+    editing?.quality_profile_id ?? null,
+  );
+  const [regionId, setRegionId] = useState<number | null>(
+    editing?.region_profile_id ?? null,
+  );
+  const [dumpId, setDumpId] = useState<number | null>(
+    editing?.dump_profile_id ?? null,
+  );
+  const [languageId, setLanguageId] = useState<number | null>(
+    editing?.language_profile_id ?? null,
+  );
+  const [namingId, setNamingId] = useState<number | null>(
+    editing?.naming_profile_id ?? null,
+  );
   const [lifecyclePolicy, setLifecyclePolicy] =
-    useState<LibraryLifecyclePolicy>("hardlink_and_seed");
-  const [useHardlinks, setUseHardlinks] = useState(true);
-  const [monitoredDefault, setMonitoredDefault] = useState(true);
+    useState<LibraryLifecyclePolicy>(
+      (editing?.lifecycle_policy as LibraryLifecyclePolicy) ??
+        "hardlink_and_seed",
+    );
+  const [useHardlinks, setUseHardlinks] = useState(
+    editing?.use_hardlinks ?? true,
+  );
+  const [monitoredDefault, setMonitoredDefault] = useState(
+    editing?.monitored_default ?? true,
+  );
 
   // When each profile list resolves, default to the first item so
   // the form is submittable on first interaction. The operator
@@ -119,7 +144,7 @@ export function CreateLibraryModal(
     }
   }, [namingId, namingProfiles.data]);
 
-  const submitting = create.isPending;
+  const submitting = create.isPending || update.isPending;
   const profilesReady =
     qualityId !== null &&
     regionId !== null &&
@@ -143,6 +168,38 @@ export function CreateLibraryModal(
       use_hardlinks: useHardlinks,
       monitored_default: monitoredDefault,
     };
+    const onError = (err: { message: string; details?: unknown }) => {
+      const apiDetails =
+        typeof err.details === "string"
+          ? (err.details as string)
+          : null;
+      pushToast({
+        kind: "error",
+        title: editing
+          ? t("mediaManagement.edit.errorTitle")
+          : t("mediaManagement.create.errorTitle"),
+        description: apiDetails ?? err.message,
+      });
+    };
+    if (editing) {
+      update.mutate(
+        { id: editing.id, payload },
+        {
+          onSuccess: (saved) => {
+            pushToast({
+              kind: "success",
+              title: t("mediaManagement.edit.successTitle"),
+              description: t("mediaManagement.edit.successBody", {
+                name: saved.name,
+              }),
+            });
+            props.onClose();
+          },
+          onError,
+        },
+      );
+      return;
+    }
     create.mutate(payload, {
       onSuccess: (created) => {
         pushToast({
@@ -154,21 +211,7 @@ export function CreateLibraryModal(
         });
         props.onClose();
       },
-      onError: (err) => {
-        // Backend envelope ships the precise reason in ``details``
-        // (e.g. ``library.path 'X': could not create (Permission
-        // denied)``). Fall through to the bare ``message`` only
-        // when nothing more useful is on the row.
-        const apiDetails =
-          typeof err.details === "string"
-            ? (err.details as string)
-            : null;
-        pushToast({
-          kind: "error",
-          title: t("mediaManagement.create.errorTitle"),
-          description: apiDetails ?? err.message,
-        });
-      },
+      onError,
     });
   }
 
@@ -176,7 +219,11 @@ export function CreateLibraryModal(
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={t("mediaManagement.create.modalTitle")}
+      aria-label={
+        editing
+          ? t("mediaManagement.edit.modalTitle")
+          : t("mediaManagement.create.modalTitle")
+      }
       className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/70 px-4 pt-[6vh] backdrop-blur-sm"
       onClick={props.onClose}
     >
@@ -186,10 +233,14 @@ export function CreateLibraryModal(
       >
         <header className="border-b border-zinc-800 px-4 py-3">
           <h2 className="text-sm font-semibold text-zinc-100">
-            {t("mediaManagement.create.modalTitle")}
+            {editing
+              ? t("mediaManagement.edit.modalTitle")
+              : t("mediaManagement.create.modalTitle")}
           </h2>
           <p className="mt-0.5 text-[0.65rem] text-zinc-500">
-            {t("mediaManagement.create.subhead")}
+            {editing
+              ? t("mediaManagement.edit.subhead")
+              : t("mediaManagement.create.subhead")}
           </p>
         </header>
 
@@ -332,8 +383,12 @@ export function CreateLibraryModal(
             className="rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting
-              ? t("mediaManagement.create.submitting")
-              : t("mediaManagement.create.submit")}
+              ? editing
+                ? t("mediaManagement.edit.submitting")
+                : t("mediaManagement.create.submitting")
+              : editing
+                ? t("mediaManagement.edit.submit")
+                : t("mediaManagement.create.submit")}
           </button>
         </footer>
       </div>

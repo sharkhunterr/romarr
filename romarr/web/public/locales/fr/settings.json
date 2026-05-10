@@ -617,6 +617,16 @@
       "successBody": "{{name}} est prête pour les imports.",
       "errorTitle": "Impossible d'ajouter la ludothèque"
     },
+    "edit": {
+      "button": "Modifier",
+      "modalTitle": "Modifier la ludothèque",
+      "subhead": "Ajustez la destination, les profils ou la politique de cycle de vie. Les releases existantes gardent leur ludothèque sauf si vous les réassignez.",
+      "submit": "Enregistrer",
+      "submitting": "Enregistrement…",
+      "successTitle": "Ludothèque mise à jour",
+      "successBody": "{{name}} enregistrée.",
+      "errorTitle": "Échec de l'enregistrement"
+    },
     "lifecycle": {
       "hardlink_and_seed": "Hardlink + seed",
       "move_and_remove": "Move + suppression",
