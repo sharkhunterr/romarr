@@ -244,6 +244,18 @@
     "seeders_one": "{{count}} seeder",
     "seeders_other": "{{count}} seeders",
     "rejected": "Rejeté",
+    "detail": {
+      "fields": {
+        "indexer": "Indexeur",
+        "guid": "GUID",
+        "size": "Taille",
+        "languages": "Langues",
+        "fileFormat": "Format fichier",
+        "titleScore": "Score titre",
+        "scoreBreakdown": "Décomposition score",
+        "downloadUrl": "URL téléchargement"
+      }
+    },
     "facet": {
       "platform": "Plateforme",
       "region": "Région",

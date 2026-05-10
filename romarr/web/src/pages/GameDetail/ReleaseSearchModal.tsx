@@ -213,6 +213,7 @@ function CandidateRow(props: {
   } = props;
   const grab = useManualGrab();
   const pushToast = useToastStore((s) => s.push);
+  const [expanded, setExpanded] = useState(false);
   const onClick = (): void => {
     grab.mutate(
       {
@@ -287,9 +288,28 @@ function CandidateRow(props: {
       ].join(" ")}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-100">
+        {/* Slice 400 — title is now a toggle button. The row
+            stays compact by default (truncate); tap the title to
+            expand inline details (full title, download URL,
+            score breakdown, indexer GUID, …). Modal would crowd
+            the already-modal search; collapsible keeps the list
+            scannable while still surfacing every field. */}
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          className={[
+            "min-w-0 flex-1 text-left text-sm font-medium text-zinc-100",
+            "hover:text-brand focus-visible:outline-none focus-visible:text-brand",
+            expanded ? "" : "truncate",
+          ].join(" ")}
+          title={candidate.title}
+        >
+          <span aria-hidden="true" className="mr-1 text-zinc-500">
+            {expanded ? "▾" : "▸"}
+          </span>
           {candidate.title}
-        </p>
+        </button>
         <div className="flex shrink-0 flex-col items-end gap-1">
           {/* Match-quality column: profile score for accepted
               candidates, "Rejected" badge for rejected ones. The
@@ -492,7 +512,96 @@ function CandidateRow(props: {
             : ""}
         </p>
       )}
+
+      {expanded && (
+        <div className="mt-1 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 rounded border border-zinc-800/70 bg-zinc-950/40 p-2 text-[0.7rem]">
+          <DetailKv
+            label={t("search.detail.fields.indexer")}
+            value={
+              indexerName
+                ? `${indexerName} (#${candidate.indexer_id})`
+                : `#${candidate.indexer_id}`
+            }
+          />
+          <DetailKv
+            label={t("search.detail.fields.guid")}
+            value={candidate.indexer_guid}
+            mono
+          />
+          {candidate.size_bytes !== null &&
+            candidate.size_bytes !== undefined && (
+              <DetailKv
+                label={t("search.detail.fields.size")}
+                value={`${(candidate.size_bytes / 1_048_576).toFixed(1)} MiB · ${candidate.size_bytes} B`}
+              />
+            )}
+          {candidate.languages && candidate.languages.length > 0 && (
+            <DetailKv
+              label={t("search.detail.fields.languages")}
+              value={candidate.languages.join(", ")}
+            />
+          )}
+          {candidate.file_format && (
+            <DetailKv
+              label={t("search.detail.fields.fileFormat")}
+              value={candidate.file_format}
+            />
+          )}
+          {typeof candidate.title_match_score === "number" && (
+            <DetailKv
+              label={t("search.detail.fields.titleScore")}
+              value={`${Math.round((candidate.title_match_score ?? 0) * 100)} %`}
+            />
+          )}
+          {breakdownTooltip && (
+            <DetailKv
+              label={t("search.detail.fields.scoreBreakdown")}
+              value={breakdownTooltip}
+              pre
+            />
+          )}
+          <dt className="font-mono text-[0.6rem] uppercase tracking-widest text-zinc-500">
+            {t("search.detail.fields.downloadUrl")}
+          </dt>
+          <dd className="min-w-0">
+            <a
+              href={candidate.download_url}
+              target="_blank"
+              rel="noreferrer"
+              className="block truncate font-mono text-[0.65rem] text-brand hover:underline"
+            >
+              {candidate.download_url}
+            </a>
+          </dd>
+        </div>
+      )}
     </li>
+  );
+}
+
+function DetailKv(props: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  pre?: boolean;
+}): ReactElement {
+  return (
+    <>
+      <dt className="font-mono text-[0.6rem] uppercase tracking-widest text-zinc-500">
+        {props.label}
+      </dt>
+      <dd
+        className={[
+          "min-w-0 break-words text-zinc-200",
+          props.mono ? "font-mono text-[0.65rem]" : "",
+          props.pre ? "whitespace-pre-line" : "",
+        ]
+          .join(" ")
+          .trim()}
+      >
+        {props.value}
+      </dd>
+    </>
   );
 }
 
