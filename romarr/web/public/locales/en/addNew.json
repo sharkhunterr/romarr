@@ -11,6 +11,16 @@
   },
   "loadError": "Couldn't run the lookup",
   "noResults": "No candidates returned for \"{{q}}\". Try a different spelling or check that providers are configured under Settings > Metadata Sources.",
+  "filters": {
+    "title": "Filters",
+    "summary": "{{count}} results",
+    "platform": "Platform",
+    "platformAll": "Any platform",
+    "year": "Year",
+    "yearAll": "Any year",
+    "clear": "Clear filters",
+    "noMatches": "No candidates match the current filters."
+  },
   "addButton": "Add",
   "addHint": "Once added the metadata aggregator enriches the rest of the fields (summary, cover, release date, …) on the next refresh cycle. Field-level edits stay editable on the Game Detail page.",
   "recent": {

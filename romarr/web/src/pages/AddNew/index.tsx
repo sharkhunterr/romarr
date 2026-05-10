@@ -179,6 +179,111 @@ function LookupRow(props: {
   );
 }
 
+function applyFilters(
+  rows: readonly GameLookupRow[],
+  platformSlug: string,
+  year: string,
+): GameLookupRow[] {
+  return rows.filter((row) => {
+    if (platformSlug && row.platformSlug !== platformSlug) return false;
+    if (year && String(row.releaseYear ?? "") !== year) return false;
+    return true;
+  });
+}
+
+interface FilterBarProps {
+  platforms: ReadonlyArray<{ slug: string; name: string }>;
+  years: ReadonlyArray<number>;
+  filterPlatform: string;
+  setFilterPlatform: (s: string) => void;
+  filterYear: string;
+  setFilterYear: (s: string) => void;
+  open: boolean;
+  setOpen: (b: boolean) => void;
+  totalRows: number;
+}
+
+function FilterBar(props: FilterBarProps): ReactElement {
+  const { t } = useTranslation("addNew");
+  const activeCount =
+    (props.filterPlatform ? 1 : 0) + (props.filterYear ? 1 : 0);
+  return (
+    <div className="mb-3 rounded-md border border-zinc-800 bg-zinc-900/40">
+      <button
+        type="button"
+        onClick={() => props.setOpen(!props.open)}
+        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs text-zinc-300 hover:bg-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        aria-expanded={props.open}
+      >
+        <span className="inline-flex items-center gap-2">
+          <span className="font-medium">{t("filters.title")}</span>
+          {activeCount > 0 && (
+            <span className="rounded-full bg-brand/20 px-1.5 py-0.5 text-[0.6rem] font-medium text-brand ring-1 ring-inset ring-brand/40">
+              {activeCount}
+            </span>
+          )}
+          <span className="text-[0.65rem] text-zinc-500">
+            {t("filters.summary", { count: props.totalRows })}
+          </span>
+        </span>
+        <span aria-hidden="true" className="text-zinc-500">
+          {props.open ? "▾" : "▸"}
+        </span>
+      </button>
+      {props.open && (
+        <div className="grid gap-3 border-t border-zinc-800 p-3 sm:grid-cols-2">
+          <label className="flex flex-col gap-1">
+            <span className="text-[0.6rem] uppercase tracking-widest text-zinc-500">
+              {t("filters.platform")}
+            </span>
+            <select
+              value={props.filterPlatform}
+              onChange={(e) => props.setFilterPlatform(e.target.value)}
+              className="rounded-md bg-zinc-950 px-2 py-1.5 text-xs text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              <option value="">{t("filters.platformAll")}</option>
+              {props.platforms.map((p) => (
+                <option key={p.slug} value={p.slug}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[0.6rem] uppercase tracking-widest text-zinc-500">
+              {t("filters.year")}
+            </span>
+            <select
+              value={props.filterYear}
+              onChange={(e) => props.setFilterYear(e.target.value)}
+              className="rounded-md bg-zinc-950 px-2 py-1.5 text-xs text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              <option value="">{t("filters.yearAll")}</option>
+              {props.years.map((y) => (
+                <option key={y} value={String(y)}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </label>
+          {activeCount > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                props.setFilterPlatform("");
+                props.setFilterYear("");
+              }}
+              className="col-span-full justify-self-start text-[0.65rem] text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              {t("filters.clear")}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AddNewPage(): ReactElement {
   const { t } = useTranslation("addNew");
   const navigate = useNavigate();
@@ -187,6 +292,16 @@ export function AddNewPage(): ReactElement {
   const urlQuery = searchParams.get("q") ?? "";
   const [query, setQuery] = useState(urlQuery);
   const [pendingAdd, setPendingAdd] = useState<GameLookupRow | null>(null);
+
+  // Slice 396 — client-side filters on the lookup results.
+  // Platform / year are projected directly from the candidate
+  // shape (``platformSlug`` + ``releaseYear`` already on the
+  // GameLookupRow contract). Genre / type / edition aren't in
+  // the contract yet — defer to a follow-up that enriches the
+  // lookup endpoint with provider-side genre tags.
+  const [filterPlatform, setFilterPlatform] = useState<string>("");
+  const [filterYear, setFilterYear] = useState<string>("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const platforms = usePlatforms();
   const directAdd = useAddGameFromLookup();
@@ -303,8 +418,39 @@ export function AddNewPage(): ReactElement {
         </p>
       ) : (
         <>
+          <FilterBar
+            platforms={
+              Array.from(
+                new Map(
+                  lookup.data
+                    .filter((r) => r.platformSlug)
+                    .map((r) => [
+                      r.platformSlug!,
+                      { slug: r.platformSlug!, name: r.platformName ?? r.platformSlug! },
+                    ]),
+                ).values(),
+              )
+            }
+            years={
+              Array.from(
+                new Set(
+                  lookup.data
+                    .map((r) => r.releaseYear)
+                    .filter((y): y is number => y !== null && y !== undefined),
+                ),
+              ).sort((a, b) => b - a)
+            }
+            filterPlatform={filterPlatform}
+            setFilterPlatform={setFilterPlatform}
+            filterYear={filterYear}
+            setFilterYear={setFilterYear}
+            open={filtersOpen}
+            setOpen={setFiltersOpen}
+            totalRows={lookup.data.length}
+          />
+
           <ul className="space-y-2">
-            {lookup.data.map((row) => (
+            {applyFilters(lookup.data, filterPlatform, filterYear).map((row) => (
               <LookupRow
                 key={`${row.providerName}-${row.providerGameId}-${row.platformSlug ?? "any"}`}
                 row={row}
@@ -313,6 +459,12 @@ export function AddNewPage(): ReactElement {
               />
             ))}
           </ul>
+          {applyFilters(lookup.data, filterPlatform, filterYear).length ===
+            0 && (
+            <p className="rounded-md border border-dashed border-zinc-800 bg-zinc-900/20 p-3 text-[0.7rem] text-zinc-500">
+              {t("filters.noMatches")}
+            </p>
+          )}
           <p className="mt-3 rounded-md border border-dashed border-zinc-800 bg-zinc-900/20 p-3 text-[0.7rem] text-zinc-500">
             {t("addHint")}
           </p>

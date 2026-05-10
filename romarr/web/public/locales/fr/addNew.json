@@ -11,6 +11,16 @@
   },
   "loadError": "La recherche a échoué",
   "noResults": "Aucun candidat pour « {{q}} ». Essayez une autre orthographe ou vérifiez la configuration des fournisseurs sous Paramètres > Sources de métadonnées.",
+  "filters": {
+    "title": "Filtres",
+    "summary": "{{count}} résultats",
+    "platform": "Plateforme",
+    "platformAll": "Toutes plateformes",
+    "year": "Année",
+    "yearAll": "Toutes années",
+    "clear": "Effacer les filtres",
+    "noMatches": "Aucun candidat ne correspond aux filtres actuels."
+  },
   "addButton": "Ajouter",
   "addHint": "Une fois ajouté, l'agrégateur de métadonnées enrichira automatiquement le reste des champs (résumé, jaquette, date de sortie, …) au prochain cycle de rafraîchissement. Les éditions par champ restent disponibles sur la page de détail.",
   "recent": {
