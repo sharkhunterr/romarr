@@ -324,20 +324,22 @@ async def run_import(
                     if parsed_for_create.languages
                     else []
                 )
-                # Pick library binding from the matched Game's
-                # platform — when a Library covers this platform,
-                # bind to the first one. Falls back to the Release's
-                # parent Game's existing library hint when present.
-                library_id_for_release: int | None = None
-                from romarr.libraries.models import Library as _LibModel
-
-                lib_rows = (
-                    await session.execute(
-                        select(_LibModel.id).order_by(_LibModel.id)
-                    )
-                ).scalars().all()
-                library_id_for_release = (
-                    int(lib_rows[0]) if lib_rows else None
+                # Slice 385 — Sonarr-style library routing. Pick
+                # the binding from (in order):
+                #   1. ``Game.library_id`` — the operator's
+                #      add-time choice.
+                #   2. The single Library whose
+                #      ``library_platform`` allowlist contains the
+                #      Game's platform.
+                #   3. The single Library that has *no* platform
+                #      restriction (``platforms_restricted=false``)
+                #      when there's exactly one candidate.
+                #   4. The first library by id (last-resort
+                #      fallback so a single-library setup keeps
+                #      working).
+                library_id_for_release = await _pick_library_for_game(
+                    session=session,
+                    game_id=monitored_game_id,
                 )
 
                 new_release = Release(
@@ -815,6 +817,92 @@ async def _dispatch_esde_exporter(
         )
     except Exception:
         pass
+
+
+async def _pick_library_for_game(
+    *,
+    session: AsyncSession,
+    game_id: int,
+) -> int | None:
+    """Slice 385 — Sonarr-style library routing.
+
+    Resolution order:
+      1. ``Game.library_id`` — the operator's add-time choice
+         from the AddGame modal.
+      2. The single Library whose ``library_platform`` allowlist
+         covers the Game's platform.
+      3. The single Library with no platform restriction
+         (``platforms_restricted=false``) when there's exactly
+         one candidate.
+      4. The first library by id (last-resort fallback for the
+         single-library setup so legacy installs keep working).
+
+    Returns ``None`` only when there are no libraries at all
+    — the caller leaves ``Release.library_id`` NULL and skips
+    the move/profile-gate steps that depend on a binding.
+    """
+    from romarr.domain.models import Game as _Game
+    from romarr.libraries.models import (
+        Library as _Library,
+        LibraryPlatform as _LibPlatform,
+    )
+
+    game_row = (
+        await session.execute(
+            select(_Game.platform_id, _Game.library_id).where(_Game.id == game_id)
+        )
+    ).one_or_none()
+    if game_row is None:
+        return None
+    platform_id, hinted_library_id = game_row
+
+    if hinted_library_id is not None:
+        return int(hinted_library_id)
+
+    # Platform-routed: a library that whitelists this platform
+    # via ``library_platform`` is the strongest implicit signal.
+    matching = (
+        (
+            await session.execute(
+                select(_Library.id)
+                .join(_LibPlatform, _LibPlatform.library_id == _Library.id)
+                .where(_LibPlatform.platform_id == platform_id)
+                .order_by(_Library.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if len(matching) == 1:
+        return int(matching[0])
+
+    # Unrestricted libraries: a library that explicitly accepts
+    # any platform is the next-best fit. Only auto-pick when
+    # there's exactly one — multiple unrestricted libraries are
+    # an ambiguous shape the operator should resolve via
+    # ``Game.library_id``.
+    unrestricted = (
+        (
+            await session.execute(
+                select(_Library.id)
+                .where(_Library.platforms_restricted.is_(False))
+                .order_by(_Library.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if len(unrestricted) == 1:
+        return int(unrestricted[0])
+
+    # Last-resort fallback: the first library by id. Keeps the
+    # legacy single-library install working without operator
+    # action; ambiguous multi-library setups should hit one of
+    # the upper branches first.
+    first = (
+        await session.execute(select(_Library.id).order_by(_Library.id))
+    ).scalar_one_or_none()
+    return int(first) if first is not None else None
 
 
 async def _maybe_move_to_library(

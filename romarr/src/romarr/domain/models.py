@@ -242,6 +242,20 @@ class Game(Base, TimestampMixin):
     # ``summary``, which is provider-owned.
     notes: Mapped[str | None] = mapped_column(String, nullable=True)
 
+    # Slice 385 — Sonarr-style library binding. The operator picks
+    # a library at add-time; the importer reads this back when
+    # auto-creating a Release for a manual grab so the file lands
+    # under the right root with that library's profile cascade.
+    # Nullable for backward compat with rows added before this
+    # column existed; the importer falls back to platform routing
+    # when unset.
+    library_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("library.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     # Relationships
     platform: Mapped[Platform] = relationship(back_populates="games")
     releases: Mapped[list[Release]] = relationship(

@@ -184,6 +184,7 @@ class GameCreate(_SchemaBase):
     monitored: bool = True
     needs_metadata_refresh: bool = False
     notes: str | None = None
+    library_id: int | None = None
 
     @model_validator(mode="after")
     def _check_slug(self) -> GameCreate:
@@ -218,6 +219,7 @@ class GameUpdate(_SchemaBase):
     custom_metadata: dict[str, Any] | None = None
     monitored: bool | None = None
     needs_metadata_refresh: bool | None = None
+    library_id: int | None = None
 
 
 class GameRead(GameCreate):

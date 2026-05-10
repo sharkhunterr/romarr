@@ -273,6 +273,11 @@ class LookupAddRequest(BaseModel):
     ]
     title: Annotated[str, Field(min_length=1, max_length=255)]
     platform_id: Annotated[int, Field(alias="platformId", ge=1)]
+    # Slice 385 — Sonarr-style library binding. Optional so an
+    # operator-less first-run / scripted add still works (the
+    # importer falls back to platform routing); the AddGame UI
+    # always sends it explicitly.
+    library_id: Annotated[int | None, Field(alias="libraryId", ge=1)] = None
     monitored: bool = True
 
 
@@ -340,6 +345,25 @@ async def add_game_from_lookup(
             },
         )
 
+    # Slice 385 — validate the library_id when supplied; the
+    # AddGame modal sends one but a scripted client may omit it.
+    if body.library_id is not None:
+        from romarr.libraries.models import Library
+
+        lib_exists = (
+            await db.execute(
+                select(Library.id).where(Library.id == body.library_id)
+            )
+        ).scalar_one_or_none()
+        if lib_exists is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "errorMessage": f"library_id={body.library_id} not found",
+                    "errorCode": "library_not_found",
+                },
+            )
+
     base_slug = slugify_title(body.title)
     slug = await _allocate_unique_slug(
         db, platform_id=body.platform_id, base=base_slug
@@ -350,6 +374,7 @@ async def add_game_from_lookup(
         slug=slug,
         title=body.title.strip(),
         monitored=body.monitored,
+        library_id=body.library_id,
         # The aggregator runs on the next refresh cycle and pulls
         # everything else (summary, cover, release date, …) from
         # the configured provider priority list.
