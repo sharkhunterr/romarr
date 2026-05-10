@@ -117,42 +117,49 @@ def build_managed_download_dispatcher(
         )
 
         async with sessionmaker() as session:
+            success: bool
+            error_msg: str | None
             try:
                 outcome = await run_import(
                     context,
                     session=session,
                     event_channel=event_channel,
                 )
-            except Exception:
+                success = outcome.success
+                error_msg = outcome.error_msg
+            except Exception as exc:
+                # Slice 390 — an *uncaught* run_import failure
+                # (PermissionError on the library tree, DB error,
+                # etc.) used to leave the queue_entry frozen at
+                # ``completed`` forever and the operator saw
+                # nothing in the UI. Treat it as a hard failure
+                # for queue purposes — the dispatcher's ``raise``
+                # below still notifies the watcher, but the queue
+                # row gets the truthful ``state='failed'`` plus
+                # a class-name+message so the operator can act
+                # without digging into logs.
+                success = False
+                error_msg = f"{type(exc).__name__}: {exc}"
                 logger.exception(
                     "watcher_dispatch.run_import_failed "
                     "client_id=%s native_id=%s",
                     item.client_id,
                     item.client_native_id,
                 )
-                raise
 
-            # Slice 384 — settle the originating queue_entry. On
-            # success the row vanishes (Activity → Queue is for
-            # in-flight or failed work; the audit trail lives in
-            # ``import_history``). On failure the row flips to
-            # ``failed`` with the rejection reason on
-            # ``error_msg`` so the operator can see + retry.
-            #
-            # Slice 389 — also surface failures that have NO
-            # matching queue_entry (download added outside the
-            # manual-grab path, or hash mismatch between
-            # add-time and watcher-time): synthesize a
-            # ``state='failed'`` row so the Activity → Queue
-            # tab still shows the operator something is wrong.
+            # Slice 384/389 — settle the originating queue_entry.
+            # On success the row vanishes; on failure it flips to
+            # ``state='failed'`` (or a synthetic row gets inserted
+            # when no queue_entry matches the (client_id,
+            # native_id) pair).
             try:
                 await _settle_queue_entry(
                     session=session,
                     client_id=item.client_id,
                     native_id=item.client_native_id,
                     title=item.name,
-                    success=outcome.success,
-                    error_msg=outcome.error_msg,
+                    success=success,
+                    error_msg=error_msg,
                 )
             except Exception:
                 logger.exception(
@@ -161,6 +168,15 @@ def build_managed_download_dispatcher(
                     item.client_id,
                     item.client_native_id,
                 )
+
+            # We deliberately don't re-raise even on the
+            # unstructured exception path: the queue_entry is now
+            # the authoritative surface for the operator, and the
+            # watcher's per-item exception handler would just log
+            # the same thing twice. The next tick re-evaluates
+            # the same download (no ``romarr-imported`` tag yet)
+            # so a transient cause (permissions just chowned,
+            # disk just remounted) auto-recovers.
 
     return dispatch
 
