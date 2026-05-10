@@ -155,6 +155,13 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     """
     database_url = getattr(app.state, "_test_database_url", None)
 
+    # Slice 391 — install the in-memory log capture so the
+    # Settings → Logs page has data to surface. Idempotent
+    # across re-creates of the app (test harness loops, etc.).
+    from romarr.api.log_capture import install as install_log_capture
+
+    install_log_capture()
+
     # Slice 187 — settings-driven lifespan toggles. Tests can
     # still override via ``app.state._enable_bootstrap`` /
     # ``_enable_scheduler`` / ``_auto_migrate``; production
