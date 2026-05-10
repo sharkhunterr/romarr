@@ -118,7 +118,7 @@ def build_managed_download_dispatcher(
 
         async with sessionmaker() as session:
             try:
-                await run_import(
+                outcome = await run_import(
                     context,
                     session=session,
                     event_channel=event_channel,
@@ -132,7 +132,69 @@ def build_managed_download_dispatcher(
                 )
                 raise
 
+            # Slice 384 — settle the originating queue_entry. On
+            # success the row vanishes (Activity → Queue is for
+            # in-flight or failed work; the audit trail lives in
+            # ``import_history``). On failure the row flips to
+            # ``failed`` with the rejection reason on
+            # ``error_msg`` so the operator can see + retry.
+            try:
+                await _settle_queue_entry(
+                    session=session,
+                    client_id=item.client_id,
+                    native_id=item.client_native_id,
+                    success=outcome.success,
+                    error_msg=outcome.error_msg,
+                )
+            except Exception:
+                logger.exception(
+                    "watcher_dispatch.settle_queue_entry_failed "
+                    "client_id=%s native_id=%s",
+                    item.client_id,
+                    item.client_native_id,
+                )
+
     return dispatch
+
+
+async def _settle_queue_entry(
+    *,
+    session: "AsyncSession",
+    client_id: int,
+    native_id: str,
+    success: bool,
+    error_msg: str | None,
+) -> None:
+    """Reconcile the queue_entry mirror with the import outcome.
+
+    Success → delete the row so the Activity → Queue tab only
+    keeps in-flight or failed work visible.
+
+    Failure → set ``state='failed'`` + populate ``error_msg`` so
+    the operator's queue list surfaces the rejection reason
+    (e.g. ``extract:bad-archive``, ``match:no_game``) without
+    needing to dig into history.
+    """
+    from sqlalchemy import select as _select
+
+    from romarr.api.models import QueueEntry
+
+    row = (
+        await session.execute(
+            _select(QueueEntry).where(
+                QueueEntry.download_client_id == client_id,
+                QueueEntry.download_client_native_id == native_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        return
+    if success:
+        await session.delete(row)
+    else:
+        row.state = "failed"
+        row.error_msg = error_msg or "import_failed"
+    await session.commit()
 
 
 def build_get_enabled_clients(
