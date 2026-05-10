@@ -4368,6 +4368,8 @@ export interface components {
             title: string;
             /** Platformid */
             platformId: number;
+            /** Libraryid */
+            libraryId?: number | null;
             /**
              * Monitored
              * @default true
