@@ -104,7 +104,18 @@ export function CreateLibraryModal(
   }, [languageId, languageProfiles.data]);
   useEffect(() => {
     if (namingId === null && namingProfiles.data) {
-      setNamingId(_profilePickFirst(namingProfiles.data));
+      // Slice 387 — Sonarr-style preference: prefer the
+      // "RomM Passthrough" / romm-convention naming so files
+      // land with names a parallel RomM scan recognises out
+      // of the box. Falls back to the first profile when no
+      // romm-shaped one is configured.
+      const list = namingProfiles.data;
+      const romm = list.find(
+        (p) =>
+          ("convention" in p && p.convention === "romm") ||
+          /romm/i.test(p.name),
+      );
+      setNamingId(romm?.id ?? _profilePickFirst(list));
     }
   }, [namingId, namingProfiles.data]);
 
