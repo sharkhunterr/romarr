@@ -30,6 +30,7 @@ remain stubs — they land with the WATCH slice when the
 from __future__ import annotations
 
 import asyncio
+import re
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
@@ -827,6 +828,23 @@ async def _dispatch_esde_exporter(
         pass
 
 
+_ILLEGAL_PATH_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+
+
+def _sanitise_path_component(name: str) -> str:
+    """Slice 396 — strip filesystem-illegal chars from a path
+    component (Game.Title used as a subdirectory name).
+
+    Keeps things readable on the host: ``Mario & Luigi: Bowser's
+    Inside Story`` → ``Mario & Luigi  Bowser's Inside Story``.
+    Falls back to ``unknown`` for empty / all-stripped input.
+    Trailing whitespace + dots are trimmed because Windows
+    rejects them on shared NAS targets.
+    """
+    cleaned = _ILLEGAL_PATH_CHARS.sub(" ", name).strip().rstrip(".")
+    return cleaned or "unknown"
+
+
 async def _pick_library_for_game(
     *,
     session: AsyncSession,
@@ -964,19 +982,31 @@ async def _maybe_move_to_library(
         # Test fixture / pre-deployment — keep the file in-place.
         return None
 
-    # Resolve platform via Game.platform_id (avoid the
-    # ORM relationship which would trigger lazy load on the
-    # session's connection — async-incompatible).
-    platform_slug_row = (
+    # Resolve platform slug + game title in one round-trip
+    # (avoid the ORM relationship which would trigger lazy load
+    # on the session's connection — async-incompatible).
+    game_row = (
         await session.execute(
-            select(Platform.slug)
+            select(Platform.slug, Game.title)
             .join(Game, Game.platform_id == Platform.id)
             .where(Game.id == release.game_id)
         )
-    ).scalar_one_or_none()
-    platform_slug = platform_slug_row or "unknown"
+    ).one_or_none()
+    if game_row is not None:
+        platform_slug = game_row[0] or "unknown"
+        game_title = game_row[1] or "unknown"
+    else:
+        platform_slug = "unknown"
+        game_title = "unknown"
 
-    dest_path = library_path / platform_slug / source_path.name
+    # Slice 396 — RomM-style layout: every Game gets its own
+    # subfolder under the platform, and Releases for that Game
+    # land inside as siblings. Lets the operator stash multiple
+    # ROMs per Game (regional variants, hacks, …) without
+    # filename collisions and matches what RomM scans on the
+    # other side.
+    safe_game_dir = _sanitise_path_component(game_title)
+    dest_path = library_path / platform_slug / safe_game_dir / source_path.name
     # In-place fast path: source already lives at the destination.
     # The scanner-driven import case (`imported_via="scan"`) hits
     # this — the file is already under the library tree, so the

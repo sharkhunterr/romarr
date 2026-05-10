@@ -152,7 +152,8 @@ async def test_auto_import_moves_into_library_tree(
     outcome = await run_import(context, session=async_session)
     assert outcome.success is True
 
-    expected_dest = library_root / "megadrive" / rom.name
+    # Slice 396 — RomM-style layout: ``<lib>/<platform>/<game_title>/<rom>``.
+    expected_dest = library_root / "megadrive" / "Sonic the Hedgehog" / rom.name
     assert expected_dest.exists()
 
     dump = (
@@ -178,8 +179,9 @@ async def test_destination_collision_parks_with_typed_reason(
     _write_megadrive_rom(rom)
 
     # Plant a different file at the destination (different bytes
-    # → different SHA-1).
-    dest = library_root / "megadrive" / rom.name
+    # → different SHA-1). Slice 396 destination shape:
+    # ``<lib>/<platform>/<game_title>/<rom>``.
+    dest = library_root / "megadrive" / "Sonic the Hedgehog" / rom.name
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_bytes(b"\xff" * 4096)  # different content
 
