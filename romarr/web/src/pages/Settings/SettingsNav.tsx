@@ -16,6 +16,7 @@ import {
   Database,
   Download,
   FileQuestion,
+  FileText,
   FolderTree,
   Gamepad2,
   HelpCircle,
@@ -53,6 +54,7 @@ export const SETTINGS_NAV_ENTRIES: readonly SettingsNavEntry[] = [
   { to: "/settings/unidentified", slug: "unidentified", Icon: HelpCircle, shipped: true },
   { to: "/settings/ui", slug: "ui", Icon: Palette, shipped: true },
   { to: "/settings/general", slug: "general", Icon: SettingsIcon, shipped: true },
+  { to: "/settings/logs", slug: "logs", Icon: FileText, shipped: true },
 ];
 
 function entryClass(isActive: boolean): string {

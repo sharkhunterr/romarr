@@ -16,7 +16,34 @@
     "tags": "Tags",
     "unidentified": "Unidentified",
     "ui": "UI",
-    "general": "General"
+    "general": "General",
+    "logs": "Logs"
+  },
+  "logs": {
+    "title": "System Logs",
+    "subtitle": "Live tail of the in-process log buffer. The newest 2000 records are kept; click a row for the full message and traceback.",
+    "filters": {
+      "all": "All levels",
+      "debug": "Debug+",
+      "info": "Info+",
+      "warn": "Warning+",
+      "error": "Error+",
+      "levelLabel": "Minimum level",
+      "loggerLabel": "Logger filter",
+      "loggerPlaceholder": "e.g. importer, search, downloaders…"
+    },
+    "loadError": "Couldn't load the logs.",
+    "empty": {
+      "title": "No log lines match",
+      "body": "Adjust the filters above or wait — Romarr writes a line every time the importer / scheduler / API does something noteworthy."
+    },
+    "hasTraceback": "trace",
+    "detail": {
+      "title": "Log entry",
+      "messageLabel": "Message",
+      "tracebackLabel": "Traceback",
+      "close": "Close"
+    }
   },
   "home": {
     "welcomeTitle": "Welcome to Settings",

@@ -16,7 +16,34 @@
     "tags": "Étiquettes",
     "unidentified": "Non identifiés",
     "ui": "Interface",
-    "general": "Général"
+    "general": "Général",
+    "logs": "Logs"
+  },
+  "logs": {
+    "title": "Logs système",
+    "subtitle": "Lecture en direct du tampon mémoire des logs. Les 2000 derniers enregistrements sont conservés ; cliquez une ligne pour le message complet + la stack trace.",
+    "filters": {
+      "all": "Tous niveaux",
+      "debug": "Debug+",
+      "info": "Info+",
+      "warn": "Avertissement+",
+      "error": "Erreur+",
+      "levelLabel": "Niveau minimum",
+      "loggerLabel": "Filtre logger",
+      "loggerPlaceholder": "ex. importer, search, downloaders…"
+    },
+    "loadError": "Chargement des logs impossible.",
+    "empty": {
+      "title": "Aucun log ne correspond",
+      "body": "Ajustez les filtres au-dessus ou patientez — Romarr écrit une ligne chaque fois que l'importer / scheduler / API fait quelque chose de notable."
+    },
+    "hasTraceback": "trace",
+    "detail": {
+      "title": "Entrée de log",
+      "messageLabel": "Message",
+      "tracebackLabel": "Stack trace",
+      "close": "Fermer"
+    }
   },
   "home": {
     "welcomeTitle": "Bienvenue dans les paramètres",

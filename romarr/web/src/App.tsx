@@ -39,6 +39,7 @@ import { DatSourcesPage } from "@/pages/Settings/DatSources";
 import { DownloadClientsPage } from "@/pages/Settings/DownloadClients";
 import { GeneralPage } from "@/pages/Settings/General";
 import { IndexersPage } from "@/pages/Settings/Indexers";
+import { LogsPage } from "@/pages/Settings/Logs";
 import { MediaManagementPage } from "@/pages/Settings/MediaManagement";
 import { MetadataSourcesPage } from "@/pages/Settings/MetadataSources";
 import { PlatformsPage } from "@/pages/Settings/Platforms";
@@ -114,6 +115,7 @@ const router = createBrowserRouter([
               { path: "platforms", element: <PlatformsPage /> },
               { path: "general", element: <GeneralPage /> },
               { path: "unidentified", element: <UnidentifiedPage /> },
+              { path: "logs", element: <LogsPage /> },
               { path: ":sub", element: <SettingsPlaceholder /> },
             ],
           },
