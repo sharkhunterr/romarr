@@ -54,13 +54,58 @@ import base64 as _b64
 _FALLBACK_DEVID = _b64.b64decode("enVyZGkxNQ==").decode()
 _FALLBACK_DEVPASSWORD = _b64.b64decode("eFRKd29PRmpPUUc=").decode()
 
-# Mirror of foundation 0001's screenscraper_id seed for the 5 MVP platforms.
+# Slice 411 — ScreenScraper systemeid mapping aligned to the
+# RomM-canonical Romarr slugs (slice 401 renamed megadrive →
+# genesis, gamecube → ngc, dreamcast → dc). Without this the
+# search round dropped the systemeid hint when the operator
+# scoped by platform and SS returned the wrong title (or 404 in
+# extreme cases). IDs sourced from screenscraper.fr/api2.
 _DEFAULT_PLATFORM_MAPPING: dict[str, int] = {
     "nes": 3,
+    "fds": 106,
     "snes": 4,
-    "megadrive": 1,
+    "n64": 14,
+    "ngc": 13,        # GameCube (was "gamecube")
+    "wii": 16,
+    "wiiu": 18,
+    "switch": 225,
+    "virtualboy": 11,
     "gameboy": 9,
+    "gbc": 10,
     "gba": 12,
+    "nds": 15,
+    "3ds": 17,
+    "master-system": 2,
+    "gamegear": 21,
+    "genesis": 1,     # Mega Drive / Genesis (was "megadrive")
+    "segacd": 20,
+    "sega32x": 19,
+    "saturn": 22,
+    "dc": 23,         # Dreamcast (was "dreamcast")
+    "psx": 57,
+    "ps2": 58,
+    "ps3": 59,
+    "psp": 61,
+    "psvita": 62,
+    "xbox": 32,
+    "xbox360": 33,
+    "atari-2600": 26,
+    "atari-5200": 40,
+    "atari-7800": 41,
+    "atari-lynx": 28,
+    "atari-jaguar": 27,
+    "neogeo": 142,
+    "ngp": 25,
+    "ngpc": 82,
+    "pcengine": 31,
+    "pce-cd": 114,
+    "wonderswan": 45,
+    "wonderswan-color": 46,
+    "colecovision": 48,
+    "intellivision": 115,
+    "threedo": 29,
+    "pokemon-mini": 211,
+    "pcfx": 72,
 }
 
 # Region preference for picking a single canonical title from
@@ -253,7 +298,12 @@ class ScreenScraperProvider(MetadataProvider):
                 params["systemeid"] = str(sid)
 
         body = await self._call(
-            lambda: self._get("/rechercheJeu.php", params=params)
+            # Slice 411 — the official ScreenScraper search
+            # endpoint is ``jeuRecherche.php`` (jeu + Recherche).
+            # We had ``rechercheJeu.php`` (recherche + Jeu)
+            # which returns 404 — SS silently dropped every
+            # search query for ages.
+            lambda: self._get("/jeuRecherche.php", params=params)
         )
         rows = (
             body.get("response", {})

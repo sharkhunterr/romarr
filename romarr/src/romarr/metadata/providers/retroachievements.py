@@ -30,12 +30,48 @@ _BASE = "https://retroachievements.org/API"
 
 # RA's console_id table for Romarr's MVP-5. Source: the GetConsoleIDs
 # RA endpoint. Static enough to ship as a built-in.
+# Slice 411 — RetroAchievements console-id mapping aligned with
+# the RomM-canonical Romarr slugs (slice 401: megadrive →
+# genesis, gamecube → ngc, dreamcast → dc). Without this every
+# RA search returned an empty list because the slug key didn't
+# match, even though the operator had RA enabled.
+# Console IDs from https://api.retroachievements.org/v1.
 _DEFAULT_PLATFORM_MAPPING: dict[str, int] = {
     "nes": 7,
     "snes": 3,
-    "megadrive": 1,
+    "n64": 2,
+    "ngc": 16,       # GameCube
+    "wii": 19,
+    "wiiu": 41,
     "gameboy": 4,
+    "gbc": 6,
     "gba": 5,
+    "nds": 18,
+    "3ds": 62,
+    "virtualboy": 28,
+    "pokemon-mini": 24,
+    "master-system": 11,
+    "gamegear": 15,
+    "genesis": 1,    # Mega Drive / Genesis
+    "segacd": 9,
+    "sega32x": 10,
+    "saturn": 39,
+    "dc": 40,        # Dreamcast
+    "psx": 12,
+    "ps2": 21,
+    "psp": 41,
+    "atari-2600": 25,
+    "atari-7800": 51,
+    "atari-jaguar": 17,
+    "atari-lynx": 13,
+    "neogeo": 14,
+    "ngp": 14,
+    "pcengine": 8,
+    "pce-cd": 76,
+    "wonderswan": 53,
+    "colecovision": 44,
+    "intellivision": 45,
+    "threedo": 43,
 }
 
 

@@ -43,13 +43,13 @@ async def test_search_carries_api_key_query_param(
 
     with respx.mock:
         respx.get("https://api.mobygames.com/v1/games").mock(side_effect=_record)
-        await p.search_games("Sonic", platform_slug="megadrive")
+        await p.search_games("Sonic", platform_slug="genesis")
 
     assert captured
     params = dict(captured[-1].url.params)
     assert params["api_key"] == "mg-key"
     assert params["title"] == "Sonic"
-    assert params["platform"] == "16"  # mobygames id for megadrive
+    assert params["platform"] == "16"  # mobygames id for genesis
 
 
 async def test_403_response_maps_to_auth_error(
@@ -166,7 +166,7 @@ async def test_search_returns_results(
         respx.get("https://api.mobygames.com/v1/games").mock(
             return_value=httpx.Response(200, json=payload)
         )
-        results = await p.search_games("Sonic", platform_slug="megadrive")
+        results = await p.search_games("Sonic", platform_slug="genesis")
     titles = [r.title for r in results]
     assert titles == ["Sonic the Hedgehog", "Sonic 2"]
 
@@ -223,7 +223,10 @@ def test_self_registered() -> None:
     assert PROVIDER_REGISTRY.get("mobygames") is MobyGamesProvider
 
 
-def test_platform_mapping_megadrive_is_16(mg_client: httpx.AsyncClient) -> None:
+def test_platform_mapping_genesis_is_16(mg_client: httpx.AsyncClient) -> None:
     p = MobyGamesProvider(rate_limit_rps=100, rate_limit_burst=100, client=mg_client)
-    assert p.get_platform_mapping("megadrive") == 16
-    assert p.get_platform_mapping("psx") is None
+    assert p.get_platform_mapping("genesis") == 16
+    # Slice 411 widened the default mapping to cover every major
+    # platform.
+    assert p.get_platform_mapping("psx") == 6
+    assert p.get_platform_mapping("unknown-slug") is None

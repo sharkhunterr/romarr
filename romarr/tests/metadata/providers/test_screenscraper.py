@@ -55,11 +55,11 @@ async def test_search_carries_dev_and_user_credentials_as_url_params(
 
     with respx.mock:
         respx.get(
-            "https://api.screenscraper.fr/api2/rechercheJeu.php"
+            "https://api.screenscraper.fr/api2/jeuRecherche.php"
         ).mock(side_effect=_record)
-        await p.search_games("Sonic", platform_slug="megadrive")
+        await p.search_games("Sonic", platform_slug="genesis")
 
-    assert captured, "rechercheJeu.php was not called"
+    assert captured, "jeuRecherche.php was not called"
     request = captured[-1]
     params = dict(request.url.params)
     assert params["devid"] == "dev-1"
@@ -68,7 +68,7 @@ async def test_search_carries_dev_and_user_credentials_as_url_params(
     assert params["sspassword"] == "user-pwd"
     assert params["output"] == "json"
     assert params["softname"] == "romarr"
-    assert params["systemeid"] == "1"  # megadrive → screenscraper id 1
+    assert params["systemeid"] == "1"  # genesis → screenscraper id 1
 
 
 async def test_configure_rejects_partial_credentials(
@@ -87,7 +87,7 @@ async def test_403_response_maps_to_auth_error(
     p = _make_provider(ss_client)
     with respx.mock:
         respx.get(
-            "https://api.screenscraper.fr/api2/rechercheJeu.php"
+            "https://api.screenscraper.fr/api2/jeuRecherche.php"
         ).mock(return_value=httpx.Response(403))
         with pytest.raises(AuthError):
             await p.search_games("Sonic")
@@ -100,7 +100,7 @@ async def test_423_quota_locked_maps_to_auth_error(
     p = _make_provider(ss_client)
     with respx.mock:
         respx.get(
-            "https://api.screenscraper.fr/api2/rechercheJeu.php"
+            "https://api.screenscraper.fr/api2/jeuRecherche.php"
         ).mock(return_value=httpx.Response(423))
         with pytest.raises(AuthError):
             await p.search_games("Sonic")
@@ -257,7 +257,11 @@ def test_self_registered() -> None:
     assert PROVIDER_REGISTRY.get("screenscraper") is ScreenScraperProvider
 
 
-def test_platform_mapping_megadrive_is_1(ss_client: httpx.AsyncClient) -> None:
+def test_platform_mapping_genesis_is_1(ss_client: httpx.AsyncClient) -> None:
+    # Slice 411 widened the default mapping to cover disc-based
+    # platforms (psx / ps2 / ngc / dc / saturn) so the user
+    # doesn't have to wire them by hand.
     p = ScreenScraperProvider(rate_limit_rps=100, rate_limit_burst=100, client=ss_client)
-    assert p.get_platform_mapping("megadrive") == 1
-    assert p.get_platform_mapping("psx") is None
+    assert p.get_platform_mapping("genesis") == 1
+    assert p.get_platform_mapping("psx") == 57
+    assert p.get_platform_mapping("unknown-slug") is None
