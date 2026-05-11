@@ -253,7 +253,16 @@
         "fileFormat": "Format fichier",
         "titleScore": "Score titre",
         "scoreBreakdown": "Décomposition score",
-        "downloadUrl": "URL téléchargement"
+        "downloadUrl": "URL téléchargement",
+        "grabs": "Téléchargements",
+        "downloadVolumeFactor": "Ratio téléchargement",
+        "uploadVolumeFactor": "Ratio upload",
+        "freeleech": "Freeleech",
+        "year": "Année",
+        "genre": "Genre",
+        "description": "Notes",
+        "infoUrl": "Page du tracker",
+        "nfoUrl": "NFO"
       }
     },
     "facet": {

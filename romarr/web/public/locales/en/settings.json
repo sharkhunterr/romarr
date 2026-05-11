@@ -694,7 +694,36 @@
       "platformsAffected_one": "Platform",
       "platformsAffected_other": "Platforms"
     },
-    "uploadHint": "Pack upload (multipart YAML) + per-platform override toggles land in a follow-up slice."
+    "uploadHint": "Pack upload (multipart YAML) + per-platform override toggles land in a follow-up slice.",
+    "catalogue": {
+      "heading": "Configured platforms",
+      "subhead": "{{count}} platforms ready for monitoring + grab.",
+      "filterPlaceholder": "Filter (name / slug / alias)…",
+      "loadError": "Couldn't load the platform catalogue.",
+      "noMatches": "No platform matches the filter."
+    },
+    "packs": {
+      "heading": "Platform Packs",
+      "subhead": "Bulk platform definitions are shipped as YAML packs. Audit log per pack application."
+    },
+    "detail": {
+      "modalTitle": "{{name}} — details",
+      "close": "Close",
+      "sections": {
+        "identity": "Identity",
+        "aliases": "Aliases (used by grab + manual search detection)",
+        "providerIds": "Metadata provider IDs",
+        "newznabCategories": "Newznab category IDs"
+      },
+      "fields": {
+        "slug": "Slug (folder name)",
+        "name": "Full name",
+        "shortName": "Short name",
+        "manufacturer": "Manufacturer",
+        "releaseYear": "Release year",
+        "pack": "From pack"
+      }
+    }
   },
   "general": {
     "title": "General",

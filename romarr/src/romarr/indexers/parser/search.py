@@ -145,6 +145,35 @@ def _project_attr(
         if cat not in cats:
             cats.append(cat)
         fields["categories"] = cats
+    # Slice 402 — extra standard attrs we now project onto
+    # ``SearchResult``. ``downloadvolumefactor`` / ``upload...``
+    # are private-tracker freeleech / bonus signals; ``grabs`` is
+    # the download counter used as a popularity signal; the rest
+    # carry operator-facing context (year, genre, NFO link).
+    elif n == "grabs":
+        with contextlib.suppress(TypeError, ValueError):
+            fields["grabs"] = int(value)
+    elif n in ("downloadvolumefactor", "download_volume_factor"):
+        with contextlib.suppress(TypeError, ValueError):
+            fields["download_volume_factor"] = float(value)
+    elif n in ("uploadvolumefactor", "upload_volume_factor"):
+        with contextlib.suppress(TypeError, ValueError):
+            fields["upload_volume_factor"] = float(value)
+    elif n in ("description", "comments", "release_notes"):
+        if value and "description" not in fields:
+            fields["description"] = value
+    elif n == "year":
+        with contextlib.suppress(TypeError, ValueError):
+            fields["year"] = int(value)
+    elif n == "genre":
+        if value:
+            fields["genre"] = value
+    elif n in ("info", "info_url", "infourl"):
+        if value:
+            fields["info_url"] = value
+    elif n in ("nfo", "nfo_url", "nfourl"):
+        if value:
+            fields["nfo_url"] = value
 
 
 def _parse_item(item: etree._Element, *, indexer_id: int) -> SearchResult | None:

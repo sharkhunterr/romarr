@@ -253,7 +253,16 @@
         "fileFormat": "File format",
         "titleScore": "Title match",
         "scoreBreakdown": "Score breakdown",
-        "downloadUrl": "Download URL"
+        "downloadUrl": "Download URL",
+        "grabs": "Downloads",
+        "downloadVolumeFactor": "Download ratio",
+        "uploadVolumeFactor": "Upload ratio",
+        "freeleech": "Freeleech",
+        "year": "Year",
+        "genre": "Genre",
+        "description": "Notes",
+        "infoUrl": "Tracker page",
+        "nfoUrl": "NFO"
       }
     },
     "facet": {

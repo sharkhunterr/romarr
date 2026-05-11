@@ -135,6 +135,19 @@ class Candidate(_Base):
     # operator-facing % score.
     title_match_score: int | None = None
 
+    # Slice 402 — extra indexer metadata projected through from
+    # ``SearchResult`` so the search modal's expanded-row view +
+    # the scorer can use them. All optional; the parser fills in
+    # whatever the torznab/grabarr extended-attrs surfaced.
+    grabs: int | None = None
+    download_volume_factor: float | None = None
+    upload_volume_factor: float | None = None
+    description: str | None = None
+    year: int | None = None
+    genre: str | None = None
+    info_url: str | None = None
+    nfo_url: str | None = None
+
 
 _IndexerOutcome = Literal["ok", "failed", "cache-hit", "cache-miss"]
 

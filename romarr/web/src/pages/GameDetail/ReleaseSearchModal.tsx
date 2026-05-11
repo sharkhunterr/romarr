@@ -553,6 +553,82 @@ function CandidateRow(props: {
               value={`${Math.round((candidate.title_match_score ?? 0) * 100)} %`}
             />
           )}
+          {typeof candidate.grabs === "number" && (
+            <DetailKv
+              label={t("search.detail.fields.grabs")}
+              value={String(candidate.grabs)}
+            />
+          )}
+          {typeof candidate.download_volume_factor === "number" && (
+            <DetailKv
+              label={t("search.detail.fields.downloadVolumeFactor")}
+              value={
+                candidate.download_volume_factor === 0
+                  ? t("search.detail.fields.freeleech")
+                  : `${candidate.download_volume_factor}×`
+              }
+            />
+          )}
+          {typeof candidate.upload_volume_factor === "number" &&
+            candidate.upload_volume_factor !== 1 && (
+              <DetailKv
+                label={t("search.detail.fields.uploadVolumeFactor")}
+                value={`${candidate.upload_volume_factor}×`}
+              />
+            )}
+          {typeof candidate.year === "number" && (
+            <DetailKv
+              label={t("search.detail.fields.year")}
+              value={String(candidate.year)}
+            />
+          )}
+          {candidate.genre && (
+            <DetailKv
+              label={t("search.detail.fields.genre")}
+              value={candidate.genre}
+            />
+          )}
+          {candidate.description && (
+            <DetailKv
+              label={t("search.detail.fields.description")}
+              value={candidate.description}
+              pre
+            />
+          )}
+          {candidate.info_url && (
+            <>
+              <dt className="font-mono text-[0.6rem] uppercase tracking-widest text-zinc-500">
+                {t("search.detail.fields.infoUrl")}
+              </dt>
+              <dd className="min-w-0">
+                <a
+                  href={candidate.info_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block truncate text-[0.65rem] text-brand hover:underline"
+                >
+                  {candidate.info_url}
+                </a>
+              </dd>
+            </>
+          )}
+          {candidate.nfo_url && (
+            <>
+              <dt className="font-mono text-[0.6rem] uppercase tracking-widest text-zinc-500">
+                {t("search.detail.fields.nfoUrl")}
+              </dt>
+              <dd className="min-w-0">
+                <a
+                  href={candidate.nfo_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block truncate text-[0.65rem] text-brand hover:underline"
+                >
+                  {candidate.nfo_url}
+                </a>
+              </dd>
+            </>
+          )}
           {breakdownTooltip && (
             <DetailKv
               label={t("search.detail.fields.scoreBreakdown")}

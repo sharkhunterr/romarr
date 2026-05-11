@@ -82,6 +82,15 @@ def _reject(
         would_auto_reject=True,
         pre_grab_dat_match=pre_grab_dat_match,
         title_match_score=title_match_score,
+        # Slice 402 — extra torznab/grabarr metadata.
+        grabs=result.grabs,
+        download_volume_factor=result.download_volume_factor,
+        upload_volume_factor=result.upload_volume_factor,
+        description=result.description,
+        year=result.year,
+        genre=result.genre,
+        info_url=result.info_url,
+        nfo_url=result.nfo_url,
     )
 
 
@@ -115,6 +124,15 @@ def _accept(
         would_auto_reject=False,
         pre_grab_dat_match=pre_grab_dat_match,
         title_match_score=title_match_score,
+        # Slice 402 — extra torznab/grabarr metadata.
+        grabs=result.grabs,
+        download_volume_factor=result.download_volume_factor,
+        upload_volume_factor=result.upload_volume_factor,
+        description=result.description,
+        year=result.year,
+        genre=result.genre,
+        info_url=result.info_url,
+        nfo_url=result.nfo_url,
     )
 
 

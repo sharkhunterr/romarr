@@ -2992,6 +2992,22 @@ export interface components {
             pre_grab_dat_match: "verified" | "hack" | "none" | "skipped";
             /** Title Match Score */
             title_match_score?: number | null;
+            /** Grabs (download count) */
+            grabs?: number | null;
+            /** Download Volume Factor — 0 = freeleech */
+            download_volume_factor?: number | null;
+            /** Upload Volume Factor */
+            upload_volume_factor?: number | null;
+            /** Description / release notes */
+            description?: string | null;
+            /** Release Year */
+            year?: number | null;
+            /** Genre */
+            genre?: string | null;
+            /** Tracker info page URL */
+            info_url?: string | null;
+            /** NFO page URL */
+            nfo_url?: string | null;
         };
         /**
          * ClientType
@@ -5049,6 +5065,8 @@ export interface components {
             retroachievements_id?: number | null;
             /** Newznab Category Ids */
             newznab_category_ids?: number[];
+            /** Aliases — operator-facing nicknames for detection */
+            aliases?: string[];
             /**
              * Pack Source
              * @default builtin

@@ -694,7 +694,36 @@
       "platformsAffected_one": "Plateforme",
       "platformsAffected_other": "Plateformes"
     },
-    "uploadHint": "L'envoi de packs (YAML multipart) + les bascules d'override par plateforme arriveront dans un slice à venir."
+    "uploadHint": "L'envoi de packs (YAML multipart) + les bascules d'override par plateforme arriveront dans un slice à venir.",
+    "catalogue": {
+      "heading": "Plateformes configurées",
+      "subhead": "{{count}} plateformes prêtes pour le suivi + grab.",
+      "filterPlaceholder": "Filtrer (nom / slug / alias)…",
+      "loadError": "Impossible de charger le catalogue.",
+      "noMatches": "Aucune plateforme ne correspond au filtre."
+    },
+    "packs": {
+      "heading": "Platform Packs",
+      "subhead": "Définitions en masse via YAML packs. Audit log par application."
+    },
+    "detail": {
+      "modalTitle": "{{name}} — détails",
+      "close": "Fermer",
+      "sections": {
+        "identity": "Identité",
+        "aliases": "Alias (utilisés par la détection grab + recherche manuelle)",
+        "providerIds": "IDs fournisseurs de métadonnées",
+        "newznabCategories": "Catégories Newznab"
+      },
+      "fields": {
+        "slug": "Slug (nom de dossier)",
+        "name": "Nom complet",
+        "shortName": "Nom court",
+        "manufacturer": "Fabricant",
+        "releaseYear": "Année de sortie",
+        "pack": "Issu du pack"
+      }
+    }
   },
   "general": {
     "title": "Général",
