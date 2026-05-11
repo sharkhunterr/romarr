@@ -287,6 +287,31 @@ class QBittorrentClient(DownloadClient):
                                 "tags": ",".join(tags),
                             },
                         )
+                    # Slice 405 — meta-torrent re-grab (Minerva /
+                    # Erista archives surface many "individual"
+                    # results that all share the same big info-
+                    # hash). When this torrent was already tagged
+                    # ``romarr-imported`` from a prior grab, the
+                    # watcher would skip it and the new
+                    # queue_entry would freeze forever. Strip the
+                    # tag so the watcher re-processes the meta-
+                    # torrent with the fresh queue_entry's
+                    # pre_matched_game_id pointing at the new
+                    # game.
+                    existing_tags = {
+                        t.strip()
+                        for t in str(existing.get("tags") or "").split(",")
+                        if t.strip()
+                    }
+                    if TAG_IMPORTED in existing_tags:
+                        await self._post(
+                            client,
+                            "/torrents/removeTags",
+                            data={
+                                "hashes": magnet_hash.lower(),
+                                "tags": TAG_IMPORTED,
+                            },
+                        )
                     return magnet_hash.lower()
 
             await self._submit_torrent(
