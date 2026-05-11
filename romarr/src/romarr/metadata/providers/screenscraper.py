@@ -138,12 +138,21 @@ class ScreenScraperProvider(MetadataProvider):
         return params
 
     async def health_check(self) -> bool:
+        # Slice 408 — AuthError is actionable (operator pasted
+        # bad creds, or SS needs a devid) so we re-raise it. The
+        # ``test_provider`` endpoint catches at the boundary and
+        # surfaces ``str(exc)`` in the UI, which now carries the
+        # operator-friendly message. Transient / rate-limit
+        # failures stay silent (False) — they describe network
+        # state, not a config bug.
         try:
             await self._call(
                 lambda: self._get(
                     "/ssuserInfos.php", params=self._auth_params()
                 )
             )
+        except AuthError:
+            raise
         except ProviderError:
             return False
         return True
@@ -171,12 +180,33 @@ class ScreenScraperProvider(MetadataProvider):
             raise ProviderError(
                 f"ScreenScraper unexpected {response.status_code}"
             )
-        # ScreenScraper sends JSON when ``output=json`` is on the
-        # querystring; the body sits inside a top-level ``response`` key.
+        # Slice 408 — ScreenScraper returns HTTP 200 with a plain-
+        # text error body on auth + quota failures rather than the
+        # JSON the ``output=json`` query param promises. Detect
+        # those common shapes and surface a clear, actionable
+        # error instead of a generic "response was not JSON".
         try:
             payload = response.json()
-        except ValueError as exc:  # pragma: no cover — guard
-            raise ProviderError("ScreenScraper response was not JSON") from exc
+        except ValueError:
+            text_body = (response.text or "").strip()
+            lowered = text_body.lower()
+            if "erreur de login" in lowered or "verifier" in lowered or "vérifier" in lowered:
+                raise AuthError(
+                    "ScreenScraper rejected the credentials — check your "
+                    "ssid / sspassword (the screenscraper.fr account "
+                    "you registered, not the dev key)."
+                )
+            if "api closed" in lowered or "api fermée" in lowered:
+                raise AuthError(
+                    "ScreenScraper closed its anonymous API for this user "
+                    "tier — register a free devid + devpassword at "
+                    "https://www.screenscraper.fr/membreinscription.php "
+                    "and paste them in the Advanced section."
+                )
+            snippet = text_body[:200] if text_body else "(empty body)"
+            raise ProviderError(
+                f"ScreenScraper response was not JSON: {snippet}"
+            )
         if not isinstance(payload, dict):
             raise ProviderError("ScreenScraper response was not a JSON object")
         return payload
