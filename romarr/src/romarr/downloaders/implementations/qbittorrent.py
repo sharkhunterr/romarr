@@ -62,6 +62,31 @@ MIN_WEBAPI_VERSION = (2, 8, 3)
 """Minimum supported qBittorrent Web API version (qBit >= 4.4.0)."""
 
 _INFO_HASH_RE = re.compile(r"xt=urn:btih:([0-9a-fA-F]{40}|[A-Z2-7]{32})")
+
+# Slice 416 — token helpers for meta-torrent file selection.
+# Match the orchestrator's slice-415 walker so a file qBit
+# picks at grab time is the same file the importer walks at
+# import time.
+_PATH_TOKEN_RE = re.compile(r"[a-z0-9]+")
+_PATH_STOPWORDS: frozenset[str] = frozenset(
+    {"the", "of", "a", "an", "and", "in", "on", "no", "intro",
+     "rom", "roms", "usa", "europe", "japan", "rev", "rerelease",
+     "nintendo", "sega", "sony", "atari"}
+)
+
+
+def _significant_path_tokens(text: str) -> set[str]:
+    """Lowercase alphanumeric tokens minus noise + ubiquitous
+    manufacturer words. A file living under
+    ``No-Intro/Nintendo - Game Boy Advance/`` shouldn't score
+    against an ``N64 / Nintendo 64`` platform purely on
+    ``nintendo`` — drop manufacturer names so the title /
+    platform-name signal dominates."""
+    return {
+        t
+        for t in _PATH_TOKEN_RE.findall(text.lower())
+        if len(t) >= 2 and t not in _PATH_STOPWORDS
+    }
 """Magnet info-hash extractor: SHA-1 hex (40) or base32 (32)."""
 
 
@@ -432,6 +457,93 @@ class QBittorrentClient(DownloadClient):
                     "tags": TAG_IMPORTED,
                 },
             )
+
+    async def select_only_matching_file(
+        self,
+        client_native_id: str,
+        *,
+        title_tokens: set[str],
+        platform_tokens: set[str] | None = None,
+    ) -> str | None:
+        """Slice 416 — narrow a meta-torrent to one file via qBit's
+        ``/torrents/filePrio`` API.
+
+        For multi-file torrents (Minerva_Myrient, Erista archives,
+        …), the indexer's "grab this game" result points at a
+        specific file inside a giant shared torrent. Without
+        intervention qBit picks files based on swarm availability
+        and the operator often ends up with the wrong ROM
+        downloaded. We score every file in the torrent by token
+        overlap against the matched game's title + platform,
+        priority-zero everything else, and priority-1 the
+        winning file so qBit only fetches what the operator
+        asked for.
+
+        Single-file torrents are a no-op. Returns the matched
+        file's path inside the torrent on success, ``None`` when
+        no candidate clears the title-overlap floor.
+        """
+        platform_tokens = platform_tokens or set()
+        async with self._new_client() as client:
+            await self._login(client)
+            response = await self._get(
+                client, "/torrents/files", hash=client_native_id.lower()
+            )
+            try:
+                files = response.json()
+            except ValueError:
+                return None
+            if not isinstance(files, list) or len(files) <= 1:
+                # Single-file torrent or unparseable — nothing
+                # to narrow.
+                return None
+
+            best_idx: int | None = None
+            best_score: tuple[int, int] = (0, 0)
+            for idx, entry in enumerate(files):
+                if not isinstance(entry, dict):
+                    continue
+                name = str(entry.get("name") or "")
+                if not name:
+                    continue
+                path_tokens = _significant_path_tokens(name)
+                title_overlap = len(title_tokens & path_tokens)
+                if title_overlap == 0:
+                    continue
+                platform_overlap = len(platform_tokens & path_tokens)
+                score = (title_overlap, platform_overlap)
+                if best_idx is None or score > best_score:
+                    best_idx = idx
+                    best_score = score
+            if best_idx is None:
+                return None
+
+            other_ids = "|".join(
+                str(i) for i in range(len(files)) if i != best_idx
+            )
+            # Two POSTs — qBit's filePrio takes one priority value
+            # at a time but accepts a list of file ids.
+            if other_ids:
+                await self._post(
+                    client,
+                    "/torrents/filePrio",
+                    data={
+                        "hash": client_native_id.lower(),
+                        "id": other_ids,
+                        "priority": "0",
+                    },
+                )
+            await self._post(
+                client,
+                "/torrents/filePrio",
+                data={
+                    "hash": client_native_id.lower(),
+                    "id": str(best_idx),
+                    "priority": "1",
+                },
+            )
+            picked = files[best_idx]
+            return str(picked.get("name") or "")
 
     # ---- internals ------------------------------------------------------------
 
