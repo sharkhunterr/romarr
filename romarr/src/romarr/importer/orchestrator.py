@@ -902,7 +902,15 @@ async def _pick_file_for_pre_matched_game(
         if v:
             platform_tokens.update(_significant_path_tokens(v))
 
-    best: tuple["Path", int] | None = None
+    # Require a minimum title-token overlap so we don't import
+    # the wrong ROM just because "Nintendo" matches both N64
+    # and GBA folders inside a meta-torrent (slice 415b — user
+    # reported GoldenEye 007 grabbing the Metroid Fusion file
+    # because Minerva's ``No-Intro/Nintendo - Game Boy Advance/``
+    # path scored on the shared "nintendo" token).
+    required_title_overlap = max(1, min(2, len(title_tokens)))
+
+    best: tuple["Path", int, int] | None = None  # (path, title_ov, platform_ov)
     for p in candidates:
         # Score over the *path* (parent dirs + filename) so
         # Minerva's ``No-Intro/Nintendo - Game Boy Advance/``
@@ -910,17 +918,18 @@ async def _pick_file_for_pre_matched_game(
         path_tokens = _significant_path_tokens(str(p.relative_to(root)))
         title_overlap = len(title_tokens & path_tokens)
         platform_overlap = len(platform_tokens & path_tokens)
-        # Title match weighs heavier than platform — a wrong
-        # title on the right platform is worse than the right
-        # title on a slightly-off platform folder.
+        if title_overlap < required_title_overlap:
+            continue
         score = title_overlap * 3 + platform_overlap
-        if best is None or score > best[1]:
-            best = (p, score)
+        if best is None or score > best[1] * 3 + best[2]:
+            best = (p, title_overlap, platform_overlap)
     if best is None:
-        return candidates[0]
-    # Refuse to pick a zero-score file — better to fail
-    # ``match:no_game`` cleanly than to import a random file.
-    return best[0] if best[1] > 0 else None
+        # No file in the meta-torrent matches the matched
+        # Game's title — fail cleanly as ``match:no_game``
+        # rather than importing a random ROM under the wrong
+        # game's folder.
+        return None
+    return best[0]
 
 
 _PATH_TOKEN_RE = re.compile(r"[a-z0-9]+")
