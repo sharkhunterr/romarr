@@ -8,6 +8,7 @@ provider's role is purely additive.
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from typing import Any
 
@@ -30,6 +31,51 @@ _BASE = "https://retroachievements.org/API"
 
 # RA's console_id table for Romarr's MVP-5. Source: the GetConsoleIDs
 # RA endpoint. Static enough to ship as a built-in.
+# Slice 413 — publisher-prefix stripping helpers for the
+# relaxed title-match. RA lists most games under the bare
+# franchise title (``Tarzan``, ``Splinter Cell``) while the
+# operator-side title carries the publisher prefix (``Disney's
+# Tarzan``, ``Tom Clancy's Splinter Cell``). We strip these
+# prefixes when the strict substring match fails so the search
+# still binds the right RA row.
+_PUBLISHER_PREFIXES: tuple[str, ...] = (
+    "disney's ",
+    "disneys ",
+    "tom clancy's ",
+    "tom clancys ",
+    "sid meier's ",
+    "sid meiers ",
+    "ea sports ",
+    "ea sports nhl ",
+    "ea sports fifa ",
+    "lego ",
+    "marvel's ",
+    "marvels ",
+    "nickelodeon ",
+)
+
+# Tokens that don't help disambiguate — strip from the
+# set-overlap heuristic.
+_STOPWORDS: frozenset[str] = frozenset(
+    {"the", "a", "an", "of", "and", "&", "with", "in", "on"}
+)
+
+_WORD_RE = re.compile(r"[a-z0-9]+")
+
+
+def _strip_publisher_prefix(title_cf: str) -> str:
+    """Drop a leading publisher / franchise prefix when present."""
+    for prefix in _PUBLISHER_PREFIXES:
+        if title_cf.startswith(prefix):
+            return title_cf[len(prefix):].strip()
+    return title_cf
+
+
+def _significant_tokens(title_cf: str) -> set[str]:
+    """Lowercase alphanumeric tokens minus the stopword list."""
+    return {t for t in _WORD_RE.findall(title_cf) if t not in _STOPWORDS}
+
+
 # Slice 411 — RetroAchievements console-id mapping aligned with
 # the RomM-canonical Romarr slugs (slice 401: megadrive →
 # genesis, gamecube → ngc, dreamcast → dc). Without this every
@@ -171,22 +217,56 @@ class RetroAchievementsProvider(MetadataProvider):
         if not isinstance(rows, list):
             return []
 
-        normalized = query.casefold()
+        # Slice 413 — more permissive title matching. The strict
+        # substring used to miss "Tarzan" when the operator's
+        # game was titled "Disney's Tarzan" (publisher prefix
+        # on Romarr's side, bare title on RA's). Try several
+        # progressively-relaxed matches so the publisher /
+        # franchise prefix variants ("Tom Clancy's …", "EA
+        # Sports …", "Disney's …", subtitle differences) all
+        # bind to the same canonical RA row.
+        normalized = query.casefold().strip()
+        stripped_query = _strip_publisher_prefix(normalized)
+        query_tokens = _significant_tokens(normalized)
+
         out: list[GameSearchResult] = []
         for row in rows:
             title = row.get("Title") or ""
             game_id = row.get("ID")
             if not title or game_id is None:
                 continue
-            if normalized in title.casefold():
-                out.append(
-                    GameSearchResult(
-                        provider_name=self.name,
-                        provider_game_id=str(game_id),
-                        title=title,
-                        confidence=1.0 if normalized == title.casefold() else 0.6,
-                    )
+            title_cf = title.casefold().strip()
+            confidence: float | None = None
+            if normalized == title_cf:
+                confidence = 1.0
+            elif normalized in title_cf or title_cf in normalized:
+                confidence = 0.8
+            elif stripped_query and (
+                stripped_query in title_cf or title_cf in stripped_query
+            ):
+                confidence = 0.7
+            else:
+                title_tokens = _significant_tokens(title_cf)
+                shared = query_tokens & title_tokens
+                if (
+                    shared
+                    and query_tokens
+                    and len(shared) / len(query_tokens) >= 0.6
+                ):
+                    confidence = 0.5
+            if confidence is None:
+                continue
+            out.append(
+                GameSearchResult(
+                    provider_name=self.name,
+                    provider_game_id=str(game_id),
+                    title=title,
+                    confidence=confidence,
                 )
+            )
+        # Sort by confidence desc so the canonical hit floats to
+        # the top — callers usually take ``candidates[0]``.
+        out.sort(key=lambda r: r.confidence, reverse=True)
         return out
 
     async def get_game(self, provider_game_id: str) -> GameMetadata:
