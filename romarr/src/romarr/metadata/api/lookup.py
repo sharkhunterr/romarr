@@ -305,13 +305,24 @@ async def lookup_games(
             display_name = row.platform_name
             manufacturer = None
         hits = hits_by_index.get(index, [row])
+        # Slice 412 — collapse same-provider hits inside a group
+        # so the badge stack reads as the set of providers that
+        # found this game (one badge per provider), not the raw
+        # list of every hit. The aggregator picked the
+        # highest-confidence hit as canonical already; for the
+        # other providers we keep their best hit too.
+        best_by_provider: dict[str, GameSearchResult] = {}
+        for h in hits:
+            existing = best_by_provider.get(h.provider_name)
+            if existing is None or h.confidence > existing.confidence:
+                best_by_provider[h.provider_name] = h
         providers = [
             ProviderHit(
                 name=h.provider_name,
                 gameId=h.provider_game_id,
                 confidence=h.confidence,
             )
-            for h in hits
+            for h in best_by_provider.values()
         ]
         out_rows.append(
             GameLookupRow(
