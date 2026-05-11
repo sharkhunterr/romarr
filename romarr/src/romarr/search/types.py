@@ -149,7 +149,9 @@ class Candidate(_Base):
     nfo_url: str | None = None
 
 
-_IndexerOutcome = Literal["ok", "failed", "cache-hit", "cache-miss"]
+_IndexerOutcome = Literal[
+    "ok", "failed", "rate_limited", "cache-hit", "cache-miss"
+]
 
 
 class SearchRoundReport(_Base):

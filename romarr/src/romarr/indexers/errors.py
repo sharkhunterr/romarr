@@ -33,6 +33,23 @@ class IndexerProtocolError(IndexerError):
     can tolerate."""
 
 
+class IndexerRateLimitedError(IndexerProtocolError):
+    """Slice 404 — HTTP 429 from the indexer (or whatever it
+    proxies, e.g. Prowlarr → upstream tracker). Carries the
+    ``Retry-After`` hint (seconds) when the server provided one
+    so the caller / UI can tell the operator when to try again.
+
+    Subclasses ``IndexerProtocolError`` so existing
+    ``except IndexerProtocolError`` blocks still catch it; new
+    code that wants to short-circuit retries on rate-limit hits
+    can type-narrow on this class specifically.
+    """
+
+    def __init__(self, message: str, *, retry_after_seconds: float | None = None) -> None:
+        super().__init__(message)
+        self.retry_after_seconds = retry_after_seconds
+
+
 class RateLimitDelayed(Exception):  # noqa: N818 — informational, not raised
     """Marker attached to log records when the rate limiter delayed
     a call. Never raised; callers structlog with ``extra={"delayed": True}``."""
@@ -43,5 +60,6 @@ __all__ = [
     "IndexerAuthError",
     "IndexerError",
     "IndexerProtocolError",
+    "IndexerRateLimitedError",
     "RateLimitDelayed",
 ]

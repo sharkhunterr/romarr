@@ -5573,7 +5573,7 @@ export interface components {
             grabs?: components["schemas"]["Candidate"][];
             /** Indexer Outcomes */
             indexer_outcomes?: {
-                [key: string]: "ok" | "failed" | "cache-hit" | "cache-miss";
+                [key: string]: "ok" | "failed" | "rate_limited" | "cache-hit" | "cache-miss";
             };
             /** Overcap Indexers */
             overcap_indexers?: number[];

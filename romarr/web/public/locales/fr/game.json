@@ -244,6 +244,12 @@
     "seeders_one": "{{count}} seeder",
     "seeders_other": "{{count}} seeders",
     "rejected": "Rejeté",
+    "outcome": {
+      "rateLimited_one": "Indexeur rate-limité (HTTP 429). Patientez puis réessayez — l'indexeur en amont nous a demandé de ralentir, tous les résultats ont été ignorés.",
+      "rateLimited_other": "{{count}} indexeurs rate-limités (HTTP 429). Patientez puis réessayez — l'indexeur en amont a demandé de ralentir.",
+      "failed_one": "L'indexeur a renvoyé une erreur. Vérifiez sa santé dans Paramètres → Indexeurs.",
+      "failed_other": "{{count}} indexeurs en erreur. Vérifiez Paramètres → Indexeurs."
+    },
     "detail": {
       "fields": {
         "indexer": "Indexeur",

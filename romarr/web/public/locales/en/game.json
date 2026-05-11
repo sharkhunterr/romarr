@@ -244,6 +244,12 @@
     "seeders_one": "{{count}} seeder",
     "seeders_other": "{{count}} seeders",
     "rejected": "Rejected",
+    "outcome": {
+      "rateLimited_one": "Indexer rate-limited (HTTP 429). Wait a moment then retry — every result was dropped because the upstream indexer asked us to slow down.",
+      "rateLimited_other": "{{count}} indexers rate-limited (HTTP 429). Wait a moment then retry — every result was dropped because the upstream asked us to slow down.",
+      "failed_one": "Indexer responded with an error. Check the indexer's health in Settings → Indexers.",
+      "failed_other": "{{count}} indexers responded with errors. Check Settings → Indexers."
+    },
     "detail": {
       "fields": {
         "indexer": "Indexer",

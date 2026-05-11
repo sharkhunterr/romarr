@@ -822,9 +822,41 @@ export function ReleaseSearchModal(
           )}
 
           {search.isSuccess && (search.data.candidates ?? []).length === 0 && (
-            <p className="rounded-md border border-zinc-800 bg-zinc-900/40 p-3 text-xs text-zinc-400">
-              {t("search.empty")}
-            </p>
+            <>
+              {/* Slice 404 — when no candidates came back, look at
+                  ``indexer_outcomes`` and surface a precise
+                  diagnostic. Rate-limited indexers are the
+                  common case for a fresh "no candidates" — they
+                  silently dropped every result. */}
+              {(() => {
+                const outcomes = search.data.indexer_outcomes ?? {};
+                const rateLimited = Object.values(outcomes).filter(
+                  (v) => v === "rate_limited",
+                ).length;
+                const failed = Object.values(outcomes).filter(
+                  (v) => v === "failed",
+                ).length;
+                if (rateLimited > 0) {
+                  return (
+                    <p className="rounded-md border border-amber-900/50 bg-amber-950/20 p-3 text-xs text-amber-200">
+                      {t("search.outcome.rateLimited", { count: rateLimited })}
+                    </p>
+                  );
+                }
+                if (failed > 0) {
+                  return (
+                    <p className="rounded-md border border-red-900/50 bg-red-950/20 p-3 text-xs text-red-300">
+                      {t("search.outcome.failed", { count: failed })}
+                    </p>
+                  );
+                }
+                return (
+                  <p className="rounded-md border border-zinc-800 bg-zinc-900/40 p-3 text-xs text-zinc-400">
+                    {t("search.empty")}
+                  </p>
+                );
+              })()}
+            </>
           )}
 
           {search.isSuccess && (search.data.candidates ?? []).length > 0 && (

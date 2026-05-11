@@ -38,6 +38,7 @@ import httpx
 from tenacity import (
     AsyncRetrying,
     RetryError,
+    retry_if_exception,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential_jitter,
@@ -87,6 +88,7 @@ def _looks_like_file_format(token: str) -> bool:
 from romarr.indexers.errors import (
     IndexerAuthError,
     IndexerProtocolError,
+    IndexerRateLimitedError,
 )
 from romarr.indexers.parser.caps import parse_caps
 from romarr.indexers.parser.extended_attrs import (
@@ -344,12 +346,23 @@ class NewznabClient:
         async def _attempt() -> bytes:
             return await self._do_request(merged)
 
+        # Slice 404 — retry transient 5xx / network blips, but NOT
+        # rate-limit hits. The indexer just told us to slow down;
+        # hammering with backoff still burns its budget and our
+        # health surface, and the operator gets a clean
+        # ``rate_limited`` outcome up the stack instead of three
+        # identical 429s.
+        def _is_retryable(exc: BaseException) -> bool:
+            if isinstance(exc, IndexerRateLimitedError):
+                return False
+            return isinstance(exc, IndexerProtocolError)
+
         try:
             async for attempt in AsyncRetrying(
                 reraise=True,
                 stop=stop_after_attempt(3),
                 wait=wait_exponential_jitter(initial=0.5, max=4.0),
-                retry=retry_if_exception_type(IndexerProtocolError),
+                retry=retry_if_exception(_is_retryable),
             ):
                 with attempt:
                     return await self._breaker.call(_attempt)
@@ -388,6 +401,28 @@ class NewznabClient:
             self._record_issue("auth", f"HTTP {response.status_code}")
             raise IndexerAuthError(
                 f"indexer rejected credentials (HTTP {response.status_code})"
+            )
+        # Slice 404 — surface 429 as a distinct error so the retry
+        # decorator can skip it (no point hammering when the
+        # indexer just told us to slow down) and the search round
+        # can report ``rate_limited`` instead of a generic
+        # ``failed``. Honour the ``Retry-After`` header (seconds)
+        # when present.
+        if response.status_code == 429:
+            retry_after_raw = response.headers.get("Retry-After")
+            retry_after_seconds: float | None = None
+            if retry_after_raw:
+                try:
+                    retry_after_seconds = float(retry_after_raw)
+                except (TypeError, ValueError):
+                    retry_after_seconds = None
+            self._record_issue(
+                "rate_limit",
+                f"HTTP 429 (retry-after={retry_after_raw or '?'})",
+            )
+            raise IndexerRateLimitedError(
+                "indexer rate-limited (HTTP 429)",
+                retry_after_seconds=retry_after_seconds,
             )
         if response.status_code >= 500:
             self._record_issue("protocol", f"HTTP {response.status_code}")

@@ -22,7 +22,11 @@ from uuid import uuid4
 from sqlalchemy import select
 
 from romarr.domain.models import Platform
-from romarr.indexers.errors import IndexerAuthError, IndexerProtocolError
+from romarr.indexers.errors import (
+    IndexerAuthError,
+    IndexerProtocolError,
+    IndexerRateLimitedError,
+)
 from romarr.search.history import record_round
 from romarr.search.pipeline import run_pipeline
 from romarr.search.platform_match import match_platform_in_title
@@ -147,6 +151,11 @@ async def run_manual_search(
         try:
             try:
                 results = await client.search(query, categories=None)
+            except IndexerRateLimitedError:
+                # Slice 404 — distinct outcome so the UI can tell
+                # the operator "indexer told us to slow down" vs
+                # the generic "indexer failed".
+                return indexer_id, [], "rate_limited", False
             except (IndexerAuthError, IndexerProtocolError):
                 return indexer_id, [], "failed", False
             except Exception:
