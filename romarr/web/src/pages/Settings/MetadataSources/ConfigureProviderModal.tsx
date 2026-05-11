@@ -192,23 +192,15 @@ export function ConfigureProviderModal(
           </div>
         ) : (
           <form onSubmit={onSubmit} className="space-y-3">
-            {/* Slice 408 — ScreenScraper-specific guidance:
-                their API returns 403 without devid+devpassword,
-                even when the user's ssid/sspassword are correct.
-                Link directly to the dev-key registration page so
-                the operator knows what to do. */}
+            {/* Slice 408c — ScreenScraper note: Romarr ships
+                the same community dev key as RomM / Skraper, so
+                only the operator's personal ssid + sspassword
+                are needed. Operators with their own registered
+                dev key can paste it in the Advanced section to
+                bypass the shared key's quota. */}
             {provider.provider_name === "screenscraper" && (
-              <div className="rounded-md border border-amber-900/40 bg-amber-950/20 p-3 text-[0.7rem] text-amber-200">
-                {t("metadataSources.configure.ssDevKeyNote")}{" "}
-                <a
-                  href="https://www.screenscraper.fr/membreinscription.php"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-brand underline hover:no-underline"
-                >
-                  screenscraper.fr → register
-                </a>
-                .
+              <div className="rounded-md border border-zinc-800 bg-zinc-900/40 p-3 text-[0.7rem] text-zinc-400">
+                {t("metadataSources.configure.ssDevKeyNote")}
               </div>
             )}
             {primaryFields.map((f) => (

@@ -882,7 +882,7 @@
       "cancel": "Annuler",
       "close": "Fermer",
       "advanced": "Avancé (optionnel)",
-      "ssDevKeyNote": "L'API de ScreenScraper exige une clé développeur en plus du compte utilisateur. Obtenez-en une gratuitement sur",
+      "ssDevKeyNote": "Romarr embarque la même clé développeur ScreenScraper que RomM et Skraper — seuls vos identifiants utilisateur screenscraper.fr sont nécessaires. Si vous avez votre propre clé dev, collez-la dans Avancé pour utiliser son quota.",
       "required": "Champ(s) requis : {{fields}}"
     },
     "fieldPriorityHint": "L'ordre par champ se configure via /api/v3/metadata/field-priority — l'éditeur drag-and-drop arrive dans un slice à venir."

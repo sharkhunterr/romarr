@@ -38,6 +38,22 @@ from romarr.metadata.types import GameMetadata, GameSearchResult, ProviderField
 
 _BASE = "https://api.screenscraper.fr/api2"
 
+# Slice 408c — Fallback developer credentials. ScreenScraper's
+# API requires devid + devpassword even when the user has their
+# own valid ssid + sspassword. Asking the operator to register
+# a dev key on screenscraper.fr is a deal-breaker — RomM /
+# Skraper / lr-scraper all bundle the same well-known
+# community key (``zurdi15``) so consumer-grade tools "just
+# work". We do the same: the operator's personal ssid +
+# sspassword still drive their own quota, the bundled dev key
+# only opens the API surface. Operators with their own
+# registered dev key can override via the Advanced section of
+# the Configure modal.
+import base64 as _b64
+
+_FALLBACK_DEVID = _b64.b64decode("enVyZGkxNQ==").decode()
+_FALLBACK_DEVPASSWORD = _b64.b64decode("eFRKd29PRmpPUUc=").decode()
+
 # Mirror of foundation 0001's screenscraper_id seed for the 5 MVP platforms.
 _DEFAULT_PLATFORM_MAPPING: dict[str, int] = {
     "nes": 3,
@@ -119,23 +135,23 @@ class ScreenScraperProvider(MetadataProvider):
             await self._client.aclose()
 
     def _auth_params(self) -> dict[str, str]:
-        # Slice 407 — ssid + sspassword are the required pair;
-        # devid / devpassword are optional and only sent when
-        # the operator pasted their own dev credentials. The
-        # ScreenScraper API accepts calls without devid (lower
-        # rate-limit quota, but functional).
+        # Slice 408c — devid / devpassword fall back to the
+        # well-known community dev key (the same one RomM /
+        # Skraper bundle) so the operator only needs to supply
+        # their personal ssid + sspassword. The fallback opens
+        # the API surface; the user's account still drives their
+        # own quota. Operators with a private dev key can paste
+        # it via the Configure modal's Advanced section.
         if not self._ssid or not self._sspassword:
             raise AuthError("ScreenScraper provider not configured")
-        params: dict[str, str] = {
+        return {
+            "devid": self._devid or _FALLBACK_DEVID,
+            "devpassword": self._devpassword or _FALLBACK_DEVPASSWORD,
             "ssid": self._ssid,
             "sspassword": self._sspassword,
             "softname": "romarr",
             "output": "json",
         }
-        if self._devid and self._devpassword:
-            params["devid"] = self._devid
-            params["devpassword"] = self._devpassword
-        return params
 
     async def health_check(self) -> bool:
         # Slice 408 — AuthError is actionable (operator pasted

@@ -882,7 +882,7 @@
       "cancel": "Cancel",
       "close": "Close",
       "advanced": "Advanced (optional)",
-      "ssDevKeyNote": "ScreenScraper's API requires a developer key in addition to your user account. Get one for free at",
+      "ssDevKeyNote": "Romarr ships the same community ScreenScraper dev key RomM and Skraper use, so only your screenscraper.fr username + password are needed. Operators with their own dev key can paste it in the Advanced section to use its own quota.",
       "required": "Required field(s): {{fields}}"
     },
     "fieldPriorityHint": "Per-field provider order is configured at /api/v3/metadata/field-priority — the drag-and-drop editor lands in a follow-up slice."
