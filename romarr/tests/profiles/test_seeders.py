@@ -286,11 +286,19 @@ async def test_seed_runs_clean_when_factory_row_freshly_inserted(
     """Edge case: a row inserted with non-default timestamps must not
     trip the seeder into thinking it's been edited."""
     now = datetime.now(UTC) - timedelta(days=30)
+    # Slice 403 — broader allowed_formats list in the seeded
+    # JSON. Pre-populate the row with the exact same list so the
+    # pre-existing branch (no update) still exercises here; the
+    # other two seeded rows are still missing → +2 inserts.
     async_session.add(
         QualityProfile(
             seed_key="preservation",
             name="Preservation",
-            allowed_formats=["raw", "zip", "7z"],
+            allowed_formats=[
+                "raw", "zip", "7z", "rar",
+                "iso", "cue", "bin", "img", "gdi", "mdf", "nrg",
+                "chd", "rvz", "wbfs", "wia", "nkit", "ciso", "cso", "pbp",
+            ],
             preferred_format="7z",
             require_dat_verified=False,
             allow_archive_double_compression=False,
