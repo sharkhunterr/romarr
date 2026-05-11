@@ -56,6 +56,10 @@ PACK_SCHEMA: dict[str, Any] = {
                 "name": {"type": "string", "minLength": 1},
                 "short_name": {"type": "string"},
                 "manufacturer": {"type": "string"},
+                "aliases": {
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 1},
+                },
                 "generation": {"type": "integer", "minimum": 1},
                 "release_year": {
                     "type": "integer",

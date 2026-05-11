@@ -76,6 +76,16 @@ class Platform(Base, TimestampMixin):
         JSON, nullable=False, default=list
     )
 
+    # Slice 401 — operator-facing alias strings used by the
+    # title-match (manual search) and filename-parser (importer)
+    # paths so a release titled "Final Fantasy VII (PSX)" /
+    # "(PS1)" / "(PlayStation)" all bind to the same Platform
+    # row. Empty list when no aliases are configured; the slug +
+    # short_name + name are always considered alongside.
+    aliases: Mapped[list[str]] = mapped_column(
+        JSON, nullable=False, default=list
+    )
+
     # Pack provenance (spec 003 populates).
     pack_source: Mapped[str] = mapped_column(
         String(16), nullable=False, default="builtin"

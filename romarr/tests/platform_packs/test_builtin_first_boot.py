@@ -38,9 +38,11 @@ async def test_empty_db_applies_built_in_pack(
 
     assert len(platforms) >= 18  # 20 platforms shipped, ≥ 18 is the SC-001 floor
     assert all(p.pack_source == "builtin" for p in platforms)
-    # Sample a few canonical ones.
+    # Sample a few canonical ones. Slice 401 aligned the slugs
+    # to RomM (megadrive → genesis, gamecube → ngc, dreamcast →
+    # dc) so the folders match what RomM scans on the other end.
     slugs = {p.slug for p in platforms}
-    for required in ("nes", "snes", "megadrive", "psx", "gba"):
+    for required in ("nes", "snes", "genesis", "psx", "gba"):
         assert required in slugs
 
 

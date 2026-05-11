@@ -78,9 +78,12 @@ def _alias_appears_in(title_tokens: list[str], alias_tokens: list[str]) -> bool:
 def _aliases_for(platform: Platform) -> list[str]:
     """Generate every spelling we expect to see for ``platform``.
 
-    Includes the slug, short_name, full name, and the full name
-    with the manufacturer prefix dropped (so ``Nintendo Game Boy
-    Advance`` also matches a bare ``Game Boy Advance``).
+    Includes the slug, short_name, full name, the full name with
+    the manufacturer prefix dropped (so ``Nintendo Game Boy
+    Advance`` also matches a bare ``Game Boy Advance``), and the
+    operator-curated ``Platform.aliases`` list (slice 401 —
+    handles the ``psx`` / ``ps1`` / ``psone`` / ``PlayStation``
+    cluster, ``megadrive`` / ``genesis`` / ``md`` / ``smd``, …).
     """
     aliases: list[str] = []
     if platform.slug:
@@ -96,6 +99,8 @@ def _aliases_for(platform: Platform) -> list[str]:
                 stripped = stripped[len(prefix):].strip()
                 if stripped and stripped != platform.name:
                     aliases.append(stripped)
+    extras = getattr(platform, "aliases", None) or []
+    aliases.extend(str(a) for a in extras if a)
     return aliases
 
 

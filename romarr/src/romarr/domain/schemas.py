@@ -60,6 +60,7 @@ class PlatformCreate(_SchemaBase):
     launchbox_id: int | None = None
     retroachievements_id: int | None = None
     newznab_category_ids: list[int] = Field(default_factory=list)
+    aliases: list[str] = Field(default_factory=list)
     pack_source: str = "builtin"
     pack_version: Annotated[str | None, Field(max_length=16)] = None
     extra_meta: dict[str, Any] = Field(default_factory=dict)
