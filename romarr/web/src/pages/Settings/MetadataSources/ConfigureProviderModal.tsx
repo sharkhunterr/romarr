@@ -192,6 +192,25 @@ export function ConfigureProviderModal(
           </div>
         ) : (
           <form onSubmit={onSubmit} className="space-y-3">
+            {/* Slice 408 — ScreenScraper-specific guidance:
+                their API returns 403 without devid+devpassword,
+                even when the user's ssid/sspassword are correct.
+                Link directly to the dev-key registration page so
+                the operator knows what to do. */}
+            {provider.provider_name === "screenscraper" && (
+              <div className="rounded-md border border-amber-900/40 bg-amber-950/20 p-3 text-[0.7rem] text-amber-200">
+                {t("metadataSources.configure.ssDevKeyNote")}{" "}
+                <a
+                  href="https://www.screenscraper.fr/membreinscription.php"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-brand underline hover:no-underline"
+                >
+                  screenscraper.fr → register
+                </a>
+                .
+              </div>
+            )}
             {primaryFields.map((f) => (
               <label key={f.key} className="block text-xs text-zinc-400">
                 <span className="mb-1 block">

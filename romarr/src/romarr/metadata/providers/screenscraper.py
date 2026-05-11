@@ -165,9 +165,25 @@ class ScreenScraperProvider(MetadataProvider):
         except httpx.HTTPError as exc:
             raise TransientError("ScreenScraper network error") from exc
         if response.status_code in (401, 403):
-            # ScreenScraper returns 423 when the user account is locked
-            # (over quota); treat that as an auth-class problem too.
-            raise AuthError(f"ScreenScraper {response.status_code}")
+            # Slice 408 — ScreenScraper 401/403 almost always means
+            # the devid + devpassword pair is missing or wrong.
+            # Point the operator at the registration page so they
+            # know what to do.
+            if not self._devid or not self._devpassword:
+                raise AuthError(
+                    f"ScreenScraper {response.status_code} — the API "
+                    "requires a developer key. Register one for free at "
+                    "https://www.screenscraper.fr/membreinscription.php "
+                    "(or use your existing screenscraper.fr account "
+                    "and request a dev key under Profile → Menu "
+                    "développeur), then paste devid + devpassword in "
+                    "the Advanced section of the Configure modal."
+                )
+            raise AuthError(
+                f"ScreenScraper {response.status_code} — devid / "
+                "devpassword rejected; double-check them on "
+                "screenscraper.fr → Profile → Menu développeur."
+            )
         if response.status_code == 423:
             raise AuthError("ScreenScraper 423 (quota / locked account)")
         if response.status_code == 429:

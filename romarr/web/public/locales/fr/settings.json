@@ -882,6 +882,7 @@
       "cancel": "Annuler",
       "close": "Fermer",
       "advanced": "Avancé (optionnel)",
+      "ssDevKeyNote": "L'API de ScreenScraper exige une clé développeur en plus du compte utilisateur. Obtenez-en une gratuitement sur",
       "required": "Champ(s) requis : {{fields}}"
     },
     "fieldPriorityHint": "L'ordre par champ se configure via /api/v3/metadata/field-priority — l'éditeur drag-and-drop arrive dans un slice à venir."

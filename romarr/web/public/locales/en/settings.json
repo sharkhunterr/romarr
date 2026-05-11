@@ -882,6 +882,7 @@
       "cancel": "Cancel",
       "close": "Close",
       "advanced": "Advanced (optional)",
+      "ssDevKeyNote": "ScreenScraper's API requires a developer key in addition to your user account. Get one for free at",
       "required": "Required field(s): {{fields}}"
     },
     "fieldPriorityHint": "Per-field provider order is configured at /api/v3/metadata/field-priority — the drag-and-drop editor lands in a follow-up slice."
