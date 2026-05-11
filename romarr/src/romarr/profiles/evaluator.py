@@ -93,6 +93,18 @@ def _reject(code: str, message: str, *, field: str | None = None) -> EvaluationR
     )
 
 
+# Slice 403 — archive containers are transparent for the quality
+# gate. They wrap the actual ROM dump; the importer extracts them
+# and the gate runs again on the inner file format. Rejecting a
+# release for being a ``.rar`` would just block content that
+# would have passed once unwrapped, which is a footgun (the user's
+# PSX ``.rar`` of an ``.iso`` shouldn't fail at search time
+# because the profile happened to spell out ``zip + 7z`` only).
+_UNIVERSAL_ARCHIVE_CONTAINERS = frozenset(
+    {"zip", "rar", "7z", "tar", "gz", "bz2", "xz"}
+)
+
+
 class ProfileEvaluator:
     """Static-method facade for the four pure evaluators.
 
@@ -112,6 +124,22 @@ class ProfileEvaluator:
                 "dat_required",
                 "profile requires DAT verification; release is unverified",
                 field="dat_verified",
+            )
+        # Slice 403 — archive containers (zip / rar / 7z / tar / …)
+        # are transparent: pass through regardless of
+        # ``allowed_formats`` because the importer extracts them and
+        # the gate runs again on the inner file. Avoids the common
+        # footgun where a PSX ``.rar`` of an ``.iso`` is rejected
+        # at search time despite being fine once unwrapped.
+        if (
+            facts.file_format
+            and facts.file_format.lower() in _UNIVERSAL_ARCHIVE_CONTAINERS
+        ):
+            return _accept(
+                "container_format",
+                f"file_format {facts.file_format!r} is a universal "
+                "archive container — gate defers to inner format",
+                field="file_format",
             )
         if facts.file_format and facts.file_format not in profile.allowed_formats:
             return _reject(

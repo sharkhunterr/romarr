@@ -553,6 +553,16 @@
         "successTitle": "Quality profile added",
         "successBody": "{{name}} is now available to bind to a library.",
         "errorTitle": "Couldn't add the profile"
+      },
+      "edit": {
+        "button": "Edit",
+        "modalTitle": "Edit Quality profile",
+        "subhead": "Tweak which formats this profile accepts. Container archives (zip / rar / 7z / …) always pass — the importer unwraps them.",
+        "submit": "Save changes",
+        "submitting": "Saving…",
+        "successTitle": "Quality profile updated",
+        "successBody": "{{name}} saved.",
+        "errorTitle": "Couldn't save the profile"
       }
     }
   },

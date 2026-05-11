@@ -2,7 +2,11 @@
   {
     "seed_key": "preservation",
     "name": "Preservation",
-    "allowed_formats": ["raw", "zip", "7z"],
+    "allowed_formats": [
+      "raw", "zip", "7z", "rar",
+      "iso", "cue", "bin", "img", "gdi", "mdf", "nrg",
+      "chd", "rvz", "wbfs", "wia", "nkit", "ciso", "cso", "pbp"
+    ],
     "preferred_format": "7z",
     "require_dat_verified": false,
     "allow_archive_double_compression": false,
@@ -11,7 +15,11 @@
   {
     "seed_key": "emulation-optimized",
     "name": "Emulation Optimized",
-    "allowed_formats": ["raw", "zip", "chd", "rvz"],
+    "allowed_formats": [
+      "raw", "zip", "7z", "rar",
+      "iso", "cue", "bin", "img", "gdi",
+      "chd", "rvz", "wbfs", "nkit", "ciso", "cso", "pbp"
+    ],
     "preferred_format": "chd",
     "require_dat_verified": false,
     "allow_archive_double_compression": false,
@@ -20,7 +28,10 @@
   {
     "seed_key": "disk-saver",
     "name": "Disk Saver",
-    "allowed_formats": ["7z", "chd", "rvz", "nkit"],
+    "allowed_formats": [
+      "7z", "rar",
+      "chd", "rvz", "nkit", "ciso", "cso"
+    ],
     "preferred_format": "chd",
     "require_dat_verified": false,
     "allow_archive_double_compression": false,

@@ -553,6 +553,16 @@
         "successTitle": "Profil qualité ajouté",
         "successBody": "{{name}} est disponible pour être lié à une ludothèque.",
         "errorTitle": "Impossible d'ajouter le profil"
+      },
+      "edit": {
+        "button": "Modifier",
+        "modalTitle": "Modifier le profil qualité",
+        "subhead": "Ajustez les formats acceptés. Les archives (zip / rar / 7z / …) passent toujours — l'importeur les extrait.",
+        "submit": "Enregistrer",
+        "submitting": "Enregistrement…",
+        "successTitle": "Profil qualité mis à jour",
+        "successBody": "{{name}} enregistré.",
+        "errorTitle": "Échec de l'enregistrement"
       }
     }
   },

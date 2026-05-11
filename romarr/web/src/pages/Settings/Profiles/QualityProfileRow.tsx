@@ -11,6 +11,7 @@
  * deferred to a follow-up slice.
  */
 
+import { Pencil } from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -18,6 +19,8 @@ import {
   useDeleteQualityProfile,
   type QualityProfile,
 } from "@/lib/api/queries/quality-profiles";
+
+import { CreateQualityProfileModal } from "./CreateQualityProfileModal";
 
 interface QualityProfileRowProps {
   profile: QualityProfile;
@@ -46,6 +49,7 @@ export function QualityProfileRow(
   const del = useDeleteQualityProfile();
 
   const [confirming, setConfirming] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   function confirmDelete(): void {
     del.mutate(profile.id);
@@ -113,6 +117,18 @@ export function QualityProfileRow(
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
           type="button"
+          onClick={() => setEditOpen(true)}
+          className={[
+            "min-h-[36px] inline-flex items-center gap-1 rounded-md border border-zinc-700 px-3 text-xs font-medium",
+            "text-zinc-200 hover:bg-zinc-800",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+          ].join(" ")}
+        >
+          <Pencil size={12} aria-hidden="true" />
+          {t("profiles.quality.edit.button")}
+        </button>
+        <button
+          type="button"
           onClick={() => setConfirming(true)}
           disabled={profile.is_factory_default}
           title={
@@ -130,6 +146,13 @@ export function QualityProfileRow(
           {t("profiles.quality.delete.button")}
         </button>
       </div>
+
+      {editOpen && (
+        <CreateQualityProfileModal
+          profile={profile}
+          onClose={() => setEditOpen(false)}
+        />
+      )}
 
       {confirming && (
         <div className="mt-3 rounded-md border border-red-900/50 bg-red-950/20 p-3">
