@@ -3602,6 +3602,8 @@ export interface components {
             releaseYear?: number | null;
             /** Coverurl */
             coverUrl?: string | null;
+            /** Providers — every (name, id) pair the dedupe collapsed */
+            providers?: { name: string; gameId: string; confidence: number }[];
         };
         /** GameRead */
         GameRead: {

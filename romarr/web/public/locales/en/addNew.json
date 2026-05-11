@@ -34,6 +34,8 @@
     "platformAll": "Any platform",
     "year": "Year",
     "yearAll": "Any year",
+    "provider": "Provider",
+    "providerAll": "Any provider",
     "clear": "Clear filters",
     "noMatches": "No candidates match the current filters."
   },

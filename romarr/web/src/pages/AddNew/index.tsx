@@ -164,9 +164,25 @@ function LookupRow(props: {
           <ConfidenceBar value={row.confidence} />
         </div>
         <div className="mt-auto flex flex-wrap items-center justify-between gap-2 text-[0.65rem] text-zinc-500">
-          <div className="flex flex-wrap items-center gap-2">
-            <ProviderPill name={row.providerName} />
-            <span className="font-mono">id: {row.providerGameId}</span>
+          {/* Slice 410 — when dedupe collapsed multiple
+              providers into this row, surface every one as a
+              pill instead of just the highest-confidence
+              ``providerName``. Tooltip carries the provider's
+              id so the operator can cross-check. */}
+          <div className="flex flex-wrap items-center gap-1">
+            {(row.providers ?? []).length > 0 ? (
+              (row.providers ?? []).map((p) => (
+                <span
+                  key={`${p.name}-${p.gameId}`}
+                  title={`${p.name} · id ${p.gameId}`}
+                  className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[0.55rem] uppercase tracking-wider text-zinc-300"
+                >
+                  {p.name}
+                </span>
+              ))
+            ) : (
+              <ProviderPill name={row.providerName} />
+            )}
           </div>
           <button
             type="button"
@@ -192,10 +208,16 @@ function applyFilters(
   rows: readonly GameLookupRow[],
   platformSlug: string,
   year: string,
+  providerName: string,
 ): GameLookupRow[] {
   return rows.filter((row) => {
     if (platformSlug && row.platformSlug !== platformSlug) return false;
     if (year && String(row.releaseYear ?? "") !== year) return false;
+    if (providerName) {
+      const names = (row.providers ?? []).map((p) => p.name);
+      if (!names.includes(providerName) && row.providerName !== providerName)
+        return false;
+    }
     return true;
   });
 }
@@ -203,10 +225,13 @@ function applyFilters(
 interface FilterBarProps {
   platforms: ReadonlyArray<{ slug: string; name: string }>;
   years: ReadonlyArray<number>;
+  providers: ReadonlyArray<string>;
   filterPlatform: string;
   setFilterPlatform: (s: string) => void;
   filterYear: string;
   setFilterYear: (s: string) => void;
+  filterProvider: string;
+  setFilterProvider: (s: string) => void;
   open: boolean;
   setOpen: (b: boolean) => void;
   totalRows: number;
@@ -215,7 +240,9 @@ interface FilterBarProps {
 function FilterBar(props: FilterBarProps): ReactElement {
   const { t } = useTranslation("addNew");
   const activeCount =
-    (props.filterPlatform ? 1 : 0) + (props.filterYear ? 1 : 0);
+    (props.filterPlatform ? 1 : 0) +
+    (props.filterYear ? 1 : 0) +
+    (props.filterProvider ? 1 : 0);
   return (
     <div className="mb-3 rounded-md border border-zinc-800 bg-zinc-900/40">
       <button
@@ -275,11 +302,29 @@ function FilterBar(props: FilterBarProps): ReactElement {
               ))}
             </select>
           </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[0.6rem] uppercase tracking-widest text-zinc-500">
+              {t("filters.provider")}
+            </span>
+            <select
+              value={props.filterProvider}
+              onChange={(e) => props.setFilterProvider(e.target.value)}
+              className="rounded-md bg-zinc-950 px-2 py-1.5 text-xs text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              <option value="">{t("filters.providerAll")}</option>
+              {props.providers.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </label>
           {activeCount > 0 && (
             <button
               type="button"
               onClick={() => {
                 props.setFilterPlatform("");
+                props.setFilterProvider("");
                 props.setFilterYear("");
               }}
               className="col-span-full justify-self-start text-[0.65rem] text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
@@ -311,6 +356,7 @@ export function AddNewPage(): ReactElement {
   // lookup endpoint with provider-side genre tags.
   const [filterPlatform, setFilterPlatform] = useState<string>("");
   const [filterYear, setFilterYear] = useState<string>("");
+  const [filterProvider, setFilterProvider] = useState<string>("");
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const platforms = usePlatforms();
@@ -450,17 +496,28 @@ export function AddNewPage(): ReactElement {
                 ),
               ).sort((a, b) => b - a)
             }
+            providers={
+              Array.from(
+                new Set(
+                  lookup.data.flatMap((r) =>
+                    (r.providers ?? []).map((p) => p.name).concat(r.providerName),
+                  ),
+                ),
+              ).sort()
+            }
             filterPlatform={filterPlatform}
             setFilterPlatform={setFilterPlatform}
             filterYear={filterYear}
             setFilterYear={setFilterYear}
+            filterProvider={filterProvider}
+            setFilterProvider={setFilterProvider}
             open={filtersOpen}
             setOpen={setFiltersOpen}
             totalRows={lookup.data.length}
           />
 
           <ul className="space-y-2">
-            {applyFilters(lookup.data, filterPlatform, filterYear).map((row) => (
+            {applyFilters(lookup.data, filterPlatform, filterYear, filterProvider).map((row) => (
               <LookupRow
                 key={`${row.providerName}-${row.providerGameId}-${row.platformSlug ?? "any"}`}
                 row={row}
@@ -470,7 +527,7 @@ export function AddNewPage(): ReactElement {
               />
             ))}
           </ul>
-          {applyFilters(lookup.data, filterPlatform, filterYear).length ===
+          {applyFilters(lookup.data, filterPlatform, filterYear, filterProvider).length ===
             0 && (
             <p className="rounded-md border border-dashed border-zinc-800 bg-zinc-900/20 p-3 text-[0.7rem] text-zinc-500">
               {t("filters.noMatches")}

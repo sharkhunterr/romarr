@@ -34,6 +34,8 @@
     "platformAll": "Toutes plateformes",
     "year": "Année",
     "yearAll": "Toutes années",
+    "provider": "Fournisseur",
+    "providerAll": "Tous fournisseurs",
     "clear": "Effacer les filtres",
     "noMatches": "Aucun candidat ne correspond aux filtres actuels."
   },

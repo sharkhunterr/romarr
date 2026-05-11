@@ -832,6 +832,8 @@ async def read_game_metadata(
             },
         )
 
+    from romarr.metadata.models import MetadataProviderConfig
+
     cache_rows = (
         await db.execute(
             select(MetadataCache).where(MetadataCache.game_id == game_id)
@@ -839,11 +841,33 @@ async def read_game_metadata(
     ).scalars().all()
     cache_by_provider = {c.provider_name: c for c in cache_rows}
 
+    # Slice 410 — include every enabled provider, even when no
+    # cache row exists yet, so the operator can see that SS is
+    # configured but the aggregator hasn't pulled from it for
+    # this game (typical after enabling a provider on an old
+    # game that was previously bound to a single source).
+    enabled_provider_names = set(
+        (
+            await db.execute(
+                select(MetadataProviderConfig.provider_name).where(
+                    MetadataProviderConfig.enabled.is_(True)
+                )
+            )
+        ).scalars().all()
+    )
+
     providers: list[GameMetadataProviderRead] = []
     for provider_name, column in _GAME_PROVIDER_FK_COLUMN.items():
         pinned = getattr(row, column, None)
         cached = cache_by_provider.get(provider_name)
-        if pinned is None and cached is None:
+        if (
+            pinned is None
+            and cached is None
+            and provider_name not in enabled_provider_names
+        ):
+            # Disabled + never used → drop from the audit view
+            # entirely. Enabled-but-empty shows up so the
+            # operator notices and can trigger a refresh.
             continue
         cache_data = cached.data if cached else {}
         fields_payload: dict[str, Any] = {}

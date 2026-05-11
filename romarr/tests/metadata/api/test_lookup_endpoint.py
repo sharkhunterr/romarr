@@ -159,13 +159,18 @@ async def test_lookup_merges_and_ranks_by_confidence(
     resp = await api_client.get("/api/v3/game/lookup?q=sonic")
     assert resp.status_code == 200, resp.json()
     body = resp.json()
-    assert len(body) == 4
-    # Confidence-descending order across providers.
+    # Slice 410 — the two fake providers both return "Sonic 1"
+    # and "Sonic 2"; cross-provider dedupe collapses to 2 rows,
+    # each tagged with both provider hits.
+    assert len(body) == 2
     confidences = [row["confidence"] for row in body]
     assert confidences == sorted(confidences, reverse=True)
-    # Rank is the row index in the response.
     ranks = [row["rank"] for row in body]
-    assert ranks == [0, 1, 2, 3]
+    assert ranks == [0, 1]
+    # Every row carries both providers (igdb + screenscraper).
+    for row in body:
+        names = sorted(p["name"] for p in row["providers"])
+        assert names == ["igdb", "screenscraper"]
 
 
 @pytest.mark.asyncio
