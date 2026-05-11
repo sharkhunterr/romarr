@@ -881,6 +881,7 @@
       "saving": "Saving…",
       "cancel": "Cancel",
       "close": "Close",
+      "advanced": "Advanced (optional)",
       "required": "Required field(s): {{fields}}"
     },
     "fieldPriorityHint": "Per-field provider order is configured at /api/v3/metadata/field-priority — the drag-and-drop editor lands in a follow-up slice."

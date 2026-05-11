@@ -881,6 +881,7 @@
       "saving": "Enregistrement…",
       "cancel": "Annuler",
       "close": "Fermer",
+      "advanced": "Avancé (optionnel)",
       "required": "Champ(s) requis : {{fields}}"
     },
     "fieldPriorityHint": "L'ordre par champ se configure via /api/v3/metadata/field-priority — l'éditeur drag-and-drop arrive dans un slice à venir."

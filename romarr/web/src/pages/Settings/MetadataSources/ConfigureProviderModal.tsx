@@ -29,6 +29,10 @@ interface FieldDef {
   placeholder?: string;
   secret?: boolean;
   required?: boolean;
+  /** Slice 407 — when true, the field renders under a
+   * collapsed "Advanced" disclosure so the form stays one-
+   * focal for the common case. */
+  advanced?: boolean;
 }
 
 const FIELDS_BY_PROVIDER: Record<string, FieldDef[]> = {
@@ -41,11 +45,28 @@ const FIELDS_BY_PROVIDER: Record<string, FieldDef[]> = {
       required: true,
     },
   ],
+  // Slice 407 — ScreenScraper auth is RomM-style now: just
+  // username + password. The dev credentials (``devid`` /
+  // ``devpassword``) are optional and only matter if the
+  // operator registered their own dev key on screenscraper.fr
+  // (better rate-limit quota). The form renders the dev fields
+  // collapsed under an Advanced section.
   screenscraper: [
-    { key: "devid", label: "Developer ID", required: true },
-    { key: "devpassword", label: "Developer Password", secret: true, required: true },
-    { key: "ssid", label: "User Login", required: true },
-    { key: "sspassword", label: "User Password", secret: true, required: true },
+    { key: "ssid", label: "Username", required: true },
+    { key: "sspassword", label: "Password", secret: true, required: true },
+    {
+      key: "devid",
+      label: "Developer ID (optional)",
+      required: false,
+      advanced: true,
+    },
+    {
+      key: "devpassword",
+      label: "Developer Password (optional)",
+      secret: true,
+      required: false,
+      advanced: true,
+    },
   ],
   mobygames: [
     { key: "api_key", label: "API Key", secret: true, required: true },
@@ -80,10 +101,13 @@ export function ConfigureProviderModal(
   const test = useTestMetadataProvider();
 
   const fields = FIELDS_BY_PROVIDER[provider.provider_name] ?? [];
+  const primaryFields = fields.filter((f) => !f.advanced);
+  const advancedFields = fields.filter((f) => f.advanced);
   const noCreds = NO_CREDS_PROVIDERS.has(provider.provider_name);
 
   const [values, setValues] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   useEffect(() => {
     setValues(Object.fromEntries(fields.map((f) => [f.key, ""])));
@@ -168,7 +192,7 @@ export function ConfigureProviderModal(
           </div>
         ) : (
           <form onSubmit={onSubmit} className="space-y-3">
-            {fields.map((f) => (
+            {primaryFields.map((f) => (
               <label key={f.key} className="block text-xs text-zinc-400">
                 <span className="mb-1 block">
                   {f.label}
@@ -195,6 +219,45 @@ export function ConfigureProviderModal(
                 />
               </label>
             ))}
+
+            {advancedFields.length > 0 && (
+              <details
+                open={advancedOpen}
+                onToggle={(e) =>
+                  setAdvancedOpen((e.target as HTMLDetailsElement).open)
+                }
+                className="rounded-md border border-zinc-800 bg-zinc-900/40 px-3 py-2 text-xs"
+              >
+                <summary className="cursor-pointer select-none text-zinc-400 hover:text-zinc-200">
+                  {t("metadataSources.configure.advanced")}
+                </summary>
+                <div className="mt-3 space-y-3">
+                  {advancedFields.map((f) => (
+                    <label key={f.key} className="block text-xs text-zinc-400">
+                      <span className="mb-1 block">{f.label}</span>
+                      <input
+                        type={f.secret ? "password" : "text"}
+                        autoComplete={f.secret ? "new-password" : "off"}
+                        value={values[f.key] ?? ""}
+                        placeholder={f.placeholder}
+                        onChange={(e) =>
+                          setValues((prev) => ({
+                            ...prev,
+                            [f.key]: e.target.value,
+                          }))
+                        }
+                        className={[
+                          "w-full rounded-md bg-zinc-900 px-3 py-2 text-sm text-zinc-100",
+                          "ring-1 ring-inset ring-zinc-700",
+                          "focus-visible:outline-none focus-visible:ring-2",
+                          "focus-visible:ring-brand",
+                        ].join(" ")}
+                      />
+                    </label>
+                  ))}
+                </div>
+              </details>
+            )}
 
             {error && (
               <p role="alert" className="text-xs text-red-400">

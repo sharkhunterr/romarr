@@ -87,16 +87,23 @@ class ScreenScraperProvider(MetadataProvider):
         self._language_preference = "en"
 
     def configure(self, config: dict[str, Any]) -> None:
-        devid = config.get("devid")
-        devpassword = config.get("devpassword")
+        # Slice 407 — RomM-style auth: only the operator's
+        # personal ``ssid`` / ``sspassword`` are required.
+        # ``devid`` / ``devpassword`` are app credentials; when
+        # omitted we send ScreenScraper calls without them and
+        # the API treats us as an anonymous client (lower quota,
+        # but works). Operators with their own dev account can
+        # still paste them via the Advanced section of the UI.
         ssid = config.get("ssid")
         sspassword = config.get("sspassword")
-        if not all((devid, devpassword, ssid, sspassword)):
+        if not all((ssid, sspassword)):
             raise AuthError(
-                "ScreenScraper requires devid, devpassword, ssid, sspassword"
+                "ScreenScraper requires ssid + sspassword (the operator's "
+                "user account on screenscraper.fr). devid / devpassword are "
+                "optional — register your own dev key for better rate limits."
             )
-        self._devid = devid
-        self._devpassword = devpassword
+        self._devid = config.get("devid") or None
+        self._devpassword = config.get("devpassword") or None
         self._ssid = ssid
         self._sspassword = sspassword
         if lang := config.get("language"):
@@ -112,16 +119,23 @@ class ScreenScraperProvider(MetadataProvider):
             await self._client.aclose()
 
     def _auth_params(self) -> dict[str, str]:
-        if self._devid is None:
+        # Slice 407 — ssid + sspassword are the required pair;
+        # devid / devpassword are optional and only sent when
+        # the operator pasted their own dev credentials. The
+        # ScreenScraper API accepts calls without devid (lower
+        # rate-limit quota, but functional).
+        if not self._ssid or not self._sspassword:
             raise AuthError("ScreenScraper provider not configured")
-        return {
-            "devid": self._devid,
-            "devpassword": self._devpassword or "",
-            "ssid": self._ssid or "",
-            "sspassword": self._sspassword or "",
+        params: dict[str, str] = {
+            "ssid": self._ssid,
+            "sspassword": self._sspassword,
             "softname": "romarr",
             "output": "json",
         }
+        if self._devid and self._devpassword:
+            params["devid"] = self._devid
+            params["devpassword"] = self._devpassword
+        return params
 
     async def health_check(self) -> bool:
         try:
