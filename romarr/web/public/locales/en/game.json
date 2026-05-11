@@ -6,8 +6,36 @@
     "releases": "Releases",
     "history": "History",
     "files": "Files",
+    "metadata": "Metadata",
     "notes": "Notes",
     "ariaLabel": "Game tabs"
+  },
+  "metadata": {
+    "title": "Metadata sources",
+    "subtitle": "Per-provider snapshot — IDs, cached payloads, on-disk file hashes.",
+    "loadError": "Couldn't load the metadata snapshot.",
+    "open": "open",
+    "fetchedAt": "fetched {{value}}",
+    "expiresAt": "TTL until {{value}}",
+    "noCache": "No cached payload yet — refresh the metadata aggregator to populate this provider's contribution.",
+    "providerName": {
+      "igdb": "IGDB",
+      "mobygames": "MobyGames",
+      "screenscraper": "ScreenScraper",
+      "launchbox": "LaunchBox",
+      "retroachievements": "RetroAchievements"
+    },
+    "fields": {
+      "title": "Title"
+    },
+    "empty": {
+      "title": "No provider data yet",
+      "body": "Bind a provider ID via the lookup-add flow or run a metadata refresh to populate this tab."
+    },
+    "hashes": {
+      "title": "File hashes",
+      "subtitle": "SHA-1 / MD5 / CRC32 of every imported Dump under this game. Useful for cross-checking against external DAT files."
+    }
   },
   "delete": {
     "button": "Delete game"

@@ -23,19 +23,27 @@ import { BulkDeleteModal } from "@/pages/Library/BulkDeleteModal";
 import { FilesTab } from "./FilesTab";
 import { GameHeader } from "./GameHeader";
 import { HistoryTab } from "./HistoryTab";
+import { MetadataTab } from "./MetadataTab";
 import { NotesTab } from "./NotesTab";
 import { OverviewTab } from "./OverviewTab";
 import { PendingDownloads } from "./PendingDownloads";
 import { ReleaseSearchModal } from "./ReleaseSearchModal";
 import { ReleasesTab } from "./ReleasesTab";
 
-type Tab = "overview" | "releases" | "history" | "files" | "notes";
+type Tab =
+  | "overview"
+  | "releases"
+  | "history"
+  | "files"
+  | "metadata"
+  | "notes";
 
 const TABS: readonly Tab[] = [
   "overview",
   "releases",
   "history",
   "files",
+  "metadata",
   "notes",
 ];
 
@@ -146,6 +154,7 @@ export function GameDetailPage(): ReactElement {
           )}
           {tab === "history" && <HistoryTab gameId={gameId} />}
           {tab === "files" && <FilesTab gameId={gameId} />}
+          {tab === "metadata" && <MetadataTab gameId={gameId} />}
           {tab === "notes" && <NotesTab game={game.data} />}
 
           {deleteOpen && (

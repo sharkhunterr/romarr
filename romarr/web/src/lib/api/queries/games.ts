@@ -117,6 +117,33 @@ export function useGame(
   });
 }
 
+export interface GameMetadataProvider {
+  providerName: string;
+  providerGameId: string | null;
+  cachedProviderGameId: string | null;
+  fields: Record<string, unknown>;
+  coverUrl: string | null;
+  fetchedAt: string | null;
+  expiresAt: string | null;
+}
+
+export interface GameMetadata {
+  gameId: number;
+  providers: GameMetadataProvider[];
+  fileHashes: Record<string, string[]>;
+}
+
+export function useGameMetadata(
+  gameId: number | null,
+): UseQueryResult<GameMetadata, ApiError> {
+  return useQuery<GameMetadata, ApiError>({
+    queryKey: ["games", "metadata", gameId],
+    queryFn: () => apiFetch<GameMetadata>(`/api/v3/game/${gameId}/metadata`),
+    enabled: gameId !== null,
+    staleTime: 30_000,
+  });
+}
+
 export function useReleasesForGame(
   gameId: number | null,
 ): UseQueryResult<Release[], ApiError> {

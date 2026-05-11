@@ -6,8 +6,36 @@
     "releases": "Releases",
     "history": "Historique",
     "files": "Fichiers",
+    "metadata": "Métadonnées",
     "notes": "Notes",
     "ariaLabel": "Onglets Jeu"
+  },
+  "metadata": {
+    "title": "Sources de métadonnées",
+    "subtitle": "Snapshot par fournisseur — IDs, payloads en cache, hashes des fichiers sur disque.",
+    "loadError": "Impossible de charger les métadonnées.",
+    "open": "ouvrir",
+    "fetchedAt": "récupéré {{value}}",
+    "expiresAt": "TTL jusqu'au {{value}}",
+    "noCache": "Pas encore de payload en cache — rafraîchissez l'agrégateur de métadonnées pour remplir la contribution de ce fournisseur.",
+    "providerName": {
+      "igdb": "IGDB",
+      "mobygames": "MobyGames",
+      "screenscraper": "ScreenScraper",
+      "launchbox": "LaunchBox",
+      "retroachievements": "RetroAchievements"
+    },
+    "fields": {
+      "title": "Titre"
+    },
+    "empty": {
+      "title": "Aucune donnée provider",
+      "body": "Liez un ID provider via le lookup-add, ou lancez un refresh métadonnées pour remplir cet onglet."
+    },
+    "hashes": {
+      "title": "Hashes fichiers",
+      "subtitle": "SHA-1 / MD5 / CRC32 de chaque Dump importé pour ce jeu. Utile pour vérifier vis-à-vis des DAT files externes."
+    }
   },
   "delete": {
     "button": "Supprimer le jeu"
