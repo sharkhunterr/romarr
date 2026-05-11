@@ -492,6 +492,13 @@ class QBittorrentClient(DownloadClient):
               ``.torrent`` payload directly;
             * ``None`` when the URL is plain HTTP and qBit can
               fetch it itself (the original behaviour).
+
+        Raises :class:`DownloaderError` on 4xx / 5xx so the
+        caller doesn't fall through to qBit's silent failure
+        path (slice 406 — the user observed a Prowlarr 429 on
+        the download URL leading qBit to list the *previous*
+        torrent in the category as the "just-added" one,
+        polluting the queue_entry with a stale hash).
         """
         try:
             async with httpx.AsyncClient(
@@ -500,8 +507,10 @@ class QBittorrentClient(DownloadClient):
                 follow_redirects=False,
             ) as probe:
                 response = await probe.get(url)
-        except httpx.HTTPError:
-            return None
+        except httpx.HTTPError as exc:
+            raise DownloaderError(
+                f"indexer download URL fetch failed: {exc}"
+            ) from exc
 
         if response.status_code in (301, 302, 303, 307, 308):
             location = response.headers.get("location", "")
@@ -526,8 +535,18 @@ class QBittorrentClient(DownloadClient):
             )
             if looks_like_torrent and body:
                 return TorrentBytes(data=body)
+            # 200 OK with non-torrent payload — let qBit have a
+            # shot (might be HTML the operator can debug).
+            return None
 
-        return None
+        # 4xx / 5xx from the indexer (Prowlarr 429 is the common
+        # case). Surfacing as a DownloaderError keeps the grab
+        # flow from silently storing a stale hash via
+        # ``_discover_added_hash``.
+        raise DownloaderError(
+            f"indexer download URL returned HTTP {response.status_code} — "
+            "the torrent file was not delivered (likely rate-limited)"
+        )
 
     async def _discover_added_hash(
         self, client: httpx.AsyncClient, source: TorrentSource
