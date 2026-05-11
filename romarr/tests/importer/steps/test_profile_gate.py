@@ -84,12 +84,15 @@ def test_all_gates_accept() -> None:
 
 
 def test_quality_reject_returns_structured_reason() -> None:
+    # Slice 403 made archive containers (zip / 7z / rar / …)
+    # transparent in the quality gate. Use a non-container family
+    # (chd) so the reject path still fires.
     result = apply_profile_gate(
-        quality=_Quality(allowed_formats=["raw"]),  # 7z not allowed
+        quality=_Quality(allowed_formats=["raw"]),  # chd not allowed
         region=_Region(),
         dump=_Dump(),
         language=_Language(),
-        facts=_facts(file_format="7z"),
+        facts=_facts(file_format="chd"),
     )
     assert result.passed is False
     assert result.rejection_reason is RejectionReason.PROFILE_QUALITY_REJECT
@@ -141,11 +144,11 @@ def test_first_failing_gate_in_fixed_order() -> None:
     in the fixed Q→R→D→L order surfaces — deterministic across
     reruns."""
     result = apply_profile_gate(
-        quality=_Quality(allowed_formats=["raw"]),  # rejects
+        quality=_Quality(allowed_formats=["raw"]),  # rejects chd
         region=_Region(exclude_regions=["USA"]),  # would reject too
         dump=_Dump(),
         language=_Language(),
-        facts=_facts(),
+        facts=_facts(file_format="chd"),
     )
     assert result.failing_gate == "quality"
 
@@ -156,12 +159,15 @@ def test_first_failing_gate_in_fixed_order() -> None:
 
 
 def test_force_overrides_rejection_into_warning() -> None:
+    # Slice 403 — use ``chd`` (not an archive container) so the
+    # quality gate actually fires the reject branch ``force``
+    # is meant to override.
     result = apply_profile_gate(
         quality=_Quality(allowed_formats=["raw"]),
         region=_Region(),
         dump=_Dump(),
         language=_Language(),
-        facts=_facts(file_format="7z"),
+        facts=_facts(file_format="chd"),
         force=True,
     )
     assert result.passed is True
