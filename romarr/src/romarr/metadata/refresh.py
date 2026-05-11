@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import select
 
+from romarr.config.settings import get_settings
 from romarr.domain.models import Game, Platform
 from romarr.metadata.aggregator import aggregate
 from romarr.metadata.cache import get_cached, put_cached
@@ -364,6 +365,86 @@ async def refresh_game_metadata(
         return await _refresh_inner(session, game_id=game_id, force=force)
 
 
+async def _resolve_provider_ids_via_hash(
+    session: AsyncSession, *, game: Game
+) -> None:
+    """Slice 414 — use Hasheous to populate missing provider FK
+    columns on ``game`` from the file hash of any imported Dump.
+
+    Hasheous is a hash-keyed cross-reference service: given a
+    SHA-1 / MD5 / CRC, it returns the corresponding IGDB,
+    RetroAchievements, TheGamesDB and MobyGames immutable IDs.
+    We only write FK columns that are currently NULL — the
+    operator's manual pin (or a previous Hasheous lookup) wins.
+
+    Failure modes are all silent: Hasheous unreachable, hash
+    unknown, no Dump rows yet. The per-provider refresh loop
+    handles the no-id case by falling back to title search.
+    """
+    from romarr.domain.models import Dump, Release
+    from romarr.identification.hashmatch.remote import HasheousBackend
+
+    # Pick the first Dump with at least one hash. The Hasheous
+    # ``ByHash`` endpoint accepts any of (md5, sha1, crc) so a
+    # single Dump is enough.
+    dump_row = (
+        await session.execute(
+            select(Dump.sha1, Dump.md5, Dump.crc32)
+            .join(Release, Release.id == Dump.release_id)
+            .where(Release.game_id == game.id)
+            .limit(1)
+        )
+    ).one_or_none()
+    if dump_row is None:
+        return
+    sha1, md5, crc32 = dump_row
+    if not (sha1 or md5 or crc32):
+        return
+
+    try:
+        backend = HasheousBackend(get_settings())
+    except Exception:
+        return
+    try:
+        refs = await backend.lookup_cross_refs(
+            sha1=sha1, md5=md5, crc32=crc32
+        )
+    except Exception:
+        logger.exception("metadata.refresh.hasheous_lookup_failed")
+        return
+    if not refs:
+        return
+
+    # Provider FK column on Game keyed by Romarr's metadata
+    # provider name. Mirrors ``_PROVIDER_FK_COLUMN`` in
+    # ``lookup.py`` so the refresh path and the lookup-add path
+    # write the same columns.
+    column_by_provider = {
+        "igdb": "igdb_id",
+        "mobygames": "mobygames_id",
+        "retroachievements": "retroachievements_id",
+    }
+    populated: list[str] = []
+    for provider_name, column in column_by_provider.items():
+        existing = getattr(game, column, None)
+        if existing is not None:
+            continue  # operator pin / prior lookup wins
+        raw = refs.get(provider_name)
+        if raw is None:
+            continue
+        try:
+            setattr(game, column, int(raw))
+            populated.append(provider_name)
+        except (TypeError, ValueError):
+            continue
+    if populated:
+        await session.flush()
+        logger.info(
+            "metadata.refresh.hasheous_cross_refs_pinned",
+            extra={"game_id": game.id, "providers": populated},
+        )
+
+
 async def _refresh_inner(
     session: AsyncSession, *, game_id: int, force: bool
 ) -> AggregationResult:
@@ -379,6 +460,15 @@ async def _refresh_inner(
         )
     ).scalar_one_or_none()
     platform_slug = platform.slug if platform is not None else None
+
+    # Slice 414 — RomM-style hash-driven cross-reference. If
+    # this game has at least one Dump on disk and Hasheous is
+    # enabled, look up the hash and pin any missing per-
+    # provider FK column on the Game. The per-provider refresh
+    # loop below then calls ``get_game(pinned_id)`` directly —
+    # no more fuzzy title matching against ``Disney's Tarzan``
+    # / ``Tom Clancy's …`` / publisher-prefix variants.
+    await _resolve_provider_ids_via_hash(session, game=game)
 
     providers = await load_enabled_providers(session, scan=True)
     providers_by_name = {p.name: p for p in providers}
