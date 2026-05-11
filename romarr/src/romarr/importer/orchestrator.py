@@ -153,26 +153,25 @@ async def run_import(
     # taxonomy hit (FR-005 / CL004).
     source_path = context.source_path
     extract_failure: ExtractError | None = None
-    # Slice 383: when qBit hands us a multi-file torrent, the
-    # save_path points at the torrent's top-level *directory*
-    # (e.g. ``Minerva_Myrient/No-Intro/.../Metroid.zip``). Walk
-    # the tree and pick the first archive or ROM-shaped file —
-    # that's the working source for the rest of the pipeline.
+    # Slice 383 / 415: when qBit hands us a multi-file
+    # meta-torrent (Minerva_Myrient et al.), the save_path
+    # points at the torrent's top-level *directory* containing
+    # thousands of files. The naive "first archive/ROM
+    # alphabetically" pick from slice 383 was wrong on every
+    # meta-torrent that contained a Disney's Tarzan release
+    # (it sorts before everything else).
+    #
+    # Slice 415 — title-aware walker: when ``context`` carries
+    # a ``pre_matched_game_id`` (manual-grab flow), score each
+    # candidate file by token overlap with the matched Game's
+    # title + platform short name and pick the highest. Falls
+    # back to the alphabetical-first heuristic when no pre-
+    # match is available (scan-driven imports).
     if source_path.exists() and source_path.is_dir():
-        nested = next(
-            (
-                p
-                for p in sorted(source_path.rglob("*"))
-                if p.is_file()
-                and (
-                    p.suffix.lower() in _ARCHIVE_SUFFIXES
-                    or p.suffix.lower()
-                    in {".gba", ".nds", ".sfc", ".smc", ".n64", ".z64",
-                        ".v64", ".gb", ".gbc", ".nes", ".md", ".smd",
-                        ".iso", ".cue", ".bin", ".chd", ".rvz"}
-                )
-            ),
-            None,
+        nested = await _pick_file_for_pre_matched_game(
+            session=session,
+            root=source_path,
+            pre_matched_game_id=context.pre_matched_game_id,
         )
         if nested is not None:
             source_path = nested
@@ -843,6 +842,101 @@ def _sanitise_path_component(name: str) -> str:
     """
     cleaned = _ILLEGAL_PATH_CHARS.sub(" ", name).strip().rstrip(".")
     return cleaned or "unknown"
+
+
+_ROM_SUFFIXES: frozenset[str] = frozenset({
+    ".gba", ".nds", ".sfc", ".smc", ".n64", ".z64", ".v64",
+    ".gb", ".gbc", ".nes", ".md", ".smd", ".iso", ".cue",
+    ".bin", ".chd", ".rvz", ".pbp", ".cso", ".wbfs", ".wia",
+    ".nkit", ".ciso", ".gdi", ".gcm", ".3ds", ".cia", ".nsp",
+    ".xci", ".unif", ".fds", ".vb", ".min", ".sms", ".gg",
+    ".vpk", ".32x",
+})
+
+
+async def _pick_file_for_pre_matched_game(
+    *,
+    session: AsyncSession,
+    root: "Path",
+    pre_matched_game_id: int | None,
+) -> "Path | None":
+    """Slice 415 — find the file in a meta-torrent that matches
+    a pre-matched Game.
+
+    Walks ``root`` for files with archive or ROM extensions,
+    scores each by token overlap against the matched Game's
+    title + platform short_name, and returns the highest
+    scorer. When no pre-match is available, returns the first
+    archive/ROM alphabetically (the original slice 383
+    behaviour for scan-driven imports).
+    """
+    candidates = [
+        p
+        for p in sorted(root.rglob("*"))
+        if p.is_file()
+        and not p.name.startswith(".")
+        and (
+            p.suffix.lower() in _ARCHIVE_SUFFIXES
+            or p.suffix.lower() in _ROM_SUFFIXES
+        )
+    ]
+    if not candidates:
+        return None
+    if pre_matched_game_id is None:
+        return candidates[0]
+
+    game_row = (
+        await session.execute(
+            select(Game.title, Platform.slug, Platform.name, Platform.short_name)
+            .join(Platform, Platform.id == Game.platform_id)
+            .where(Game.id == pre_matched_game_id)
+        )
+    ).one_or_none()
+    if game_row is None:
+        return candidates[0]
+    title, platform_slug, platform_name, platform_short = game_row
+
+    title_tokens = _significant_path_tokens(title or "")
+    platform_tokens: set[str] = set()
+    for v in (platform_slug, platform_name, platform_short):
+        if v:
+            platform_tokens.update(_significant_path_tokens(v))
+
+    best: tuple["Path", int] | None = None
+    for p in candidates:
+        # Score over the *path* (parent dirs + filename) so
+        # Minerva's ``No-Intro/Nintendo - Game Boy Advance/``
+        # platform folder contributes to the match.
+        path_tokens = _significant_path_tokens(str(p.relative_to(root)))
+        title_overlap = len(title_tokens & path_tokens)
+        platform_overlap = len(platform_tokens & path_tokens)
+        # Title match weighs heavier than platform — a wrong
+        # title on the right platform is worse than the right
+        # title on a slightly-off platform folder.
+        score = title_overlap * 3 + platform_overlap
+        if best is None or score > best[1]:
+            best = (p, score)
+    if best is None:
+        return candidates[0]
+    # Refuse to pick a zero-score file — better to fail
+    # ``match:no_game`` cleanly than to import a random file.
+    return best[0] if best[1] > 0 else None
+
+
+_PATH_TOKEN_RE = re.compile(r"[a-z0-9]+")
+_PATH_STOPWORDS: frozenset[str] = frozenset(
+    {"the", "of", "a", "an", "and", "in", "on", "no", "intro",
+     "rom", "roms", "usa", "europe", "japan", "rev", "rerelease"}
+)
+
+
+def _significant_path_tokens(text: str) -> set[str]:
+    """Lowercase alphanumeric tokens minus noise words."""
+    return {
+        t
+        for t in _PATH_TOKEN_RE.findall(text.lower())
+        if len(t) >= 2 and t not in _PATH_STOPWORDS
+    }
 
 
 async def _pick_library_for_game(
