@@ -47,7 +47,22 @@
       "Bash(grep -nA5 \"requires a username\\\\|requires a password\" tests/downloaders/test_models.py)",
       "Bash(.venv/bin/pytest tests/downloaders/test_models.py tests/downloaders/api/ tests/downloaders/implementations/test_qbittorrent.py --no-cov -q)",
       "Bash(grep -nA10 \"if payload.type is ClientType.QBITTORRENT\" src/romarr/downloaders/api/clients.py)",
-      "Bash(grep -nA20 \"_login\\\\|SID cookie\" src/romarr/downloaders/implementations/qbittorrent.py)"
+      "Bash(grep -nA20 \"_login\\\\|SID cookie\" src/romarr/downloaders/implementations/qbittorrent.py)",
+      "Bash(curl -s \"http://localhost:8088/api/v2/torrents/info\")",
+      "Bash(grep -nB2 -A10 \"rom/release/grab\")",
+      "Bash(grep -nB2 -A30 \"def _tag_downloaded_imported\" src/romarr/importer/orchestrator.py)",
+      "Bash(python -m pytest tests/importer/ tests/api/routers/test_queue.py tests/downloaders/ -x --no-header -q)",
+      "Bash(python3 -m pytest tests/importer/ tests/api/routers/test_queue.py tests/downloaders/ -x --no-header -q)",
+      "Bash(.venv/bin/python -m pytest tests/importer/ tests/api/routers/test_queue.py -x --no-header -q)",
+      "Bash(.venv/bin/python -m pytest tests/metadata/api/ tests/importer/ tests/domain/ -x --no-header -q -p no:cacheprovider)",
+      "Bash(grep -nA3 \"NamingProfileRead:\" web/src/types/api/schema.ts)",
+      "Bash(.venv/bin/python -m pytest tests/api/test_bootstrap_lifespan.py::test_lifespan_skips_bootstrap_by_default -x --no-header --no-cov)",
+      "Bash(git stash *)",
+      "Bash(.venv/bin/python -m pytest tests/metadata/api/test_lookup_endpoint.py -x --no-header --no-cov)",
+      "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); print\\(f'{len\\(data\\)} torrent\\(s\\):'\\); [print\\(f'  {t[\\\\\"hash\\\\\"][:12]} {t[\\\\\"name\\\\\"]}'\\) for t in data]\")",
+      "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); print\\('|'.join\\(t['hash'] for t in data\\)\\)\")",
+      "Bash(xargs -I {} curl -s -X POST \"http://localhost:8088/api/v2/torrents/delete\" -d \"hashes={}&deleteFiles=true\" -o /dev/null -w \"delete: %{http_code}\\\\n\")",
+      "Bash(python3 -c \"import json,sys; print\\(f'{len\\(json.load\\(sys.stdin\\)\\)} torrent\\(s\\) remaining'\\)\")"
     ]
   }
 }
