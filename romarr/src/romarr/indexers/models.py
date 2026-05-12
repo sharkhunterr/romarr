@@ -34,7 +34,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from romarr.domain.base import Base, TimestampMixin
 
-_IMPLEMENTATION_CHECK = "implementation IN ('newznab','torznab')"
+_IMPLEMENTATION_CHECK = "implementation IN ('newznab','torznab','grabarr')"
 _SOURCE_CHECK = "source IN ('manual','prowlarr')"
 _SYNC_LEVEL_CHECK = "sync_level IN ('disabled','add_only','full_sync')"
 

@@ -108,6 +108,31 @@ async def test_indexer_implementation_check_constraint(
     await async_session.rollback()
 
 
+async def test_indexer_implementation_grabarr_accepted(
+    async_session: AsyncSession,
+) -> None:
+    # Migration 0022 widened the CHECK constraint to allow the
+    # ``'grabarr'`` literal — the foundation stub for the direct
+    # protocol (docs/grabarr-direct-protocol.md v0.2). The full row
+    # wiring (registry, client class) lands in the R2 slice; here we
+    # only verify the column tolerates the literal at insert time.
+    async_session.add(
+        Indexer(
+            name="Grabarr direct",
+            implementation="grabarr",
+            url="https://grabarr.test/torznab/default/api",
+            source="manual",
+        )
+    )
+    await async_session.commit()
+    row = (
+        await async_session.execute(
+            select(Indexer).where(Indexer.name == "Grabarr direct")
+        )
+    ).scalar_one()
+    assert row.implementation == "grabarr"
+
+
 async def test_indexer_priority_range_check(
     async_session: AsyncSession,
 ) -> None:

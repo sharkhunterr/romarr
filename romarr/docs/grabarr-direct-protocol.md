@@ -1,16 +1,31 @@
 # Grabarr ↔ Romarr direct protocol
 
-Status: draft v0.1
+Status: draft v0.2
 Owners: Romarr (this repo) + Grabarr (sharkhunterr/grabarr)
 Goal: let Romarr resolve a Grabarr search result into a concrete
 download instruction (HTTP-direct, magnet, or specific-file-in-meta-torrent)
 **without going through Prowlarr** and **without guessing** which file
 inside a meta-torrent matches the operator's pick.
 
+## Changelog
+
+- **v0.2 (2026-05-12)** — Pin the Romarr-side topology (one indexer row
+  `implementation=grabarr` + one downloader row `type=grabarr_direct`,
+  linked via `indexer.download_client_id`). Clarify that **search**
+  stays on Newznab/Torznab in Grabarr (Romarr's existing multi-indexer
+  fan-out in `search/rounds/manual.py` is already the Prowlarr-side
+  equivalent — Prowlarr in our setup never proxied searches, it only
+  push-synced indexer configs). Call out the BitTorrent-wrap detour
+  that today makes "direct HTTP" sources transit BitTorrent for no
+  reason — that's the large-file pain point this protocol kills.
+- **v0.1** — Initial draft: resolve endpoint shape, three method
+  variants (`http_direct`, `torrent_magnet`, `torrent_in_meta`),
+  health + dat endpoints, error taxonomy, implementation checklists.
+
 ## Why
 
-The Romarr → Prowlarr → Grabarr chain has three pain points the
-direct protocol fixes:
+The Romarr → Prowlarr → Grabarr chain has four pain points the direct
+protocol fixes:
 
 1. **Meta-torrent file selection is heuristic.** Slice 416 picks a file
    from a multi-file torrent by token-overlap on the path. For the
@@ -26,7 +41,21 @@ direct protocol fixes:
    Grabarr can flag those results as `http_direct` and Romarr streams
    them with `httpx`.
 
-3. **Hash validation is impossible end-to-end.** Newznab/Torznab carries
+3. **Grabarr currently wraps HTTP-direct sources in a single-file
+   torrent.** To stay Newznab/Torznab-compatible, Grabarr serves
+   `/torznab/{slug}/download/{token}.torrent` for every result —
+   including pure HTTP-direct ones (Internet Archive, RomsFun,
+   Edge Emulation, etc.). The torrent advertises Grabarr itself as a
+   BEP-19 webseed (`/torznab/{slug}/seed/{token}`), so qBit fetches the
+   file by HTTP **through** Grabarr instead of from the upstream source
+   directly. For small ROMs this is invisible overhead; for large
+   archives (the user's reported pain point) the proxy hop is where
+   throughput collapses — Grabarr has to either prefetch or stream the
+   full payload back out, and the upstream's own Range-supporting CDN
+   gets bypassed. The direct protocol skips the wrap entirely:
+   Romarr fetches the upstream URL itself with `httpx` Range support.
+
+4. **Hash validation is impossible end-to-end.** Newznab/Torznab carries
    no per-file checksum. The importer matches files by name + token
    overlap. With sha1/md5/crc32 in the resolve response Romarr can
    verify the imported file against the no-intro/redump dat and refuse
@@ -36,11 +65,63 @@ direct protocol fixes:
 
 - Replace Grabarr's Newznab/Torznab surface — the protocol is **purely
   additive**. Sonarr/Radarr/Prowlarr keep working unchanged.
-- Search via Grabarr direct — the search path stays Newznab/Torznab.
-  This protocol only covers the **resolve + grab** phase, which is
-  where the gain is.
+- Add a new search endpoint to Grabarr. The search path stays
+  Newznab/Torznab; Grabarr already aggregates internally across its
+  source plugins (`grabarr/core/orchestrator.py:orchestrate_search`
+  with `aggregate_all`) so one Newznab call already returns merged
+  results. Romarr's own multi-indexer fan-out (`search/rounds/
+  manual.py:run_manual_search`) is the Prowlarr-side equivalent and
+  already covers the search-aggregation role on Romarr's side.
+  This protocol therefore only covers the **resolve + grab** phase,
+  which is where all the gain is.
 - Cover non-Grabarr indexers. Other Newznab/Torznab indexers continue
   through Prowlarr + qBit as today.
+- Replace Prowlarr's *config-sync* (push notifications on indexer
+  mutations). That path is orthogonal and operators who use it can
+  keep using it.
+
+## Romarr-side topology
+
+The integration shows up as **two linked rows** in Romarr's settings,
+created atomically by a single "Add Grabarr" wizard so the operator
+never sees the split:
+
+| Row             | Table             | Key fields                                                            |
+| --------------- | ----------------- | --------------------------------------------------------------------- |
+| Grabarr indexer | `indexer`         | `implementation='grabarr'`, `base_url`, `api_key`, `download_client_id` → grabarr_direct row |
+| Grabarr client  | `download_client` | `type='grabarr_direct'`, `base_url`, `api_key`, `timeout_seconds`     |
+
+Both rows share the same `base_url` + `api_key` (they target the same
+Grabarr instance). The split exists because:
+
+- **Search is an indexer responsibility.** Romarr's `IndexerRegistry`
+  iterates `indexer` rows and asks each one to `search(query)`. For a
+  `grabarr` indexer this hits the existing Torznab endpoint — no new
+  search code is needed. The result list comes back as ordinary
+  Newznab/Torznab releases with tokens in the `<guid>`.
+
+- **Grab is a download-client responsibility.** Romarr's dispatcher
+  routes a chosen release to the indexer's pinned `download_client_id`
+  (this column already exists at `src/romarr/indexers/models.py:66`).
+  For a Grabarr indexer the pinned client is `grabarr_direct`, which
+  is the only kind that knows about `/romarr/api/v1/resolve`.
+
+The `grabarr_direct` client delegates magnet handoffs to the operator's
+configured qBit client (separate row, unchanged) — see "Romarr-side
+behaviour" below. It is *not* a replacement for qBit; it's a smart
+pre-resolver that **short-circuits to httpx for HTTP-direct sources**
+and falls through to qBit for the torrent cases.
+
+### How Romarr recognises a Grabarr release at grab time
+
+The `indexer.implementation` column already carries `'newznab'` or
+`'torznab'`. We add a third literal `'grabarr'` (DB CHECK widened in
+migration 0022). At grab time `src/romarr/search/api/grab.py` already
+fetches the originating `Indexer` row — extending the source-kind
+sniff in `src/romarr/search/dispatch.py` to map `implementation =
+'grabarr'` to the linked `grabarr_direct` client is the one extra
+branch needed. Everything else (the queue table, the manual-search
+UI, the existing qBit + SAB clients) is untouched.
 
 ## Auth model
 
@@ -214,24 +295,34 @@ JSON body for all errors:
 
 ## Romarr-side behaviour (informative)
 
-- A `DirectGrabarrClient` registers as a `DownloadClient` of type
-  `grabarr_direct`. Operator configures it from Settings → Download
-  Clients with `base_url` + `api_key` + `timeout_seconds` (slice 420).
+- A `GrabarrDirectClient` registers as a `DownloadClient` of type
+  `grabarr_direct`. Operator does not configure it directly — the
+  "Add Grabarr" wizard in Settings → Indexers creates the linked
+  indexer + downloader pair atomically (shared `base_url`, `api_key`,
+  `timeout_seconds` reusing slice 420's per-client timeout column).
+  Removing the indexer cascades the removal of the linked client.
 - The client implements the existing `DownloadClient` ABC:
-  - `test_connection` → `GET /health` + protocol_version check
+  - `test_connection` → `GET /romarr/api/v1/health` + protocol_version
+    check (refuse to enable on mismatch)
   - `add_torrent(source: TorrentUrl)` — `source.url` is the Grabarr
-    search-result URL Romarr already has; the client extracts the guid
-    from it (or carries it on a richer source type), POSTs resolve,
-    dispatches to httpx/qBit per `method`, returns a native id
-  - HTTP-direct native id = SHA-1 of `(url + started_at)` so qBit's
-    info-hash dedup model still works for the queue table
+    Torznab `/download/{token}.torrent` URL Romarr already has from
+    the search response; the client extracts the token, POSTs
+    resolve, dispatches per `method`, returns a native id
+  - HTTP-direct native id = SHA-1 of `(url + started_at)` so the queue
+    table's info-hash-style dedup model keeps working
 - For `method=torrent_in_meta` and `torrent_magnet` the client
-  delegates the actual `/torrents/add` + `filePrio` to the operator's
-  configured qBit client. So `grabarr_direct` is **not** a replacement
-  for qBit; it's a smart pre-resolver that *may* short-circuit to
-  httpx for HTTP-direct sources. Operators with no qBit configured
+  delegates the actual `/torrents/add` + `filePrio` to a **separately
+  configured qBit client** (looked up by the existing
+  `enable_for_torrents` routing). Operators with no qBit configured
   can only grab `http_direct` results — the dispatcher filters
-  candidates accordingly.
+  candidates accordingly (status surfaced in the manual-search UI as
+  "needs qBit").
+- Capability advertisement: the indexer's manual-search rows carry a
+  `method_preview` field (sniffed from the result's `<attr>` set
+  Grabarr adds on the Torznab response) so the UI can mark a
+  candidate "HTTP direct" vs "torrent" *before* the operator clicks
+  grab. This is a v0.3 addition — v0.2 ships without it; the
+  dispatcher just calls `/resolve` blind and trusts the response.
 
 ## Implementation checklist for Grabarr
 
@@ -255,19 +346,71 @@ JSON body for all errors:
 
 ## Implementation checklist for Romarr (this repo)
 
-- [ ] New downloader implementation `DirectGrabarrClient` under
-      `src/romarr/downloaders/implementations/grabarr_direct.py`
-- [ ] New `ClientType.GRABARR_DIRECT` literal + migration to widen the
-      `download_client.type` CHECK
-- [ ] `DownloadClientCreate` schema accepts `base_url` + `api_key`
-- [ ] Connectivity test calls `/health` and surfaces
-      `protocol_version` mismatch as a typed warning
-- [ ] HTTP-direct streamer with hash validation post-download
-- [ ] Routing capability flags: `enable_for_http_direct: bool` on the
-      `grabarr_direct` row, surfaces in the dispatcher's candidate
-      filter
-- [ ] UI: Settings → Download Clients → Add → Grabarr Direct (form
-      with base_url, api_key, timeout, enable_for_torrents=false by
-      default, enable_for_http_direct=true)
-- [ ] Tests: respx fixtures for each `method` branch + a checksum
-      mismatch path
+Order is incremental — each item leaves the tree green and the
+existing Prowlarr/Newznab path untouched.
+
+**Phase R1 — foundation (this branch, slice 422):**
+
+- [ ] Migration 0022: widen the `download_client.type` CHECK to include
+      `'grabarr_direct'` and the `indexer.implementation` CHECK to
+      include `'grabarr'`. Idempotent downgrade.
+- [ ] Add `ClientType.GRABARR_DIRECT = "grabarr_direct"` to
+      `src/romarr/downloaders/types.py`.
+- [ ] Stub `src/romarr/downloaders/implementations/grabarr_direct.py`
+      with `available = False` (mirrors the transmission / deluge
+      stubs) so the factory imports cleanly without exposing the type
+      in the UI's `_CLIENT_TYPES` array yet.
+- [ ] Add `'grabarr'` to the `IndexerImplementation` literal in
+      `src/romarr/indexers/models.py` and the API schema, gated so the
+      Add-Indexer modal does not surface it yet (kept off the
+      `_IMPLEMENTATIONS` array until R2).
+
+**Phase R2 — wiring:**
+
+- [ ] `GrabarrDirectClient` real implementation (test_connection,
+      add_torrent dispatching per resolve.method, get_status etc.).
+- [ ] Indexer-side `GrabarrClient` (parallels `NewznabClient`) — talks
+      to Grabarr's existing Torznab `/api` for search, no new search
+      code in Grabarr.
+- [ ] Extend `src/romarr/search/dispatch.py` to map
+      `indexer.implementation == 'grabarr'` to the linked
+      `grabarr_direct` client at grab time. Newznab/Torznab path
+      remains the default branch.
+- [ ] HTTP-direct streamer with hash validation post-download; failure
+      modes surfaced as queue-row error states.
+- [ ] "Add Grabarr" wizard (Settings → Indexers → New → Grabarr)
+      creates the indexer + linked downloader rows atomically; removing
+      the indexer cascades.
+- [ ] Tests: respx fixtures for each `method` branch + checksum
+      mismatch path + the indexer-side search test (mocked Torznab
+      response).
+
+**Phase R3 — UX polish (defer):**
+
+- [ ] `method_preview` chip in manual-search row.
+- [ ] `/dat/<platform_slug>` preload + library validation pass.
+- [ ] Optional: replace Grabarr's BitTorrent-wrap path on the operator's
+      Sonarr/Radarr-via-Prowlarr stack with an opt-in flag in Grabarr
+      to short-circuit known HTTP-direct sources to redirects. Out of
+      scope for this repo.
+
+## Open questions (need decision before R2)
+
+1. **Removing an indexer that has a linked downloader.** Cascade
+   delete the downloader row, or detach and leave it dangling? Soft
+   delete? Decision: cascade is simpler and matches "Add Grabarr is
+   one logical thing". Confirm with operator UX.
+2. **Two Grabarr instances on the same Romarr.** Allowed? The schema
+   doesn't forbid it (multiple `download_client` rows with
+   `type='grabarr_direct'`). UI wizard must keep them distinct (label
+   them by base_url, not by type). No technical blocker.
+3. **Token expiry.** Grabarr's existing `SearchToken` table has a TTL.
+   What happens if Romarr's manual-search row sits in the UI past
+   that TTL and the operator clicks grab? `404 guid_not_found` —
+   surfaced as a "stale result, re-search" toast. Confirm TTL is long
+   enough for realistic operator workflows (24h proposed).
+4. **HTTP-direct partial-download resume.** If httpx fails mid-stream
+   and the upstream supports Range, do we resume or retry from zero?
+   Resume is the right answer (large IA files), but adds a state
+   machine to the queue. v0.2 ships with retry-from-zero; v0.3 adds
+   Range-resume.

@@ -18,8 +18,10 @@ class ClientType(StrEnum):
     """The set of supported download-client implementations.
 
     The two MVP impls are ``QBITTORRENT`` and ``SABNZBD``; the three
-    stubs surface in the registry / schema endpoint with
-    ``available = False`` so the UI can grey them out.
+    v1-deferred stubs (Transmission, Deluge, NZBGet) and the
+    Grabarr-direct foundation stub surface in the registry / schema
+    endpoint with ``available = False`` so the UI can grey them out
+    (or hide them entirely until wiring lands).
     """
 
     QBITTORRENT = "qbittorrent"
@@ -27,6 +29,11 @@ class ClientType(StrEnum):
     TRANSMISSION = "transmission"  # stub — deferred to v1
     DELUGE = "deluge"              # stub — deferred to v1
     NZBGET = "nzbget"              # stub — deferred to v1
+    # Slice 422 — Grabarr-direct foundation. Stub with
+    # ``available = False`` until the resolve-dispatcher lands; the
+    # DB CHECK constraint accepts the literal so future wiring slices
+    # can persist rows without another migration.
+    GRABARR_DIRECT = "grabarr_direct"
 
 
 class SourceKind(StrEnum):

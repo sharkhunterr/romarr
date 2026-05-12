@@ -30,7 +30,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 from romarr.domain.base import Base, TimestampMixin
 
 _TYPE_CHECK = (
-    "type IN ('qbittorrent','sabnzbd','transmission','deluge','nzbget')"
+    "type IN ('qbittorrent','sabnzbd','transmission','deluge',"
+    "'nzbget','grabarr_direct')"
 )
 _SSL_CHECK = (
     "ssl_cert_validation IN ('enabled','disabled','disabled-for-local')"
