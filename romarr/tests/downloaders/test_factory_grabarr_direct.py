@@ -75,3 +75,29 @@ def test_factory_honours_use_ssl_and_url_base() -> None:
 def test_factory_routes_unknown_type_to_value_error() -> None:
     with pytest.raises(ValueError, match="unknown download client type"):
         build_client_from_row(_row(type="not-a-real-type"))
+
+
+def test_factory_honours_download_root_env_var(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Slice 425 — the http_direct streamer needs a base path under
+    which to write files. Until the R3 wizard adds it as a column
+    on the download_client row, operators pin it via the
+    ``ROMARR_GRABARR_DIRECT_DOWNLOAD_ROOT`` env var."""
+    monkeypatch.setenv(
+        "ROMARR_GRABARR_DIRECT_DOWNLOAD_ROOT", "/data/grabarr-dl"
+    )
+    client = build_client_from_row(_row())
+    assert isinstance(client, GrabarrDirectClient)
+    assert str(client._download_root) == "/data/grabarr-dl"  # noqa: SLF001
+
+
+def test_factory_falls_back_to_downloads_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv(
+        "ROMARR_GRABARR_DIRECT_DOWNLOAD_ROOT", raising=False
+    )
+    client = build_client_from_row(_row())
+    assert isinstance(client, GrabarrDirectClient)
+    assert str(client._download_root) == "/downloads"  # noqa: SLF001
