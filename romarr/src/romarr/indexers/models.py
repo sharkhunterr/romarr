@@ -112,7 +112,7 @@ class Indexer(Base, TimestampMixin):
             "priority BETWEEN 1 AND 100", name="ck_indexer_priority_range"
         ),
         CheckConstraint(
-            "timeout_seconds BETWEEN 5 AND 120",
+            "timeout_seconds BETWEEN 5 AND 600",
             name="ck_indexer_timeout_range",
         ),
         CheckConstraint(

@@ -77,7 +77,7 @@ class IndexerCreate(_Base):
     seed_time_minutes: Annotated[int | None, Field(default=None, ge=0)] = None
     discount_only: bool = False
     priority_indexer: bool = False
-    timeout_seconds: Annotated[int, Field(ge=5, le=120)] = 30
+    timeout_seconds: Annotated[int, Field(ge=5, le=600)] = 30
     result_limit: Annotated[int, Field(ge=1, le=500)] = 100
 
 
@@ -99,7 +99,7 @@ class IndexerUpdate(_Base):
     seed_time_minutes: Annotated[int | None, Field(default=None, ge=0)] = None
     discount_only: bool | None = None
     priority_indexer: bool | None = None
-    timeout_seconds: Annotated[int | None, Field(default=None, ge=5, le=120)] = None
+    timeout_seconds: Annotated[int | None, Field(default=None, ge=5, le=600)] = None
     result_limit: Annotated[int | None, Field(default=None, ge=1, le=500)] = None
 
 
