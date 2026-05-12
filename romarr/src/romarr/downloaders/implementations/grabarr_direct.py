@@ -39,10 +39,12 @@ contract.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 import os
 import re
 import ssl
+import zlib
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, ClassVar
@@ -324,6 +326,16 @@ class GrabarrDirectClient(DownloadClient):
         message preserved — the reconciler relies on ``state +
         error`` to drive the queue-row UI rather than introspecting
         the task itself.
+
+        Slice 429 / R4 — when the resolve response carried per-file
+        checksums (sha1 / md5 / crc32 — populated by Grabarr from
+        ``SearchResult.metadata``), we compute the same digests
+        incrementally during the stream and verify post-completion.
+        A mismatch marks the entry FAILED with a
+        ``checksum_mismatch`` error and unlinks the file so the
+        importer never picks up a tampered or interrupted download.
+        Checksums absent from the response → verification step is
+        a no-op, file is trusted as-is.
         """
         snap = self._pending[native_id]
         url = snap["url"]
@@ -338,6 +350,13 @@ class GrabarrDirectClient(DownloadClient):
         )
         snap["state"] = "DOWNLOADING"
         snap["save_path"] = str(target_path)
+        expected = snap.get("checksums") or {}
+        # Hashers run incrementally on every chunk so the final
+        # state ends up with the digest without a second pass over
+        # the file. Lazily initialised only for digests we care
+        # about (skip md5 if the resolve didn't include it).
+        hashers = _build_hashers(expected)
+        crc = 0 if "crc32" in expected else None
         try:
             target_path.parent.mkdir(parents=True, exist_ok=True)
             async with httpx.AsyncClient(
@@ -363,11 +382,37 @@ class GrabarrDirectClient(DownloadClient):
                             snap["progress"] = (
                                 bytes_done / total if total else 0.0
                             )
+                            for h in hashers.values():
+                                h.update(chunk)
+                            if crc is not None:
+                                crc = zlib.crc32(chunk, crc)
+
+            # Post-stream checksum verification. Compare every digest
+            # the resolver provided against what we just computed.
+            # First mismatch wins — surface it loudly with the
+            # expected vs actual side-by-side for the operator's
+            # error rail.
+            actual: dict[str, str] = {
+                name: h.hexdigest() for name, h in hashers.items()
+            }
+            if crc is not None:
+                actual["crc32"] = f"{crc & 0xFFFFFFFF:08x}"
+            mismatches = _checksum_mismatches(expected, actual)
+            if mismatches:
+                raise DownloaderError(
+                    "checksum_mismatch: "
+                    + "; ".join(
+                        f"{algo} expected={exp} actual={act}"
+                        for algo, exp, act in mismatches
+                    )
+                )
+
             snap["state"] = "COMPLETED"
             snap["progress"] = 1.0 if snap.get("total_bytes") else 0.0
+            snap["computed_checksums"] = actual
             _log.info(
-                "grabarr_direct[%s]: completed %s (%d bytes)",
-                native_id, target_path, bytes_done,
+                "grabarr_direct[%s]: completed %s (%d bytes, %d checksums verified)",
+                native_id, target_path, bytes_done, len(mismatches) and 0 or len(expected),
             )
         except asyncio.CancelledError:
             # Reraise so the task ends cancelled; ``remove`` already
@@ -556,6 +601,41 @@ class GrabarrDirectClient(DownloadClient):
                 f"{resp.text[:200]}"
             )
         return resp.json()
+
+
+def _build_hashers(
+    expected: dict[str, str],
+) -> dict[str, Any]:  # Any = hashlib._Hash (private type)
+    """Initialise hashlib objects for every algorithm the resolver
+    provided a digest for. Unknown algorithms are silently skipped
+    — the protocol could introduce new ones (sha256 in v2) without
+    requiring an old Romarr to update."""
+    out: dict[str, Any] = {}
+    for algo in ("sha1", "md5"):
+        if algo in expected:
+            out[algo] = hashlib.new(algo)
+    return out
+
+
+def _checksum_mismatches(
+    expected: dict[str, str], actual: dict[str, str]
+) -> list[tuple[str, str, str]]:
+    """Return ``(algo, expected, actual)`` for each digest where the
+    streamer computed a value that doesn't match the resolver's
+    reference. Comparison is case-insensitive (Edge Emulation
+    returns lowercase, no-intro DATs are uppercase)."""
+    out: list[tuple[str, str, str]] = []
+    for algo, exp in expected.items():
+        act = actual.get(algo)
+        if act is None:
+            # Algorithm advertised by the resolver but we didn't
+            # compute it — covered by ``_build_hashers``'s allow-list.
+            # Skipping rather than failing so a Romarr that doesn't
+            # know about ``sha256`` doesn't block a download.
+            continue
+        if exp.lower() != act.lower():
+            out.append((algo, exp, act))
+    return out
 
 
 __all__ = ["GrabarrDirectClient", "SUPPORTED_PROTOCOL_VERSION"]

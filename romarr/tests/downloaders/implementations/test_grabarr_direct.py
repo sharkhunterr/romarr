@@ -63,6 +63,7 @@ def _http_direct_resolve(
     *, url: str = f"{_FILE_HOST}/files/sample.zip",
     filename: str = "sample.zip",
     size: int = 12,
+    checksums: dict[str, str] | None = None,
 ) -> dict[str, object]:
     return {
         "method": "http_direct",
@@ -70,7 +71,7 @@ def _http_direct_resolve(
         "url": url,
         "expected_size": size,
         "headers": {},
-        "checksums": {},
+        "checksums": checksums or {},
         "source": "internet_archive",
         "expires_at": "2026-05-13T00:00:00Z",
     }
@@ -302,6 +303,196 @@ async def test_http_direct_upstream_4xx_marks_failed_and_removes_file(
     # File must not linger after a failure (the writer creates the
     # path before the stream loop; the cleanup pass deletes it).
     assert not Path(snap["save_path"]).exists()
+
+
+# ---- slice 429 / R4 — checksum verification ------------------------------
+
+
+@respx.mock
+async def test_http_direct_verifies_matching_checksums(
+    tmp_path: Path,
+) -> None:
+    """Slice 429 / R4 — when the resolve response carries sha1 /
+    md5 / crc32, the streamer computes them incrementally and
+    accepts the download on a full match. ``computed_checksums``
+    on the pending snap mirrors the values for diagnostics."""
+    import hashlib
+    import zlib
+
+    token = "tokVerify"
+    body = b"ROM-BYTES-12"
+    sha1 = hashlib.sha1(body).hexdigest()
+    md5 = hashlib.md5(body).hexdigest()
+    crc32 = f"{zlib.crc32(body) & 0xFFFFFFFF:08x}"
+    respx.get(f"{_BASE}/romarr/roms_all/api/v1/resolve/{token}").mock(
+        return_value=httpx.Response(
+            200,
+            json=_http_direct_resolve(
+                size=len(body),
+                checksums={"sha1": sha1, "md5": md5, "crc32": crc32},
+            ),
+        )
+    )
+    respx.get(f"{_FILE_HOST}/files/sample.zip").mock(
+        return_value=httpx.Response(
+            200, content=body, headers={"content-length": str(len(body))}
+        )
+    )
+
+    client = _client(tmp_path)
+    nid = await client.add_torrent(
+        TorrentUrl(url=_torznab_url(token=token)),
+        category="romarr",
+        tags=[],
+    )
+    await client.wait_for_task(nid)
+
+    status = await client.get_status(nid)
+    assert status.state is DownloadState.COMPLETED
+    snap = client._pending[nid]  # noqa: SLF001
+    assert snap["computed_checksums"]["sha1"] == sha1
+    assert snap["computed_checksums"]["md5"] == md5
+    assert snap["computed_checksums"]["crc32"] == crc32
+    # File matches the bytes we asked for.
+    expected_path = tmp_path / "romarr" / "sample.zip"
+    assert expected_path.read_bytes() == body
+
+
+@respx.mock
+async def test_http_direct_marks_failed_on_sha1_mismatch(
+    tmp_path: Path,
+) -> None:
+    """Tampered (or truncated) upstream → sha1 mismatch → FAILED
+    state + file removed so the importer never picks it up."""
+    token = "tokTampered"
+    body = b"ROM-BYTES-12"
+    wrong_sha1 = "0000000000000000000000000000000000000000"
+    respx.get(f"{_BASE}/romarr/roms_all/api/v1/resolve/{token}").mock(
+        return_value=httpx.Response(
+            200,
+            json=_http_direct_resolve(
+                size=len(body),
+                checksums={"sha1": wrong_sha1},
+            ),
+        )
+    )
+    respx.get(f"{_FILE_HOST}/files/sample.zip").mock(
+        return_value=httpx.Response(
+            200, content=body, headers={"content-length": str(len(body))}
+        )
+    )
+
+    client = _client(tmp_path)
+    nid = await client.add_torrent(
+        TorrentUrl(url=_torznab_url(token=token)),
+        category="romarr",
+        tags=[],
+    )
+    await client.wait_for_task(nid)
+
+    status = await client.get_status(nid)
+    assert status.state is DownloadState.FAILED
+    snap = client._pending[nid]  # noqa: SLF001
+    assert "checksum_mismatch" in (snap["error"] or "")
+    assert "sha1" in (snap["error"] or "")
+    # Bad bytes must not linger — the importer should never see them.
+    assert not Path(snap["save_path"]).exists()
+
+
+@respx.mock
+async def test_http_direct_skips_verification_when_no_checksums(
+    tmp_path: Path,
+) -> None:
+    """No checksums advertised → streamer just writes the file
+    without computing digests. Stays COMPLETED, no error."""
+    token = "tokNoChecksum"
+    body = b"X" * 7
+    respx.get(f"{_BASE}/romarr/roms_all/api/v1/resolve/{token}").mock(
+        return_value=httpx.Response(
+            200, json=_http_direct_resolve(size=len(body), checksums={})
+        )
+    )
+    respx.get(f"{_FILE_HOST}/files/sample.zip").mock(
+        return_value=httpx.Response(200, content=body)
+    )
+
+    client = _client(tmp_path)
+    nid = await client.add_torrent(
+        TorrentUrl(url=_torznab_url(token=token)),
+        category="romarr",
+        tags=[],
+    )
+    await client.wait_for_task(nid)
+    status = await client.get_status(nid)
+    assert status.state is DownloadState.COMPLETED
+
+
+@respx.mock
+async def test_http_direct_case_insensitive_checksum_compare(
+    tmp_path: Path,
+) -> None:
+    """no-intro DATs use uppercase hex; Edge Emulation lowercase.
+    The comparison must accept both."""
+    import hashlib
+
+    token = "tokCase"
+    body = b"DATA"
+    sha1_upper = hashlib.sha1(body).hexdigest().upper()
+    respx.get(f"{_BASE}/romarr/roms_all/api/v1/resolve/{token}").mock(
+        return_value=httpx.Response(
+            200,
+            json=_http_direct_resolve(
+                size=len(body), checksums={"sha1": sha1_upper}
+            ),
+        )
+    )
+    respx.get(f"{_FILE_HOST}/files/sample.zip").mock(
+        return_value=httpx.Response(200, content=body)
+    )
+
+    client = _client(tmp_path)
+    nid = await client.add_torrent(
+        TorrentUrl(url=_torznab_url(token=token)),
+        category="romarr",
+        tags=[],
+    )
+    await client.wait_for_task(nid)
+    assert (await client.get_status(nid)).state is DownloadState.COMPLETED
+
+
+@respx.mock
+async def test_http_direct_unknown_algorithm_is_silently_skipped(
+    tmp_path: Path,
+) -> None:
+    """A future Grabarr might add sha256 to the resolve response.
+    An older Romarr should accept the download as long as the
+    algorithms it CAN compute (sha1/md5/crc32) match — unknown
+    algos are ignored, not treated as a missing-digest failure."""
+    import hashlib
+
+    token = "tokFuture"
+    body = b"FUTURE"
+    sha1 = hashlib.sha1(body).hexdigest()
+    respx.get(f"{_BASE}/romarr/roms_all/api/v1/resolve/{token}").mock(
+        return_value=httpx.Response(
+            200,
+            json=_http_direct_resolve(
+                size=len(body),
+                checksums={"sha1": sha1, "sha256": "unknown-to-us"},
+            ),
+        )
+    )
+    respx.get(f"{_FILE_HOST}/files/sample.zip").mock(
+        return_value=httpx.Response(200, content=body)
+    )
+    client = _client(tmp_path)
+    nid = await client.add_torrent(
+        TorrentUrl(url=_torznab_url(token=token)),
+        category="romarr",
+        tags=[],
+    )
+    await client.wait_for_task(nid)
+    assert (await client.get_status(nid)).state is DownloadState.COMPLETED
 
 
 @respx.mock
