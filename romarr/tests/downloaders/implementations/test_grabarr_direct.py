@@ -339,11 +339,14 @@ async def test_http_direct_remove_cancels_in_flight_and_deletes(
 
 
 @respx.mock
-async def test_torrent_magnet_raises_for_r2e(tmp_path: Path) -> None:
-    """R2e wires the qBit delegation via dispatcher pre-resolve.
-    Until then this branch trips an explicit NotImplementedError so
-    callers that hit a magnet-emitting source (Vimm, AudioBookBay,
-    PlanetEmu, Minerva) see the gap rather than a silent stash."""
+async def test_torrent_magnet_at_client_layer_is_routing_misconfig(
+    tmp_path: Path,
+) -> None:
+    """Post-R2e the dispatcher pre-resolves grabarr indexers and
+    re-routes torrent_magnet results to qBit before they reach
+    this client. If a magnet still hits ``add_torrent`` it means
+    routing picked grabarr_direct despite the URL — surface the
+    misconfig as a ``DownloaderError`` operators can action."""
     token = "tokMagnet"
     respx.get(f"{_BASE}/romarr/roms_all/api/v1/resolve/{token}").mock(
         return_value=httpx.Response(
@@ -362,14 +365,15 @@ async def test_torrent_magnet_raises_for_r2e(tmp_path: Path) -> None:
         )
     )
     client = _client(tmp_path)
-    with pytest.raises(NotImplementedError, match="R2e"):
+    with pytest.raises(DownloaderError, match="pre-resolve"):
         await client.add_torrent(
             TorrentUrl(url=_torznab_url(token=token)),
             category="romarr",
             tags=[],
         )
-    # The snapshot was still stashed before the raise so R2e's
-    # dispatcher pre-resolve can pick up the contract cleanly.
+    # The snapshot is still stashed before the raise — operators
+    # can introspect ``self._pending`` post-mortem to debug the
+    # routing misconfig.
     assert f"grabarr-{token}" in client._pending  # noqa: SLF001
 
 

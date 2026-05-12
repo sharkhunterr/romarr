@@ -29,6 +29,11 @@ from romarr.indexers.types import SearchResult
 from romarr.search._clients import make_download_client_factory
 from romarr.search.blocklist import is_blocklisted
 from romarr.search.dispatch import DispatchStatus, dispatch_winner
+from romarr.search.dispatch_grabarr import (
+    GrabarrPreResolveError,
+    filter_candidates_for_magnet,
+    maybe_pre_resolve,
+)
 from romarr.search.history import record_round
 from romarr.search.schemas import GrabRequest
 from romarr.search.types import Candidate
@@ -243,10 +248,45 @@ async def manual_grab(
     # indexer's ``download_client_id`` pin — see ``downloaders/
     # routing.py``.
 
+    # Slice 426 / R2e — pre-resolve the grabarr candidate so
+    # ``torrent_magnet`` results are routed to the operator's qBit
+    # row instead of grabarr_direct (which only handles
+    # http_direct). The helper is a no-op for newznab/torznab
+    # indexers — they keep the existing pin-and-dispatch path.
+    indexer_pin: int | None = (
+        indexer_row.download_client_id if indexer_row is not None else None
+    )
+    try:
+        candidate, indexer_pin, grabarr_resolved = await maybe_pre_resolve(
+            candidate=candidate,
+            indexer_row=indexer_row,
+            db=db,
+        )
+    except GrabarrPreResolveError as exc:
+        # The grab cannot proceed — surface a structured failure so
+        # the manual-search UI displays the operator-actionable
+        # error (apikey mismatch, expired token, network).
+        return {
+            "status": "failed",
+            "correlation_id": str(uuid.uuid4()),
+            "no_grab_reason": str(exc),
+        }
+    if grabarr_resolved is not None and grabarr_resolved.method == "torrent_magnet":
+        # The dispatcher cannot let routing pick grabarr_direct for
+        # a magnet — its add_torrent rejects magnets. Filter the
+        # grabarr_direct rows out of the candidate pool so qBit
+        # wins by capability + priority. http_direct keeps the
+        # original candidates list (the linked grabarr_direct row
+        # IS the right pick there).
+        candidates_for_routing = await filter_candidates_for_magnet(
+            candidates=candidates_for_routing, db=db
+        )
+
     started_at = datetime.now(UTC)
     outcome = await dispatch_winner(
         candidate=candidate,
         candidates=candidates_for_routing,
+        indexer_pin=indexer_pin,
         client_factory=factory,
         source_kind=source_kind,
     )

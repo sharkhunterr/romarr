@@ -273,17 +273,20 @@ class GrabarrDirectClient(DownloadClient):
         self._pending[native_id] = snap
 
         if resolve["method"] == "torrent_magnet":
-            # R2e wires the qBit delegation: the dispatcher will
-            # pre-resolve for grabarr indexers and re-route the
-            # magnet to the operator's qBit row via the routing
-            # engine. For now this branch raises loudly so any
-            # caller that hits it on a magnet-emitting source
-            # (Vimm, AudioBookBay, PlanetEmu, Minerva) sees the
-            # gap rather than a silent stash.
-            raise NotImplementedError(
-                "magnet delegation lands in R2e — the dispatcher "
-                "will pre-resolve grabarr indexers and route magnet "
-                "results through the linked qBit client"
+            # Slice 426 / R2e — the dispatcher's
+            # ``maybe_pre_resolve`` in
+            # :mod:`romarr.search.dispatch_grabarr` catches
+            # torrent_magnet results BEFORE routing and re-routes
+            # them to the operator's qBit row, filtering
+            # grabarr_direct out of the candidate pool. If this
+            # branch fires, the operator's qBit + Grabarr config
+            # are out of sync — surface the gap loudly.
+            raise DownloaderError(
+                "grabarr_direct received a torrent_magnet resolve at "
+                "add_torrent — the dispatcher's pre-resolve should "
+                "have re-routed this to the operator's qBit client. "
+                "Check that a qBittorrent download client is "
+                "configured and enabled for torrents."
             )
 
         if resolve["method"] != "http_direct":
