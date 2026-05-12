@@ -881,6 +881,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/indexer/grabarr": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Atomic Add-Grabarr wizard (admin only). Creates a linked download_client + indexer pair after a /health probe. */
+        post: operations["add_grabarr_api_v3_indexer_grabarr_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/indexer/schema": {
         parameters: {
             query?: never;
@@ -3032,11 +3049,13 @@ export interface components {
          * @description The set of supported download-client implementations.
          *
          *     The two MVP impls are ``QBITTORRENT`` and ``SABNZBD``; the three
-         *     stubs surface in the registry / schema endpoint with
-         *     ``available = False`` so the UI can grey them out.
+         *     v1-deferred stubs (Transmission, Deluge, NZBGet) and the
+         *     Grabarr-direct foundation stub surface in the registry / schema
+         *     endpoint with ``available = False`` so the UI can grey them out
+         *     (or hide them entirely until wiring lands).
          * @enum {string}
          */
-        ClientType: "qbittorrent" | "sabnzbd" | "transmission" | "deluge" | "nzbget";
+        ClientType: "qbittorrent" | "sabnzbd" | "transmission" | "deluge" | "nzbget" | "grabarr_direct";
         /**
          * ConnectivityWarning
          * @description Non-blocking observation surfaced by the connectivity tester.
@@ -3196,6 +3215,8 @@ export interface components {
              * @default romarr
              */
             category_default: string;
+            /** Download Root */
+            download_root?: string | null;
             /**
              * Enable For Torrents
              * @default false
@@ -3271,6 +3292,8 @@ export interface components {
             category_default: string;
             /** Client Version Seen */
             client_version_seen: string | null;
+            /** Download Root */
+            download_root?: string | null;
             /** Enable For Torrents */
             enable_for_torrents: boolean;
             /** Enable For Usenet */
@@ -3352,6 +3375,8 @@ export interface components {
             api_key?: string | null;
             /** Category Default */
             category_default?: string | null;
+            /** Download Root */
+            download_root?: string | null;
             /** Enable For Torrents */
             enable_for_torrents?: boolean | null;
             /** Enable For Usenet */
@@ -3791,6 +3816,32 @@ export interface components {
             /** Title */
             title: string;
         };
+        /**
+         * GrabarrWizardRequest
+         * @description POST body for the atomic Add-Grabarr flow.
+         */
+        GrabarrWizardRequest: {
+            /** Api Key */
+            api_key: string;
+            /** Base Url */
+            base_url: string;
+            /** Download Root */
+            download_root?: string | null;
+            /** Name */
+            name: string;
+            /** Profile Slug */
+            profile_slug: string;
+            /**
+             * Timeout Seconds
+             * @default 60
+             */
+            timeout_seconds: number;
+        };
+        /** GrabarrWizardResponse */
+        GrabarrWizardResponse: {
+            download_client: components["schemas"]["DownloadClientRead"];
+            indexer: components["schemas"]["IndexerRead"];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -3925,7 +3976,7 @@ export interface components {
              * Implementation
              * @enum {string}
              */
-            implementation: "newznab" | "torznab";
+            implementation: "newznab" | "torznab" | "grabarr";
             /**
              * Min Seeders
              * @default 1
@@ -4065,7 +4116,7 @@ export interface components {
             /** Enable Rss */
             enable_rss?: boolean | null;
             /** Implementation */
-            implementation?: ("newznab" | "torznab") | null;
+            implementation?: ("newznab" | "torznab" | "grabarr") | null;
             /** Min Seeders */
             min_seeders?: number | null;
             /** Name */
@@ -7972,6 +8023,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IndexerRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_grabarr_api_v3_indexer_grabarr_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GrabarrWizardRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrabarrWizardResponse"];
                 };
             };
             /** @description Validation Error */

@@ -33,6 +33,10 @@ export type IndexerTestResult =
   components["schemas"][
     "romarr__indexers__connectivity__ConnectivityTestResult"
   ];
+export type GrabarrWizardRequest =
+  components["schemas"]["GrabarrWizardRequest"];
+export type GrabarrWizardResponse =
+  components["schemas"]["GrabarrWizardResponse"];
 
 const INDEXERS_KEY = ["settings", "indexers"] as const;
 
@@ -76,6 +80,36 @@ export function useCreateIndexer(): UseMutationResult<
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: INDEXERS_KEY });
+    },
+  });
+}
+
+/**
+ * Slice 428 / R3b — atomic "Add Grabarr" wizard.
+ *
+ * Hits POST /api/v3/indexer/grabarr, which probes /health on the
+ * operator's Grabarr deploy and then creates the linked
+ * download_client + indexer pair under a single transaction.
+ * Invalidates both the indexer list AND the download-client list
+ * so the Settings → Download Clients view picks the new row up
+ * too without a manual refresh.
+ */
+export function useCreateGrabarrIntegration(): UseMutationResult<
+  GrabarrWizardResponse,
+  ApiError,
+  GrabarrWizardRequest
+> {
+  const qc = useQueryClient();
+  return useMutation<GrabarrWizardResponse, ApiError, GrabarrWizardRequest>({
+    mutationFn: (payload) =>
+      apiFetch<GrabarrWizardResponse>("/api/v3/indexer/grabarr", {
+        method: "POST",
+        json: payload,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: INDEXERS_KEY });
+      // Reuse the same key the download-client queries use.
+      void qc.invalidateQueries({ queryKey: ["settings", "downloadClients"] });
     },
   });
 }

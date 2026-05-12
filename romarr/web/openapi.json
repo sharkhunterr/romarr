@@ -1003,13 +1003,14 @@
         "type": "object"
       },
       "ClientType": {
-        "description": "The set of supported download-client implementations.\n\nThe two MVP impls are ``QBITTORRENT`` and ``SABNZBD``; the three\nstubs surface in the registry / schema endpoint with\n``available = False`` so the UI can grey them out.",
+        "description": "The set of supported download-client implementations.\n\nThe two MVP impls are ``QBITTORRENT`` and ``SABNZBD``; the three\nv1-deferred stubs (Transmission, Deluge, NZBGet) and the\nGrabarr-direct foundation stub surface in the registry / schema\nendpoint with ``available = False`` so the UI can grey them out\n(or hide them entirely until wiring lands).",
         "enum": [
           "qbittorrent",
           "sabnzbd",
           "transmission",
           "deluge",
-          "nzbget"
+          "nzbget",
+          "grabarr_direct"
         ],
         "title": "ClientType",
         "type": "string"
@@ -1361,6 +1362,18 @@
             "title": "Category Default",
             "type": "string"
           },
+          "download_root": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Download Root"
+          },
           "enable_for_torrents": {
             "default": false,
             "title": "Enable For Torrents",
@@ -1511,6 +1524,17 @@
               }
             ],
             "title": "Client Version Seen"
+          },
+          "download_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Download Root"
           },
           "enable_for_torrents": {
             "title": "Enable For Torrents",
@@ -1733,6 +1757,18 @@
               }
             ],
             "title": "Category Default"
+          },
+          "download_root": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Download Root"
           },
           "enable_for_torrents": {
             "anyOf": [
@@ -3081,6 +3117,80 @@
         "title": "GrabRequest",
         "type": "object"
       },
+      "GrabarrWizardRequest": {
+        "additionalProperties": false,
+        "description": "POST body for the atomic Add-Grabarr flow.",
+        "properties": {
+          "api_key": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Api Key",
+            "type": "string"
+          },
+          "base_url": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Base Url",
+            "type": "string"
+          },
+          "download_root": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Download Root"
+          },
+          "name": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "profile_slug": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Profile Slug",
+            "type": "string"
+          },
+          "timeout_seconds": {
+            "default": 60,
+            "maximum": 600.0,
+            "minimum": 5.0,
+            "title": "Timeout Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "base_url",
+          "profile_slug",
+          "api_key"
+        ],
+        "title": "GrabarrWizardRequest",
+        "type": "object"
+      },
+      "GrabarrWizardResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "download_client": {
+            "$ref": "#/components/schemas/DownloadClientRead"
+          },
+          "indexer": {
+            "$ref": "#/components/schemas/IndexerRead"
+          }
+        },
+        "required": [
+          "indexer",
+          "download_client"
+        ],
+        "title": "GrabarrWizardResponse",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3544,7 +3654,8 @@
           "implementation": {
             "enum": [
               "newznab",
-              "torznab"
+              "torznab",
+              "grabarr"
             ],
             "title": "Implementation",
             "type": "string"
@@ -3987,7 +4098,8 @@
               {
                 "enum": [
                   "newznab",
-                  "torznab"
+                  "torznab",
+                  "grabarr"
                 ],
                 "type": "string"
               },
@@ -12085,6 +12197,47 @@
         "summary": "Create an indexer (admin only). ``?test=true`` runs caps+search first.",
         "tags": [
           "Indexers"
+        ]
+      }
+    },
+    "/api/v3/indexer/grabarr": {
+      "post": {
+        "operationId": "add_grabarr_api_v3_indexer_grabarr_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrabarrWizardRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrabarrWizardResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Atomic Add-Grabarr wizard (admin only). Creates a linked download_client + indexer pair after a /health probe.",
+        "tags": [
+          "Indexers \u2014 Grabarr"
         ]
       }
     },

@@ -642,6 +642,7 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     # registration order).
     app.include_router(grabarr_wizard_router)
     app.include_router(indexers_router)
+    app.include_router(libraries_router)
     # Spec 009 T076 + T081 — manual scan triggers.
     app.include_router(scan_router)
     # Spec 009 T082 (slice 279) — read-only exporter catalog.
