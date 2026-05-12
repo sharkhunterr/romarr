@@ -27,11 +27,15 @@ CL003 (FR-005a) min-version gate: ``test_connection`` queries
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import re
 from datetime import UTC, datetime
 from typing import Any, ClassVar
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 from romarr.downloaders.base import DownloadClient
 from romarr.downloaders.errors import (
@@ -486,6 +490,23 @@ class QBittorrentClient(DownloadClient):
         platform_tokens = platform_tokens or set()
         async with self._new_client() as client:
             await self._login(client)
+            # Slice 417 — a freshly-added magnet has no metadata
+            # yet (qBit fetches the file list from the DHT, takes
+            # a few seconds). If we read ``/torrents/files``
+            # before that, qBit returns an empty list and we
+            # short-circuit without setting any priority, so qBit
+            # quietly downloads the WHOLE archive (Minerva is
+            # 7.6 TB — never completes, never imports). Poll
+            # ``has_metadata`` first.
+            if not await self._wait_for_metadata(
+                client, client_native_id.lower()
+            ):
+                logger.warning(
+                    "qbit.select_only_matching_file.metadata_timeout "
+                    "native_id=%s",
+                    client_native_id,
+                )
+                return None
             response = await self._get(
                 client, "/torrents/files", hash=client_native_id.lower()
             )
@@ -498,8 +519,22 @@ class QBittorrentClient(DownloadClient):
                 # to narrow.
                 return None
 
-            best_idx: int | None = None
-            best_score: tuple[int, int] = (0, 0)
+            # Slice 418 — two-pass selection so a meta-torrent
+            # never picks a wrong-platform file. Minerva bundles
+            # 46 000+ ROMs across every platform; an N64
+            # ``GoldenEye 007`` grab against an archive that
+            # only ships the DS apfix versions used to match
+            # the DS file (title overlap = 2, platform overlap
+            # = 0) and qBit downloaded the wrong rom.
+            #
+            # Pass 1: title AND platform overlap (≥ 1 each).
+            # Pass 2 fallback: only when NO candidate anywhere
+            # had any platform overlap — that means the
+            # archive doesn't encode platform info in paths
+            # (e.g. an Erista single-platform release), so
+            # title-only is the best we can do.
+            title_matches: list[tuple[int, int, int]] = []  # idx, t_ov, p_ov
+            any_platform_overlap = False
             for idx, entry in enumerate(files):
                 if not isinstance(entry, dict):
                     continue
@@ -508,15 +543,46 @@ class QBittorrentClient(DownloadClient):
                     continue
                 path_tokens = _significant_path_tokens(name)
                 title_overlap = len(title_tokens & path_tokens)
+                platform_overlap = len(platform_tokens & path_tokens)
+                if platform_overlap > 0:
+                    any_platform_overlap = True
                 if title_overlap == 0:
                     continue
-                platform_overlap = len(platform_tokens & path_tokens)
-                score = (title_overlap, platform_overlap)
-                if best_idx is None or score > best_score:
-                    best_idx = idx
-                    best_score = score
-            if best_idx is None:
+                title_matches.append((idx, title_overlap, platform_overlap))
+
+            strict = [m for m in title_matches if m[2] > 0]
+            pool = strict if strict else (
+                title_matches if not any_platform_overlap else []
+            )
+            if not pool:
+                logger.warning(
+                    "qbit.select_only_matching_file.no_platform_match "
+                    "native_id=%s title=%s platform=%s candidates=%d",
+                    client_native_id,
+                    sorted(title_tokens),
+                    sorted(platform_tokens),
+                    len(title_matches),
+                )
+                # Block the torrent from downloading anything —
+                # we know the operator's target file isn't in
+                # this archive. Caller (grab.py) sees the None
+                # return and the queue_entry stays as-is for
+                # manual cleanup, but at least qBit doesn't
+                # wander off downloading 7.6 TB.
+                all_ids = "|".join(str(i) for i in range(len(files)))
+                if all_ids:
+                    await self._post(
+                        client,
+                        "/torrents/filePrio",
+                        data={
+                            "hash": client_native_id.lower(),
+                            "id": all_ids,
+                            "priority": "0",
+                        },
+                    )
                 return None
+
+            best_idx, _, _ = max(pool, key=lambda m: (m[1], m[2]))
 
             other_ids = "|".join(
                 str(i) for i in range(len(files)) if i != best_idx
@@ -546,6 +612,38 @@ class QBittorrentClient(DownloadClient):
             return str(picked.get("name") or "")
 
     # ---- internals ------------------------------------------------------------
+
+    async def _wait_for_metadata(
+        self,
+        client: httpx.AsyncClient,
+        info_hash: str,
+        *,
+        timeout: float = 30.0,
+        interval: float = 0.5,
+    ) -> bool:
+        """Slice 417 — block until qBit reports ``has_metadata=true``
+        for the given hash, or ``timeout`` seconds elapse.
+
+        Magnet adds give qBit only the info-hash; the file list
+        comes later via the DHT/peer metadata exchange. Reading
+        ``/torrents/files`` before metadata is in returns an
+        empty list, so callers (slice 416's filePrio narrowing)
+        must wait or they silently no-op and qBit downloads the
+        whole torrent.
+
+        Returns ``True`` once ``has_metadata`` flips to true,
+        ``False`` on timeout. qBit's piece-request engine is
+        gated on metadata anyway, so no data is downloaded
+        during the wait — the only cost is the operator
+        watching a brief delay between grab and download start.
+        """
+        deadline = asyncio.get_event_loop().time() + timeout
+        while asyncio.get_event_loop().time() < deadline:
+            row = await self._fetch_torrent_by_hash(client, info_hash)
+            if row is not None and bool(row.get("has_metadata")):
+                return True
+            await asyncio.sleep(interval)
+        return False
 
     async def _fetch_torrent_by_hash(
         self, client: httpx.AsyncClient, info_hash: str
@@ -613,8 +711,13 @@ class QBittorrentClient(DownloadClient):
         polluting the queue_entry with a stale hash).
         """
         try:
+            # Slice 420 — share the download client's configured
+            # timeout. Indexers that proxy through a slow upstream
+            # (Prowlarr -> Grabarr) routinely take past 15 s; the
+            # operator now controls this from Settings → Download
+            # Clients.
             async with httpx.AsyncClient(
-                timeout=15.0,
+                timeout=self._timeout,
                 verify=self._verify,
                 follow_redirects=False,
             ) as probe:

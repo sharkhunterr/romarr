@@ -83,6 +83,14 @@ class DownloadClient(Base, TimestampMixin):
     client_version_seen: Mapped[str | None] = mapped_column(
         String(64), nullable=True
     )
+    # Slice 420 — controls every HTTP call this client makes:
+    # the client's own API (qBit, SAB) AND the indexer-side
+    # ``/download`` URL fetch we do during torrent add when an
+    # indexer proxies through a slow upstream (Prowlarr ->
+    # Grabarr can take well past the prior hard-coded 15 s).
+    timeout_seconds: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=60
+    )
 
     __table_args__ = (
         UniqueConstraint(
@@ -97,6 +105,10 @@ class DownloadClient(Base, TimestampMixin):
         CheckConstraint(
             "priority BETWEEN 1 AND 100",
             name="ck_download_client_priority_range",
+        ),
+        CheckConstraint(
+            "timeout_seconds BETWEEN 5 AND 600",
+            name="ck_download_client_timeout_range",
         ),
     )
 

@@ -57,6 +57,7 @@ def build_client_from_row(row: DownloadClientRow) -> DownloadClient:
             url_base=row.url_base,
             ssl_cert_validation=ssl_setting,
             category_default=row.category_default,
+            timeout_seconds=row.timeout_seconds,
         )
     if row.type == ClientType.SABNZBD.value:
         if row.api_key_encrypted is None:
@@ -72,6 +73,7 @@ def build_client_from_row(row: DownloadClientRow) -> DownloadClient:
             url_base=row.url_base,
             ssl_cert_validation=ssl_setting,
             category_default=row.category_default,
+            timeout_seconds=row.timeout_seconds,
         )
     if row.type == ClientType.TRANSMISSION.value:
         return TransmissionClient(client_id=row.id, name=row.name)

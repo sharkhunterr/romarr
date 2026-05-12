@@ -81,6 +81,7 @@ def _to_read(row: DownloadClientRow) -> DownloadClientRead:
             "last_health_ok": row.last_health_ok,
             "last_health_error": row.last_health_error,
             "client_version_seen": row.client_version_seen,
+            "timeout_seconds": row.timeout_seconds,
         }
     )
 
@@ -134,6 +135,7 @@ def _ephemeral_client_from_create(
             url_base=payload.url_base,
             ssl_cert_validation=payload.ssl_cert_validation,
             category_default=payload.category_default,
+            timeout_seconds=payload.timeout_seconds,
         )
     if payload.type is ClientType.SABNZBD:
         assert payload.api_key is not None
@@ -147,6 +149,7 @@ def _ephemeral_client_from_create(
             url_base=payload.url_base,
             ssl_cert_validation=payload.ssl_cert_validation,
             category_default=payload.category_default,
+            timeout_seconds=payload.timeout_seconds,
         )
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
@@ -256,6 +259,7 @@ async def create_client(
         remove_completed_downloads=payload.remove_completed_downloads,
         remove_failed_downloads=payload.remove_failed_downloads,
         ssl_cert_validation=payload.ssl_cert_validation,
+        timeout_seconds=payload.timeout_seconds,
     )
     db.add(row)
     try:
@@ -309,6 +313,7 @@ async def update_client(
         "enabled",
         "remove_completed_downloads",
         "remove_failed_downloads",
+        "timeout_seconds",
     ):
         if key in fields:
             setattr(row, key, fields[key])
