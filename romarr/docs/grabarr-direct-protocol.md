@@ -1,6 +1,6 @@
 # Grabarr ↔ Romarr direct protocol
 
-Status: draft v0.2
+Status: draft v0.2.1
 Owners: Romarr (this repo) + Grabarr (sharkhunterr/grabarr)
 Goal: let Romarr resolve a Grabarr search result into a concrete
 download instruction (HTTP-direct, magnet, or specific-file-in-meta-torrent)
@@ -9,6 +9,13 @@ inside a meta-torrent matches the operator's pick.
 
 ## Changelog
 
+- **v0.2.1 (2026-05-12)** — Slug-scope the `/resolve` endpoint path
+  (`/romarr/{slug}/api/v1/resolve/{token}`) so it reuses the existing
+  torznab apikey hash check via the profile slug, rather than
+  inventing a parallel apikey lookup index. `/health` stays
+  slug-less (deploy-metadata only, unauthenticated). Companion
+  Grabarr-side `/resolve` implementation landed in slice 423 with
+  10 unit tests covering every response branch + every error code.
 - **v0.2 (2026-05-12)** — Pin the Romarr-side topology (one indexer row
   `implementation=grabarr` + one downloader row `type=grabarr_direct`,
   linked via `indexer.download_client_id`). Clarify that **search**
@@ -153,12 +160,20 @@ Smoke endpoint for the connectivity-test button. Returns:
 `protocol_version` is a single integer Romarr checks at config time to
 refuse incompatible Grabarr deploys.
 
-### `GET /romarr/api/v1/resolve?guid=<guid>`
+### `GET /romarr/{slug}/api/v1/resolve/{token}`
 
-Given the `guid` Romarr received from a Newznab/Torznab search result,
-return the concrete download instruction. The `guid` is whatever
-Grabarr already serialises in `<guid>` of the Newznab response — no
-new format on the search path.
+Given the `token` Romarr extracted from the Torznab `<enclosure>`
+URL (`/torznab/{slug}/download/{token}.torrent`), return the
+concrete download instruction. The `token` is whatever Grabarr
+already serialises into the Torznab response — no new format on
+the search path. The `{slug}` segment is the profile slug (same
+one in the Torznab URL); reusing it keeps the per-profile ACL
+intact and avoids inventing a parallel apikey-lookup index.
+Requires `?apikey=<key>` query param OR
+`Authorization: Bearer <key>` header.
+
+(`/health` stays slug-less and unauthenticated — it reports only
+deploy metadata + the list of registered adapter ids.)
 
 200 OK response shape (one of three discriminated by `method`):
 

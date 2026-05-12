@@ -59,7 +59,12 @@ class IndexerRead(_Base):
 
 class IndexerCreate(_Base):
     name: Annotated[str, Field(min_length=1, max_length=128)]
-    implementation: Literal["newznab", "torznab"]
+    # ``'grabarr'`` accepted at the API layer so the (future) "Add
+    # Grabarr" wizard can POST through the same /api/v3/indexer
+    # endpoint. The DB CHECK was widened in migration 0022; the
+    # Add Indexer modal's ``_IMPLEMENTATIONS`` array still only
+    # surfaces newznab/torznab today.
+    implementation: Literal["newznab", "torznab", "grabarr"]
     url: Annotated[str, Field(min_length=1)]
     api_key: Annotated[str | None, Field(default=None, max_length=255)] = None
     categories: list[int] = Field(default_factory=list)
@@ -83,7 +88,7 @@ class IndexerCreate(_Base):
 
 class IndexerUpdate(_Base):
     name: Annotated[str | None, Field(default=None, min_length=1, max_length=128)] = None
-    implementation: Literal["newznab", "torznab"] | None = None
+    implementation: Literal["newznab", "torznab", "grabarr"] | None = None
     url: Annotated[str | None, Field(default=None, min_length=1)] = None
     api_key: Annotated[str | None, Field(default=None, max_length=255)] = None
     categories: list[int] | None = None
