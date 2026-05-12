@@ -166,6 +166,8 @@
         "enableTorrents": "Accepter les grabs torrent",
         "enableUsenet": "Accepter les grabs Usenet"
       },
+      "timeoutLabel": "Timeout (s)",
+      "timeoutHint": "Durée maximale pour chaque appel HTTP vers ce client ET pour récupérer le .torrent depuis l'indexeur au moment du grab. Augmentez-la si Prowlarr proxifie un upstream lent comme Grabarr (5–600 s).",
       "cancel": "Annuler",
       "submit": "Ajouter le client",
       "submitting": "Ajout…",
@@ -992,6 +994,8 @@
         "enableAutomatic": "Activer la recherche automatique (rafraîchissement Wanted)",
         "enableInteractive": "Activer la recherche interactive (UI manuelle)"
       },
+      "timeoutLabel": "Timeout (s)",
+      "timeoutHint": "Durée maximale que Romarr attend pour une recherche sur l'indexeur. Augmentez-la si Prowlarr proxifie un upstream lent comme Grabarr (5–600 s).",
       "prowlarrHint": "Conseil : préférez le setup Prowlarr push. Ajoutez Romarr à votre instance Prowlarr et les indexeurs se synchronisent sans la saisie manuelle ci-dessous.",
       "cancel": "Annuler",
       "submit": "Ajouter l'indexeur",
