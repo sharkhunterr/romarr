@@ -96,15 +96,25 @@ class IndexerRegistry:
     async def load_enabled(
         self, session: AsyncSession
     ) -> list[NewznabClient]:
-        """Return clients for every indexer with at least one
-        enable-* flag set."""
+        """Return clients for every indexer with the master
+        ``enabled`` flag on AND at least one ``enable_*`` capability
+        flag set.
+
+        Slice 432 — the master switch lets operators kill a whole
+        indexer without zeroing out every capability toggle one by
+        one. Pre-slice the load filter was capability-only; adding
+        the ``enabled = True`` predicate hides disabled rows from
+        every search/RSS round at the registry layer so dispatch /
+        rounds don't even see them.
+        """
         rows = (
             (
                 await session.execute(
                     select(Indexer).where(
+                        Indexer.enabled.is_(True),
                         (Indexer.enable_rss.is_(True))
                         | (Indexer.enable_automatic_search.is_(True))
-                        | (Indexer.enable_interactive_search.is_(True))
+                        | (Indexer.enable_interactive_search.is_(True)),
                     )
                 )
             )
