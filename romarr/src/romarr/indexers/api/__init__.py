@@ -11,6 +11,11 @@ and ``/api/v3/indexer*``.
 """
 
 from romarr.indexers.api.applications import router as applications_router
+from romarr.indexers.api.grabarr import router as grabarr_wizard_router
 from romarr.indexers.api.indexers import router as indexers_router
 
-__all__ = ["applications_router", "indexers_router"]
+__all__ = [
+    "applications_router",
+    "grabarr_wizard_router",
+    "indexers_router",
+]

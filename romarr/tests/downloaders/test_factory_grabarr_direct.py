@@ -38,6 +38,7 @@ def _row(**over: Any) -> Any:
         "category_default": "romarr",
         "ssl_cert_validation": "enabled",
         "timeout_seconds": 90,
+        "download_root": None,
     }
     base.update(over)
     return SimpleNamespace(**base)
@@ -80,14 +81,12 @@ def test_factory_routes_unknown_type_to_value_error() -> None:
 def test_factory_honours_download_root_env_var(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Slice 425 — the http_direct streamer needs a base path under
-    which to write files. Until the R3 wizard adds it as a column
-    on the download_client row, operators pin it via the
-    ``ROMARR_GRABARR_DIRECT_DOWNLOAD_ROOT`` env var."""
+    """Slice 425 fallback path — when ``row.download_root`` is NULL
+    (legacy / R2 rows), the env var picks up the slack."""
     monkeypatch.setenv(
         "ROMARR_GRABARR_DIRECT_DOWNLOAD_ROOT", "/data/grabarr-dl"
     )
-    client = build_client_from_row(_row())
+    client = build_client_from_row(_row(download_root=None))
     assert isinstance(client, GrabarrDirectClient)
     assert str(client._download_root) == "/data/grabarr-dl"  # noqa: SLF001
 
@@ -98,6 +97,15 @@ def test_factory_falls_back_to_downloads_default(
     monkeypatch.delenv(
         "ROMARR_GRABARR_DIRECT_DOWNLOAD_ROOT", raising=False
     )
-    client = build_client_from_row(_row())
+    client = build_client_from_row(_row(download_root=None))
     assert isinstance(client, GrabarrDirectClient)
     assert str(client._download_root) == "/downloads"  # noqa: SLF001
+
+
+def test_factory_honours_per_row_download_root() -> None:
+    """Slice 427 / R3a — the wizard pins ``download_root`` on the
+    download_client row, and the factory threads it through to the
+    client constructor (overrides any env var fallback)."""
+    client = build_client_from_row(_row(download_root="/data/grabarr-row"))
+    assert isinstance(client, GrabarrDirectClient)
+    assert str(client._download_root) == "/data/grabarr-row"  # noqa: SLF001

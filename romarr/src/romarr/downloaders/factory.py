@@ -105,6 +105,11 @@ def build_client_from_row(row: DownloadClientRow) -> DownloadClient:
             ssl_cert_validation=ssl_setting,
             category_default=row.category_default,
             timeout_seconds=row.timeout_seconds,
+            # Slice 427 / R3a — prefer the per-row override (set by
+            # the wizard); fall back to env / ``/downloads`` when
+            # NULL. The client constructor reads the env var so
+            # passing ``None`` keeps the fallback chain intact.
+            download_root=row.download_root,
         )
     raise ValueError(f"unknown download client type: {row.type!r}")
 

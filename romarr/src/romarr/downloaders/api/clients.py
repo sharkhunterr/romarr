@@ -82,6 +82,7 @@ def _to_read(row: DownloadClientRow) -> DownloadClientRead:
             "last_health_error": row.last_health_error,
             "client_version_seen": row.client_version_seen,
             "timeout_seconds": row.timeout_seconds,
+            "download_root": row.download_root,
         }
     )
 
@@ -260,6 +261,7 @@ async def create_client(
         remove_failed_downloads=payload.remove_failed_downloads,
         ssl_cert_validation=payload.ssl_cert_validation,
         timeout_seconds=payload.timeout_seconds,
+        download_root=payload.download_root,
     )
     db.add(row)
     try:
@@ -314,6 +316,7 @@ async def update_client(
         "remove_completed_downloads",
         "remove_failed_downloads",
         "timeout_seconds",
+        "download_root",
     ):
         if key in fields:
             setattr(row, key, fields[key])

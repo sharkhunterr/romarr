@@ -92,6 +92,14 @@ class DownloadClient(Base, TimestampMixin):
     timeout_seconds: Mapped[int] = mapped_column(
         Integer, nullable=False, default=60
     )
+    # Slice 427 / R3a — base directory the grabarr_direct streamer
+    # writes to for http_direct grabs. NULL for every other client
+    # type (qBit / SAB own their own save paths). When NULL the
+    # client falls back to the ``ROMARR_GRABARR_DIRECT_DOWNLOAD_ROOT``
+    # env var (default ``/downloads``).
+    download_root: Mapped[str | None] = mapped_column(
+        String(512), nullable=True
+    )
 
     __table_args__ = (
         UniqueConstraint(

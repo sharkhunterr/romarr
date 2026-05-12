@@ -103,9 +103,12 @@ class GrabarrDirectClient(DownloadClient):
     client_type: ClassVar[ClientType] = ClientType.GRABARR_DIRECT
     supports_torrents: ClassVar[bool] = True
     supports_usenet: ClassVar[bool] = False
-    # R3 wizard flips this on. Until then the type stays out of the
-    # Add Download Client modal's ``_CLIENT_TYPES`` array.
-    available: ClassVar[bool] = False
+    # Slice 427 / R3a — the wizard endpoint is the supported
+    # creation path; ``available`` now matches reality. The Add
+    # Download Client modal's ``_CLIENT_TYPES`` array stays at the
+    # qBit/SAB/stubs set so the type is still hidden from the
+    # generic add flow — the dedicated wizard route is the entry.
+    available: ClassVar[bool] = True
 
     def __init__(
         self,

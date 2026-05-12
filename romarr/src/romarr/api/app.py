@@ -67,7 +67,11 @@ from romarr.importer.api import (
     unidentified_router as importer_unidentified_router,
 )
 from romarr.importer.webhook import router as importer_webhook_router
-from romarr.indexers.api import applications_router, indexers_router
+from romarr.indexers.api import (
+    applications_router,
+    grabarr_wizard_router,
+    indexers_router,
+)
 from romarr.libraries.api import (
     exporters_router,
     libraries_router,
@@ -632,8 +636,12 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     app.include_router(packs_router)
     app.include_router(platform_pack_platforms_router)
     app.include_router(applications_router)
+    # Grabarr wizard must mount BEFORE indexers_router so its
+    # ``/api/v3/indexer/grabarr`` POST handler wins over indexers_router's
+    # parameterized ``/{indexer_id}`` route (FastAPI dispatches by
+    # registration order).
+    app.include_router(grabarr_wizard_router)
     app.include_router(indexers_router)
-    app.include_router(libraries_router)
     # Spec 009 T076 + T081 — manual scan triggers.
     app.include_router(scan_router)
     # Spec 009 T082 (slice 279) — read-only exporter catalog.

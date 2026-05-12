@@ -83,9 +83,11 @@ def test_class_metadata() -> None:
     assert GrabarrDirectClient.client_type is ClientType.GRABARR_DIRECT
     assert GrabarrDirectClient.supports_torrents is True
     assert GrabarrDirectClient.supports_usenet is False
-    # R3 "Add Grabarr" wizard flips this on. Until then the type
-    # stays out of the Add Download Client modal.
-    assert GrabarrDirectClient.available is False
+    # Slice 427 / R3a — the wizard endpoint ships, so the class
+    # declares itself available. The Add Download Client modal
+    # still hides it (``_CLIENT_TYPES`` array unchanged) because
+    # the dedicated wizard is the supported entry path.
+    assert GrabarrDirectClient.available is True
 
 
 def test_base_url_layout() -> None:
