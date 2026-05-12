@@ -211,6 +211,24 @@ export function IndexerRow(props: IndexerRowProps): ReactElement {
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
           type="button"
+          onClick={() => flip("enabled")}
+          disabled={toggle.isPending}
+          aria-pressed={indexer.enabled}
+          className={[
+            "min-h-[36px] rounded-md px-3 text-xs font-medium",
+            indexer.enabled
+              ? "border border-zinc-700 bg-brand/15 text-brand hover:bg-brand/25"
+              : "border border-zinc-700 bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+            "disabled:cursor-not-allowed disabled:opacity-60",
+          ].join(" ")}
+        >
+          {indexer.enabled
+            ? t("indexers.action.disable")
+            : t("indexers.action.enable")}
+        </button>
+        <button
+          type="button"
           onClick={runTest}
           disabled={test.isPending}
           className={[

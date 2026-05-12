@@ -227,6 +227,10 @@
     "toggle": {
       "enabled": "Activé",
       "errorFallback": "Bascule échouée."
+    },
+    "action": {
+      "enable": "Activer",
+      "disable": "Désactiver"
     }
   },
   "datSources": {
@@ -1079,7 +1083,12 @@
     "auto": "Auto",
     "interactive": "Interactif",
     "toggle": {
+      "enabled": "Activé",
       "errorFallback": "Bascule échouée."
+    },
+    "action": {
+      "enable": "Activer",
+      "disable": "Désactiver"
     }
   },
   "unidentified": {

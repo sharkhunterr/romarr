@@ -132,6 +132,10 @@
     "toggle": {
       "enabled": "Enabled",
       "errorFallback": "Toggle failed."
+    },
+    "action": {
+      "enable": "Enable",
+      "disable": "Disable"
     }
   },
   "downloadClients": {
@@ -227,6 +231,10 @@
     "toggle": {
       "enabled": "Enabled",
       "errorFallback": "Toggle failed."
+    },
+    "action": {
+      "enable": "Enable",
+      "disable": "Disable"
     }
   },
   "datSources": {
@@ -1079,7 +1087,12 @@
     "auto": "Auto",
     "interactive": "Interactive",
     "toggle": {
+      "enabled": "Enabled",
       "errorFallback": "Toggle failed."
+    },
+    "action": {
+      "enable": "Enable",
+      "disable": "Disable"
     }
   },
   "unidentified": {
