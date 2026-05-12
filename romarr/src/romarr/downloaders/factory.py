@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, cast
 
 from romarr.downloaders.implementations import (
     DelugeClient,
+    GrabarrDirectClient,
     NzbgetClient,
     QBittorrentClient,
     SabnzbdClient,
@@ -81,6 +82,30 @@ def build_client_from_row(row: DownloadClientRow) -> DownloadClient:
         return DelugeClient(client_id=row.id, name=row.name)
     if row.type == ClientType.NZBGET.value:
         return NzbgetClient(client_id=row.id, name=row.name)
+    if row.type == ClientType.GRABARR_DIRECT.value:
+        # Slice 424 — the api_key column carries the Grabarr apikey
+        # (same key the linked indexer row uses against the Torznab
+        # surface, per the v0.2 doc's "Romarr-side topology"). It's
+        # NOT NULL once the wizard lands, but until then we tolerate
+        # absence on the foundation row and let test_connection
+        # surface the 401.
+        api_key = (
+            decrypt(row.api_key_encrypted).decode("utf-8")
+            if row.api_key_encrypted is not None
+            else ""
+        )
+        return GrabarrDirectClient(
+            client_id=row.id,
+            name=row.name,
+            host=row.host,
+            port=row.port,
+            api_key=api_key,
+            use_ssl=row.use_ssl,
+            url_base=row.url_base,
+            ssl_cert_validation=ssl_setting,
+            category_default=row.category_default,
+            timeout_seconds=row.timeout_seconds,
+        )
     raise ValueError(f"unknown download client type: {row.type!r}")
 
 

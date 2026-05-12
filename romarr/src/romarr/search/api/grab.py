@@ -227,11 +227,21 @@ async def manual_grab(
     ).scalar_one_or_none()
     source_kind = (
         SourceKind.TORRENT
-        if indexer_row is not None and indexer_row.implementation == "torznab"
+        if indexer_row is not None
+        and indexer_row.implementation in ("torznab", "grabarr")
         else SourceKind.USENET
         if indexer_row is not None and indexer_row.implementation == "newznab"
         else None  # falls back to URL sniffing
     )
+    # Slice 424 — Grabarr indexers map to torrent for routing
+    # (every resolve method is something only a torrent-capable
+    # client should be eligible for: ``torrent_magnet`` is a
+    # magnet, and ``http_direct`` is consumed by the
+    # ``grabarr_direct`` client which declares supports_torrents=True
+    # so it shares the same capability slot). The actual dispatch
+    # to the linked ``grabarr_direct`` row is driven by the
+    # indexer's ``download_client_id`` pin — see ``downloaders/
+    # routing.py``.
 
     started_at = datetime.now(UTC)
     outcome = await dispatch_winner(
