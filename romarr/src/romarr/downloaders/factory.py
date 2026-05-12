@@ -4,6 +4,24 @@ Single source of truth so the API routers + the future grab orchestrator
 + the connectivity tester all instantiate clients the same way.
 Credentials are decrypted via :mod:`romarr.metadata.encryption` per
 Article III (single Fernet helper across the project).
+
+Slice 435 — ``GRABARR_DIRECT`` clients are cached as singletons per
+``row.id`` because they hold their own in-memory state (the
+``_pending`` dict tracking active http_direct streams + their
+asyncio tasks). qBit / SAB don't need this: their state lives in
+the external daemon, so every factory call freely builds a fresh
+client. For ``grabarr_direct`` though, building a fresh instance
+every time the queue reconciler polls means ``get_status`` raises
+``unknown native_id`` immediately after add_torrent — the
+download might land on disk via its still-running task but the
+queue row stays stuck on "downloading" because nobody can see
+into the pending dict the ephemeral instance carried.
+
+Cache invalidation hooks below (``forget_grabarr_direct``) are
+called from the PUT/DELETE handlers so config changes pick up
+on the next factory call. Romarr restart drops the cache
+entirely; in-flight downloads survive the restart on disk but
+appear as "unknown" until R5 wires DB-backed state.
 """
 
 from __future__ import annotations
@@ -25,6 +43,31 @@ if TYPE_CHECKING:
     from romarr.downloaders.base import DownloadClient
     from romarr.downloaders.models import DownloadClient as DownloadClientRow
     from romarr.downloaders.tls import SslCertValidation
+
+
+# Slice 435 — singleton cache for grabarr_direct clients. Keyed by
+# row.id; the value is the live client instance whose ``_pending``
+# dict + asyncio tasks must survive across factory calls.
+# ``forget_grabarr_direct(row_id)`` clears one entry; PUT/DELETE
+# handlers call it so config changes take effect on the next
+# factory call without a Romarr restart.
+_grabarr_direct_cache: dict[int, "GrabarrDirectClient"] = {}
+
+
+def forget_grabarr_direct(row_id: int) -> None:
+    """Drop the cached singleton for ``row_id``.
+
+    Called from the PUT + DELETE handlers in
+    :mod:`romarr.downloaders.api.clients`. The next
+    ``build_client_from_row`` call instantiates a fresh client with
+    the updated config; any active stream tasks the old instance
+    held are kept alive by the asyncio event loop until they
+    complete on their own — they just won't be visible to the
+    queue reconciler after the swap (acceptable trade-off; the
+    operator who edits a download_client row is typically
+    aware they're disrupting in-flight work).
+    """
+    _grabarr_direct_cache.pop(row_id, None)
 
 
 def build_client_from_row(row: DownloadClientRow) -> DownloadClient:
@@ -83,6 +126,12 @@ def build_client_from_row(row: DownloadClientRow) -> DownloadClient:
     if row.type == ClientType.NZBGET.value:
         return NzbgetClient(client_id=row.id, name=row.name)
     if row.type == ClientType.GRABARR_DIRECT.value:
+        # Slice 435 — singleton cache: the in-memory _pending dict +
+        # asyncio stream tasks must survive across factory calls so
+        # the queue reconciler can see the state add_torrent created.
+        existing = _grabarr_direct_cache.get(row.id)
+        if existing is not None:
+            return existing
         # Slice 424 — the api_key column carries the Grabarr apikey
         # (same key the linked indexer row uses against the Torznab
         # surface, per the v0.2 doc's "Romarr-side topology"). It's
@@ -94,7 +143,7 @@ def build_client_from_row(row: DownloadClientRow) -> DownloadClient:
             if row.api_key_encrypted is not None
             else ""
         )
-        return GrabarrDirectClient(
+        client = GrabarrDirectClient(
             client_id=row.id,
             name=row.name,
             host=row.host,
@@ -111,7 +160,9 @@ def build_client_from_row(row: DownloadClientRow) -> DownloadClient:
             # passing ``None`` keeps the fallback chain intact.
             download_root=row.download_root,
         )
+        _grabarr_direct_cache[row.id] = client
+        return client
     raise ValueError(f"unknown download client type: {row.type!r}")
 
 
-__all__ = ["build_client_from_row"]
+__all__ = ["build_client_from_row", "forget_grabarr_direct"]

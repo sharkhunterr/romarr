@@ -27,7 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from romarr.api.dependencies import get_db, require_admin
 from romarr.auth import Principal
 from romarr.downloaders.connectivity import test_connectivity
-from romarr.downloaders.factory import build_client_from_row
+from romarr.downloaders.factory import build_client_from_row, forget_grabarr_direct
 from romarr.downloaders.implementations import (
     QBittorrentClient,
     SabnzbdClient,
@@ -349,6 +349,12 @@ async def update_client(
             },
         ) from exc
     await db.refresh(row)
+    # Slice 435 — config may have changed (host / api_key /
+    # download_root / timeout). Drop the singleton so the next
+    # factory call rebuilds with the new values; any in-flight
+    # stream on the old instance keeps running until completion
+    # via the asyncio event loop's strong ref to the task.
+    forget_grabarr_direct(client_id)
     return _to_read(row)
 
 
@@ -365,6 +371,11 @@ async def delete_client(
     row = await _get_or_404(db, client_id)
     await db.delete(row)
     await db.commit()
+    # Slice 435 — drop the singleton cache entry so the next
+    # ``build_client_from_row`` (if the operator recreates the
+    # client with the same id, unlikely but possible) starts fresh
+    # rather than serving the stale instance's pending dict.
+    forget_grabarr_direct(client_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

@@ -15,12 +15,25 @@ from typing import Any
 
 import pytest
 
-from romarr.downloaders.factory import build_client_from_row
+from romarr.downloaders.factory import (
+    build_client_from_row,
+    forget_grabarr_direct,
+)
 from romarr.downloaders.implementations.grabarr_direct import (
     GrabarrDirectClient,
 )
 from romarr.downloaders.types import ClientType
 from romarr.metadata.encryption import encrypt
+
+
+@pytest.fixture(autouse=True)
+def _reset_grabarr_direct_cache() -> None:
+    """Slice 435 — the factory caches grabarr_direct clients per
+    row.id so the queue reconciler keeps seeing the same instance
+    add_torrent populated. Tests build many ``row.id == 7`` fakes
+    with different config, so each test starts from a clean cache
+    to avoid the second test seeing the first test's instance."""
+    forget_grabarr_direct(7)
 
 
 def _row(**over: Any) -> Any:
