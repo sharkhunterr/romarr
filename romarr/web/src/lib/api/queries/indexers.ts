@@ -134,11 +134,19 @@ export function useTestIndexer(): UseMutationResult<
   ApiError,
   number
 > {
+  // Slice 431 — the backend now persists ``last_health_*`` on the
+  // row after every manual test. Invalidate the list query so the
+  // row's health dot + badge re-render with the fresh outcome
+  // instead of staying stuck on "untested".
+  const qc = useQueryClient();
   return useMutation<IndexerTestResult, ApiError, number>({
     mutationFn: (id) =>
       apiFetch<IndexerTestResult>(`/api/v3/indexer/${id}/test`, {
         method: "POST",
       }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: INDEXERS_KEY });
+    },
   });
 }
 
@@ -178,6 +186,10 @@ export function useProbeIndexer(): UseMutationResult<
  */
 export interface ToggleIndexerVariables {
   id: number;
+  // Slice 432 — master kill-switch. When false the indexer is
+  // hidden from every search round + RSS poll + grab dispatch
+  // regardless of the per-capability flags below.
+  enabled?: boolean;
   enable_rss?: boolean;
   enable_automatic_search?: boolean;
   enable_interactive_search?: boolean;

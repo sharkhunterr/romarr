@@ -37,6 +37,10 @@ class IndexerRead(_Base):
     is_configured: bool
     categories: list[int]
     priority: int
+    # Slice 432 — master enable/disable. When False, the indexer
+    # is hidden from every search round / RSS poll / grab dispatch
+    # regardless of the per-capability flags below.
+    enabled: bool
     enable_rss: bool
     enable_automatic_search: bool
     enable_interactive_search: bool
@@ -69,6 +73,7 @@ class IndexerCreate(_Base):
     api_key: Annotated[str | None, Field(default=None, max_length=255)] = None
     categories: list[int] = Field(default_factory=list)
     priority: Annotated[int, Field(ge=1, le=100)] = 25
+    enabled: bool = True
     enable_rss: bool = True
     enable_automatic_search: bool = True
     enable_interactive_search: bool = True
@@ -93,6 +98,7 @@ class IndexerUpdate(_Base):
     api_key: Annotated[str | None, Field(default=None, max_length=255)] = None
     categories: list[int] | None = None
     priority: Annotated[int | None, Field(default=None, ge=1, le=100)] = None
+    enabled: bool | None = None
     enable_rss: bool | None = None
     enable_automatic_search: bool | None = None
     enable_interactive_search: bool | None = None

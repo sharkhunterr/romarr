@@ -140,6 +140,7 @@ export function CreateIndexerModal(
       implementation,
       url: url.trim(),
       api_key: apiKey.trim() || null,
+      enabled: true,
       enable_rss: enableRss,
       enable_automatic_search: enableAutomatic,
       enable_interactive_search: enableInteractive,

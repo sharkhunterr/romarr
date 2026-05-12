@@ -3651,6 +3651,11 @@
             "title": "Enable Rss",
             "type": "boolean"
           },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
           "implementation": {
             "enum": [
               "newznab",
@@ -3815,6 +3820,10 @@
             "title": "Enable Rss",
             "type": "boolean"
           },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
           "id": {
             "title": "Id",
             "type": "integer"
@@ -3953,6 +3962,7 @@
           "is_configured",
           "categories",
           "priority",
+          "enabled",
           "enable_rss",
           "enable_automatic_search",
           "enable_interactive_search",
@@ -4092,6 +4102,17 @@
               }
             ],
             "title": "Enable Rss"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
           },
           "implementation": {
             "anyOf": [

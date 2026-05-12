@@ -3973,6 +3973,11 @@ export interface components {
              */
             enable_rss: boolean;
             /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
              * Implementation
              * @enum {string}
              */
@@ -4040,6 +4045,8 @@ export interface components {
             enable_interactive_search: boolean;
             /** Enable Rss */
             enable_rss: boolean;
+            /** Enabled */
+            enabled: boolean;
             /** Id */
             id: number;
             /** Implementation */
@@ -4115,6 +4122,8 @@ export interface components {
             enable_interactive_search?: boolean | null;
             /** Enable Rss */
             enable_rss?: boolean | null;
+            /** Enabled */
+            enabled?: boolean | null;
             /** Implementation */
             implementation?: ("newznab" | "torznab" | "grabarr") | null;
             /** Min Seeders */

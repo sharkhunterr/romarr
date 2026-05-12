@@ -258,6 +258,7 @@ def _indexer_to_read(row: Indexer) -> IndexerRead:
         "is_configured": row.api_key_encrypted is not None,
         "categories": row.categories or [],
         "priority": row.priority,
+        "enabled": row.enabled,
         "enable_rss": row.enable_rss,
         "enable_automatic_search": row.enable_automatic_search,
         "enable_interactive_search": row.enable_interactive_search,

@@ -16,6 +16,7 @@ caller role — :func:`_to_read` projects the row to
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -379,7 +380,24 @@ async def test_client(
 ) -> ConnectivityTestResult:
     row = await _get_or_404(db, client_id)
     impl = build_client_from_row(row)
-    return await test_connectivity(impl)
+    result = await test_connectivity(impl)
+    # Slice 431 — persist outcome on the row so the Settings →
+    # Download Clients list reflects a successful manual test on
+    # the health dot + badge. Pre-slice the test result was JSON
+    # only; the row stayed at last_health_at=NULL forever which
+    # rendered as "non testé" badge regardless of how many times
+    # the operator clicked Test and saw the green inline message.
+    row.last_health_at = datetime.now(UTC)
+    row.last_health_ok = result.ok
+    row.last_health_error = (
+        None
+        if result.ok
+        else (result.error_code or result.error_message or "connectivity")
+    )
+    if result.client_version:
+        row.client_version_seen = result.client_version
+    await db.commit()
+    return result
 
 
 @router.post(

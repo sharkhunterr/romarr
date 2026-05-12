@@ -51,6 +51,14 @@ class Indexer(Base, TimestampMixin):
     )
     categories: Mapped[list[int]] = mapped_column(JSON, nullable=False, default=list)
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=25)
+    # Slice 432 — master kill-switch. When False, the registry's
+    # ``load_enabled`` query excludes this row regardless of the
+    # per-capability ``enable_*`` toggles below. Lets operators
+    # disable a whole indexer (e.g., a flaky Prowlarr-pushed one)
+    # without zeroing every capability flag in turn.
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="1"
+    )
     enable_rss: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     enable_automatic_search: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True
