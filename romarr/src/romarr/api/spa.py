@@ -61,6 +61,21 @@ def register_spa(
             name="spa-assets",
         )
 
+    # Slice 430 — i18next-http-backend loads translations from
+    # ``/locales/{{lng}}/{{ns}}.json``. Before this mount the
+    # catch-all below intercepted those paths and returned
+    # ``index.html``; the JSON parse failed silently and the UI
+    # rendered raw key strings ("indexers.title") instead of
+    # localised copy. ``html=False`` keeps Starlette from auto-
+    # appending ``index.html`` on directory hits.
+    locales_dir = dist_root / "locales"
+    if locales_dir.is_dir():
+        app.mount(
+            "/locales",
+            StaticFiles(directory=locales_dir, html=False),
+            name="spa-locales",
+        )
+
     # Top-level static files Vite emits (manifest, service
     # worker, icons, favicon). Each is wired explicitly so the
     # router-level path matching stays predictable; a wildcard
