@@ -40,6 +40,7 @@ from romarr.downloaders.errors import (
     ConnectionError as DownloaderConnError,
     VersionError,
 )
+from romarr.importer.models import ImportHistory
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -157,25 +158,77 @@ async def reconcile_once(
                     )
                     new_progress = float(status.progress)
                     new_size = status.total_bytes
+                    # Slice 438 — pull the typed error from
+                    # ``DownloadStatus.error`` (populated by the
+                    # streamer / qBit / SAB when they have a
+                    # specific failure to surface) instead of
+                    # always blanking ``error_msg``. Lets the
+                    # queue page + History tab show
+                    # "checksum_mismatch", "upstream 404", "CF
+                    # challenge" inline instead of operators
+                    # having to grep the container logs.
+                    new_error: str | None = None
+                    if new_state == "failed":
+                        new_error = status.error
                     if (
                         row.progress == new_progress
                         and row.state == new_state
                         and row.eta_seconds == status.eta_seconds
                         and (new_size is None or row.size_bytes == new_size)
-                        and row.error_msg is None
+                        and row.error_msg == new_error
                     ):
                         # Nothing moved — skip the write so we
                         # don't bump ``last_updated_at`` and
                         # cause a no-op websocket fan-out.
                         continue
+                    previous_state = row.state
                     row.state = new_state
                     row.progress = new_progress
                     row.eta_seconds = status.eta_seconds
                     if new_size is not None:
                         row.size_bytes = new_size
-                    row.error_msg = None
+                    row.error_msg = new_error
                     row.last_updated_at = now
                     updated += 1
+
+                    # Slice 438 — emit a synthetic ImportHistory row
+                    # the moment a queue entry transitions to FAILED
+                    # so the Activity → History tab shows the
+                    # operator-facing failure ("CF challenge",
+                    # "checksum_mismatch", "upstream 404", etc.)
+                    # without them having to read container logs.
+                    # ``imported_via='download_failed'`` is a
+                    # distinct value (CHECK widened by migration
+                    # 0025) so the UI / queries can filter these
+                    # apart from actual import-pipeline failures.
+                    if (
+                        previous_state != "failed"
+                        and new_state == "failed"
+                    ):
+                        import uuid as _uuid
+                        session.add(
+                            ImportHistory(
+                                source_path=row.title or row.download_client_native_id,
+                                dest_path=status.save_path,
+                                download_client_id=row.download_client_id,
+                                download_client_native_id=row.download_client_native_id,
+                                game_id=row.game_id,
+                                release_id=row.release_id,
+                                dump_id=None,
+                                source_hash_sha1=None,
+                                confidence=None,
+                                imported_via="download_failed",
+                                success=False,
+                                coalesced=False,
+                                warning=None,
+                                error_msg=new_error or "download failed",
+                                imported_by="reconciler",
+                                correlation_id=str(_uuid.uuid4()),
+                                started_at=now,
+                                finished_at=now,
+                                duration_ms=0,
+                            )
+                        )
             finally:
                 close = getattr(client, "aclose", None)
                 if close is not None:

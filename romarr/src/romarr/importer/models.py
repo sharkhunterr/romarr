@@ -28,7 +28,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 from romarr.domain.base import Base, TimestampMixin
 
 _IMPORTED_VIA_CHECK = (
-    "imported_via IN ('automatic','manual','rss','api','webhook','scan')"
+    "imported_via IN "
+    "('automatic','manual','rss','api','webhook','scan','download_failed')"
 )
 
 

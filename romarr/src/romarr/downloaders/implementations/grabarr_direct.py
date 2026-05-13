@@ -551,6 +551,10 @@ class GrabarrDirectClient(DownloadClient):
             save_path=snap.get("save_path"),
             completed_paths=completed,
             fetched_at=datetime.now(UTC),
+            # Slice 438 — surface the streamer's recorded failure
+            # ("checksum_mismatch", "upstream 404", "CF challenge")
+            # so the queue_reconciler can write it to error_msg.
+            error=snap.get("error"),
         )
 
     async def remove(
