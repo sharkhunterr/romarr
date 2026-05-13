@@ -8178,6 +8178,39 @@
             "title": "Cutoff Met",
             "type": "boolean"
           },
+          "dat_entry_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dat Entry Name"
+          },
+          "dat_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dat Source"
+          },
+          "dat_verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dat Verified"
+          },
           "disc_number": {
             "default": 1,
             "title": "Disc Number",

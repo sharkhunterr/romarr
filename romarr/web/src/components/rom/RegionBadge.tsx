@@ -10,6 +10,8 @@ import { type CSSProperties, type ReactElement } from "react";
 export interface RegionBadgeProps {
   code: string;
   className?: string;
+  /** When true, skip the flag emoji and only render the ISO code. */
+  noEmoji?: boolean;
 }
 
 const REGION_FLAGS: Record<string, string> = {
@@ -57,7 +59,7 @@ export function RegionBadge(props: RegionBadgeProps): ReactElement {
 
   return (
     <span className={className} aria-label={`Region ${code}`}>
-      <span aria-hidden="true">{flag}</span>
+      {!props.noEmoji && <span aria-hidden="true">{flag}</span>}
       <span>{code}</span>
     </span>
   );

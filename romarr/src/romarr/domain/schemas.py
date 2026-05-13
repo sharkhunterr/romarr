@@ -301,6 +301,12 @@ class ReleaseRead(ReleaseCreate):
     id: int
     created_at: datetime
     updated_at: datetime
+    # Slice 452 — aggregate from the release's Dumps so the
+    # Releases tab can paint the same DAT badge as the Files
+    # tab without re-fetching dumps per row.
+    dat_verified: bool | None = None
+    dat_source: str | None = None
+    dat_entry_name: str | None = None
 
 
 # ---------------------------------------------------------------------------

@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 
 import {
   ConventionBadge,
+  DatVerifiedBadge,
   DumpStatusIcon,
   LanguagePills,
   MultiDiscAccordion,
@@ -140,6 +141,20 @@ function ReleaseRow(props: ReleaseRowProps): ReactElement {
           {release.name}
         </p>
         <div className="flex shrink-0 items-center gap-1.5">
+          {/* Slice 452 — aggregate DAT badge per release.
+              ``dat_source`` is null when none of the release's
+              Dumps cleared the cascade. */}
+          {release.dat_source !== null &&
+            release.dat_source !== undefined && (
+              <DatVerifiedBadge
+                status={release.dat_verified ? "verified" : "invalid"}
+                title={
+                  release.dat_entry_name
+                    ? `${release.dat_source} — ${release.dat_entry_name}`
+                    : (release.dat_source ?? undefined)
+                }
+              />
+            )}
           <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[0.6rem] uppercase tracking-wider text-zinc-400">
             {release.status}
           </span>
@@ -148,12 +163,19 @@ function ReleaseRow(props: ReleaseRowProps): ReactElement {
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {regions.map((code) => (
-          <RegionBadge key={`${release.id}-${code}`} code={code} />
+          <RegionBadge
+            key={`${release.id}-${code}`}
+            code={code}
+            noEmoji
+          />
         ))}
         <ConventionBadge convention={asConvention(release.naming_convention)} />
-        <DumpStatusIcon status={asDumpStatus(release.dump_status)} iconOnly />
+        <DumpStatusIcon
+          status={asDumpStatus(release.dump_status)}
+          noEmoji
+        />
         {languages.length > 0 && (
-          <LanguagePills codes={languages} max={3} />
+          <LanguagePills codes={languages} max={3} noEmoji />
         )}
         {release.disc_total > 1 && (
           <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-zinc-400">

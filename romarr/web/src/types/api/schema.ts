@@ -5686,6 +5686,12 @@ export interface components {
              * @default false
              */
             cutoff_met: boolean;
+            /** Dat Entry Name */
+            dat_entry_name?: string | null;
+            /** Dat Source */
+            dat_source?: string | null;
+            /** Dat Verified */
+            dat_verified?: boolean | null;
             /**
              * Disc Number
              * @default 1

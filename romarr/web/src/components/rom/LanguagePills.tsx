@@ -13,6 +13,8 @@ export interface LanguagePillsProps {
   /** Maximum pills to render before collapsing into "+N more". */
   max?: number;
   className?: string;
+  /** When true, skip flag emoji and only render the ISO code. */
+  noEmoji?: boolean;
 }
 
 const LANGUAGE_FLAGS: Record<string, string> = {
@@ -65,7 +67,7 @@ export function LanguagePills(
             className={pillClass()}
             aria-label={`Language ${lower}`}
           >
-            <span aria-hidden="true">{flag}</span>
+            {!props.noEmoji && <span aria-hidden="true">{flag}</span>}
             <span>{lower}</span>
           </span>
         );

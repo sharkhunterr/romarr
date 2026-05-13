@@ -983,9 +983,46 @@ async def list_releases_for_game(
             .order_by(Release.disc_number.asc(), Release.name.asc())
         )
     ).scalars().all()
-    return [
-        ReleaseRead.model_validate(row, from_attributes=True) for row in rows
-    ]
+
+    # Slice 452 — Per-release DAT aggregate. Pre-fetch every Dump
+    # for these releases in one query, then collapse each
+    # release's outcome to {verified | invalid | absent} so the
+    # Releases tab can paint the same badge as the Files tab
+    # without a per-row roundtrip.
+    release_ids = [r.id for r in rows]
+    dat_by_release: dict[int, tuple[bool, str | None, str | None]] = {}
+    if release_ids:
+        dump_rows = (
+            await db.execute(
+                select(
+                    Dump.release_id,
+                    Dump.dat_verified,
+                    Dump.dat_source,
+                    DatEntry.name,
+                )
+                .outerjoin(DatEntry, DatEntry.id == Dump.dat_entry_id)
+                .where(Dump.release_id.in_(release_ids))
+            )
+        ).all()
+        for rel_id, verified, src, entry_name in dump_rows:
+            current = dat_by_release.get(rel_id)
+            # Prefer verified > matched-but-invalid > absent. Once
+            # we've seen a verified Dump for a release, keep it.
+            if current is None or (verified and not current[0]):
+                dat_by_release[rel_id] = (
+                    bool(verified), src, entry_name
+                )
+
+    out: list[ReleaseRead] = []
+    for row in rows:
+        read = ReleaseRead.model_validate(row, from_attributes=True)
+        agg = dat_by_release.get(row.id)
+        if agg is not None:
+            read.dat_verified = agg[0]
+            read.dat_source = agg[1]
+            read.dat_entry_name = agg[2]
+        out.append(read)
+    return out
 
 
 @router.patch(

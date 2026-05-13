@@ -613,6 +613,60 @@ async def run_import(
                 )
                 await session.commit()
                 return failure_outcome
+            # Slice 452 — Pre-persist DAT match: query dat_entry
+            # by SHA-1 for the matched platform and surface
+            # ``dat_verified`` / ``dat_source`` / ``dat_entry_id``
+            # on the Dump row directly at import time. Before this
+            # slice the cascade was wired but never actually
+            # consulted, so the FilesTab badge stayed grey on every
+            # fresh import. When the cascade returns a VERIFIED
+            # entry, also overwrite the Release.name with the
+            # canonical DAT name so the operator sees the
+            # authoritative title instead of the source filename.
+            dat_verified = False
+            dat_source: str | None = None
+            dat_entry_id: int | None = None
+            _import_platform_id = suggested_platform_id
+            if _import_platform_id is None:
+                _row = (
+                    await session.execute(
+                        select(Game.platform_id).where(
+                            Game.id == monitored_game_id
+                        )
+                    )
+                ).scalar_one_or_none()
+                _import_platform_id = int(_row) if _row is not None else None
+            try:
+                _best = (
+                    await DatManager(session).best_match_by_sha1(
+                        platform_id=_import_platform_id,
+                        sha1=hash_result.sha1,
+                    )
+                    if _import_platform_id is not None
+                    else None
+                )
+            except Exception:  # noqa: BLE001 — never block import
+                _best = None
+            if _best is not None:
+                _w = _best.winner
+                from romarr.domain.enums import (
+                    DumpStatus as _DS,
+                    NamingConvention as _NC,
+                )
+
+                dat_verified = _w.status == _DS.VERIFIED.value
+                dat_source = _w.source
+                dat_entry_id = _w.id
+                if dat_verified and _w.name:
+                    _rel = (
+                        await session.execute(
+                            select(Release).where(Release.id == release_id)
+                        )
+                    ).scalar_one_or_none()
+                    if _rel is not None and _rel.name != _w.name:
+                        _rel.name = _w.name
+                        _rel.naming_convention = _NC.NO_INTRO
+
             outcome = None
             try:
                 outcome = await manual_import_known(
@@ -624,6 +678,9 @@ async def run_import(
                     file_format=file_format,
                     original_filename=source_path.name,
                     hashes=hash_result,
+                    dat_verified=dat_verified,
+                    dat_source=dat_source,
+                    dat_entry_id=dat_entry_id,
                 )
                 await session.commit()
             except IntegrityError:
