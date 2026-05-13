@@ -197,12 +197,34 @@ async def run_import(
             # ``roms[0]`` would happily pick the 40-byte marker
             # and the rest of the pipeline would park it as
             # ``match:no_game``.
-            roms = [
+            # Slice 437 — prefer ROM-extension files when picking
+            # the post-extract source. Pre-slice the filter was
+            # "any non-archive, non-dotfile" — that accepted
+            # license artifacts (PSN ``.rap`` 16-byte tokens,
+            # ``.info`` markers, ``.txt`` readmes, ``.nfo`` scene
+            # tags) as the game's dump when an archive bundled
+            # them alongside the real ROM. User reported a Crash
+            # Bandicoot Warped grab whose dump landed as a 16-byte
+            # ``UP9000-NPUI94244_00-0000000000000001.rap`` because
+            # the archive also contained the .chd ROM but
+            # alphabetical pick favoured a different file. ROM-
+            # extension files now win; fallback to the old "any
+            # non-archive" only when the archive contains no
+            # recognised ROM at all (e.g., ebook / audiobook
+            # archives whose ROM-set is empty by definition).
+            rom_pref = [
+                p
+                for p in result.extracted_paths
+                if p.suffix.lower() in _ROM_SUFFIXES
+                and not p.name.startswith(".")
+            ]
+            rom_fb = [
                 p
                 for p in result.extracted_paths
                 if p.suffix.lower() not in _ARCHIVE_SUFFIXES
                 and not p.name.startswith(".")
             ]
+            roms = rom_pref if rom_pref else rom_fb
             if roms:
                 source_path = roms[0]
         except ExtractError as exc:

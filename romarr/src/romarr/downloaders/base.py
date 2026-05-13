@@ -132,6 +132,7 @@ class DownloadClient(ABC):
         *,
         title_tokens: set[str],
         platform_tokens: set[str] | None = None,
+        allowed_extensions: frozenset[str] | None = None,
     ) -> str | None:
         """Slice 416 — narrow a multi-file torrent to a single
         file by setting per-file priorities so the client only

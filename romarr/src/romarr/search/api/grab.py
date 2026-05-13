@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from romarr.api.dependencies import get_db, require_admin
 from romarr.api.models import QueueEntry
 from romarr.auth import Principal
-from romarr.domain.models import Game, Platform, Release
+from romarr.domain.models import Game, Platform, PlatformFormat, Release
 from romarr.downloaders.models import DownloadClient
 from romarr.downloaders.routing import RoutingCandidate
 from romarr.downloaders.types import SourceKind
@@ -87,11 +87,13 @@ async def _narrow_meta_torrent_file_selection(
         ).scalar_one_or_none()
         if row is not None:
             target_game_id = int(row)
+    platform_id: int | None = None
     if target_game_id is not None:
         row = (
             await db.execute(
                 select(
                     Game.title,
+                    Platform.id,
                     Platform.short_name,
                     Platform.name,
                     Platform.slug,
@@ -102,14 +104,38 @@ async def _narrow_meta_torrent_file_selection(
         ).one_or_none()
         if row is not None:
             title = row[0] or title
-            platform_short = row[1]
-            platform_name = row[2]
-            platform_slug = row[3]
+            platform_id = row[1]
+            platform_short = row[2]
+            platform_name = row[3]
+            platform_slug = row[4]
     title_tokens = _significant_path_tokens(title)
     platform_tokens: set[str] = set()
     for v in (platform_short, platform_name, platform_slug):
         if v:
             platform_tokens.update(_significant_path_tokens(v))
+
+    # Slice 437 — load ROM extensions from ``platform_format`` for
+    # the target game's platform (built-in pack + community + user
+    # additions). The download client uses this to gate which
+    # files in a meta-torrent get scored; license / readme /
+    # scene-tag artifacts whose extension isn't a recognised
+    # platform format never enter contention. Archive extensions
+    # (zip / 7z / rar) are always permitted — the importer
+    # extracts them and picks the inner file afterwards.
+    allowed_extensions: frozenset[str] | None = None
+    if platform_id is not None:
+        ext_rows = (
+            await db.execute(
+                select(PlatformFormat.extension).where(
+                    PlatformFormat.platform_id == platform_id
+                )
+            )
+        ).scalars().all()
+        if ext_rows:
+            allowed_extensions = frozenset(
+                {e.lower() if e.startswith(".") else f".{e.lower()}" for e in ext_rows}
+                | {".zip", ".7z", ".rar"}
+            )
 
     try:
         factory = make_download_client_factory(db)
@@ -125,6 +151,7 @@ async def _narrow_meta_torrent_file_selection(
             native_id,
             title_tokens=title_tokens,
             platform_tokens=platform_tokens,
+            allowed_extensions=allowed_extensions,
         )
         if picked is not None:
             logger.info(

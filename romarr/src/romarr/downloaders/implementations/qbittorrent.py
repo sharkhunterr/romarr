@@ -468,6 +468,7 @@ class QBittorrentClient(DownloadClient):
         *,
         title_tokens: set[str],
         platform_tokens: set[str] | None = None,
+        allowed_extensions: frozenset[str] | None = None,
     ) -> str | None:
         """Slice 416 — narrow a meta-torrent to one file via qBit's
         ``/torrents/filePrio`` API.
@@ -533,6 +534,25 @@ class QBittorrentClient(DownloadClient):
             # archive doesn't encode platform info in paths
             # (e.g. an Erista single-platform release), so
             # title-only is the best we can do.
+            # Slice 437 — pre-filter to ``allowed_extensions``
+            # when the caller provided them. Pre-slice the loop
+            # scored every file in the torrent, which meant a
+            # PSN ``.rap`` license token sitting next to the
+            # real ``.chd`` in a meta-torrent's per-game folder
+            # scored identically on the parent-dir tokens (same
+            # "Crash", "Bandicoot", "Warped" tokens from the
+            # folder) and could win alphabetically. The .chd
+            # downloaded but the user's queue ended up pointing
+            # at the 16-byte .rap, which the importer then
+            # dumped as the game's release.
+            #
+            # ``allowed_extensions`` comes from grab.py querying
+            # ``platform_format`` for the target game's platform
+            # — built-in pack + user additions, no hardcoded
+            # sets in the download-client layer. ``None`` keeps
+            # the legacy any-extension scoring for callers that
+            # don't know the platform yet (scan-driven imports,
+            # tests).
             title_matches: list[tuple[int, int, int]] = []  # idx, t_ov, p_ov
             any_platform_overlap = False
             for idx, entry in enumerate(files):
@@ -541,6 +561,14 @@ class QBittorrentClient(DownloadClient):
                 name = str(entry.get("name") or "")
                 if not name:
                     continue
+                if allowed_extensions is not None:
+                    suffix = (
+                        f".{name.rsplit('.', 1)[-1].lower()}"
+                        if "." in name
+                        else ""
+                    )
+                    if suffix not in allowed_extensions:
+                        continue
                 path_tokens = _significant_path_tokens(name)
                 title_overlap = len(title_tokens & path_tokens)
                 platform_overlap = len(platform_tokens & path_tokens)
