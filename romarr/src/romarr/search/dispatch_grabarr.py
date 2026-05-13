@@ -70,12 +70,20 @@ class GrabarrResolved:
     Drives the dispatcher's routing branch decision *and* gives
     the post-grab telemetry layer something to record (the
     resolved upstream URL or magnet, source, checksums).
+
+    Slice 442 — ``internal_file_path`` carries the specific file
+    inside a meta-torrent the operator picked (e.g., Minerva's
+    ``./No-Intro/.../Crash 3 (Europe).zip``). Romarr threads it
+    into qBit's filePrio so the right file gets priority=1
+    instead of token-overlap-scoring possibly preferring an
+    unrelated release that happened to share parent-dir tokens.
     """
 
     method: str            # "http_direct" | "torrent_magnet"
     candidate: Candidate   # possibly mutated (magnet URL substituted)
     indexer_pin: int | None
     raw: dict[str, Any]    # the full resolve response — checksums etc.
+    internal_file_path: str | None = None
 
 
 class GrabarrPreResolveError(RuntimeError):
@@ -135,11 +143,20 @@ async def maybe_pre_resolve(
         # Pydantic models are frozen-ish; model_copy with ``update`` is the
         # supported clone-with-mutation path.
         rewritten = candidate.model_copy(update={"download_url": magnet})
+        # Slice 442 — surface the adapter-supplied internal file
+        # path so the qBit narrowing layer picks the exact file
+        # the operator chose, not a token-overlap "best match"
+        # that may include unrelated releases sitting in the
+        # same meta-torrent folder.
+        internal = payload.get("internal_file_path")
+        if not isinstance(internal, str) or not internal:
+            internal = None
         snap = GrabarrResolved(
             method=method,
             candidate=rewritten,
             indexer_pin=None,  # let routing pick by capability + priority
             raw=payload,
+            internal_file_path=internal,
         )
         return rewritten, None, snap
 

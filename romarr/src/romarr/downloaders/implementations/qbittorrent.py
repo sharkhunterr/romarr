@@ -469,6 +469,7 @@ class QBittorrentClient(DownloadClient):
         title_tokens: set[str],
         platform_tokens: set[str] | None = None,
         allowed_extensions: frozenset[str] | None = None,
+        target_path: str | None = None,
     ) -> str | None:
         """Slice 416 — narrow a meta-torrent to one file via qBit's
         ``/torrents/filePrio`` API.
@@ -519,6 +520,68 @@ class QBittorrentClient(DownloadClient):
                 # Single-file torrent or unparseable — nothing
                 # to narrow.
                 return None
+
+            # Slice 442 — when the caller provided an explicit
+            # ``target_path`` (Grabarr's ``internal_file_path``
+            # from /resolve, identifying the exact file the
+            # operator picked from the search result), short-
+            # circuit the token-overlap scoring and select that
+            # file directly. Pre-slice the scoring could land on
+            # a different release sharing parent-dir tokens
+            # (user's Crash 3 (Europe) .zip grab losing to a USA
+            # Demo .chd in the same Minerva meta-torrent). The
+            # ``./``-prefix is Minerva-style; we tolerate both
+            # presence and absence on either side of the
+            # comparison.
+            if target_path is not None:
+                norm_target = target_path.lstrip("./").lower()
+                exact_idx: int | None = None
+                for idx, entry in enumerate(files):
+                    if not isinstance(entry, dict):
+                        continue
+                    name = str(entry.get("name") or "")
+                    if not name:
+                        continue
+                    if name.lstrip("./").lower() == norm_target:
+                        exact_idx = idx
+                        break
+                if exact_idx is not None:
+                    all_ids = "|".join(str(i) for i in range(len(files)))
+                    if all_ids:
+                        await self._post(
+                            client,
+                            "/torrents/filePrio",
+                            hash=client_native_id.lower(),
+                            id=all_ids,
+                            priority="0",
+                        )
+                    await self._post(
+                        client,
+                        "/torrents/filePrio",
+                        hash=client_native_id.lower(),
+                        id=str(exact_idx),
+                        priority="1",
+                    )
+                    logger.info(
+                        "qbit.select_only_matching_file.target_path_match "
+                        "native_id=%s idx=%d path=%s",
+                        client_native_id,
+                        exact_idx,
+                        target_path,
+                    )
+                    return str(files[exact_idx].get("name") or target_path)
+                # ``target_path`` was supposed to match but the
+                # qBit-side metadata doesn't carry that path —
+                # fall through to the token-overlap scoring as
+                # a defensive fallback instead of refusing
+                # outright.
+                logger.warning(
+                    "qbit.select_only_matching_file.target_path_miss "
+                    "native_id=%s target=%s candidate_count=%d",
+                    client_native_id,
+                    target_path,
+                    len(files),
+                )
 
             # Slice 418 — two-pass selection so a meta-torrent
             # never picks a wrong-platform file. Minerva bundles

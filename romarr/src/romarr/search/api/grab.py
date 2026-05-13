@@ -64,6 +64,7 @@ async def _narrow_meta_torrent_file_selection(
     game_id: int | None,
     release_id: int | None,
     fallback_title: str,
+    target_internal_path: str | None = None,
 ) -> None:
     """Slice 416 — call the download client's
     ``select_only_matching_file`` so a meta-torrent (Minerva /
@@ -152,6 +153,7 @@ async def _narrow_meta_torrent_file_selection(
             title_tokens=title_tokens,
             platform_tokens=platform_tokens,
             allowed_extensions=allowed_extensions,
+            target_path=target_internal_path,
         )
         if picked is not None:
             logger.info(
@@ -345,6 +347,18 @@ async def manual_grab(
         # Erista archive case where qBit downloads thousands
         # of files and the importer's walker has to guess
         # which one the operator asked for.
+        # Slice 442 — for Grabarr-driven magnet grabs, pull the
+        # specific internal file path from the pre-resolve
+        # response so qBit narrows to the exact file the operator
+        # picked. Without it, qBit's token-overlap scoring could
+        # land on a different release sharing parent-dir tokens
+        # (user's Crash Bandicoot 3 Warped Europe .zip grab
+        # losing to a USA Demo .chd already on disk).
+        target_internal_path = (
+            grabarr_resolved.internal_file_path
+            if grabarr_resolved is not None
+            else None
+        )
         await _narrow_meta_torrent_file_selection(
             db=db,
             client_id=outcome.client_id,
@@ -352,6 +366,7 @@ async def manual_grab(
             game_id=body.game_id,
             release_id=body.release_id,
             fallback_title=body.title,
+            target_internal_path=target_internal_path,
         )
 
         # Upsert by (download_client_id, native_id) so reruns of
