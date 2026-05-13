@@ -15,7 +15,7 @@
  * their own slices.
  */
 
-import { Search } from "lucide-react";
+import { Monitor, Moon, Search, Sun, type LucideIcon } from "lucide-react";
 import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -25,16 +25,20 @@ import { useThemeStore, type Theme } from "@/lib/store/theme";
 import { ConnectionIndicator } from "./ConnectionIndicator";
 import { LanguageToggle } from "./LanguageToggle";
 
-const THEME_GLYPH: Record<Theme, string> = {
-  dark: "🌙",
-  light: "☀️",
-  auto: "💻",
+const THEME_ICON: Record<Theme, LucideIcon> = {
+  dark: Moon,
+  light: Sun,
+  auto: Monitor,
 };
 
+// Cycle dark → auto → dark. ``light`` is omitted because most
+// components don't yet ship light-theme variants — picking it
+// today would leave the app unreadable. Re-enable once the
+// component palette gets dark:/light: variants throughout.
 const NEXT_THEME: Record<Theme, Theme> = {
-  dark: "light",
-  light: "auto",
+  dark: "auto",
   auto: "dark",
+  light: "dark",
 };
 
 export function Header(): ReactElement {
@@ -94,14 +98,18 @@ export function Header(): ReactElement {
           onClick={() => setTheme(NEXT_THEME[theme])}
           className={[
             "inline-flex h-9 w-9 items-center justify-center rounded-md",
-            "text-base hover:bg-zinc-800",
+            "border border-zinc-800 bg-zinc-900/60 text-zinc-200",
+            "hover:bg-zinc-900",
             "focus-visible:outline-none focus-visible:ring-2",
             "focus-visible:ring-brand",
           ].join(" ")}
           title={themeTitle}
           aria-label={themeTitle}
         >
-          {THEME_GLYPH[theme]}
+          {(() => {
+            const Icon = THEME_ICON[theme];
+            return <Icon size={16} strokeWidth={2} aria-hidden="true" />;
+          })()}
         </button>
       </div>
     </header>

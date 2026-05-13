@@ -75,18 +75,16 @@ export function useWebSocketBridge(): void {
 
         if (isSystemMessage(envelope)) {
           const kind = envelope.data.kind ?? "";
-          if (kind === "pong") {
-            // Server keepalive — never user-facing.
+          if (kind === "pong" || kind === "welcome") {
+            // ``pong`` is a server keepalive; ``welcome`` fires on
+            // every (re)connect — the WS does that on every page
+            // refresh, so a toast each time is pure noise. The
+            // ConnectionIndicator pill already shows connection
+            // state, so this stays silent.
             return;
           }
-          let title: string;
-          if (kind === "welcome" && envelope.data.username) {
-            title = t("toast.ws.welcome", { username: envelope.data.username });
-          } else if (kind === "" || kind === undefined) {
-            return;
-          } else {
-            title = t("toast.ws.generic", { kind });
-          }
+          if (kind === "" || kind === undefined) return;
+          const title = t("toast.ws.generic", { kind });
           if (title.length === 0) return;
           useToastStore.getState().push({ kind: "info", title });
         }

@@ -54,7 +54,7 @@ describe("Header", () => {
     ).toBeInTheDocument();
   });
 
-  it("cycles theme dark → light → auto → dark on each click", async () => {
+  it("cycles theme dark ↔ auto on each click (light deferred)", async () => {
     act(() => {
       useThemeStore.getState().setTheme("dark");
     });
@@ -64,19 +64,16 @@ describe("Header", () => {
 
     const themeButton = screen.getByRole("button", { name: "Theme: Dark" });
     await user.click(themeButton);
-    expect(useThemeStore.getState().theme).toBe("light");
-
-    await user.click(screen.getByRole("button", { name: "Theme: Light" }));
     expect(useThemeStore.getState().theme).toBe("auto");
 
     await user.click(screen.getByRole("button", { name: "Theme: Auto" }));
     expect(useThemeStore.getState().theme).toBe("dark");
   });
 
-  it("renders the EN/FR language toggle pills", () => {
+  it("renders the language picker dropdown", () => {
     renderWithProviders(<Header />, { i18nResources: I18N_BUNDLE });
 
-    expect(screen.getByRole("button", { name: "EN" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "FR" })).toBeInTheDocument();
+    const combobox = screen.getByRole("combobox", { name: /language/i });
+    expect(combobox).toBeInTheDocument();
   });
 });
