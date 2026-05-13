@@ -1303,8 +1303,189 @@
         "title": "CustomFormatRead",
         "type": "object"
       },
+      "DatSourceCreate": {
+        "properties": {
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "platform_id": {
+            "title": "Platform Id",
+            "type": "integer"
+          },
+          "source": {
+            "enum": [
+              "no-intro",
+              "redump",
+              "tosec",
+              "goodtools",
+              "hasheous",
+              "playmatch",
+              "custom"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "url": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "url",
+          "source",
+          "platform_id"
+        ],
+        "title": "DatSourceCreate",
+        "type": "object"
+      },
+      "DatSourceRead": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "last_entry_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Entry Count"
+          },
+          "last_refresh_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Refresh At"
+          },
+          "last_refresh_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Refresh Error"
+          },
+          "last_refresh_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ok",
+                  "failed",
+                  "running"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Refresh Status"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "platform_id": {
+            "title": "Platform Id",
+            "type": "integer"
+          },
+          "platform_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Name"
+          },
+          "platform_slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Slug"
+          },
+          "source": {
+            "enum": [
+              "no-intro",
+              "redump",
+              "tosec",
+              "goodtools",
+              "hasheous",
+              "playmatch",
+              "custom"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "url",
+          "source",
+          "platform_id",
+          "enabled",
+          "last_refresh_at",
+          "last_refresh_status",
+          "last_refresh_error",
+          "last_entry_count",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DatSourceRead",
+        "type": "object"
+      },
       "DatSourceSummary": {
-        "description": "One row per distinct ``DatEntry.source`` value.",
+        "description": "Read-only summary of ingested entries grouped by DAT\nauthority (no-intro / redump / \u2026). The Settings page renders\nthis alongside the per-source rows so operators see both:\n'I asked for these 4 URLs' AND 'they produced 27 000 entries\nlast refresh'.",
         "properties": {
           "entry_count": {
             "title": "Entry Count",
@@ -1338,6 +1519,49 @@
           "latest_updated_at"
         ],
         "title": "DatSourceSummary",
+        "type": "object"
+      },
+      "DatSourceUpdate": {
+        "properties": {
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "title": "DatSourceUpdate",
         "type": "object"
       },
       "DownloadClientCreate": {
@@ -7658,6 +7882,57 @@
         "title": "RefreshMetadataResponse",
         "type": "object"
       },
+      "RefreshOutcome": {
+        "description": "Per-source result returned by /refresh + /refresh-all.",
+        "properties": {
+          "entries_ingested": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entries Ingested"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "failed",
+              "running"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status"
+        ],
+        "title": "RefreshOutcome",
+        "type": "object"
+      },
       "RegionProfileRead": {
         "additionalProperties": false,
         "properties": {
@@ -10545,8 +10820,8 @@
     },
     "/api/v3/dat-source": {
       "get": {
-        "description": "One row per distinct ``DatEntry.source`` (No-Intro / Redump\n/ TOSEC / etc.), with entry count, platform count, and the\nmost-recent ``updated_at`` across the source's rows. Sorted\nby source name for deterministic UI rendering.",
-        "operationId": "list_dat_sources_api_v3_dat_source_get",
+        "description": "One row per distinct ``DatEntry.source``, with entry count\n+ platform count + latest updated_at. The Settings page pairs\nthis with the per-row source list below.",
+        "operationId": "summary_api_v3_dat_source_get",
         "responses": {
           "200": {
             "content": {
@@ -10555,7 +10830,7 @@
                   "items": {
                     "$ref": "#/components/schemas/DatSourceSummary"
                   },
-                  "title": "Response List Dat Sources Api V3 Dat Source Get",
+                  "title": "Response Summary Api V3 Dat Source Get",
                   "type": "array"
                 }
               }
@@ -10564,6 +10839,222 @@
           }
         },
         "summary": "DAT cache summary grouped by source (any authenticated user).",
+        "tags": [
+          "DAT Sources"
+        ]
+      }
+    },
+    "/api/v3/dat-source/sources": {
+      "get": {
+        "operationId": "list_sources_api_v3_dat_source_sources_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DatSourceRead"
+                  },
+                  "title": "Response List Sources Api V3 Dat Source Sources Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List configured DAT source URLs (any authenticated user).",
+        "tags": [
+          "DAT Sources"
+        ]
+      },
+      "post": {
+        "operationId": "create_source_api_v3_dat_source_sources_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatSourceCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatSourceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Register a new DAT source URL (admin only).",
+        "tags": [
+          "DAT Sources"
+        ]
+      }
+    },
+    "/api/v3/dat-source/sources/refresh-all": {
+      "post": {
+        "operationId": "refresh_all_api_v3_dat_source_sources_refresh_all_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RefreshOutcome"
+                  },
+                  "title": "Response Refresh All Api V3 Dat Source Sources Refresh All Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Re-fetch + re-ingest every enabled DAT source (admin only).",
+        "tags": [
+          "DAT Sources"
+        ]
+      }
+    },
+    "/api/v3/dat-source/sources/{source_id}": {
+      "delete": {
+        "operationId": "delete_source_api_v3_dat_source_sources__source_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete a DAT source (admin only). Ingested DatEntry rows kept.",
+        "tags": [
+          "DAT Sources"
+        ]
+      },
+      "put": {
+        "operationId": "update_source_api_v3_dat_source_sources__source_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatSourceUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatSourceRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update a DAT source (admin only).",
+        "tags": [
+          "DAT Sources"
+        ]
+      }
+    },
+    "/api/v3/dat-source/sources/{source_id}/refresh": {
+      "post": {
+        "operationId": "refresh_source_api_v3_dat_source_sources__source_id__refresh_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshOutcome"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Re-fetch + re-ingest one DAT source (admin only).",
         "tags": [
           "DAT Sources"
         ]

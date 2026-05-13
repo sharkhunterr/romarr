@@ -239,14 +239,64 @@
     "loadError": "Impossible de charger les sources DAT",
     "empty": {
       "title": "Aucune source DAT chargée",
-      "body": "Déclenchez la tâche dat-update via Système > Tâches pour charger le premier bundle."
+      "body": "Ajoutez une source DAT via le bouton ci-dessus puis lancez Rafraîchir pour ingérer le premier bundle."
     },
-    "refreshHint": "Relancez la tâche dat-update via Système > Tâches pour rafraîchir.",
+    "summaryTitle": "Cache agrégé",
+    "summaryHint": "Lignes consolidées par autorité (No-Intro, Redump, …) — alimentées par les ingestions ci-dessous.",
+    "rowsTitle": "Sources configurées",
+    "rowsHint": "URL directes vers des DAT Logiqx. Romarr télécharge puis ingère à chaque rafraîchissement.",
+    "rowsEmpty": "Aucune source configurée pour l'instant.",
+    "addButton": "Ajouter une source",
+    "refreshAllButton": "Tout rafraîchir",
+    "refreshAllRunning": "Rafraîchissement…",
+    "refreshAllDoneToast": "{{ok}}/{{total}} sources rafraîchies",
+    "refreshAllErrorToast": "Échec du rafraîchissement global",
     "cols": {
       "source": "Source",
       "entries": "Entrées",
       "platforms": "Plateformes",
-      "latestUpdate": "Dernière mise à jour"
+      "latestUpdate": "Dernière mise à jour",
+      "platform": "Plateforme",
+      "name": "Nom",
+      "status": "Statut",
+      "lastEntries": "Entrées (dernier)",
+      "actions": "Actions"
+    },
+    "status": {
+      "never": "Jamais",
+      "ok": "OK",
+      "failed": "Échec",
+      "running": "En cours"
+    },
+    "action": {
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "refresh": "Rafraîchir",
+      "refreshing": "…"
+    },
+    "deleteConfirm": "Supprimer la source « {{name}} » ?",
+    "deletedToast": "Source supprimée",
+    "deleteErrorToast": "Suppression impossible",
+    "refreshDoneToast": "Source « {{name}} » rafraîchie ({{count}} entrées)",
+    "refreshFailedToast": "Échec : {{error}}",
+    "modal": {
+      "titleAdd": "Ajouter une source DAT",
+      "titleEdit": "Modifier la source DAT",
+      "subhead": "URL directe vers un fichier Logiqx (.dat / .xml). Les pages d'accueil avec captcha ne fonctionnent pas — utilisez un miroir direct.",
+      "nameLabel": "Nom",
+      "urlLabel": "URL du DAT",
+      "urlHint": "Doit pointer directement sur un XML Logiqx, pas une page de téléchargement.",
+      "sourceLabel": "Autorité",
+      "platformLabel": "Plateforme",
+      "platformPlaceholder": "— Choisir une plateforme —",
+      "enabledLabel": "Activée",
+      "errorTitle": "Échec de l'opération",
+      "cancel": "Annuler",
+      "submitting": "Enregistrement…",
+      "submitAdd": "Ajouter",
+      "submitEdit": "Enregistrer",
+      "toastCreated": "Source « {{name}} » ajoutée",
+      "toastUpdated": "Source « {{name}} » mise à jour"
     }
   },
   "qualityDefinitions": {

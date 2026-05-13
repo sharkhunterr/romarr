@@ -243,14 +243,64 @@
     "loadError": "Couldn't load DAT sources",
     "empty": {
       "title": "No DAT sources loaded yet",
-      "body": "Trigger the dat-update task under System > Tasks to ingest the first DAT bundle."
+      "body": "Add a DAT source with the button above then hit Refresh to ingest the first bundle."
     },
-    "refreshHint": "Re-run the dat-update task under System > Tasks to refresh.",
+    "summaryTitle": "Aggregated cache",
+    "summaryHint": "Rows consolidated per authority (No-Intro, Redump, …) — populated by the ingestions below.",
+    "rowsTitle": "Configured sources",
+    "rowsHint": "Direct URLs to Logiqx DATs. Romarr downloads and ingests on each refresh.",
+    "rowsEmpty": "No sources configured yet.",
+    "addButton": "Add source",
+    "refreshAllButton": "Refresh all",
+    "refreshAllRunning": "Refreshing…",
+    "refreshAllDoneToast": "{{ok}}/{{total}} sources refreshed",
+    "refreshAllErrorToast": "Refresh-all failed",
     "cols": {
       "source": "Source",
       "entries": "Entries",
       "platforms": "Platforms",
-      "latestUpdate": "Last updated"
+      "latestUpdate": "Last updated",
+      "platform": "Platform",
+      "name": "Name",
+      "status": "Status",
+      "lastEntries": "Last entries",
+      "actions": "Actions"
+    },
+    "status": {
+      "never": "Never",
+      "ok": "OK",
+      "failed": "Failed",
+      "running": "Running"
+    },
+    "action": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "refresh": "Refresh",
+      "refreshing": "…"
+    },
+    "deleteConfirm": "Delete DAT source “{{name}}”?",
+    "deletedToast": "Source deleted",
+    "deleteErrorToast": "Couldn't delete source",
+    "refreshDoneToast": "Source “{{name}}” refreshed ({{count}} entries)",
+    "refreshFailedToast": "Refresh failed: {{error}}",
+    "modal": {
+      "titleAdd": "Add DAT source",
+      "titleEdit": "Edit DAT source",
+      "subhead": "Direct URL to a Logiqx XML (.dat / .xml). Landing pages with captchas won't work — use a direct mirror.",
+      "nameLabel": "Name",
+      "urlLabel": "DAT URL",
+      "urlHint": "Must resolve directly to a Logiqx XML, not a download page.",
+      "sourceLabel": "Authority",
+      "platformLabel": "Platform",
+      "platformPlaceholder": "— Pick a platform —",
+      "enabledLabel": "Enabled",
+      "errorTitle": "Operation failed",
+      "cancel": "Cancel",
+      "submitting": "Saving…",
+      "submitAdd": "Add",
+      "submitEdit": "Save",
+      "toastCreated": "Source “{{name}}” added",
+      "toastUpdated": "Source “{{name}}” updated"
     }
   },
   "qualityDefinitions": {

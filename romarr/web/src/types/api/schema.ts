@@ -431,14 +431,83 @@ export interface paths {
         };
         /**
          * DAT cache summary grouped by source (any authenticated user).
-         * @description One row per distinct ``DatEntry.source`` (No-Intro / Redump
-         *     / TOSEC / etc.), with entry count, platform count, and the
-         *     most-recent ``updated_at`` across the source's rows. Sorted
-         *     by source name for deterministic UI rendering.
+         * @description One row per distinct ``DatEntry.source``, with entry count
+         *     + platform count + latest updated_at. The Settings page pairs
+         *     this with the per-row source list below.
          */
-        get: operations["list_dat_sources_api_v3_dat_source_get"];
+        get: operations["summary_api_v3_dat_source_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/dat-source/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List configured DAT source URLs (any authenticated user). */
+        get: operations["list_sources_api_v3_dat_source_sources_get"];
+        put?: never;
+        /** Register a new DAT source URL (admin only). */
+        post: operations["create_source_api_v3_dat_source_sources_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/dat-source/sources/refresh-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Re-fetch + re-ingest every enabled DAT source (admin only). */
+        post: operations["refresh_all_api_v3_dat_source_sources_refresh_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/dat-source/sources/{source_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update a DAT source (admin only). */
+        put: operations["update_source_api_v3_dat_source_sources__source_id__put"];
+        post?: never;
+        /** Delete a DAT source (admin only). Ingested DatEntry rows kept. */
+        delete: operations["delete_source_api_v3_dat_source_sources__source_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/dat-source/sources/{source_id}/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Re-fetch + re-ingest one DAT source (admin only). */
+        post: operations["refresh_source_api_v3_dat_source_sources__source_id__refresh_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3186,9 +3255,72 @@ export interface components {
              */
             updated_at: string;
         };
+        /** DatSourceCreate */
+        DatSourceCreate: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Name */
+            name: string;
+            /** Platform Id */
+            platform_id: number;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "no-intro" | "redump" | "tosec" | "goodtools" | "hasheous" | "playmatch" | "custom";
+            /** Url */
+            url: string;
+        };
+        /** DatSourceRead */
+        DatSourceRead: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Id */
+            id: number;
+            /** Last Entry Count */
+            last_entry_count: number | null;
+            /** Last Refresh At */
+            last_refresh_at: string | null;
+            /** Last Refresh Error */
+            last_refresh_error: string | null;
+            /** Last Refresh Status */
+            last_refresh_status: ("ok" | "failed" | "running") | null;
+            /** Name */
+            name: string;
+            /** Platform Id */
+            platform_id: number;
+            /** Platform Name */
+            platform_name?: string | null;
+            /** Platform Slug */
+            platform_slug?: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "no-intro" | "redump" | "tosec" | "goodtools" | "hasheous" | "playmatch" | "custom";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Url */
+            url: string;
+        };
         /**
          * DatSourceSummary
-         * @description One row per distinct ``DatEntry.source`` value.
+         * @description Read-only summary of ingested entries grouped by DAT
+         *     authority (no-intro / redump / …). The Settings page renders
+         *     this alongside the per-source rows so operators see both:
+         *     'I asked for these 4 URLs' AND 'they produced 27 000 entries
+         *     last refresh'.
          */
         DatSourceSummary: {
             /** Entry Count */
@@ -3199,6 +3331,15 @@ export interface components {
             platform_count: number;
             /** Source */
             source: string;
+        };
+        /** DatSourceUpdate */
+        DatSourceUpdate: {
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Name */
+            name?: string | null;
+            /** Url */
+            url?: string | null;
         };
         /**
          * DownloadClientCreate
@@ -5442,6 +5583,25 @@ export interface components {
             /** Skipped Locked */
             skipped_locked: string[];
         };
+        /**
+         * RefreshOutcome
+         * @description Per-source result returned by /refresh + /refresh-all.
+         */
+        RefreshOutcome: {
+            /** Entries Ingested */
+            entries_ingested?: number | null;
+            /** Error */
+            error?: string | null;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "failed" | "running";
+        };
         /** RegionProfileRead */
         RegionProfileRead: {
             /** Allow Fallback Outside Priorities */
@@ -7069,7 +7229,7 @@ export interface operations {
             };
         };
     };
-    list_dat_sources_api_v3_dat_source_get: {
+    summary_api_v3_dat_source_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -7085,6 +7245,174 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DatSourceSummary"][];
+                };
+            };
+        };
+    };
+    list_sources_api_v3_dat_source_sources_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatSourceRead"][];
+                };
+            };
+        };
+    };
+    create_source_api_v3_dat_source_sources_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DatSourceCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatSourceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_all_api_v3_dat_source_sources_refresh_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefreshOutcome"][];
+                };
+            };
+        };
+    };
+    update_source_api_v3_dat_source_sources__source_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DatSourceUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatSourceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_source_api_v3_dat_source_sources__source_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_source_api_v3_dat_source_sources__source_id__refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefreshOutcome"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -20,7 +20,9 @@ inline on the next list call.
 
 from __future__ import annotations
 
+import io
 import logging
+import zipfile
 from datetime import UTC, datetime
 from typing import Annotated, Literal
 
@@ -173,6 +175,39 @@ async def _refresh_one(
     except Exception as exc:  # noqa: BLE001 — log + surface, don't kill loop
         error_msg = f"unexpected: {exc!s}"
 
+    # Many DAT mirrors (e.g. redump.org/datfile/{slug}/) wrap the
+    # Logiqx XML inside a single-entry zip. Transparently extract
+    # the first .dat / .xml member so operators can paste the
+    # direct-download URL without an unzipping step.
+    if bytes_body is not None and bytes_body[:4] == b"PK\x03\x04":
+        try:
+            with zipfile.ZipFile(io.BytesIO(bytes_body)) as zf:
+                inner_name = next(
+                    (
+                        n
+                        for n in zf.namelist()
+                        if n.lower().endswith((".dat", ".xml"))
+                    ),
+                    None,
+                )
+                if inner_name is None:
+                    error_msg = (
+                        f"zip from {row.url} has no .dat/.xml member "
+                        f"(contents: {zf.namelist()[:5]})"
+                    )
+                    bytes_body = None
+                else:
+                    bytes_body = zf.read(inner_name)
+                    if len(bytes_body) > _MAX_DAT_BYTES:
+                        error_msg = (
+                            f"unzipped {inner_name} is {len(bytes_body)} "
+                            f"bytes (> {_MAX_DAT_BYTES} cap)"
+                        )
+                        bytes_body = None
+        except zipfile.BadZipFile as exc:
+            error_msg = f"bad zip: {exc!s}"
+            bytes_body = None
+
     now = datetime.now(UTC)
     if bytes_body is None:
         row.last_refresh_status = "failed"
@@ -190,7 +225,6 @@ async def _refresh_one(
             platform_id=row.platform_id,
             source=row.source,
         )
-        entries = ingest_stats.inserted
     except Exception as exc:  # noqa: BLE001
         row.last_refresh_status = "failed"
         row.last_refresh_error = f"ingest: {exc!s}"[:500]
@@ -203,13 +237,29 @@ async def _refresh_one(
             id=row.id, name=row.name, status="failed", error=str(exc)
         )
 
+    # On an idempotent re-fetch ``inserted=0`` doesn't reflect the
+    # actual rows in dat_entry — surface the real per-source row
+    # count so the UI doesn't appear to lose entries.
+    actual_count = (
+        await session.execute(
+            select(func.count(DatEntry.id)).where(
+                DatEntry.platform_id == row.platform_id,
+                DatEntry.source == row.source,
+                DatEntry.dat_contents_hash == ingest_stats.contents_hash,
+            )
+        )
+    ).scalar_one()
+
     row.last_refresh_status = "ok"
     row.last_refresh_error = None
-    row.last_entry_count = entries
+    row.last_entry_count = int(actual_count)
     row.last_refresh_at = now
     await session.commit()
     return RefreshOutcome(
-        id=row.id, name=row.name, status="ok", entries_ingested=entries
+        id=row.id,
+        name=row.name,
+        status="ok",
+        entries_ingested=int(actual_count),
     )
 
 
