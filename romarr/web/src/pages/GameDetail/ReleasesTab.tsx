@@ -1,14 +1,27 @@
 /**
- * GameDetail > Releases tab (slice 89).
+ * GameDetail > Releases tab (slices 89 / 452 / 453).
  *
- * Lists every Release for the game via
- * `useReleasesForGame`. Composes the slice 43 ROM badges
- * (RegionBadge / ConventionBadge / DumpStatusIcon /
- * LanguagePills) so the operator gets the same visual
- * vocabulary as the Wanted page.
+ * Layout per release card:
+ *
+ *   ┌─────────────────────────────────────────────┐
+ *   │ Title                  [DAT] [Status] ⋯ ⌄  │
+ *   │ Regions · Convention · Status · 🇬🇧 EN · Disc│
+ *   │ ── expanded: DAT details, file path, etc ───│
+ *   └─────────────────────────────────────────────┘
+ *
+ * All right-side controls share the same height and rounded
+ * corners. The bottom meta strip uses uniform pill chips
+ * (emoji-free) except for languages, which keep their flag
+ * emoji at the operator's explicit request.
  */
 
-import { Search } from "lucide-react";
+import {
+  ChevronDown,
+  Eye,
+  EyeOff,
+  Search,
+  type LucideIcon,
+} from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -74,52 +87,91 @@ interface ReleaseRowProps {
   platformId: number;
 }
 
-interface MonitorPillProps {
-  release: Release;
-  gameId: number;
+/* ---------------------------------------------------------------- */
+/* Reusable badge primitives — uniform style across the tab          */
+/* ---------------------------------------------------------------- */
+
+const _PILL_BASE =
+  "inline-flex items-center gap-1 rounded-md px-2 h-7 " +
+  "text-[0.65rem] font-mono uppercase tracking-wide " +
+  "ring-1 ring-inset";
+
+const _ICON_BTN_BASE =
+  "inline-flex items-center justify-center h-7 w-7 rounded-md " +
+  "ring-1 ring-inset transition-colors " +
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand " +
+  "disabled:cursor-not-allowed disabled:opacity-60";
+
+function StatusPill(props: { status: string }): ReactElement {
+  // Map release.status to colours so the meaning is readable at a
+  // glance — imported = on disk, wanted = hunting, the others
+  // (cutoff_met, blocked, etc.) fall through to neutral.
+  const tone =
+    props.status === "imported" || props.status === "cutoff_met"
+      ? "bg-emerald-700/30 text-emerald-200 ring-emerald-500/40"
+      : props.status === "wanted"
+        ? "bg-amber-700/30 text-amber-200 ring-amber-500/40"
+        : "bg-zinc-800 text-zinc-300 ring-zinc-600";
+  return <span className={`${_PILL_BASE} ${tone}`}>{props.status}</span>;
 }
 
-function MonitorPill(props: MonitorPillProps): ReactElement {
-  const { t } = useTranslation("game");
-  const { release, gameId } = props;
-  const toggle = useToggleReleaseMonitor();
-  const onClick = (): void => {
-    toggle.mutate({
-      releaseId: release.id,
-      gameId,
-      monitored: !release.monitored,
-    });
-  };
-  const tone = release.monitored
-    ? "bg-emerald-700/30 text-emerald-200 ring-emerald-500/40"
-    : "bg-zinc-800 text-zinc-400 ring-zinc-700";
+function IconButton(props: {
+  icon: LucideIcon;
+  onClick: () => void;
+  tone?: "neutral" | "accent" | "emerald";
+  label: string;
+  pressed?: boolean;
+  disabled?: boolean;
+}): ReactElement {
+  const tone =
+    props.tone === "emerald"
+      ? "bg-emerald-700/30 text-emerald-200 ring-emerald-500/40 hover:bg-emerald-700/40"
+      : props.tone === "accent"
+        ? "bg-brand/15 text-brand ring-brand/40 hover:bg-brand/25"
+        : "bg-zinc-800 text-zinc-300 ring-zinc-700 hover:bg-zinc-700";
   return (
     <button
       type="button"
-      onClick={onClick}
-      disabled={toggle.isPending}
-      aria-pressed={release.monitored}
-      className={[
-        "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5",
-        "text-[0.6rem] uppercase tracking-wider ring-1 ring-inset",
-        "transition-colors hover:brightness-110",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-        "disabled:cursor-not-allowed disabled:opacity-60",
-        tone,
-      ].join(" ")}
-      title={
-        toggle.isError && toggle.error?.message
-          ? toggle.error.message
-          : undefined
-      }
+      onClick={props.onClick}
+      disabled={props.disabled}
+      aria-pressed={props.pressed}
+      aria-label={props.label}
+      title={props.label}
+      className={`${_ICON_BTN_BASE} ${tone}`}
     >
-      <span aria-hidden="true">{release.monitored ? "👁️" : "💤"}</span>
-      <span>
-        {release.monitored
-          ? t("releases.monitor.on")
-          : t("releases.monitor.off")}
-      </span>
+      <props.icon size={15} strokeWidth={2.2} aria-hidden="true" />
     </button>
+  );
+}
+
+/* ---------------------------------------------------------------- */
+/* Expandable detail rows                                           */
+/* ---------------------------------------------------------------- */
+
+function DetailRow(props: {
+  label: string;
+  value: string | null | undefined;
+  mono?: boolean;
+}): ReactElement | null {
+  if (props.value === null || props.value === undefined || props.value === "") {
+    return null;
+  }
+  return (
+    <div className="grid grid-cols-[7rem_minmax(0,1fr)] gap-2">
+      <span className="text-[0.6rem] uppercase tracking-widest text-zinc-500">
+        {props.label}
+      </span>
+      <span
+        className={[
+          "min-w-0 break-words text-[0.7rem] text-zinc-200",
+          props.mono ? "font-mono text-[0.65rem]" : "",
+        ]
+          .join(" ")
+          .trim()}
+      >
+        {props.value}
+      </span>
+    </div>
   );
 }
 
@@ -127,41 +179,89 @@ function ReleaseRow(props: ReleaseRowProps): ReactElement {
   const { t } = useTranslation("game");
   const { release, gameId, platformId } = props;
   const [searchOpen, setSearchOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const toggleMonitor = useToggleReleaseMonitor();
   const regions = release.regions ?? [];
   const languages = release.languages ?? [];
+  const hasDatBadge =
+    release.dat_source !== null && release.dat_source !== undefined;
+
   return (
     <li
       className={[
-        "flex flex-col gap-2 rounded-md border border-zinc-800",
-        "bg-zinc-900/40 p-3",
+        "flex flex-col gap-2 rounded-lg border border-zinc-800",
+        "bg-zinc-900/40 px-3 py-2.5",
       ].join(" ")}
     >
-      <div className="flex items-start justify-between gap-2">
-        <p className="truncate text-sm font-medium text-zinc-100">
+      {/* Header — title + right-aligned action cluster. */}
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="min-w-0 truncate text-sm font-medium text-zinc-100">
           {release.name}
-        </p>
+        </h3>
         <div className="flex shrink-0 items-center gap-1.5">
-          {/* Slice 452 — aggregate DAT badge per release.
-              ``dat_source`` is null when none of the release's
-              Dumps cleared the cascade. */}
-          {release.dat_source !== null &&
-            release.dat_source !== undefined && (
-              <DatVerifiedBadge
-                status={release.dat_verified ? "verified" : "invalid"}
-                title={
-                  release.dat_entry_name
-                    ? `${release.dat_source} — ${release.dat_entry_name}`
-                    : (release.dat_source ?? undefined)
-                }
-              />
-            )}
-          <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[0.6rem] uppercase tracking-wider text-zinc-400">
-            {release.status}
-          </span>
-          <MonitorPill release={release} gameId={gameId} />
+          {hasDatBadge && (
+            <DatVerifiedBadge
+              status={release.dat_verified ? "verified" : "invalid"}
+              title={
+                release.dat_entry_name
+                  ? `${release.dat_source} — ${release.dat_entry_name}`
+                  : (release.dat_source ?? undefined)
+              }
+            />
+          )}
+          <StatusPill status={release.status} />
+          <IconButton
+            icon={release.monitored ? Eye : EyeOff}
+            onClick={() => {
+              toggleMonitor.mutate({
+                releaseId: release.id,
+                gameId,
+                monitored: !release.monitored,
+              });
+            }}
+            disabled={toggleMonitor.isPending}
+            pressed={release.monitored}
+            tone={release.monitored ? "emerald" : "neutral"}
+            label={
+              release.monitored
+                ? t("releases.monitor.on")
+                : t("releases.monitor.off")
+            }
+          />
+          <IconButton
+            icon={Search}
+            onClick={() => setSearchOpen(true)}
+            tone="accent"
+            label={t("search.button")}
+          />
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            aria-pressed={expanded}
+            aria-label={
+              expanded
+                ? t("releases.collapse")
+                : t("releases.expand")
+            }
+            title={
+              expanded
+                ? t("releases.collapse")
+                : t("releases.expand")
+            }
+            className={`${_ICON_BTN_BASE} bg-zinc-800 text-zinc-300 ring-zinc-700 hover:bg-zinc-700`}
+          >
+            <ChevronDown
+              size={15}
+              strokeWidth={2.2}
+              aria-hidden="true"
+              className={`transition-transform ${expanded ? "rotate-180" : ""}`}
+            />
+          </button>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+
+      {/* Meta strip — uniform pills (languages keep their flag). */}
+      <div className="flex flex-wrap items-center gap-1.5">
         {regions.map((code) => (
           <RegionBadge
             key={`${release.id}-${code}`}
@@ -175,29 +275,72 @@ function ReleaseRow(props: ReleaseRowProps): ReactElement {
           noEmoji
         />
         {languages.length > 0 && (
-          <LanguagePills codes={languages} max={3} noEmoji />
+          <LanguagePills codes={languages} max={3} />
         )}
         {release.disc_total > 1 && (
-          <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-zinc-400">
-            Disc {release.disc_number}/{release.disc_total}
+          <span
+            className={[
+              "inline-flex items-center gap-1 rounded-md px-2 py-0.5",
+              "text-xs font-mono font-medium",
+              "bg-zinc-800 text-zinc-200 ring-1 ring-inset ring-zinc-700",
+            ].join(" ")}
+          >
+            {t("releases.disc", {
+              n: release.disc_number,
+              total: release.disc_total,
+            })}
           </span>
         )}
       </div>
-      <div className="flex items-center justify-end">
-        <button
-          type="button"
-          onClick={() => setSearchOpen(true)}
-          className={[
-            "inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[0.65rem] font-medium",
-            "bg-zinc-800 text-zinc-200 ring-1 ring-inset ring-zinc-700",
-            "hover:bg-zinc-700",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-          ].join(" ")}
-        >
-          <Search size={12} aria-hidden="true" />
-          {t("search.button")}
-        </button>
-      </div>
+
+      {/* Expand — DAT match details + identifiers. */}
+      {expanded && (
+        <div className="mt-1 space-y-1 rounded-md border border-zinc-800/70 bg-zinc-950/40 px-3 py-2">
+          {hasDatBadge && (
+            <>
+              <DetailRow
+                label={t("releases.detail.datSource")}
+                value={release.dat_source}
+              />
+              <DetailRow
+                label={t("releases.detail.datEntry")}
+                value={release.dat_entry_name}
+              />
+              <DetailRow
+                label={t("releases.detail.datStatus")}
+                value={
+                  release.dat_verified
+                    ? t("releases.detail.datStatusVerified")
+                    : t("releases.detail.datStatusInvalid")
+                }
+              />
+            </>
+          )}
+          <DetailRow
+            label={t("releases.detail.releaseId")}
+            value={`#${release.id}`}
+            mono
+          />
+          <DetailRow
+            label={t("releases.detail.namingConvention")}
+            value={release.naming_convention}
+            mono
+          />
+          {release.revision && (
+            <DetailRow
+              label={t("releases.detail.revision")}
+              value={release.revision}
+            />
+          )}
+          {release.cutoff_met && (
+            <DetailRow
+              label={t("releases.detail.cutoff")}
+              value={t("releases.detail.cutoffMet")}
+            />
+          )}
+        </div>
+      )}
+
       <ReleaseSearchModal
         open={searchOpen}
         onClose={() => setSearchOpen(false)}
@@ -237,11 +380,6 @@ export function ReleasesTab(props: ReleasesTabProps): ReactElement {
     );
   }
 
-  // Multi-disc grouping (T083): build a parent → children map
-  // for releases that carry parent_release_id. The Disc 1
-  // parent's own row IS the accordion header; children are
-  // discs 2..N. Non-multi-disc releases (parent_release_id =
-  // null AND no children pointing back) render as flat rows.
   const allReleases = releases.data ?? [];
   const childrenByParent = new Map<number, Release[]>();
   for (const r of allReleases) {
@@ -251,22 +389,13 @@ export function ReleasesTab(props: ReleasesTabProps): ReactElement {
       childrenByParent.set(r.parent_release_id, list);
     }
   }
-  // Sort children by disc_number ascending so the accordion
-  // body reads disc 2, 3, 4, ...
   for (const list of childrenByParent.values()) {
     list.sort((a, b) => a.disc_number - b.disc_number);
   }
-  // Top-level releases = parent_release_id is null. Children
-  // are folded under their parent and skipped at the top level.
   const topLevel = allReleases.filter(
     (r) => r.parent_release_id === null || r.parent_release_id === undefined,
   );
 
-  // ReleaseRow itself renders the outer <li>. Single-disc
-  // releases pass through directly; multi-disc parents wrap
-  // a MultiDiscAccordion in a `<div role="listitem">` so the
-  // outer `<ul>` doesn't end up with an `<li>` containing
-  // another `<li>` (invalid DOM).
   return (
     <ul className="space-y-2">
       {topLevel.map((release) => {
@@ -281,7 +410,6 @@ export function ReleasesTab(props: ReleasesTabProps): ReactElement {
             />
           );
         }
-        // Multi-disc: header row + accordion grouping the children.
         const totalDiscs = release.disc_total || children.length + 1;
         return (
           <div key={release.id} role="listitem">

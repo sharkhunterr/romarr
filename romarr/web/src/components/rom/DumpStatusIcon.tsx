@@ -94,8 +94,8 @@ export function DumpStatusIcon(
     return (
       <span
         className={[
-          "inline-flex items-center rounded-md bg-zinc-800 px-1.5 py-0.5",
-          "text-[0.6rem] font-mono uppercase tracking-wider ring-1 ring-inset ring-zinc-700",
+          "inline-flex items-center rounded-md bg-zinc-800 px-2 py-0.5",
+          "text-xs font-mono font-medium ring-1 ring-inset ring-zinc-700",
           STATUS_COLORS[props.status],
           props.className ?? "",
         ]

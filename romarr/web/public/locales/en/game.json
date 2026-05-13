@@ -157,7 +157,22 @@
       "on": "Monitored",
       "off": "Paused"
     },
-    "multiDiscTitle": "{{title}} — {{total}} discs"
+    "multiDiscTitle": "{{title}} — {{total}} discs",
+    "expand": "More info",
+    "collapse": "Collapse",
+    "disc": "Disc {{n}}/{{total}}",
+    "detail": {
+      "datSource": "DAT authority",
+      "datEntry": "Canonical name",
+      "datStatus": "DAT status",
+      "datStatusVerified": "Verified",
+      "datStatusInvalid": "BADDUMP / HACK / OVERDUMP",
+      "releaseId": "Release ID",
+      "namingConvention": "Naming convention",
+      "revision": "Revision",
+      "cutoff": "Cutoff",
+      "cutoffMet": "Met"
+    }
   },
   "history": {
     "loadError": "Couldn't load history",
