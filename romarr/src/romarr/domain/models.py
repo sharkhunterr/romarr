@@ -479,6 +479,71 @@ class DatEntry(Base, TimestampMixin):
     )
 
 
+class DatSource(Base, TimestampMixin):
+    """A persistent DAT source URL + per-platform binding.
+
+    Slice 443 — pre-slice the only DAT-related table was ``dat_entry``
+    (the parsed entries cache). The list of URLs to fetch lived in
+    code / settings only; ``DatUpdateRunner`` accepted
+    ``DatSourceSpec`` triples passed in by the caller, with no
+    persistence layer. This row holds the URL + binding so:
+
+    - the bootstrap helper can seed recommended URLs at first boot
+      from the ``identification/dat/recommended.py`` catalog;
+    - operators can add custom URLs via ``POST /api/v3/dat-source``;
+    - the scheduled DAT-update task refreshes every enabled row;
+    - the Settings → DAT Sources UI shows last-refresh status +
+      entry-count per source so operators see at a glance what's
+      loaded and when it last succeeded.
+
+    ``source`` is the DAT-authority literal that pairs with each
+    fetched entry's ``DatEntry.source`` (no-intro / redump / tosec
+    / …) — same CHECK literals on both tables.
+    """
+
+    __tablename__ = "dat_source"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    url: Mapped[str] = mapped_column(String(1024), nullable=False)
+    source: Mapped[str] = mapped_column(String(32), nullable=False)
+    platform_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("platform.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="1", index=True
+    )
+    last_refresh_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_refresh_status: Mapped[str | None] = mapped_column(
+        String(16), nullable=True
+    )
+    last_refresh_error: Mapped[str | None] = mapped_column(
+        String(500), nullable=True
+    )
+    last_entry_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "source", "platform_id", name="uq_dat_source_source_platform"
+        ),
+        CheckConstraint(
+            "source IN ('no-intro','redump','tosec','goodtools','hasheous',"
+            "'playmatch','custom')",
+            name="ck_dat_source_source",
+        ),
+        CheckConstraint(
+            "last_refresh_status IS NULL "
+            "OR last_refresh_status IN ('ok','failed','running')",
+            name="ck_dat_source_status",
+        ),
+    )
+
+
 class UnidentifiedDump(Base, TimestampMixin):
     """Files the pipeline could not match with confidence ≥ 0.5 (FR-029).
 

@@ -15,6 +15,7 @@ from romarr.domain.base import Base
 from romarr.domain.enums import DumpStatus, NamingConvention
 from romarr.domain.models import (
     DatEntry,
+    DatSource,
     Dump,
     Game,
     Platform,
@@ -28,6 +29,7 @@ from romarr.domain.models import (
 __all__ = [
     "Base",
     "DatEntry",
+    "DatSource",
     "Dump",
     "DumpStatus",
     "Game",
