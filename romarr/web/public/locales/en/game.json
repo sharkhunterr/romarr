@@ -253,6 +253,10 @@
     "headerButton": "Manual search",
     "title": "Manual search",
     "close": "Close",
+    "datBadge": {
+      "verifiedTooltip": "This release's hash matches a VERIFIED entry in the DAT cache.",
+      "hackTooltip": "This release's hash is in the DAT cache but the entry is flagged as a hack / baddump."
+    },
     "empty": "No candidates returned. Try a different query or check that indexers are enabled.",
     "noIndexers": "No indexer configured — the search will return nothing until you enable at least one Newznab/Torznab indexer in Settings → Indexers.",
     "query": {

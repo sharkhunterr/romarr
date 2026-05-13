@@ -253,6 +253,10 @@
     "headerButton": "Recherche manuelle",
     "title": "Recherche manuelle",
     "close": "Fermer",
+    "datBadge": {
+      "verifiedTooltip": "Hash de cette release reconnu comme conforme dans la base DAT.",
+      "hackTooltip": "Hash de cette release trouvé dans la base DAT mais marqué hack/baddump."
+    },
     "empty": "Aucun candidat. Essayez une autre requête ou vérifiez que des indexers sont activés.",
     "noIndexers": "Aucun indexer configuré — la recherche ne renverra rien tant qu'au moins un indexer Newznab/Torznab n'est pas activé dans Réglages → Indexers.",
     "query": {
