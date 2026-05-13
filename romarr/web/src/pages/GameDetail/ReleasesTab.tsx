@@ -88,32 +88,14 @@ interface ReleaseRowProps {
 }
 
 /* ---------------------------------------------------------------- */
-/* Reusable badge primitives — uniform style across the tab          */
+/* Reusable icon-button primitive — uniform style across the tab     */
 /* ---------------------------------------------------------------- */
-
-const _PILL_BASE =
-  "inline-flex items-center gap-1 rounded-md px-2 h-7 " +
-  "text-[0.65rem] font-mono uppercase tracking-wide " +
-  "ring-1 ring-inset";
 
 const _ICON_BTN_BASE =
   "inline-flex items-center justify-center h-7 w-7 rounded-md " +
   "ring-1 ring-inset transition-colors " +
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand " +
   "disabled:cursor-not-allowed disabled:opacity-60";
-
-function StatusPill(props: { status: string }): ReactElement {
-  // Map release.status to colours so the meaning is readable at a
-  // glance — imported = on disk, wanted = hunting, the others
-  // (cutoff_met, blocked, etc.) fall through to neutral.
-  const tone =
-    props.status === "imported" || props.status === "cutoff_met"
-      ? "bg-emerald-700/30 text-emerald-200 ring-emerald-500/40"
-      : props.status === "wanted"
-        ? "bg-amber-700/30 text-amber-200 ring-amber-500/40"
-        : "bg-zinc-800 text-zinc-300 ring-zinc-600";
-  return <span className={`${_PILL_BASE} ${tone}`}>{props.status}</span>;
-}
 
 function IconButton(props: {
   icon: LucideIcon;
@@ -207,9 +189,9 @@ function ReleaseRow(props: ReleaseRowProps): ReactElement {
                   ? `${release.dat_source} — ${release.dat_entry_name}`
                   : (release.dat_source ?? undefined)
               }
+              className="!h-7 !w-7 !p-0"
             />
           )}
-          <StatusPill status={release.status} />
           <IconButton
             icon={release.monitored ? Eye : EyeOff}
             onClick={() => {
@@ -270,10 +252,23 @@ function ReleaseRow(props: ReleaseRowProps): ReactElement {
           />
         ))}
         <ConventionBadge convention={asConvention(release.naming_convention)} />
-        <DumpStatusIcon
-          status={asDumpStatus(release.dump_status)}
-          noEmoji
-        />
+        {/* ``Release.dump_status`` is parsed from the filename's
+            naming-convention tokens — NOT from the actual DAT
+            cascade. ``verified`` / ``good`` are the parser's
+            "looks like a clean dump" guess, which would be
+            misleading next to a missing DAT badge: the operator
+            sees "Verified" and assumes cryptographic truth, when
+            in fact only the filename matched the convention.
+            So we hide those two default states entirely — the
+            DAT badge is the single source of truth for "this
+            file is good". Anything else (Hack, Proto, Beta,
+            BadDump, Demo, etc.) stays visible because it's
+            actionable signal. */}
+        {(() => {
+          const ds = asDumpStatus(release.dump_status);
+          if (ds === "verified" || ds === "good") return null;
+          return <DumpStatusIcon status={ds} noEmoji />;
+        })()}
         {languages.length > 0 && (
           <LanguagePills codes={languages} max={3} />
         )}
