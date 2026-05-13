@@ -529,12 +529,18 @@ class QBittorrentClient(DownloadClient):
             # file directly. Pre-slice the scoring could land on
             # a different release sharing parent-dir tokens
             # (user's Crash 3 (Europe) .zip grab losing to a USA
-            # Demo .chd in the same Minerva meta-torrent). The
-            # ``./``-prefix is Minerva-style; we tolerate both
-            # presence and absence on either side of the
-            # comparison.
+            # Demo .chd in the same Minerva meta-torrent).
+            #
+            # Path normalisation: Minerva ships paths like
+            # ``./No-Intro/.../file.zip``; qBit prefixes every
+            # entry with the torrent name (``Minerva_Myrient/No-
+            # Intro/.../file.zip``). Compare on the lowercase
+            # suffix — qBit's name should END with the
+            # ``.``-stripped target_path. This handles both the
+            # torrent-name prefix AND the leading-``./`` quirk
+            # without needing to know either side's exact format.
             if target_path is not None:
-                norm_target = target_path.lstrip("./").lower()
+                stripped_target = target_path.lstrip("./").lower()
                 exact_idx: int | None = None
                 for idx, entry in enumerate(files):
                     if not isinstance(entry, dict):
@@ -542,7 +548,7 @@ class QBittorrentClient(DownloadClient):
                     name = str(entry.get("name") or "")
                     if not name:
                         continue
-                    if name.lstrip("./").lower() == norm_target:
+                    if name.lower().endswith(stripped_target):
                         exact_idx = idx
                         break
                 if exact_idx is not None:
