@@ -15,6 +15,7 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
+import { DatVerifiedBadge } from "@/components/rom";
 import { useDownloadClients } from "@/lib/api/queries/download-clients";
 import { useIndexersById } from "@/lib/api/queries/indexers";
 import { usePlatformsById } from "@/lib/api/queries/platforms";
@@ -485,29 +486,19 @@ function CandidateRow(props: {
             <span>{t("search.seeders", { count: candidate.seeders })}</span>
           </>
         )}
-        {/* Only paint the DAT badge when it's actionable:
-            "verified" (green) or "hack" (amber). Indexers almost
-            never expose per-file ROM hashes — they ship the
-            torrent info-hash, which the cascade can't resolve —
-            so "none" / "skipped" render on every other candidate
-            and become pure noise. */}
+        {/* Reuse the shared DAT badge so the visual language is
+            consistent with GameDetail > Files and the Library
+            cards. The badge auto-hides when the cascade returned
+            "none" / "skipped" (most indexers don't ship per-file
+            ROM hashes), so we only see it when there's an
+            actionable verdict. */}
         {(candidate.pre_grab_dat_match === "verified" ||
           candidate.pre_grab_dat_match === "hack") && (
-          <span
-            className={[
-              "ml-auto rounded px-1.5 py-0.5 font-mono uppercase",
-              "tracking-wider",
-              candidate.pre_grab_dat_match === "verified"
-                ? "bg-emerald-950/40 text-emerald-300"
-                : "bg-amber-950/40 text-amber-300",
-            ].join(" ")}
-            title={
-              candidate.pre_grab_dat_match === "verified"
-                ? t("search.datBadge.verifiedTooltip")
-                : t("search.datBadge.hackTooltip")
-            }
-          >
-            DAT {candidate.pre_grab_dat_match}
+          <span className="ml-auto">
+            <DatVerifiedBadge
+              verified={candidate.pre_grab_dat_match === "verified"}
+              source="cascade"
+            />
           </span>
         )}
       </div>
