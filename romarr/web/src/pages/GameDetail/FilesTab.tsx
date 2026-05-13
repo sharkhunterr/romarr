@@ -126,8 +126,13 @@ function DumpRow(props: { dump: Dump }): ReactElement {
           </p>
         </div>
         <DatVerifiedBadge
-          verified={dump.dat_verified}
-          source={dump.dat_source ?? null}
+          status={
+            dump.dat_source === null || dump.dat_source === undefined
+              ? "absent"
+              : dump.dat_verified
+                ? "verified"
+                : "invalid"
+          }
         />
       </div>
 

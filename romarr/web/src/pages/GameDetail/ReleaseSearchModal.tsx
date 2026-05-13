@@ -486,18 +486,20 @@ function CandidateRow(props: {
             <span>{t("search.seeders", { count: candidate.seeders })}</span>
           </>
         )}
-        {/* Reuse the shared DAT badge so the visual language is
-            consistent with GameDetail > Files and the Library
-            cards. The badge auto-hides when the cascade returned
-            "none" / "skipped" (most indexers don't ship per-file
-            ROM hashes), so we only see it when there's an
-            actionable verdict. */}
-        {(candidate.pre_grab_dat_match === "verified" ||
-          candidate.pre_grab_dat_match === "hack") && (
+        {/* Pure-icon DAT badge. Four cascade outcomes mapped:
+            verified → ✓ green, hack → ⚠ amber, none → ?
+            zinc (we had a hash but no DAT row), skipped → nothing
+            (no hash was available to check). */}
+        {candidate.pre_grab_dat_match !== "skipped" && (
           <span className="ml-auto">
             <DatVerifiedBadge
-              verified={candidate.pre_grab_dat_match === "verified"}
-              source="cascade"
+              status={
+                candidate.pre_grab_dat_match === "verified"
+                  ? "verified"
+                  : candidate.pre_grab_dat_match === "hack"
+                    ? "invalid"
+                    : "unknown"
+              }
             />
           </span>
         )}

@@ -4,57 +4,38 @@ import { render } from "@testing-library/react";
 import { DatVerifiedBadge } from "./DatVerifiedBadge";
 
 describe("DatVerifiedBadge", () => {
-  it("renders a green ✓ badge when verified against a source", () => {
-    const { container } = render(
-      <DatVerifiedBadge verified source="no-intro" />,
-    );
-
+  it("renders an emerald icon when verified", () => {
+    const { container } = render(<DatVerifiedBadge status="verified" />);
     const badge = container.querySelector("span")!;
-    expect(badge).toHaveTextContent("DAT");
-    expect(badge).toHaveTextContent("✓");
     expect(badge.className).toContain("emerald");
+    expect(badge.querySelector("svg")).not.toBeNull();
   });
 
-  it("renders an amber ! badge when matched but unverified", () => {
-    const { container } = render(
-      <DatVerifiedBadge verified={false} source="no-intro" />,
-    );
-
+  it("renders an amber icon when invalid (BADDUMP/HACK)", () => {
+    const { container } = render(<DatVerifiedBadge status="invalid" />);
     const badge = container.querySelector("span")!;
-    expect(badge).toHaveTextContent("DAT");
-    expect(badge).toHaveTextContent("!");
     expect(badge.className).toContain("amber");
-  });
-
-  it("renders nothing when no DAT source matched the hash", () => {
-    const { container } = render(<DatVerifiedBadge verified={false} />);
-    expect(container.firstChild).toBeNull();
-  });
-
-  it("renders nothing when source is explicitly null", () => {
-    const { container } = render(
-      <DatVerifiedBadge verified={false} source={null} />,
-    );
-    expect(container.firstChild).toBeNull();
-  });
-
-  it("includes the source name in the verified tooltip", () => {
-    const { container } = render(
-      <DatVerifiedBadge verified source="No-Intro 2026-04" />,
-    );
-
-    const badge = container.querySelector("span")!;
-    expect(badge.getAttribute("title")).toBe(
-      "Verified against No-Intro 2026-04",
-    );
-  });
-
-  it("flags BADDUMP/HACK in the warning tooltip", () => {
-    const { container } = render(
-      <DatVerifiedBadge verified={false} source="no-intro" />,
-    );
-
-    const badge = container.querySelector("span")!;
     expect(badge.getAttribute("title")).toContain("BADDUMP");
+  });
+
+  it("renders a zinc icon when status is unknown", () => {
+    const { container } = render(<DatVerifiedBadge status="unknown" />);
+    const badge = container.querySelector("span")!;
+    expect(badge.className).toContain("zinc");
+    expect(badge.getAttribute("title")).toContain("not found");
+  });
+
+  it("renders nothing when status is absent", () => {
+    const { container } = render(<DatVerifiedBadge status="absent" />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it("accepts a custom title override", () => {
+    const { container } = render(
+      <DatVerifiedBadge status="verified" title="Specific tooltip" />,
+    );
+    expect(container.querySelector("span")!.getAttribute("title")).toBe(
+      "Specific tooltip",
+    );
   });
 });
