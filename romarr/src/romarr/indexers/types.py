@@ -94,6 +94,8 @@ class SearchResult(_Base):
     hash_sha1_provenance: FieldProvenance | None = None
     hash_crc32: str | None = None
     hash_crc32_provenance: FieldProvenance | None = None
+    hash_md5: str | None = None
+    hash_md5_provenance: FieldProvenance | None = None
     naming_convention: NamingConvention | None = None
     naming_convention_provenance: FieldProvenance | None = None
     dat_source: DatSource | None = None

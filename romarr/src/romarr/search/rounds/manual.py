@@ -19,9 +19,10 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Literal
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
-from romarr.domain.models import Platform
+from romarr.domain.enums import DumpStatus
+from romarr.domain.models import DatEntry, Platform
 from romarr.indexers.errors import (
     IndexerAuthError,
     IndexerProtocolError,
@@ -49,14 +50,80 @@ _RESULT_HARD_CAP = 200
 
 
 def _none_dat(_a: str | None, _b: str | None) -> Literal["verified", "hack", "none"]:
-    """Default DAT lookup for the manual round.
-
-    Wired to the foundation's DAT cache once spec 008 (importer)
-    exposes the hash-to-DAT helper. For MVP every result returns
-    ``"none"`` — the pipeline still runs the full gate set, and the
-    operator can manually verify via the file-detail UI.
+    """Fallback DAT lookup — used when no platform scope is given
+    (so we can't safely query ``dat_entry`` without risking
+    cross-platform hash collisions) or when no candidate ships a
+    usable hash. Returns ``"none"`` for every call.
     """
     return "none"
+
+
+def _status_to_outcome(status: str) -> Literal["verified", "hack", "none"]:
+    if status == DumpStatus.VERIFIED.value:
+        return "verified"
+    if status in (
+        DumpStatus.HACK.value,
+        DumpStatus.BADDUMP.value,
+    ):
+        return "hack"
+    return "none"
+
+
+async def _build_db_dat_lookup(
+    session: AsyncSession,
+    platform_id: int,
+    hashes_sha1: set[str],
+    hashes_crc32: set[str],
+) -> Callable[[str | None, str | None], Literal["verified", "hack", "none"]]:
+    """Pre-fetch ``dat_entry`` rows whose hashes appear in the
+    candidate set for this platform, then expose a sync closure
+    that satisfies :class:`DatLookup`.
+
+    Pulling matches up-front lets the pure pipeline stay sync —
+    the closure is called inline per result and just dict-looks
+    the outcome.
+    """
+    if not hashes_sha1 and not hashes_crc32:
+        return _none_dat
+
+    rows = (
+        await session.execute(
+            select(
+                DatEntry.sha1, DatEntry.crc32, DatEntry.status, DatEntry.source
+            )
+            .where(
+                DatEntry.platform_id == platform_id,
+                or_(
+                    DatEntry.sha1.in_(hashes_sha1) if hashes_sha1 else False,
+                    DatEntry.crc32.in_(hashes_crc32) if hashes_crc32 else False,
+                ),
+            )
+        )
+    ).all()
+    by_sha1: dict[str, Literal["verified", "hack", "none"]] = {}
+    by_crc32: dict[str, Literal["verified", "hack", "none"]] = {}
+    # CL001 authority order is enforced by best_match — for the
+    # pre-grab cascade a single "is this hash known?" answer is
+    # enough, so keep the strongest outcome (verified > hack >
+    # none) when the same hash spans multiple sources.
+    rank = {"verified": 2, "hack": 1, "none": 0}
+    for sha1, crc32, status, _src in rows:
+        outcome = _status_to_outcome(status)
+        if sha1 and rank[outcome] > rank.get(by_sha1.get(sha1, "none"), 0):
+            by_sha1[sha1] = outcome
+        if crc32 and rank[outcome] > rank.get(by_crc32.get(crc32, "none"), 0):
+            by_crc32[crc32] = outcome
+
+    def _lookup(
+        sha1: str | None, crc32: str | None
+    ) -> Literal["verified", "hack", "none"]:
+        if sha1 and sha1.lower() in by_sha1:
+            return by_sha1[sha1.lower()]
+        if crc32 and crc32.lower() in by_crc32:
+            return by_crc32[crc32.lower()]
+        return "none"
+
+    return _lookup
 
 
 _ClientFactory = Callable[[int], Awaitable["NewznabClient"]]
@@ -143,7 +210,14 @@ async def run_manual_search(
     overcap_indexers: list[int] = []
     history_entries: list[dict[str, object]] = []
 
-    async def _query_one(indexer_id: int) -> tuple[int, list[Candidate], str, bool]:
+    async def _fetch_one(indexer_id: int) -> tuple[int, list, str, bool]:
+        """Fetch + truncate raw SearchResults from one indexer.
+
+        The pipeline run is intentionally deferred so we can
+        pre-build a real DAT lookup against ``dat_entry`` once
+        every indexer has reported in (single SQL roundtrip
+        regardless of fan-out width).
+        """
         try:
             client = await client_factory(indexer_id)
         except Exception:
@@ -166,64 +240,71 @@ async def run_manual_search(
         # FR-029 hard cap: truncate noisy indexers, flag overcap.
         was_overcap = len(results) > _RESULT_HARD_CAP
         truncated = results[:_RESULT_HARD_CAP]
+        return indexer_id, truncated, "ok", was_overcap
 
+    fan_out = [_fetch_one(row.id) for row in indexer_rows]
+    fetch_outcomes: list[tuple[int, list, str, bool]] = []
+    if fan_out:
+        fetch_outcomes = list(
+            await asyncio.gather(*fan_out, return_exceptions=False)
+        )
+
+    # Slice 449 — build a real DAT lookup from ``dat_entry`` for
+    # this platform, using the hashes the indexers actually
+    # shipped on this round. When no platform scope is set, we
+    # fall back to ``_none_dat`` because cross-platform hash
+    # collisions would lie about verification.
+    sha1s: set[str] = set()
+    crc32s: set[str] = set()
+    for _indexer_id, raw_results, _outcome, _overcap in fetch_outcomes:
+        for r in raw_results:
+            if r.hash_sha1:
+                sha1s.add(r.hash_sha1.lower())
+            if r.hash_crc32:
+                crc32s.add(r.hash_crc32.lower())
+    if platform_id is not None and (sha1s or crc32s):
+        dat_lookup = await _build_db_dat_lookup(
+            session, platform_id, sha1s, crc32s
+        )
+    else:
+        dat_lookup = _none_dat
+
+    for indexer_id, raw_results, outcome, was_overcap in fetch_outcomes:
+        indexer_outcomes[indexer_id] = outcome
+        if was_overcap:
+            overcap_indexers.append(indexer_id)
         per_indexer_candidates: list[Candidate] = []
-        for result in truncated:
+        for result in raw_results:
             candidate = run_pipeline(
                 result=result,
                 library_state=library_state,
-                dat_lookup=_none_dat,
+                dat_lookup=dat_lookup,
                 quality_profile=quality,
                 region_profile=region,
                 dump_profile=dump,
                 language_profile=language,
                 custom_formats=custom_formats,
-                # Use the filename-parsed format when present so the
-                # quality gate can evaluate ``allowed_formats`` and
-                # the manual-search row's "Format" facet reflects
-                # what the title carries (slice 353).
                 file_format=result.file_format or "",
             )
-            # Override platform_id with what the *title* spells out
-            # (Mario Kart … (Game Boy Advance) → gba) when we can
-            # detect it. The pipeline initially stamps the matched
-            # game's platform_id; surfacing the title-parsed value
-            # is what lets the modal flag a candidate that bound to
-            # a GBA library row but advertises GameCube in its
-            # title. Falls back to whatever the pipeline already
-            # set when the title doesn't mention any catalogue
-            # platform.
             detected = match_platform_in_title(result.title, platforms_all)
             if detected is not None:
                 candidate = candidate.model_copy(
                     update={"platform_id": detected.id}
                 )
             per_indexer_candidates.append(candidate)
-        return indexer_id, per_indexer_candidates, "ok", was_overcap
-
-    fan_out = [
-        _query_one(row.id) for row in indexer_rows
-    ]
-    if fan_out:
-        for indexer_id, per_indexer, outcome, was_overcap in await asyncio.gather(
-            *fan_out, return_exceptions=False
-        ):
-            indexer_outcomes[indexer_id] = outcome
-            if was_overcap:
-                overcap_indexers.append(indexer_id)
-            for candidate in per_indexer:
-                if strict and candidate.rejection is not None:
-                    continue
-                candidates.append(candidate)
-            history_entries.append(
-                {
-                    "indexer_id": indexer_id,
-                    "results_count": len(per_indexer),
-                    "no_grab_reason": (
-                        None if outcome == "ok" else "all_indexers_failed"
-                    ),
-                }
-            )
+        for candidate in per_indexer_candidates:
+            if strict and candidate.rejection is not None:
+                continue
+            candidates.append(candidate)
+        history_entries.append(
+            {
+                "indexer_id": indexer_id,
+                "results_count": len(per_indexer_candidates),
+                "no_grab_reason": (
+                    None if outcome == "ok" else "all_indexers_failed"
+                ),
+            }
+        )
 
     finished_at = datetime.now(UTC)
     duration_ms = int((finished_at - started_at).total_seconds() * 1000)
