@@ -35,20 +35,19 @@ const _CONFIG: Record<
 > = {
   verified: {
     Icon: ShieldCheck,
-    chip:
-      "bg-emerald-700/30 text-emerald-200 ring-emerald-500/40",
+    chip: "bg-emerald-600/70 text-emerald-50 ring-emerald-300/60",
     defaultTitle:
       "Hash verified against a DAT database (No-Intro / Redump / …)",
   },
   invalid: {
     Icon: ShieldAlert,
-    chip: "bg-amber-700/30 text-amber-200 ring-amber-500/40",
+    chip: "bg-amber-600/70 text-amber-50 ring-amber-300/60",
     defaultTitle:
       "Hash matched a DAT row flagged as BADDUMP / HACK / OVERDUMP",
   },
   unknown: {
     Icon: ShieldQuestion,
-    chip: "bg-zinc-700/40 text-zinc-300 ring-zinc-500/40",
+    chip: "bg-zinc-700/70 text-zinc-100 ring-zinc-400/60",
     defaultTitle:
       "Hash was available but not found in the loaded DAT cache",
   },
@@ -61,7 +60,7 @@ export function DatVerifiedBadge(
   const cfg = _CONFIG[props.status];
   const className = [
     "inline-flex items-center justify-center",
-    "rounded-md p-1 ring-1 ring-inset",
+    "rounded-md p-1.5 ring-1 ring-inset",
     cfg.chip,
     props.className ?? "",
   ]
@@ -69,7 +68,7 @@ export function DatVerifiedBadge(
     .trim();
   return (
     <span className={className} title={props.title ?? cfg.defaultTitle}>
-      <cfg.Icon size={12} strokeWidth={2.5} aria-hidden="true" />
+      <cfg.Icon size={18} strokeWidth={2.5} aria-hidden="true" />
     </span>
   );
 }
