@@ -16,7 +16,7 @@
  * "long-press for multi-select on Library and Wanted" rule.
  */
 
-import { Check, Clock } from "lucide-react";
+import { Check, Clock, ShieldCheck } from "lucide-react";
 import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -149,6 +149,27 @@ export function GameCard(props: GameCardProps): ReactElement {
             ].join(" ")}
           >
             💤
+          </span>
+        )}
+        {/* Slice 447 — DAT-verified shield. Pinned to the bottom-
+            right of the cover so it stays distinct from the
+            acquired ring at the top-right. Only renders when at
+            least one Dump matched a VERIFIED DAT entry. */}
+        {(game.dat_verified_dump_count ?? 0) > 0 && (
+          <span
+            title={t("card.datVerifiedTooltip", {
+              count: game.dat_verified_dump_count ?? 0,
+            })}
+            aria-label={t("card.datVerifiedAria", {
+              count: game.dat_verified_dump_count ?? 0,
+            })}
+            className={[
+              "absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center",
+              "rounded-full bg-emerald-700/80 text-emerald-100 ring-1 ring-inset ring-emerald-400/50",
+              "backdrop-blur-sm",
+            ].join(" ")}
+          >
+            <ShieldCheck size={11} strokeWidth={2.5} aria-hidden="true" />
           </span>
         )}
         {(dots.length > 0 || overflowCount > 0) && (

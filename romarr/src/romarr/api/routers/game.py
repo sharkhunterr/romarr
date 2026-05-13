@@ -41,7 +41,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from romarr.api.dependencies import get_db, require_admin, require_readonly
 from romarr.api.models import Tag, TagAssignment
 from romarr.auth import Principal
-from romarr.domain.models import Dump, Game, Release
+from romarr.domain.models import DatEntry, Dump, Game, Release
 from romarr.domain.schemas import DumpRead, GameRead, ReleaseRead
 from romarr.metadata.types import ProviderField
 
@@ -463,13 +463,14 @@ async def list_games(
     stmt = stmt.limit(limit).offset(offset)
 
     rows = (await db.execute(stmt)).scalars().all()
-    acquired_ids = await _games_with_imported_release(
-        db, [row.id for row in rows]
-    )
+    ids = [row.id for row in rows]
+    acquired_ids = await _games_with_imported_release(db, ids)
+    dat_counts = await _games_dat_verified_dump_counts(db, ids)
     out: list[GameRead] = []
     for row in rows:
         read = GameRead.model_validate(row, from_attributes=True)
         read.acquired = row.id in acquired_ids
+        read.dat_verified_dump_count = dat_counts.get(row.id, 0)
         out.append(read)
     return out
 
@@ -498,6 +499,29 @@ async def _games_with_imported_release(
         )
     ).scalars().all()
     return {int(g) for g in rows}
+
+
+async def _games_dat_verified_dump_counts(
+    db: AsyncSession, game_ids: list[int]
+) -> dict[int, int]:
+    """Slice 447 — per-game count of Dumps whose SHA-1 cleared
+    the DAT cascade with a VERIFIED entry. Drives the green
+    ``DAT ✓`` icon on Library cards + Game Detail header.
+    """
+    if not game_ids:
+        return {}
+    rows = (
+        await db.execute(
+            select(Release.game_id, func.count(Dump.id))
+            .join(Dump, Dump.release_id == Release.id)
+            .where(
+                Release.game_id.in_(game_ids),
+                Dump.dat_verified.is_(True),
+            )
+            .group_by(Release.game_id)
+        )
+    ).all()
+    return {int(g): int(n) for g, n in rows}
 
 
 @router.post(
@@ -738,6 +762,8 @@ async def read_game(
     read = GameRead.model_validate(row, from_attributes=True)
     acquired = await _games_with_imported_release(db, [row.id])
     read.acquired = row.id in acquired
+    dat_counts = await _games_dat_verified_dump_counts(db, [row.id])
+    read.dat_verified_dump_count = dat_counts.get(row.id, 0)
     return read
 
 
@@ -1220,17 +1246,33 @@ async def list_dumps_for_game(
             },
         )
 
+    # Left-join the DatEntry so the FilesTab can render the
+    # canonical name + indexed size + status without a second
+    # round-trip. Most dumps won't have a match — those return
+    # NULLs across the joined columns and the UI treats them as
+    # "no DAT info".
     rows = (
         await db.execute(
-            select(Dump)
+            select(
+                Dump,
+                DatEntry.name,
+                DatEntry.size_bytes,
+                DatEntry.status,
+            )
             .join(Release, Dump.release_id == Release.id)
+            .outerjoin(DatEntry, DatEntry.id == Dump.dat_entry_id)
             .where(Release.game_id == game_id)
             .order_by(Release.disc_number.asc(), Dump.imported_at.desc())
         )
-    ).scalars().all()
-    return [
-        DumpRead.model_validate(row, from_attributes=True) for row in rows
-    ]
+    ).all()
+    out: list[DumpRead] = []
+    for dump, dat_name, dat_size, dat_status in rows:
+        read = DumpRead.model_validate(dump, from_attributes=True)
+        read.dat_entry_name = dat_name
+        read.dat_entry_size_bytes = dat_size
+        read.dat_entry_status = dat_status
+        out.append(read)
+    return out
 
 
 __all__ = ["router"]

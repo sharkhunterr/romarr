@@ -20,7 +20,7 @@
  * sticky-top so it stays in reach as the operator scrolls.
  */
 
-import { Check, Clock, Search, Trash2 } from "lucide-react";
+import { Check, Clock, Search, ShieldCheck, Trash2 } from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -108,6 +108,24 @@ export function GameHeader(props: GameHeaderProps): ReactElement {
               🔒
             </span>
           )}
+          {/* Slice 447 — DAT-verified shield overlay on the
+              cover so the operator sees the verification status
+              at a glance, even before tabbing into Files. */}
+          {(game.dat_verified_dump_count ?? 0) > 0 && (
+            <span
+              aria-hidden="true"
+              title={t("header.datVerifiedTooltip", {
+                count: game.dat_verified_dump_count ?? 0,
+              })}
+              className={[
+                "absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center",
+                "rounded-full bg-emerald-700/85 text-emerald-100 ring-1 ring-inset ring-emerald-400/60",
+                "backdrop-blur-sm",
+              ].join(" ")}
+            >
+              <ShieldCheck size={12} strokeWidth={2.5} />
+            </span>
+          )}
         </button>
 
         {coverEditOpen && (
@@ -153,6 +171,19 @@ export function GameHeader(props: GameHeaderProps): ReactElement {
                 {t("header.status.wanted")}
               </span>
             ) : null}
+            {(game.dat_verified_dump_count ?? 0) > 0 && (
+              <span
+                title={t("header.datVerifiedTooltip", {
+                  count: game.dat_verified_dump_count ?? 0,
+                })}
+                className="inline-flex items-center gap-0.5 rounded-full bg-emerald-700/30 px-1.5 py-0.5 font-medium text-emerald-200 ring-1 ring-inset ring-emerald-500/40"
+              >
+                <ShieldCheck size={10} strokeWidth={2.5} aria-hidden="true" />
+                {t("header.datVerifiedPill", {
+                  count: game.dat_verified_dump_count ?? 0,
+                })}
+              </span>
+            )}
             {game.publisher && (
               <span className="truncate text-zinc-500">{game.publisher}</span>
             )}

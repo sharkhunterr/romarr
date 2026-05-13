@@ -78,7 +78,11 @@
     "selectAria": "Select {{title}}",
     "deselectAria": "Deselect {{title}}",
     "tagsAria_one": "{{count}} tag",
-    "tagsAria_other": "{{count}} tags"
+    "tagsAria_other": "{{count}} tags",
+    "datVerifiedTooltip_one": "{{count}} file verified against a DAT (No-Intro / Redump / …)",
+    "datVerifiedTooltip_other": "{{count}} files verified against a DAT (No-Intro / Redump / …)",
+    "datVerifiedAria_one": "{{count}} DAT-verified file",
+    "datVerifiedAria_other": "{{count}} DAT-verified files"
   },
   "bulk": {
     "enterSelection": "Select",

@@ -234,6 +234,11 @@ class GameRead(GameCreate):
     # the schema stays usable from contexts that don't enrich
     # (writes, the lookup-add endpoint, …).
     acquired: bool | None = None
+    # Slice 447 — derived count of Dumps owned by this game whose
+    # SHA-1 matched a VERIFIED entry in the DAT cache. Drives the
+    # ``DAT ✓`` icon on Library cards + Game Detail header.
+    # Optional for the same reason ``acquired`` is.
+    dat_verified_dump_count: int | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -344,6 +349,14 @@ class DumpRead(DumpCreate):
     id: int
     created_at: datetime
     updated_at: datetime
+    # Slice 447 — joined ``dat_entry`` columns surfaced for the
+    # GameDetail > Files panel. ``dat_entry_id`` already points at
+    # the row; the API resolves the join once so the UI can show
+    # the canonical DAT-published name + indexed size + status
+    # without a follow-up fetch.
+    dat_entry_name: str | None = None
+    dat_entry_size_bytes: int | None = None
+    dat_entry_status: str | None = None
 
 
 # ---------------------------------------------------------------------------

@@ -78,7 +78,11 @@
     "selectAria": "Sélectionner {{title}}",
     "deselectAria": "Désélectionner {{title}}",
     "tagsAria_one": "{{count}} étiquette",
-    "tagsAria_other": "{{count}} étiquettes"
+    "tagsAria_other": "{{count}} étiquettes",
+    "datVerifiedTooltip_one": "{{count}} fichier vérifié contre un DAT (No-Intro / Redump / …)",
+    "datVerifiedTooltip_other": "{{count}} fichiers vérifiés contre un DAT (No-Intro / Redump / …)",
+    "datVerifiedAria_one": "{{count}} fichier vérifié DAT",
+    "datVerifiedAria_other": "{{count}} fichiers vérifiés DAT"
   },
   "bulk": {
     "enterSelection": "Sélectionner",

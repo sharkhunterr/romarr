@@ -50,7 +50,11 @@
       "acquiredTooltip": "At least one Release imported and on disk.",
       "wanted": "Wanted",
       "wantedTooltip": "Monitored — Romarr will search until a Release lands."
-    }
+    },
+    "datVerifiedPill_one": "DAT ✓",
+    "datVerifiedPill_other": "DAT ✓ ×{{count}}",
+    "datVerifiedTooltip_one": "1 file verified against a DAT database (No-Intro / Redump / …).",
+    "datVerifiedTooltip_other": "{{count}} files verified against a DAT database (No-Intro / Redump / …)."
   },
   "notes": {
     "heading": "Notes",
@@ -226,7 +230,17 @@
       "title": "No files imported yet",
       "body": "Once a Release is imported, the on-disk dump (hashes, DAT verify, size, format) appears here."
     },
-    "importedAt": "imported {{when}} via {{via}}"
+    "importedAt": "imported {{when}} via {{via}}",
+    "datMatch": {
+      "title": "DAT match",
+      "source": "Authority",
+      "entryName": "Canonical name",
+      "entrySize": "Indexed size",
+      "entryStatus": "Status",
+      "ok": "Hash verified against the database — file matches the indexed DAT entry.",
+      "warning": "Hash found in the DAT but the entry is flagged non-conforming (BADDUMP / HACK / OVERDUMP)."
+    },
+    "verifiedHeader": "DAT verified"
   },
   "pendingDownloads": {
     "title_one": "{{count}} download in progress",

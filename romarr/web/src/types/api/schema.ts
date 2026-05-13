@@ -3597,6 +3597,12 @@ export interface components {
             created_at: string;
             /** Dat Entry Id */
             dat_entry_id?: number | null;
+            /** Dat Entry Name */
+            dat_entry_name?: string | null;
+            /** Dat Entry Size Bytes */
+            dat_entry_size_bytes?: number | null;
+            /** Dat Entry Status */
+            dat_entry_status?: string | null;
             /** Dat Source */
             dat_source?: string | null;
             /**
@@ -3856,6 +3862,8 @@ export interface components {
             custom_metadata?: {
                 [key: string]: unknown;
             };
+            /** Dat Verified Dump Count */
+            dat_verified_dump_count?: number | null;
             /** Developer */
             developer?: string | null;
             /** Franchises */

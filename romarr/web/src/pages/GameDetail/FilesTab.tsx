@@ -1,12 +1,16 @@
 /**
- * GameDetail > Files tab (slice 95).
+ * GameDetail > Files tab (slices 95 + 447).
  *
  * Lists every Dump owned by the game (joined through Releases)
- * via the new `GET /api/v3/game/{id}/dump` endpoint. Each row
- * surfaces the on-disk projection: filename, format, size,
- * imported_at, DAT verification badge, and the three guaranteed
- * hashes (CRC32, MD5, SHA-1) as copyable HashBadges. SHA-256
- * is rendered when present (it's optional per FR-014).
+ * via ``GET /api/v3/game/{id}/dump``. Each row carries the on-
+ * disk projection: filename, format, size, imported_at, hashes,
+ * plus a DAT-verified badge. When a DAT entry actually matched
+ * the dump's SHA-1 the tab expands a verbose panel with the
+ * canonical DAT name, indexed size, status, and authority — so
+ * the operator can see *what* the file matched, not just *that*
+ * it matched.
+ *
+ * Strings resolve through ``game:files.*``.
  */
 
 import { type ReactElement } from "react";
@@ -21,7 +25,8 @@ interface FilesTabProps {
   gameId: number;
 }
 
-function formatBytes(bytes: number): string {
+function formatBytes(bytes: number | null | undefined): string {
+  if (bytes === null || bytes === undefined) return "—";
   if (bytes === 0) return "0 B";
   const k = 1024;
   const sizes = ["B", "KiB", "MiB", "GiB", "TiB"];
@@ -30,6 +35,68 @@ function formatBytes(bytes: number): string {
     Math.floor(Math.log(bytes) / Math.log(k)),
   );
   return `${(bytes / Math.pow(k, i)).toFixed(i === 0 ? 0 : 2)} ${sizes[i]}`;
+}
+
+function DatMatchPanel(props: { dump: Dump }): ReactElement | null {
+  const { t } = useTranslation("game");
+  const { dump } = props;
+  // No match = nothing to expand.
+  if (dump.dat_source === null || dump.dat_source === undefined) return null;
+  // No joined entry payload (legacy row pre-447 enrichment): we
+  // still know it matched, but can't show the canonical name —
+  // fall back to a one-liner.
+  const hasEntry =
+    dump.dat_entry_name !== null && dump.dat_entry_name !== undefined;
+  const verified = dump.dat_verified;
+  const statusLabel = dump.dat_entry_status ?? "?";
+
+  return (
+    <div
+      className={[
+        "mt-1 grid gap-x-3 gap-y-1 rounded-md border px-3 py-2 text-[0.7rem]",
+        verified
+          ? "border-emerald-700/40 bg-emerald-900/15"
+          : "border-amber-700/40 bg-amber-900/15",
+        "sm:grid-cols-[7rem_1fr]",
+      ].join(" ")}
+    >
+      <p
+        className={`col-span-full font-medium ${
+          verified ? "text-emerald-200" : "text-amber-200"
+        }`}
+      >
+        {t(`files.datMatch.${verified ? "ok" : "warning"}`)}
+      </p>
+
+      <span className="text-zinc-500">{t("files.datMatch.source")}</span>
+      <span className="font-mono text-zinc-200">{dump.dat_source}</span>
+
+      {hasEntry && (
+        <>
+          <span className="text-zinc-500">
+            {t("files.datMatch.entryName")}
+          </span>
+          <span className="truncate text-zinc-200" title={dump.dat_entry_name ?? ""}>
+            {dump.dat_entry_name}
+          </span>
+
+          <span className="text-zinc-500">
+            {t("files.datMatch.entrySize")}
+          </span>
+          <span className="font-mono text-zinc-300">
+            {formatBytes(dump.dat_entry_size_bytes)}
+          </span>
+
+          <span className="text-zinc-500">
+            {t("files.datMatch.entryStatus")}
+          </span>
+          <span className="font-mono uppercase tracking-wide text-zinc-300">
+            {statusLabel}
+          </span>
+        </>
+      )}
+    </div>
+  );
 }
 
 function DumpRow(props: { dump: Dump }): ReactElement {
@@ -90,6 +157,8 @@ function DumpRow(props: { dump: Dump }): ReactElement {
           <HashBadge type="SHA256" value={dump.sha256} truncate={12} />
         )}
       </div>
+
+      <DatMatchPanel dump={dump} />
     </li>
   );
 }

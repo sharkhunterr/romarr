@@ -2301,6 +2301,39 @@
             ],
             "title": "Dat Entry Id"
           },
+          "dat_entry_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dat Entry Name"
+          },
+          "dat_entry_size_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dat Entry Size Bytes"
+          },
+          "dat_entry_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dat Entry Status"
+          },
           "dat_source": {
             "anyOf": [
               {
@@ -3008,6 +3041,17 @@
             "additionalProperties": true,
             "title": "Custom Metadata",
             "type": "object"
+          },
+          "dat_verified_dump_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dat Verified Dump Count"
           },
           "developer": {
             "anyOf": [
