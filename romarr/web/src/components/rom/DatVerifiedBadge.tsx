@@ -1,35 +1,46 @@
 /**
- * "DAT ✓" / "DAT ?" badge.
+ * DAT verification badge (slices 95 + 446).
  *
- * Indicates whether a Release / Dump matches a known DAT entry
- * (No-Intro, Redump, TOSEC). The tooltip carries the source DAT
- * name when verified; the empty state surfaces a link to the
- * DAT-sources settings page (wired in the Game Detail page
- * slice).
+ * Tri-state badge driven by ``Dump.dat_verified`` + ``Dump.dat_source``:
+ *
+ *   - ``dat_source == null`` → no entry in any DAT for this hash.
+ *     The vast majority of hacks, demos, betas, scans and CHDs
+ *     (whose SHA-1 doesn't match the underlying track) fall here.
+ *     We return ``null`` so the row stays clean rather than
+ *     littered with ``DAT ?``.
+ *   - matched + verified → ``DAT ✓`` (emerald).
+ *   - matched + un-verified → ``DAT !`` (amber). The match
+ *     resolved against a DAT row whose status is BADDUMP/HACK/
+ *     OVERDUMP — surface it so the operator can investigate.
  */
 
 import { type ReactElement } from "react";
 
 export interface DatVerifiedBadgeProps {
-  /** True when the dump's hash matches a DAT entry. */
+  /** True when the cascade returned a VERIFIED entry. */
   verified: boolean;
-  /** DAT source name (e.g. "No-Intro 2026-04") when verified. */
-  source?: string;
+  /** DAT source string (``no-intro`` / ``redump`` / …). ``null`` = no match. */
+  source?: string | null;
   className?: string;
 }
 
 export function DatVerifiedBadge(
   props: DatVerifiedBadgeProps,
-): ReactElement {
+): ReactElement | null {
+  const source = props.source ?? null;
+  if (source === null) {
+    // No DAT entry matched this hash at all — don't paint a "?" on
+    // every hack/demo/CHD row.
+    return null;
+  }
+
   const colour = props.verified
     ? "bg-emerald-700/30 text-emerald-200 ring-emerald-500/40"
-    : "bg-zinc-800 text-zinc-400 ring-zinc-600";
-  const symbol = props.verified ? "✓" : "?";
+    : "bg-amber-700/30 text-amber-200 ring-amber-500/40";
+  const symbol = props.verified ? "✓" : "!";
   const tooltip = props.verified
-    ? props.source
-      ? `Verified against ${props.source}`
-      : "Verified"
-    : "No DAT match — open DAT sources settings to refresh";
+    ? `Verified against ${source}`
+    : `Matched in ${source} but flagged as BADDUMP / HACK / OVERDUMP`;
 
   const className = [
     "inline-flex items-center gap-1 rounded-md px-2 py-0.5",
@@ -42,9 +53,7 @@ export function DatVerifiedBadge(
 
   return (
     <span className={className} title={tooltip}>
-      <span className="text-[0.6rem] uppercase tracking-wider">
-        DAT
-      </span>
+      <span className="text-[0.6rem] uppercase tracking-wider">DAT</span>
       <span aria-hidden="true">{symbol}</span>
     </span>
   );

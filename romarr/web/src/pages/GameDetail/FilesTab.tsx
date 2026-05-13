@@ -60,7 +60,7 @@ function DumpRow(props: { dump: Dump }): ReactElement {
         </div>
         <DatVerifiedBadge
           verified={dump.dat_verified}
-          source={dump.dat_source ?? undefined}
+          source={dump.dat_source ?? null}
         />
       </div>
 

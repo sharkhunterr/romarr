@@ -4,8 +4,10 @@ import { render } from "@testing-library/react";
 import { DatVerifiedBadge } from "./DatVerifiedBadge";
 
 describe("DatVerifiedBadge", () => {
-  it("renders a green ✓ badge when verified", () => {
-    const { container } = render(<DatVerifiedBadge verified />);
+  it("renders a green ✓ badge when verified against a source", () => {
+    const { container } = render(
+      <DatVerifiedBadge verified source="no-intro" />,
+    );
 
     const badge = container.querySelector("span")!;
     expect(badge).toHaveTextContent("DAT");
@@ -13,13 +15,27 @@ describe("DatVerifiedBadge", () => {
     expect(badge.className).toContain("emerald");
   });
 
-  it("renders a dimmed ? badge when not verified", () => {
-    const { container } = render(<DatVerifiedBadge verified={false} />);
+  it("renders an amber ! badge when matched but unverified", () => {
+    const { container } = render(
+      <DatVerifiedBadge verified={false} source="no-intro" />,
+    );
 
     const badge = container.querySelector("span")!;
     expect(badge).toHaveTextContent("DAT");
-    expect(badge).toHaveTextContent("?");
-    expect(badge.className).toContain("zinc");
+    expect(badge).toHaveTextContent("!");
+    expect(badge.className).toContain("amber");
+  });
+
+  it("renders nothing when no DAT source matched the hash", () => {
+    const { container } = render(<DatVerifiedBadge verified={false} />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it("renders nothing when source is explicitly null", () => {
+    const { container } = render(
+      <DatVerifiedBadge verified={false} source={null} />,
+    );
+    expect(container.firstChild).toBeNull();
   });
 
   it("includes the source name in the verified tooltip", () => {
@@ -28,20 +44,17 @@ describe("DatVerifiedBadge", () => {
     );
 
     const badge = container.querySelector("span")!;
-    expect(badge.getAttribute("title")).toBe("Verified against No-Intro 2026-04");
+    expect(badge.getAttribute("title")).toBe(
+      "Verified against No-Intro 2026-04",
+    );
   });
 
-  it("uses the bare 'Verified' tooltip when source is omitted", () => {
-    const { container } = render(<DatVerifiedBadge verified />);
+  it("flags BADDUMP/HACK in the warning tooltip", () => {
+    const { container } = render(
+      <DatVerifiedBadge verified={false} source="no-intro" />,
+    );
 
     const badge = container.querySelector("span")!;
-    expect(badge.getAttribute("title")).toBe("Verified");
-  });
-
-  it("uses the no-match tooltip when not verified", () => {
-    const { container } = render(<DatVerifiedBadge verified={false} />);
-
-    const badge = container.querySelector("span")!;
-    expect(badge.getAttribute("title")).toContain("No DAT match");
+    expect(badge.getAttribute("title")).toContain("BADDUMP");
   });
 });
