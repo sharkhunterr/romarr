@@ -270,9 +270,13 @@ class RetroAchievementsProvider(MetadataProvider):
         return out
 
     async def get_game(self, provider_game_id: str) -> GameMetadata:
+        # ``API_GetGame.php`` is the minimal endpoint and does NOT
+        # include ``NumAchievements``; ``Extended`` does. Without
+        # this switch the achievements_count stayed null on every
+        # match because the field never appeared in the payload.
         payload = await self._call(
             lambda: self._get(
-                "/API_GetGame.php",
+                "/API_GetGameExtended.php",
                 params={"i": int(provider_game_id)},
             )
         )

@@ -41,7 +41,7 @@ async def test_get_game_populates_only_achievements_count(
         "NumAchievements": 42,
     }
     with respx.mock:
-        respx.get("https://retroachievements.org/API/API_GetGame.php").mock(
+        respx.get("https://retroachievements.org/API/API_GetGameExtended.php").mock(
             return_value=httpx.Response(200, json=payload)
         )
         meta = await p.get_game("1234")
@@ -58,7 +58,7 @@ async def test_get_game_no_achievements_returns_empty_fields(
     p = _make_provider(ra_client)
 
     with respx.mock:
-        respx.get("https://retroachievements.org/API/API_GetGame.php").mock(
+        respx.get("https://retroachievements.org/API/API_GetGameExtended.php").mock(
             return_value=httpx.Response(
                 200,
                 json={"ID": 1, "Title": "Some Game", "NumAchievements": 0},
@@ -74,7 +74,7 @@ async def test_get_game_unknown_id_raises_not_found(
 ) -> None:
     p = _make_provider(ra_client)
     with respx.mock:
-        respx.get("https://retroachievements.org/API/API_GetGame.php").mock(
+        respx.get("https://retroachievements.org/API/API_GetGameExtended.php").mock(
             return_value=httpx.Response(200, json={})
         )
         with pytest.raises(NotFoundError):
