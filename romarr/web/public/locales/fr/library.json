@@ -37,6 +37,9 @@
     "reset": {
       "label": "✕ Effacer les filtres",
       "aria": "Effacer tous les filtres actifs (recherche, plateforme, bibliothèque, étiquette, suivi, genre, région, année)"
+    },
+    "advanced": {
+      "label": "Filtres"
     }
   },
   "fab": {

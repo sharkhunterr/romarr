@@ -37,6 +37,9 @@
     "reset": {
       "label": "✕ Clear filters",
       "aria": "Clear every active filter (search, platform, library, tag, monitored, genre, region, year)"
+    },
+    "advanced": {
+      "label": "Filters"
     }
   },
   "fab": {
