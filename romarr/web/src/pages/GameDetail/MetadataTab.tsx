@@ -65,24 +65,35 @@ function ProviderCard(props: {
           )}
         </h3>
         <div className="flex flex-wrap items-center gap-2 text-[0.65rem] text-zinc-500">
-          {entry.providerGameId && (
-            <span className="font-mono">
-              id: {entry.providerGameId}
-              {linkBuilder && (
-                <>
-                  {" "}·{" "}
-                  <a
-                    href={linkBuilder(entry.providerGameId)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-brand hover:underline"
-                  >
-                    {t("metadata.open")}
-                  </a>
-                </>
-              )}
-            </span>
-          )}
+          {(() => {
+            // ``providerGameId`` is the operator-pinned FK from
+            // the Game row. RA doesn't always populate that
+            // column on a metadata refresh; the cached row from
+            // ``metadata_cache`` always carries the provider's
+            // canonical id though, so we fall back to it. Either
+            // surfaces the same "open external page" link.
+            const id =
+              entry.providerGameId ?? entry.cachedProviderGameId ?? null;
+            if (id === null) return null;
+            return (
+              <span className="font-mono">
+                id: {id}
+                {linkBuilder && (
+                  <>
+                    {" "}·{" "}
+                    <a
+                      href={linkBuilder(id)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-brand hover:underline"
+                    >
+                      {t("metadata.open")}
+                    </a>
+                  </>
+                )}
+              </span>
+            );
+          })()}
           {fetchedAt && (
             <span>{t("metadata.fetchedAt", { value: fetchedAt })}</span>
           )}
