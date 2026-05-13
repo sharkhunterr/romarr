@@ -338,17 +338,46 @@ async def run_import(
         # the same file coalesce idempotently (FR-033). Multi-
         # Release ambiguity falls through to parking unless the
         # parser-derived regions disambiguate to exactly one.
-        candidate_rows = (
+        #
+        # Slice 441 — for manual grabs (``pre_matched_game_id``
+        # set), match candidate releases by NAME too. Pre-slice
+        # the orchestrator picked any wanted/imported release for
+        # the game, then ``steps/db_update`` deleted the prior
+        # dump and inserted the new one. User reported a Crash
+        # Bandicoot Warped grab where the second grab (Demo
+        # .chd) overwrote the first grab's dump (Beta) on
+        # release 16, leaving the release row labelled "Beta"
+        # but pointing at the Demo file. Including the filename
+        # match lets distinct releases coexist (Beta + Demo +
+        # Final, etc.) — when no name matches, the
+        # ``not candidates`` branch below creates a fresh
+        # release row.
+        # Slice 441 — match candidate releases by NAME (the
+        # filename stem the parser already produces on the create
+        # path lines 403-415). Same-filename re-runs find their
+        # existing release and coalesce idempotently (FR-033);
+        # different-filename grabs / scans get a fresh row. Both
+        # scanner-driven AND manual-grab paths take this branch —
+        # the operator-driven nature of either flow means a
+        # distinct filename signals a distinct release intent.
+        candidate_q = (
+            select(Release.id, Release.name, Release.regions)
+            .where(
+                Release.game_id == monitored_game_id,
+                Release.status.in_(("wanted", "imported")),
+                Release.name == source_path.stem,
+            )
+        )
+        raw_candidates = (
             await session.execute(
-                select(Release.id, Release.regions)
-                .where(
-                    Release.game_id == monitored_game_id,
-                    Release.status.in_(("wanted", "imported")),
-                )
-                .order_by(Release.id)
+                candidate_q.order_by(Release.id)
             )
         ).all()
-        candidates: list[int] = [int(r[0]) for r in candidate_rows]
+        # Strip the ``name`` column back out — downstream
+        # consumers (region-disambiguation at line ~456) unpack
+        # ``(id, regions)`` pairs.
+        candidate_rows = [(int(r[0]), r[2]) for r in raw_candidates]
+        candidates: list[int] = [rid for rid, _ in candidate_rows]
 
         # T040 / FR-014 — scanner-driven import: when the Game has no
         # wanted/imported Release yet but the filename has parseable
