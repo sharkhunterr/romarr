@@ -22,7 +22,7 @@ from uuid import uuid4
 from sqlalchemy import or_, select
 
 from romarr.domain.enums import DumpStatus
-from romarr.domain.models import DatEntry, Platform
+from romarr.domain.models import DatEntry, Dump, Platform, Release
 from romarr.indexers.errors import (
     IndexerAuthError,
     IndexerProtocolError,
@@ -49,13 +49,22 @@ _RESULT_HARD_CAP = 200
 """FR-029 hard cap per (indexer, query)."""
 
 
-def _none_dat(_a: str | None, _b: str | None) -> Literal["verified", "hack", "none"]:
+from romarr.search.state import DatMatchInfo, _NONE_DAT_INFO
+
+
+def _none_dat(_a: str | None, _b: str | None) -> DatMatchInfo:
     """Fallback DAT lookup — used when no platform scope is given
     (so we can't safely query ``dat_entry`` without risking
     cross-platform hash collisions) or when no candidate ships a
-    usable hash. Returns ``"none"`` for every call.
+    usable hash. Returns the singleton "no match" info.
     """
-    return "none"
+    return _NONE_DAT_INFO
+
+
+def _none_owned(
+    _game: int | None, _sha1: str | None, _md5: str | None, _crc: str | None
+) -> bool:
+    return False
 
 
 def _status_to_outcome(status: str) -> Literal["verified", "hack", "none"]:
@@ -74,14 +83,14 @@ async def _build_db_dat_lookup(
     platform_id: int,
     hashes_sha1: set[str],
     hashes_crc32: set[str],
-) -> Callable[[str | None, str | None], Literal["verified", "hack", "none"]]:
+) -> Callable[[str | None, str | None], DatMatchInfo]:
     """Pre-fetch ``dat_entry`` rows whose hashes appear in the
     candidate set for this platform, then expose a sync closure
     that satisfies :class:`DatLookup`.
 
     Pulling matches up-front lets the pure pipeline stay sync —
     the closure is called inline per result and just dict-looks
-    the outcome.
+    the outcome and joined entry metadata.
     """
     if not hashes_sha1 and not hashes_crc32:
         return _none_dat
@@ -89,7 +98,11 @@ async def _build_db_dat_lookup(
     rows = (
         await session.execute(
             select(
-                DatEntry.sha1, DatEntry.crc32, DatEntry.status, DatEntry.source
+                DatEntry.sha1,
+                DatEntry.crc32,
+                DatEntry.status,
+                DatEntry.source,
+                DatEntry.name,
             )
             .where(
                 DatEntry.platform_id == platform_id,
@@ -100,28 +113,99 @@ async def _build_db_dat_lookup(
             )
         )
     ).all()
-    by_sha1: dict[str, Literal["verified", "hack", "none"]] = {}
-    by_crc32: dict[str, Literal["verified", "hack", "none"]] = {}
+    by_sha1: dict[str, DatMatchInfo] = {}
+    by_crc32: dict[str, DatMatchInfo] = {}
     # CL001 authority order is enforced by best_match — for the
     # pre-grab cascade a single "is this hash known?" answer is
     # enough, so keep the strongest outcome (verified > hack >
     # none) when the same hash spans multiple sources.
     rank = {"verified": 2, "hack": 1, "none": 0}
-    for sha1, crc32, status, _src in rows:
+    for sha1, crc32, status, src, name in rows:
         outcome = _status_to_outcome(status)
-        if sha1 and rank[outcome] > rank.get(by_sha1.get(sha1, "none"), 0):
-            by_sha1[sha1] = outcome
-        if crc32 and rank[outcome] > rank.get(by_crc32.get(crc32, "none"), 0):
-            by_crc32[crc32] = outcome
+        info = DatMatchInfo(
+            outcome=outcome, entry_name=name, entry_source=src
+        )
+        if sha1 and rank[outcome] > rank.get(
+            by_sha1.get(sha1, _NONE_DAT_INFO).outcome, 0
+        ):
+            by_sha1[sha1] = info
+        if crc32 and rank[outcome] > rank.get(
+            by_crc32.get(crc32, _NONE_DAT_INFO).outcome, 0
+        ):
+            by_crc32[crc32] = info
 
-    def _lookup(
-        sha1: str | None, crc32: str | None
-    ) -> Literal["verified", "hack", "none"]:
+    def _lookup(sha1: str | None, crc32: str | None) -> DatMatchInfo:
         if sha1 and sha1.lower() in by_sha1:
             return by_sha1[sha1.lower()]
         if crc32 and crc32.lower() in by_crc32:
             return by_crc32[crc32.lower()]
-        return "none"
+        return _NONE_DAT_INFO
+
+    return _lookup
+
+
+async def _build_owned_lookup(
+    session: AsyncSession,
+    game_ids: set[int],
+    hashes_sha1: set[str],
+    hashes_md5: set[str],
+    hashes_crc32: set[str],
+) -> Callable[[int | None, str | None, str | None, str | None], bool]:
+    """Pre-fetch every ``Dump.{sha1, md5, crc32}`` bound to the
+    candidate set's matched games, then expose a sync closure
+    that answers "does this game already have a Dump with one of
+    these hashes?".
+
+    Used to flag duplicates in the manual-search modal so the
+    operator doesn't re-grab the same file twice. Returns False
+    on any input when no game_id is supplied or the hash set is
+    empty.
+    """
+    if not game_ids or not (hashes_sha1 or hashes_md5 or hashes_crc32):
+        return _none_owned
+
+    rows = (
+        await session.execute(
+            select(
+                Release.game_id, Dump.sha1, Dump.md5, Dump.crc32
+            )
+            .join(Release, Release.id == Dump.release_id)
+            .where(
+                Release.game_id.in_(game_ids),
+                or_(
+                    Dump.sha1.in_(hashes_sha1) if hashes_sha1 else False,
+                    Dump.md5.in_(hashes_md5) if hashes_md5 else False,
+                    Dump.crc32.in_(hashes_crc32) if hashes_crc32 else False,
+                ),
+            )
+        )
+    ).all()
+    owned_sha1: set[tuple[int, str]] = set()
+    owned_md5: set[tuple[int, str]] = set()
+    owned_crc32: set[tuple[int, str]] = set()
+    for game_id, sha1, md5, crc32 in rows:
+        if sha1:
+            owned_sha1.add((int(game_id), sha1.lower()))
+        if md5:
+            owned_md5.add((int(game_id), md5.lower()))
+        if crc32:
+            owned_crc32.add((int(game_id), crc32.lower()))
+
+    def _lookup(
+        game_id: int | None,
+        sha1: str | None,
+        md5: str | None,
+        crc32: str | None,
+    ) -> bool:
+        if game_id is None:
+            return False
+        if sha1 and (game_id, sha1.lower()) in owned_sha1:
+            return True
+        if md5 and (game_id, md5.lower()) in owned_md5:
+            return True
+        if crc32 and (game_id, crc32.lower()) in owned_crc32:
+            return True
+        return False
 
     return _lookup
 
@@ -255,11 +339,14 @@ async def run_manual_search(
     # fall back to ``_none_dat`` because cross-platform hash
     # collisions would lie about verification.
     sha1s: set[str] = set()
+    md5s: set[str] = set()
     crc32s: set[str] = set()
     for _indexer_id, raw_results, _outcome, _overcap in fetch_outcomes:
         for r in raw_results:
             if r.hash_sha1:
                 sha1s.add(r.hash_sha1.lower())
+            if getattr(r, "hash_md5", None):
+                md5s.add(r.hash_md5.lower())
             if r.hash_crc32:
                 crc32s.add(r.hash_crc32.lower())
     if platform_id is not None and (sha1s or crc32s):
@@ -268,6 +355,21 @@ async def run_manual_search(
         )
     else:
         dat_lookup = _none_dat
+
+    # Slice 451 — owned-hash lookup so the search modal can flag
+    # candidates whose hash already lives on disk for the matched
+    # game. Scoped to the games in the library (the manual round
+    # filters by platform_id; library_state.monitored_games is
+    # already pre-scoped above).
+    candidate_game_ids = {
+        g.id for g in library_state.monitored_games
+    }
+    if candidate_game_ids and (sha1s or md5s or crc32s):
+        owned_lookup = await _build_owned_lookup(
+            session, candidate_game_ids, sha1s, md5s, crc32s
+        )
+    else:
+        owned_lookup = _none_owned
 
     for indexer_id, raw_results, outcome, was_overcap in fetch_outcomes:
         indexer_outcomes[indexer_id] = outcome
@@ -279,6 +381,7 @@ async def run_manual_search(
                 result=result,
                 library_state=library_state,
                 dat_lookup=dat_lookup,
+                owned_lookup=owned_lookup,
                 quality_profile=quality,
                 region_profile=region,
                 dump_profile=dump,

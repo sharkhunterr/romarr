@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 from romarr.search.matching import resolve_to_game
-from romarr.search.state import MonitoredGame
+from romarr.search.state import DatMatchInfo, MonitoredGame, _NONE_DAT_INFO
 
 
-def _none_dat(_a: object, _b: object) -> str:
-    return "none"
+def _none_dat(_a: object, _b: object) -> DatMatchInfo:
+    return _NONE_DAT_INFO
 
 
-def _verified_dat(_a: object, _b: object) -> str:
-    return "verified"
+def _verified_dat(_a: object, _b: object) -> DatMatchInfo:
+    return DatMatchInfo(outcome="verified", entry_name="test", entry_source="no-intro")
 
 
 _GAMES = (

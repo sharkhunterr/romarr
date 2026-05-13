@@ -314,9 +314,20 @@
         "genre": "Genre",
         "description": "Notes",
         "infoUrl": "Page du tracker",
-        "nfoUrl": "NFO"
-      }
+        "nfoUrl": "NFO",
+        "datMatchSource": "Autorité DAT",
+        "datMatchEntry": "Nom canonique DAT",
+        "datMatchStatus": "Statut DAT",
+        "alreadyOwned": "Doublon"
+      },
+      "datStatus": {
+        "verified": "Vérifié — l'entrée DAT confirme un dump conforme.",
+        "invalid": "Non valide — l'entrée DAT est marquée BADDUMP / HACK / OVERDUMP."
+      },
+      "alreadyOwnedBody": "Une release du jeu possède déjà un fichier avec ce hash."
     },
+    "alreadyOwnedPill": "Déjà possédé",
+    "alreadyOwnedTooltip": "Le hash de cette release correspond à un fichier déjà importé pour ce jeu — éviter le re-grab.",
     "facet": {
       "platform": "Plateforme",
       "region": "Région",

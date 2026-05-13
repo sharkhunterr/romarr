@@ -314,9 +314,20 @@
         "genre": "Genre",
         "description": "Notes",
         "infoUrl": "Tracker page",
-        "nfoUrl": "NFO"
-      }
+        "nfoUrl": "NFO",
+        "datMatchSource": "DAT authority",
+        "datMatchEntry": "Canonical DAT name",
+        "datMatchStatus": "DAT status",
+        "alreadyOwned": "Duplicate"
+      },
+      "datStatus": {
+        "verified": "Verified — the DAT entry confirms a clean dump.",
+        "invalid": "Invalid — the DAT entry is flagged BADDUMP / HACK / OVERDUMP."
+      },
+      "alreadyOwnedBody": "A Release of this game already carries a file with this hash."
     },
+    "alreadyOwnedPill": "Already owned",
+    "alreadyOwnedTooltip": "This candidate's hash matches a file already imported for this game — skip the re-grab.",
     "facet": {
       "platform": "Platform",
       "region": "Region",

@@ -59,6 +59,9 @@ def _reject(
     matched_game_id: int | None = None,
     matched_release_id: int | None = None,
     pre_grab_dat_match: str = "skipped",
+    pre_grab_dat_entry_name: str | None = None,
+    pre_grab_dat_entry_source: str | None = None,
+    already_owned: bool = False,
     title_match_score: int | None = None,
     platform_id: int | None = None,
 ) -> Candidate:
@@ -81,6 +84,12 @@ def _reject(
         rejection=Rejection(code=code, field=field, message=message),
         would_auto_reject=True,
         pre_grab_dat_match=pre_grab_dat_match,
+        pre_grab_dat_entry_name=pre_grab_dat_entry_name,
+        pre_grab_dat_entry_source=pre_grab_dat_entry_source,
+        hash_sha1=result.hash_sha1,
+        hash_md5=getattr(result, "hash_md5", None),
+        hash_crc32=result.hash_crc32,
+        already_owned=already_owned,
         title_match_score=title_match_score,
         # Slice 402 — extra torznab/grabarr metadata.
         grabs=result.grabs,
@@ -101,6 +110,9 @@ def _accept(
     matched_release_id: int | None,
     breakdown: ScoreBreakdown,
     pre_grab_dat_match: str,
+    pre_grab_dat_entry_name: str | None = None,
+    pre_grab_dat_entry_source: str | None = None,
+    already_owned: bool = False,
     title_match_score: int | None = None,
     platform_id: int | None = None,
 ) -> Candidate:
@@ -123,6 +135,12 @@ def _accept(
         rejection=None,
         would_auto_reject=False,
         pre_grab_dat_match=pre_grab_dat_match,
+        pre_grab_dat_entry_name=pre_grab_dat_entry_name,
+        pre_grab_dat_entry_source=pre_grab_dat_entry_source,
+        hash_sha1=result.hash_sha1,
+        hash_md5=getattr(result, "hash_md5", None),
+        hash_crc32=result.hash_crc32,
+        already_owned=already_owned,
         title_match_score=title_match_score,
         # Slice 402 — extra torznab/grabarr metadata.
         grabs=result.grabs,
@@ -236,6 +254,7 @@ def run_pipeline(
     language_profile: Any,
     custom_formats: list[Any],
     file_format: str = "",
+    owned_lookup: Any = None,
 ) -> Candidate:
     """Run the 13-step decision pipeline against one indexer result.
 
@@ -306,7 +325,10 @@ def run_pipeline(
     contributions: list[ScoreContribution] = []
 
     # ---- 5: DAT cascade -------------------------------------------------------
-    dat_outcome = dat_lookup(result.hash_sha1, result.hash_crc32)
+    dat_info = dat_lookup(result.hash_sha1, result.hash_crc32)
+    dat_outcome = dat_info.outcome
+    dat_entry_name = dat_info.entry_name
+    dat_entry_source = dat_info.entry_source
     if dat_outcome == "verified":
         contributions.append(
             ScoreContribution(
@@ -314,6 +336,17 @@ def run_pipeline(
                 name="verified DAT match",
                 value=DAT_VERIFIED_BONUS,
             )
+        )
+
+    # Owned-hash check — flag duplicates so the search modal can
+    # warn the operator before a re-grab.
+    already_owned = False
+    if owned_lookup is not None:
+        already_owned = owned_lookup(
+            matched_game.id,
+            result.hash_sha1,
+            getattr(result, "hash_md5", None),
+            result.hash_crc32,
         )
 
     # Build the ReleaseFacts the profile evaluator + scorer expect.
@@ -336,6 +369,9 @@ def run_pipeline(
             matched_release_id=matched_release_id,
             platform_id=matched_game.platform_id,
             pre_grab_dat_match=dat_outcome,
+            pre_grab_dat_entry_name=dat_entry_name,
+            pre_grab_dat_entry_source=dat_entry_source,
+            already_owned=already_owned,
             title_match_score=title_match_score,
         )
     if region_outcome.score:
@@ -366,6 +402,9 @@ def run_pipeline(
             matched_release_id=matched_release_id,
             platform_id=matched_game.platform_id,
             pre_grab_dat_match=dat_outcome,
+            pre_grab_dat_entry_name=dat_entry_name,
+            pre_grab_dat_entry_source=dat_entry_source,
+            already_owned=already_owned,
             title_match_score=title_match_score,
         )
 
@@ -381,6 +420,9 @@ def run_pipeline(
             matched_release_id=matched_release_id,
             platform_id=matched_game.platform_id,
             pre_grab_dat_match=dat_outcome,
+            pre_grab_dat_entry_name=dat_entry_name,
+            pre_grab_dat_entry_source=dat_entry_source,
+            already_owned=already_owned,
             title_match_score=title_match_score,
         )
 
@@ -401,6 +443,9 @@ def run_pipeline(
             matched_release_id=matched_release_id,
             platform_id=matched_game.platform_id,
             pre_grab_dat_match=dat_outcome,
+            pre_grab_dat_entry_name=dat_entry_name,
+            pre_grab_dat_entry_source=dat_entry_source,
+            already_owned=already_owned,
             title_match_score=title_match_score,
         )
 
@@ -416,6 +461,9 @@ def run_pipeline(
             matched_release_id=matched_release_id,
             platform_id=matched_game.platform_id,
             pre_grab_dat_match=dat_outcome,
+            pre_grab_dat_entry_name=dat_entry_name,
+            pre_grab_dat_entry_source=dat_entry_source,
+            already_owned=already_owned,
             title_match_score=title_match_score,
         )
     if cf_score:
@@ -445,6 +493,9 @@ def run_pipeline(
                 matched_release_id=matched_release_id,
                 platform_id=matched_game.platform_id,
                 pre_grab_dat_match=dat_outcome,
+            pre_grab_dat_entry_name=dat_entry_name,
+            pre_grab_dat_entry_source=dat_entry_source,
+            already_owned=already_owned,
             )
 
     # ---- 12: Seeders threshold ------------------------------------------------
@@ -469,6 +520,9 @@ def run_pipeline(
             matched_release_id=matched_release_id,
             platform_id=matched_game.platform_id,
             pre_grab_dat_match=dat_outcome,
+            pre_grab_dat_entry_name=dat_entry_name,
+            pre_grab_dat_entry_source=dat_entry_source,
+            already_owned=already_owned,
             title_match_score=title_match_score,
         )
 
@@ -481,6 +535,10 @@ def run_pipeline(
         matched_release_id=matched_release_id,
         breakdown=breakdown,
         pre_grab_dat_match=dat_outcome,
+        pre_grab_dat_entry_name=dat_entry_name,
+        pre_grab_dat_entry_source=dat_entry_source,
+        already_owned=already_owned,
+        platform_id=matched_game.platform_id,
         title_match_score=title_match_score,
     )
 

@@ -186,11 +186,16 @@ def now() -> datetime:
     return datetime.now(UTC)
 
 
-def none_dat(_a: object, _b: object) -> str:
+from romarr.search.state import DatMatchInfo, _NONE_DAT_INFO
+
+
+def none_dat(_a: object, _b: object) -> DatMatchInfo:
     """Default DAT lookup returning ``"none"`` — no DAT match."""
-    return "none"
+    return _NONE_DAT_INFO
 
 
-def verified_dat(_a: object, _b: object) -> str:
+def verified_dat(_a: object, _b: object) -> DatMatchInfo:
     """DAT lookup returning ``"verified"`` — bonus +200."""
-    return "verified"
+    return DatMatchInfo(
+        outcome="verified", entry_name="test-entry", entry_source="no-intro"
+    )

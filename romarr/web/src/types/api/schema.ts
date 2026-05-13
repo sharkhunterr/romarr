@@ -3055,6 +3055,11 @@ export interface components {
          *     introspecting ``rejection``.
          */
         Candidate: {
+            /**
+             * Already Owned
+             * @default false
+             */
+            already_owned: boolean;
             /** Description */
             description?: string | null;
             /** Download Url */
@@ -3068,6 +3073,12 @@ export interface components {
             genre?: string | null;
             /** Grabs */
             grabs?: number | null;
+            /** Hash Crc32 */
+            hash_crc32?: string | null;
+            /** Hash Md5 */
+            hash_md5?: string | null;
+            /** Hash Sha1 */
+            hash_sha1?: string | null;
             /** Indexer Guid */
             indexer_guid: string;
             /** Indexer Id */
@@ -3085,6 +3096,10 @@ export interface components {
             nfo_url?: string | null;
             /** Platform Id */
             platform_id?: number | null;
+            /** Pre Grab Dat Entry Name */
+            pre_grab_dat_entry_name?: string | null;
+            /** Pre Grab Dat Entry Source */
+            pre_grab_dat_entry_source?: string | null;
             /**
              * Pre Grab Dat Match
              * @default skipped

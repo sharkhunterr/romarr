@@ -23,6 +23,7 @@ reasons:
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -96,10 +97,41 @@ _DatOutcome = Literal["verified", "hack", "none"]
 """DAT-match boost-or-flag outcome consumed by the pipeline."""
 
 
-# Callable signature: a pure function that maps (sha1, crc32) → outcome.
-# The orchestrator wires this against the foundation's DAT lookup
-# helper before calling the pipeline.
-DatLookup = Callable[[str | None, str | None], _DatOutcome]
+@dataclass(frozen=True, slots=True)
+class DatMatchInfo:
+    """Rich return value for ``DatLookup``.
+
+    The outcome is the boost-or-flag signal the scorer +
+    Candidate field consume. ``entry_name`` / ``entry_source``
+    carry the matched ``dat_entry`` row's canonical name + DAT
+    authority so the search modal's row-expand panel can show
+    *what* the hash matched against, not just *that* it matched.
+    Both are ``None`` for ``outcome="none"``.
+    """
+
+    outcome: _DatOutcome
+    entry_name: str | None = None
+    entry_source: str | None = None
+
+
+_NONE_DAT_INFO = DatMatchInfo(outcome="none")
+"""Singleton fallback so ``_none_dat`` stubs don't re-allocate
+on every call."""
+
+
+# Callable signature: a pure function that maps (sha1, crc32) →
+# rich DatMatchInfo. The orchestrator wires this against the
+# foundation's DAT lookup helper before calling the pipeline.
+DatLookup = Callable[[str | None, str | None], "DatMatchInfo"]
+
+
+# Per-game "do we already own a Dump with this hash?" lookup.
+# Used by the manual-search round to flag duplicates the
+# operator would otherwise re-grab. Returns True iff any Dump
+# bound to ``game_id`` carries the same SHA-1 / MD5 / CRC32.
+OwnedLookup = Callable[
+    [int | None, str | None, str | None, str | None], bool
+]
 
 
 class IndexerMeta(BaseModel):
@@ -133,10 +165,13 @@ class LibraryState(BaseModel):
 __all__ = [
     "BlocklistEntry",
     "DatLookup",
+    "DatMatchInfo",
     "IndexerMeta",
     "LibraryState",
     "MonitoredGame",
     "MonitoredRelease",
+    "OwnedLookup",
     "PlatformFormatBounds",
     "SearchResult",
+    "_NONE_DAT_INFO",
 ]

@@ -737,6 +737,11 @@
         "additionalProperties": false,
         "description": "One indexer result projected through the pipeline.\n\nEither ``score_breakdown`` or ``rejection`` is populated, never\nboth. ``would_auto_reject`` is the convenience flag the manual\nUI consults to render rejected candidates as greyed-out without\nintrospecting ``rejection``.",
         "properties": {
+          "already_owned": {
+            "default": false,
+            "title": "Already Owned",
+            "type": "boolean"
+          },
           "description": {
             "anyOf": [
               {
@@ -805,6 +810,39 @@
               }
             ],
             "title": "Grabs"
+          },
+          "hash_crc32": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hash Crc32"
+          },
+          "hash_md5": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hash Md5"
+          },
+          "hash_sha1": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hash Sha1"
           },
           "indexer_guid": {
             "title": "Indexer Guid",
@@ -885,6 +923,28 @@
               }
             ],
             "title": "Platform Id"
+          },
+          "pre_grab_dat_entry_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pre Grab Dat Entry Name"
+          },
+          "pre_grab_dat_entry_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pre Grab Dat Entry Source"
           },
           "pre_grab_dat_match": {
             "default": "skipped",

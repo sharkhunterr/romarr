@@ -486,12 +486,23 @@ function CandidateRow(props: {
             <span>{t("search.seeders", { count: candidate.seeders })}</span>
           </>
         )}
-        {/* Pure-icon DAT badge. Four cascade outcomes mapped:
-            verified → ✓ green, hack → ⚠ amber, none → ?
-            zinc (we had a hash but no DAT row), skipped → nothing
-            (no hash was available to check). */}
-        {candidate.pre_grab_dat_match !== "skipped" && (
-          <span className="ml-auto">
+        <span className="ml-auto flex items-center gap-1">
+          {/* Slice 451 — duplicate warning: hash already on disk
+              for this game. Sits next to the DAT badge so the
+              operator sees both at a glance before grabbing. */}
+          {candidate.already_owned && (
+            <span
+              className="rounded-md bg-rose-700/30 px-1.5 py-0.5 text-[0.65rem] font-medium text-rose-200 ring-1 ring-inset ring-rose-500/50"
+              title={t("search.alreadyOwnedTooltip")}
+            >
+              {t("search.alreadyOwnedPill")}
+            </span>
+          )}
+          {/* Pure-icon DAT badge. Four cascade outcomes mapped:
+              verified → ✓ green, hack → ⚠ amber, none → ?
+              zinc (we had a hash but no DAT row), skipped →
+              nothing (no hash was available to check). */}
+          {candidate.pre_grab_dat_match !== "skipped" && (
             <DatVerifiedBadge
               status={
                 candidate.pre_grab_dat_match === "verified"
@@ -501,8 +512,8 @@ function CandidateRow(props: {
                     : "unknown"
               }
             />
-          </span>
-        )}
+          )}
+        </span>
       </div>
 
       {candidate.rejection && (
@@ -518,6 +529,56 @@ function CandidateRow(props: {
 
       {expanded && (
         <div className="mt-1 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 rounded border border-zinc-800/70 bg-zinc-950/40 p-2 text-[0.7rem]">
+          {/* Slice 451 — DAT match panel. Surfaces *what* the
+              hash matched against (canonical entry name, DAT
+              authority) so the operator can confirm before
+              clicking Grab. Only renders when the cascade
+              actually resolved a row. */}
+          {(candidate.pre_grab_dat_match === "verified" ||
+            candidate.pre_grab_dat_match === "hack") &&
+            candidate.pre_grab_dat_entry_name && (
+              <>
+                <DetailKv
+                  label={t("search.detail.fields.datMatchSource")}
+                  value={candidate.pre_grab_dat_entry_source ?? "—"}
+                />
+                <DetailKv
+                  label={t("search.detail.fields.datMatchEntry")}
+                  value={candidate.pre_grab_dat_entry_name}
+                />
+                <DetailKv
+                  label={t("search.detail.fields.datMatchStatus")}
+                  value={t(
+                    candidate.pre_grab_dat_match === "verified"
+                      ? "search.detail.datStatus.verified"
+                      : "search.detail.datStatus.invalid",
+                  )}
+                />
+              </>
+            )}
+          {candidate.already_owned && (
+            <DetailKv
+              label={t("search.detail.fields.alreadyOwned")}
+              value={t("search.detail.alreadyOwnedBody")}
+            />
+          )}
+          {candidate.hash_sha1 && (
+            <DetailKv
+              label="SHA-1"
+              value={candidate.hash_sha1}
+              mono
+            />
+          )}
+          {candidate.hash_md5 && (
+            <DetailKv label="MD5" value={candidate.hash_md5} mono />
+          )}
+          {candidate.hash_crc32 && (
+            <DetailKv
+              label="CRC32"
+              value={candidate.hash_crc32}
+              mono
+            />
+          )}
           <DetailKv
             label={t("search.detail.fields.indexer")}
             value={

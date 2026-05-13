@@ -129,6 +129,25 @@ class Candidate(_Base):
     rejection: Rejection | None = None
     would_auto_reject: bool = False
     pre_grab_dat_match: _DatMatchOutcome = "skipped"
+    # Slice 451 — when the cascade matched (outcome="verified" or
+    # "hack"), carry the matched ``dat_entry`` row's canonical
+    # name + DAT authority so the search modal's row-expand panel
+    # can surface *what* the hash matched against, not just *that*
+    # it matched. Both stay None for outcome ∈ {none, skipped}.
+    pre_grab_dat_entry_name: str | None = None
+    pre_grab_dat_entry_source: str | None = None
+    # Hashes the indexer shipped on this candidate (lowercase
+    # hex). Empty when the indexer / source page didn't expose
+    # one. Surfaced in the expand panel so the operator can copy
+    # them and cross-reference manually if needed.
+    hash_sha1: str | None = None
+    hash_md5: str | None = None
+    hash_crc32: str | None = None
+    # Slice 451 — True iff at least one Dump bound to the matched
+    # game already carries an identical hash (SHA-1 / MD5 / CRC32).
+    # Drives the "déjà possédé" badge in the search modal so
+    # operators don't re-grab a duplicate.
+    already_owned: bool = False
     # Identification confidence (0-100). 100 = exact title hit or
     # hash match, ≥ FUZZY_THRESHOLD (85) = fuzzy hit. Surfaces in
     # the manual-search UI as the "title match" half of the

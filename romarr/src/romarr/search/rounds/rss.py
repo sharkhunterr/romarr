@@ -40,8 +40,11 @@ if TYPE_CHECKING:
     from romarr.indexers.client import NewznabClient
 
 
-def _none_dat(_a: str | None, _b: str | None) -> Literal["verified", "hack", "none"]:
-    return "none"
+from romarr.search.state import DatMatchInfo, _NONE_DAT_INFO
+
+
+def _none_dat(_a: str | None, _b: str | None) -> DatMatchInfo:
+    return _NONE_DAT_INFO
 
 
 _ClientFactory = Callable[[int], Awaitable["NewznabClient"]]
