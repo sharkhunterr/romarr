@@ -274,6 +274,11 @@ class GrabarrDirectClient(DownloadClient):
             "state": "QUEUED",
             "error": None,
             "added_at": datetime.now(UTC),
+            # Slice 439 — stash slug + token so ``_stream_to_disk``
+            # can fire the ``grab-completed`` callback against
+            # Grabarr's downloads page once the stream resolves.
+            "slug": slug,
+            "token": token,
         }
         self._pending[native_id] = snap
 
@@ -342,6 +347,12 @@ class GrabarrDirectClient(DownloadClient):
         headers = dict(snap.get("headers") or {})
         category = snap.get("category") or self._category
         filename = self._safe_filename(snap.get("filename") or native_id)
+        # Slice 439 — extract slug + token from the original Torznab
+        # download URL stashed during add_torrent so the
+        # ``grab-completed`` callback below can locate the source
+        # profile + token on Grabarr's side.
+        callback_slug = snap.get("slug")
+        callback_token = snap.get("token")
         explicit_save = snap.get("save_path")
         target_path = (
             Path(explicit_save)
@@ -476,6 +487,29 @@ class GrabarrDirectClient(DownloadClient):
             # checking ``done()`` after completion don't see stale
             # entries.
             self._tasks.pop(native_id, None)
+            # Slice 439 — fire-and-forget callback so Grabarr's
+            # downloads page reflects the http_direct grab. We
+            # only care about the eventual visibility, so any
+            # failure (Grabarr down, profile rotated apikey,
+            # token already expired) is swallowed; the local
+            # snap stays authoritative for Romarr's own queue.
+            if callback_slug and callback_token:
+                try:
+                    await self._post_grab_completed(
+                        slug=callback_slug,
+                        token=callback_token,
+                        success=snap["state"] == "COMPLETED",
+                        size_bytes=snap.get("bytes_done"),
+                        filename=snap.get("filename"),
+                        error=snap.get("error"),
+                        checksums=snap.get("computed_checksums") or {},
+                    )
+                except Exception as exc:  # noqa: BLE001 — telemetry only
+                    _log.info(
+                        "grabarr_direct[%s]: grab-completed callback failed (visibility only, "
+                        "queue state already correct): %s",
+                        native_id, exc,
+                    )
 
     @staticmethod
     def _safe_filename(name: str) -> str:
@@ -621,6 +655,46 @@ class GrabarrDirectClient(DownloadClient):
                 f"URL does not look like a Grabarr Torznab download: {url!r}"
             )
         return m.group("slug"), m.group("token")
+
+    async def _post_grab_completed(
+        self,
+        *,
+        slug: str,
+        token: str,
+        success: bool,
+        size_bytes: int | None,
+        filename: str | None,
+        error: str | None,
+        checksums: dict[str, str],
+    ) -> None:
+        """Slice 439 — POST ``/grab-completed/{token}`` so Grabarr's
+        downloads page surfaces the http_direct grab. Pre-slice
+        the http_direct path bypassed Grabarr's Torznab
+        ``/download/{token}.torrent`` route entirely; operators
+        lost the visibility they had under the BitTorrent-wrap
+        path. This callback rebuilds it without changing the
+        bytes-on-disk topology (Romarr still owns the file)."""
+        url = f"{self.base_url}/romarr/{slug}/api/v1/grab-completed/{token}"
+        body: dict[str, Any] = {
+            "success": success,
+            "size_bytes": size_bytes,
+            "filename": filename,
+            "error": error,
+            "sha1": checksums.get("sha1"),
+            "md5": checksums.get("md5"),
+            "crc32": checksums.get("crc32"),
+        }
+        # Strip None values so the pydantic body validator stays
+        # strict on ``extra='forbid'`` without complaining about
+        # nulls in optional fields.
+        body = {k: v for k, v in body.items() if v is not None}
+        async with self._new_client() as client:
+            resp = await client.post(url, json=body)
+            if resp.status_code >= 400:
+                raise DownloaderError(
+                    f"Grabarr /grab-completed returned {resp.status_code}: "
+                    f"{resp.text[:200]}"
+                )
 
     async def _fetch_resolve(self, slug: str, token: str) -> dict[str, Any]:
         url = f"{self.base_url}/romarr/{slug}/api/v1/resolve/{token}"
