@@ -360,12 +360,37 @@ class GrabarrDirectClient(DownloadClient):
         try:
             target_path.parent.mkdir(parents=True, exist_ok=True)
             async with httpx.AsyncClient(
-                verify=self._verify, timeout=self._timeout
+                verify=self._verify, timeout=self._timeout, follow_redirects=True
             ) as client:
                 async with client.stream("GET", url, headers=headers) as resp:
                     if resp.status_code >= 400:
                         raise DownloaderError(
                             f"upstream {resp.status_code} fetching {url}"
+                        )
+                    # Slice 436 — reject HTML / text content delivered
+                    # under a binary filename. Several sources (Axekin
+                    # via vikingfile, Anna's Archive cascade landing on
+                    # CF challenge, planet-emu under rate-limit, …)
+                    # serve a 200 OK HTML page rather than a 4xx when
+                    # the real download isn't available. Pre-slice the
+                    # streamer wrote the HTML bytes verbatim and
+                    # marked COMPLETED; the importer then choked with
+                    # "Not a RAR file" / "bad zip" downstream. We
+                    # bail loudly here with a message that points to
+                    # the upstream-side issue.
+                    content_type = (
+                        (resp.headers.get("content-type") or "")
+                        .split(";", 1)[0].strip().lower()
+                    )
+                    expected_binary = _looks_binary_extension(
+                        target_path.suffix
+                    )
+                    if expected_binary and content_type.startswith("text/"):
+                        raise DownloaderError(
+                            f"upstream returned {content_type or 'unknown'} "
+                            f"for a binary file ({target_path.name}); "
+                            "likely a CF challenge / rate-limit / login "
+                            "redirect — check the source's status"
                         )
                     total = (
                         int(resp.headers.get("content-length"))
@@ -374,8 +399,26 @@ class GrabarrDirectClient(DownloadClient):
                     )
                     snap["total_bytes"] = total or snap.get("expected_size")
                     bytes_done = 0
+                    first_chunk_sniff = True
                     with target_path.open("wb") as fh:
                         async for chunk in resp.aiter_bytes(chunk_size=65536):
+                            if first_chunk_sniff and expected_binary:
+                                # Slice 436 — magic-byte sniff on the
+                                # very first chunk. Catches sources
+                                # that ship ``Content-Type: application/
+                                # octet-stream`` but the body is still
+                                # HTML (some CF-protected hosts do
+                                # this on a challenge response). Cheap
+                                # — we only inspect the first 64 bytes
+                                # once, then disable for the rest.
+                                first_chunk_sniff = False
+                                if _looks_like_html(chunk[:128]):
+                                    raise DownloaderError(
+                                        f"upstream returned HTML payload for "
+                                        f"a binary file ({target_path.name}); "
+                                        "first chunk: "
+                                        f"{chunk[:60].decode('ascii', 'replace')!r}"
+                                    )
                             fh.write(chunk)
                             bytes_done += len(chunk)
                             snap["bytes_done"] = bytes_done
@@ -601,6 +644,42 @@ class GrabarrDirectClient(DownloadClient):
                 f"{resp.text[:200]}"
             )
         return resp.json()
+
+
+# Slice 436 — extensions we treat as "definitely binary", refusing
+# any HTML / text payload served under them. Cover the ROM / archive
+# / disc-image surface. Anything outside this set falls back to the
+# magic-byte sniff alone (a .nfo or .txt source legitimately served
+# as text won't trip).
+_BINARY_EXTENSIONS: frozenset[str] = frozenset({
+    ".rar", ".zip", ".7z", ".tar", ".gz", ".tgz", ".bz2", ".xz", ".zst",
+    ".iso", ".bin", ".cue", ".chd", ".img", ".rvz", ".wbfs", ".wia",
+    ".gba", ".gb", ".gbc", ".nds", ".3ds", ".cia",
+    ".n64", ".z64", ".v64", ".smc", ".sfc", ".nes", ".smd", ".md", ".sms",
+    ".pbp", ".cso", ".m3u",
+    ".epub", ".pdf", ".mobi", ".azw3", ".djvu",
+    ".mp3", ".flac", ".ogg", ".m4a", ".wav",
+})
+
+
+def _looks_binary_extension(suffix: str) -> bool:
+    return suffix.lower() in _BINARY_EXTENSIONS
+
+
+def _looks_like_html(head: bytes) -> bool:
+    """Cheap test: does the first chunk look like HTML output?
+
+    Catches the CF-challenge / rate-limit landing pages some
+    upstream sources (Axekin via vikingfile, Anna's Archive on a
+    bad mirror) return with a 200 OK status under any content-type.
+    """
+    stripped = head.lstrip()[:200].lower()
+    return (
+        stripped.startswith(b"<!doctype html")
+        or stripped.startswith(b"<html")
+        or stripped.startswith(b"<head")
+        or b"<title>" in stripped
+    )
 
 
 def _build_hashers(

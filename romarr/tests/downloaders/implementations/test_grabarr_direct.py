@@ -495,6 +495,116 @@ async def test_http_direct_unknown_algorithm_is_silently_skipped(
     assert (await client.get_status(nid)).state is DownloadState.COMPLETED
 
 
+# ---- slice 436 / content validation -------------------------------------
+
+
+@respx.mock
+async def test_http_direct_rejects_html_content_type_under_binary_extension(
+    tmp_path: Path,
+) -> None:
+    """Slice 436 — Axekin / Anna's Archive / planet_emu sometimes
+    return a 200 OK with ``Content-Type: text/html`` when the real
+    upstream is rate-limited or hidden behind a CF challenge. Pre-
+    slice the streamer wrote the HTML bytes to a ``.rar`` and the
+    importer choked with "Not a RAR file"; this slice fails fast
+    with an operator-actionable error."""
+    token = "tokHtmlCt"
+    respx.get(f"{_BASE}/romarr/roms_all/api/v1/resolve/{token}").mock(
+        return_value=httpx.Response(
+            200,
+            json=_http_direct_resolve(filename="bogus.rar", size=10_000),
+        )
+    )
+    respx.get(f"{_FILE_HOST}/files/sample.zip").mock(
+        return_value=httpx.Response(
+            200,
+            content=b"<!DOCTYPE html><html><head><title>CF</title></head></html>",
+            headers={"content-type": "text/html; charset=utf-8"},
+        )
+    )
+
+    client = _client(tmp_path)
+    nid = await client.add_torrent(
+        TorrentUrl(url=_torznab_url(token=token)),
+        category="romarr",
+        tags=[],
+    )
+    await client.wait_for_task(nid)
+    status = await client.get_status(nid)
+    assert status.state is DownloadState.FAILED
+    snap = client._pending[nid]  # noqa: SLF001
+    assert "text/html" in (snap["error"] or "")
+    assert "CF challenge" in (snap["error"] or "") or "rate-limit" in (
+        snap["error"] or ""
+    )
+    # File must not linger.
+    assert not Path(snap["save_path"]).exists()
+
+
+@respx.mock
+async def test_http_direct_rejects_html_body_with_binary_content_type(
+    tmp_path: Path,
+) -> None:
+    """Some CF-protected sources lie on Content-Type
+    (octet-stream) but still ship HTML in the body. Magic-byte
+    sniff on the first chunk catches them."""
+    token = "tokHtmlSniff"
+    respx.get(f"{_BASE}/romarr/roms_all/api/v1/resolve/{token}").mock(
+        return_value=httpx.Response(
+            200,
+            json=_http_direct_resolve(filename="bogus.zip", size=10_000),
+        )
+    )
+    respx.get(f"{_FILE_HOST}/files/sample.zip").mock(
+        return_value=httpx.Response(
+            200,
+            content=b"<!doctype html><html><body>captcha</body></html>",
+            headers={"content-type": "application/octet-stream"},
+        )
+    )
+
+    client = _client(tmp_path)
+    nid = await client.add_torrent(
+        TorrentUrl(url=_torznab_url(token=token)),
+        category="romarr",
+        tags=[],
+    )
+    await client.wait_for_task(nid)
+    snap = client._pending[nid]  # noqa: SLF001
+    assert snap["state"] == "FAILED"
+    assert "HTML payload" in (snap["error"] or "")
+
+
+@respx.mock
+async def test_http_direct_accepts_text_content_for_non_binary_extension(
+    tmp_path: Path,
+) -> None:
+    """A legitimate text/plain source (e.g., a .nfo or .txt) under
+    a non-binary extension shouldn't trip the validation."""
+    token = "tokText"
+    respx.get(f"{_BASE}/romarr/roms_all/api/v1/resolve/{token}").mock(
+        return_value=httpx.Response(
+            200,
+            json=_http_direct_resolve(filename="readme.txt", size=20),
+        )
+    )
+    respx.get(f"{_FILE_HOST}/files/sample.zip").mock(
+        return_value=httpx.Response(
+            200,
+            content=b"plain text readme",
+            headers={"content-type": "text/plain"},
+        )
+    )
+    client = _client(tmp_path)
+    nid = await client.add_torrent(
+        TorrentUrl(url=_torznab_url(token=token)),
+        category="romarr",
+        tags=[],
+    )
+    await client.wait_for_task(nid)
+    assert (await client.get_status(nid)).state is DownloadState.COMPLETED
+
+
 @respx.mock
 async def test_http_direct_remove_cancels_in_flight_and_deletes(
     tmp_path: Path,
