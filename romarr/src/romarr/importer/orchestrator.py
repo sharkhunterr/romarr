@@ -36,7 +36,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import func, select
 
-from romarr.domain.models import Game, Platform, Release
+from romarr.domain.models import Game, Platform, PlatformFormat, Release
 from romarr.identification.dat.manager import DatManager
 from romarr.identification.hasher import Hasher
 from romarr.identification.headers import (
@@ -197,36 +197,64 @@ async def run_import(
             # ``roms[0]`` would happily pick the 40-byte marker
             # and the rest of the pipeline would park it as
             # ``match:no_game``.
-            # Slice 437 — prefer ROM-extension files when picking
-            # the post-extract source. Pre-slice the filter was
-            # "any non-archive, non-dotfile" — that accepted
-            # license artifacts (PSN ``.rap`` 16-byte tokens,
-            # ``.info`` markers, ``.txt`` readmes, ``.nfo`` scene
-            # tags) as the game's dump when an archive bundled
-            # them alongside the real ROM. User reported a Crash
-            # Bandicoot Warped grab whose dump landed as a 16-byte
-            # ``UP9000-NPUI94244_00-0000000000000001.rap`` because
-            # the archive also contained the .chd ROM but
-            # alphabetical pick favoured a different file. ROM-
-            # extension files now win; fallback to the old "any
-            # non-archive" only when the archive contains no
-            # recognised ROM at all (e.g., ebook / audiobook
-            # archives whose ROM-set is empty by definition).
-            rom_pref = [
+            # Slice 437 + 440 — pick the post-extract source by
+            # matching the target platform's recognised file
+            # formats (from ``platform_format``). Pre-slice the
+            # filter was "any non-archive, non-dotfile", which
+            # accepted PSN ``.rap`` license tokens as the game's
+            # dump when an archive contained nothing else (PS one
+            # Classics .zip on Minerva → 16-byte UP9000-*.rap).
+            #
+            # Three-tier preference:
+            #   1. Match the matched-game's platform_format (the
+            #      authoritative per-platform set: built-in pack
+            #      + community + user additions).
+            #   2. Fallback to the generic _ROM_SUFFIXES set when
+            #      we don't know the platform (scan-driven imports
+            #      with no pre-match) — still rejects license
+            #      artifacts since .rap isn't in that set.
+            #   3. ONLY when neither produces a candidate AND the
+            #      archive contains nothing but artifacts, the
+            #      orchestrator falls through to extract_failure
+            #      semantics so the import is parked with a clear
+            #      reason instead of dumping a license token as
+            #      the game's release.
+            platform_exts: frozenset[str] = frozenset()
+            if context.pre_matched_game_id is not None:
+                ext_rows = (
+                    await session.execute(
+                        select(PlatformFormat.extension)
+                        .join(Game, Game.platform_id == PlatformFormat.platform_id)
+                        .where(Game.id == context.pre_matched_game_id)
+                    )
+                ).scalars().all()
+                if ext_rows:
+                    platform_exts = frozenset(
+                        e.lower() if e.startswith(".") else f".{e.lower()}"
+                        for e in ext_rows
+                    )
+            allowed = platform_exts or _ROM_SUFFIXES
+            roms = [
                 p
                 for p in result.extracted_paths
-                if p.suffix.lower() in _ROM_SUFFIXES
+                if p.suffix.lower() in allowed
                 and not p.name.startswith(".")
             ]
-            rom_fb = [
-                p
-                for p in result.extracted_paths
-                if p.suffix.lower() not in _ARCHIVE_SUFFIXES
-                and not p.name.startswith(".")
-            ]
-            roms = rom_pref if rom_pref else rom_fb
             if roms:
                 source_path = roms[0]
+            else:
+                # No recognised ROM file in the archive. Mark the
+                # import as failed-extract with a structured reason
+                # so the operator sees "non_rom_archive" in the
+                # queue / history rather than the orchestrator
+                # silently dumping whatever non-archive bytes
+                # happened to be inside.
+                extract_failure = ExtractError(
+                    "non_rom_archive: archive contains no file matching "
+                    f"{'platform_format' if platform_exts else 'rom-extension'} "
+                    f"set (extracted: "
+                    f"{', '.join(sorted({p.suffix.lower() for p in result.extracted_paths}))[:80]})"
+                )
         except ExtractError as exc:
             extract_failure = exc
 
