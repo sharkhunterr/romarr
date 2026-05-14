@@ -313,9 +313,15 @@ def _extract_rar(
 ) -> int:
     try:
         rf = rarfile.RarFile(archive_path)
-    except rarfile.BadRarFile as exc:
+    except rarfile.Error as exc:
+        # ``rarfile.Error`` is the common base — covers ``NotRarFile``
+        # (a ``.rar``-named file that isn't a RAR — common in scraped
+        # romsets), ``BadRarFile`` (corrupt), and ``NeedFirstVolume``
+        # (a split-volume part opened out of order). All of them are
+        # "this isn't a usable archive" → park as bad-archive rather
+        # than crash the importer.
         raise ExtractError(
-            f"corrupt rar {archive_path.name}: {exc}",
+            f"not a usable rar {archive_path.name}: {exc}",
             rejection_reason=RejectionReason.EXTRACT_BAD_ARCHIVE.value,
         ) from exc
 

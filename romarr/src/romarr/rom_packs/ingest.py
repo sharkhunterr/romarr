@@ -306,6 +306,11 @@ async def _collect_rom_files(source: Path, extract_dir: Path) -> list[Path]:
     Archives are unwrapped via the importer's recursive
     ``extract()`` (zip / 7z / rar, bomb + depth guards); loose
     ROMs pass through as-is.
+
+    Per-file extraction failures are isolated — a single bad
+    archive in a big romset (a ``.rar``-named non-RAR, a corrupt
+    member, a split-volume part) is logged and skipped so the
+    rest of the pack still imports.
     """
     sources = (
         sorted(p for p in source.rglob("*") if p.is_file())
@@ -319,7 +324,15 @@ async def _collect_rom_files(source: Path, extract_dir: Path) -> list[Path]:
         if suffix in _ARCHIVE_SUFFIXES:
             sub = extract_dir / f"archive_{idx}"
             sub.mkdir(parents=True, exist_ok=True)
-            result = await extract_archive(archive_path=path, dest_dir=sub)
+            try:
+                result = await extract_archive(
+                    archive_path=path, dest_dir=sub
+                )
+            except Exception as exc:  # isolate per-archive
+                logger.warning(
+                    "rom_pack.extract_skipped path=%s: %s", path, exc
+                )
+                continue
             rom_files.extend(
                 p
                 for p in result.extracted_paths
