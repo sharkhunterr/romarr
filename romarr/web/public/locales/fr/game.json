@@ -348,7 +348,9 @@
       "region": "Région",
       "languages": "Langues",
       "dumpStatus": "Statut du dump",
+      "dumpStatusDatValidated": "Type confirmé par le DAT — dump complet et conforme",
       "naming": "Convention de nommage",
+      "namingDatValidated": "Convention confirmée par l'autorité DAT (No-Intro / Redump / …)",
       "fileFormat": "Format de fichier",
       "unknownLabel": {
         "platform": "Plateforme ?",

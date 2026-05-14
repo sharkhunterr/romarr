@@ -160,6 +160,7 @@ def _accept(
     title_match_score: int | None = None,
     platform_id: int | None = None,
     naming_convention: Any = None,
+    dump_status: Any = None,
 ) -> Candidate:
     # Slice 456 — soft scoring: a candidate is auto-reject-flagged
     # when the aggregate score (DAT bonus + region bonus minus
@@ -179,7 +180,9 @@ def _accept(
         platform_id=platform_id,
         region=result.region,
         languages=list(result.languages or ()),
-        dump_status=result.dump_status,
+        dump_status=(
+            dump_status if dump_status is not None else result.dump_status
+        ),
         naming_convention=(
             naming_convention
             if naming_convention is not None
@@ -605,6 +608,17 @@ def run_pipeline(
     # ---- 13: Aggregate --------------------------------------------------------
     total = sum(c.value for c in contributions)
     breakdown = ScoreBreakdown(total=total, contributions=contributions)
+    # Slice 457 — when the DAT cascade VERIFIED the hash, the type
+    # is authoritative: a verified entry is a clean, complete dump
+    # (not a hack / demo / beta — those resolve to ``dat_outcome
+    # == "hack"`` or never match). Promote the Candidate's
+    # ``dump_status`` to VERIFIED so the type facet reads "complete
+    # game" instead of whatever the filename parser guessed.
+    effective_dump_status = result.dump_status
+    if dat_outcome == "verified":
+        from romarr.domain.enums import DumpStatus as _DS
+
+        effective_dump_status = _DS.VERIFIED
     return _accept(
         result=result,
         matched_game_id=matched_game.id,
@@ -617,6 +631,7 @@ def run_pipeline(
         platform_id=matched_game.platform_id,
         title_match_score=title_match_score,
         naming_convention=facts.naming_convention,
+        dump_status=effective_dump_status,
     )
 
 

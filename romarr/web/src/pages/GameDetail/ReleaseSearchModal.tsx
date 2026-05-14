@@ -429,36 +429,68 @@ function CandidateRow(props: {
           }
           title={t("search.facet.languages")}
         />
-        <FacetChip
-          label={
-            candidate.dump_status
-              ? t(
-                  `search.dumpStatus.${candidate.dump_status}` as never,
-                  { defaultValue: candidate.dump_status },
-                )
-              : t("search.facet.unknownLabel.dumpStatus")
-          }
-          tone={_toneFor(
-            candidate,
-            "dump_status",
-            candidate.dump_status
-              ? (_DUMP_TONE[candidate.dump_status] ?? "neutral")
-              : "neutral",
-          )}
-          title={t("search.facet.dumpStatus")}
-        />
-        <FacetChip
-          label={
-            candidate.naming_convention &&
-            candidate.naming_convention !== "unknown"
-              ? candidate.naming_convention
-              : t("search.facet.unknownLabel.naming")
-          }
-          tone={
-            candidate.naming_convention === "scene" ? "warn" : "neutral"
-          }
-          title={t("search.facet.naming")}
-        />
+        {(() => {
+          // Slice 457 — the DAT cascade is authoritative for both
+          // the type and the naming convention. When the hash
+          // verified, the release IS a clean complete dump from a
+          // known authority → paint both chips green. When the
+          // DAT flagged it (hack / baddump) → red. Otherwise fall
+          // back to the natural per-value tone.
+          const datValidated = candidate.pre_grab_dat_match === "verified";
+          const datFlagged = candidate.pre_grab_dat_match === "hack";
+          const dumpTone: FacetTone = datValidated
+            ? "good"
+            : datFlagged
+              ? "bad"
+              : _toneFor(
+                  candidate,
+                  "dump_status",
+                  candidate.dump_status
+                    ? (_DUMP_TONE[candidate.dump_status] ?? "neutral")
+                    : "neutral",
+                );
+          const conventionTone: FacetTone = datValidated
+            ? "good"
+            : datFlagged
+              ? "bad"
+              : candidate.naming_convention === "scene"
+                ? "warn"
+                : "neutral";
+          return (
+            <>
+              <FacetChip
+                label={
+                  candidate.dump_status
+                    ? t(
+                        `search.dumpStatus.${candidate.dump_status}` as never,
+                        { defaultValue: candidate.dump_status },
+                      )
+                    : t("search.facet.unknownLabel.dumpStatus")
+                }
+                tone={dumpTone}
+                title={
+                  datValidated
+                    ? t("search.facet.dumpStatusDatValidated")
+                    : t("search.facet.dumpStatus")
+                }
+              />
+              <FacetChip
+                label={
+                  candidate.naming_convention &&
+                  candidate.naming_convention !== "unknown"
+                    ? candidate.naming_convention
+                    : t("search.facet.unknownLabel.naming")
+                }
+                tone={conventionTone}
+                title={
+                  datValidated
+                    ? t("search.facet.namingDatValidated")
+                    : t("search.facet.naming")
+                }
+              />
+            </>
+          );
+        })()}
         <FacetChip
           label={
             candidate.file_format
