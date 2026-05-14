@@ -53,7 +53,19 @@ column's CHECK constraint vocabulary in sync with consumer code."""
 
 
 _ContributionSource = Literal[
-    "region", "language", "custom_format", "dat_match", "size_bonus"
+    "region",
+    "language",
+    "custom_format",
+    "dat_match",
+    "size_bonus",
+    # Slice 456 — soft-scoring sources. The pipeline no longer
+    # hard-rejects on these gates; each appends a (usually
+    # negative) malus contribution instead.
+    "dump_status",
+    "quality",
+    "size",
+    "seeders",
+    "already_owned",
 ]
 
 

@@ -49,6 +49,50 @@ if TYPE_CHECKING:
 DAT_VERIFIED_BONUS = 200
 """FR-015: a verified DAT match contributes a fixed +200."""
 
+# Slice 456 — soft-scoring model. The only HARD reject left in
+# the pipeline is "no monitored game matches" (wrong platform /
+# unrecognised title) plus the operator's explicit blocklist.
+# Everything else — region, language, dump status, file format,
+# size, seeders, custom-format rejectors — is a *malus*: a
+# negative ScoreContribution that drags the score down without
+# excluding the candidate. Manual search shows every candidate
+# ranked; auto-grab only picks those scoring at or above
+# ``AUTO_GRAB_FLOOR``.
+PENALTY_REGION_EXCLUDED = -60
+"""Operator explicitly excluded this region — heavy, but the
+release still shows up so the operator can override."""
+PENALTY_REGION_NOT_PRIORITY = -10
+"""Region isn't in the priority list (fallback path)."""
+PENALTY_LANGUAGE_MISSING = -30
+"""None of the profile's required languages are present."""
+PENALTY_JAPANESE_ONLY = -40
+"""Release is Japanese-only and the profile excludes JA-only."""
+PENALTY_DUMP_STATUS = -25
+"""Dump status (beta / hack / demo / proto / …) the profile
+doesn't allow."""
+PENALTY_FORMAT_NOT_NATIVE = -15
+"""File format isn't the platform's native cartridge/disc format
+and isn't an archive container — still grabbable, just not
+ideal."""
+PENALTY_DAT_REQUIRED = -40
+"""Profile wants DAT-verified releases; this one isn't."""
+PENALTY_SIZE_OUT_OF_BOUNDS = -25
+"""Release size is outside the platform/format bounds."""
+PENALTY_SEEDERS_LOW = -20
+"""Seeders below the indexer's configured floor."""
+PENALTY_CUSTOM_FORMAT_REJECTOR = -100
+"""A custom-format rejector matched. Heavy malus instead of the
+old hard reject so the operator can still see + override it."""
+PENALTY_ALREADY_OWNED = -50
+"""A Dump with this hash already exists for the game — almost
+certainly a re-grab the operator doesn't want."""
+
+AUTO_GRAB_FLOOR = 0
+"""Auto-grab only dispatches candidates whose total score is at
+or above this floor. Manual search ignores it (shows everything,
+ranked) — the operator decides. Below the floor a candidate is
+flagged ``would_auto_reject=True``."""
+
 
 def _reject(
     *,
@@ -115,7 +159,14 @@ def _accept(
     already_owned: bool = False,
     title_match_score: int | None = None,
     platform_id: int | None = None,
+    naming_convention: Any = None,
 ) -> Candidate:
+    # Slice 456 — soft scoring: a candidate is auto-reject-flagged
+    # when the aggregate score (DAT bonus + region bonus minus
+    # every malus) lands below ``AUTO_GRAB_FLOOR``. It's still a
+    # fully rendered Candidate with a ``score_breakdown`` — manual
+    # search shows it ranked; only auto-grab honours the flag.
+    would_auto_reject = breakdown.total < AUTO_GRAB_FLOOR
     return Candidate(
         indexer_id=result.indexer_id,
         indexer_guid=result.guid,
@@ -129,11 +180,15 @@ def _accept(
         region=result.region,
         languages=list(result.languages or ()),
         dump_status=result.dump_status,
-        naming_convention=result.naming_convention,
+        naming_convention=(
+            naming_convention
+            if naming_convention is not None
+            else result.naming_convention
+        ),
         file_format=result.file_format,
         score_breakdown=breakdown,
         rejection=None,
-        would_auto_reject=False,
+        would_auto_reject=would_auto_reject,
         pre_grab_dat_match=pre_grab_dat_match,
         pre_grab_dat_entry_name=pre_grab_dat_entry_name,
         pre_grab_dat_entry_source=pre_grab_dat_entry_source,
@@ -322,6 +377,16 @@ def run_pipeline(
             title_match_score=title_match_score,
         )
 
+    # ─────────────────────────────────────────────────────────────
+    # Slice 456 — soft scoring. Past this point NOTHING hard-rejects:
+    # every gate that used to ``return _reject(...)`` now appends a
+    # negative ScoreContribution (a malus) instead. The candidate
+    # always reaches ``_accept`` with a full ``score_breakdown``;
+    # ``would_auto_reject`` is derived from whether the total lands
+    # below ``AUTO_GRAB_FLOOR``. The two hard rejects above
+    # (no-game-match, blocklist) stay — wrong platform / explicitly
+    # banned content shouldn't even be ranked.
+    # ─────────────────────────────────────────────────────────────
     contributions: list[ScoreContribution] = []
 
     # ---- 5: DAT cascade -------------------------------------------------------
@@ -339,7 +404,8 @@ def run_pipeline(
         )
 
     # Owned-hash check — flag duplicates so the search modal can
-    # warn the operator before a re-grab.
+    # warn the operator before a re-grab. Soft malus, not a reject:
+    # the operator might genuinely want to re-pull a corrupt file.
     already_owned = False
     if owned_lookup is not None:
         already_owned = owned_lookup(
@@ -348,33 +414,49 @@ def run_pipeline(
             getattr(result, "hash_md5", None),
             result.hash_crc32,
         )
+    if already_owned:
+        contributions.append(
+            ScoreContribution(
+                source="already_owned",
+                name="hash already on disk for this game",
+                value=PENALTY_ALREADY_OWNED,
+            )
+        )
 
     # Build the ReleaseFacts the profile evaluator + scorer expect.
-    facts = _release_facts_from_result(result, matched_release, file_format=file_format)
+    # Pass the DAT outcome through so ``dat_verified`` + the
+    # naming-convention derivation land on the facts.
+    facts = _release_facts_from_result(
+        result,
+        matched_release,
+        file_format=file_format,
+        dat_outcome=dat_outcome,
+        dat_entry_source=dat_entry_source,
+    )
 
-    # ---- 6: Region ------------------------------------------------------------
+    # ---- 6: Region — malus, never reject -------------------------------------
     region_outcome = ProfileEvaluator.evaluate_region(region_profile, facts)
     if region_outcome.decision is Decision.REJECT:
-        code = (
-            RejectionCode.REGION_EXCLUDED
-            if region_outcome.reason and region_outcome.reason.code == "region_excluded"
-            else RejectionCode.REGION_OUT_OF_PRIORITIES
+        excluded = (
+            region_outcome.reason is not None
+            and region_outcome.reason.code == "region_excluded"
         )
-        return _reject(
-            result=result,
-            code=code,
-            field="region",
-            message=region_outcome.reason.message if region_outcome.reason else "",
-            matched_game_id=matched_game.id,
-            matched_release_id=matched_release_id,
-            platform_id=matched_game.platform_id,
-            pre_grab_dat_match=dat_outcome,
-            pre_grab_dat_entry_name=dat_entry_name,
-            pre_grab_dat_entry_source=dat_entry_source,
-            already_owned=already_owned,
-            title_match_score=title_match_score,
+        contributions.append(
+            ScoreContribution(
+                source="region",
+                name=(
+                    f"region excluded {facts.regions!r}"
+                    if excluded
+                    else f"region not in priorities {facts.regions!r}"
+                ),
+                value=(
+                    PENALTY_REGION_EXCLUDED
+                    if excluded
+                    else PENALTY_REGION_NOT_PRIORITY
+                ),
+            )
         )
-    if region_outcome.score:
+    elif region_outcome.score:
         contributions.append(
             ScoreContribution(
                 source="region",
@@ -383,90 +465,97 @@ def run_pipeline(
             )
         )
 
-    # ---- 7: Language ----------------------------------------------------------
-    language_outcome = ProfileEvaluator.evaluate_language(language_profile, facts)
+    # ---- 7: Language — malus, never reject -----------------------------------
+    language_outcome = ProfileEvaluator.evaluate_language(
+        language_profile, facts
+    )
     if language_outcome.decision is Decision.REJECT:
-        code_map = {
-            "japanese_only_excluded": RejectionCode.JAPANESE_ONLY_EXCLUDED,
-            "required_language_missing": RejectionCode.LANGUAGE_REQUIRED,
-        }
         reason_code = (
             language_outcome.reason.code if language_outcome.reason else ""
         )
-        return _reject(
-            result=result,
-            code=code_map.get(reason_code, RejectionCode.LANGUAGE_REQUIRED),
-            field="languages",
-            message=language_outcome.reason.message if language_outcome.reason else "",
-            matched_game_id=matched_game.id,
-            matched_release_id=matched_release_id,
-            platform_id=matched_game.platform_id,
-            pre_grab_dat_match=dat_outcome,
-            pre_grab_dat_entry_name=dat_entry_name,
-            pre_grab_dat_entry_source=dat_entry_source,
-            already_owned=already_owned,
-            title_match_score=title_match_score,
+        contributions.append(
+            ScoreContribution(
+                source="language",
+                name=(
+                    language_outcome.reason.message
+                    if language_outcome.reason
+                    else "language gate"
+                ),
+                value=(
+                    PENALTY_JAPANESE_ONLY
+                    if reason_code == "japanese_only_excluded"
+                    else PENALTY_LANGUAGE_MISSING
+                ),
+            )
         )
 
-    # ---- 8: Dump --------------------------------------------------------------
+    # ---- 8: Dump status — malus, never reject --------------------------------
     dump_outcome = ProfileEvaluator.evaluate_dump(dump_profile, facts)
     if dump_outcome.decision is Decision.REJECT:
-        return _reject(
-            result=result,
-            code=RejectionCode.DUMP_STATUS_DISALLOWED,
-            field="dump_status",
-            message=dump_outcome.reason.message if dump_outcome.reason else "",
-            matched_game_id=matched_game.id,
-            matched_release_id=matched_release_id,
-            platform_id=matched_game.platform_id,
-            pre_grab_dat_match=dat_outcome,
-            pre_grab_dat_entry_name=dat_entry_name,
-            pre_grab_dat_entry_source=dat_entry_source,
-            already_owned=already_owned,
-            title_match_score=title_match_score,
+        contributions.append(
+            ScoreContribution(
+                source="dump_status",
+                name=(
+                    f"dump status {facts.dump_status.value!r} "
+                    "not allowed by profile"
+                ),
+                value=PENALTY_DUMP_STATUS,
+            )
         )
 
-    # ---- 9: Quality / format --------------------------------------------------
-    quality_outcome = ProfileEvaluator.evaluate_quality(quality_profile, facts)
+    # ---- 9: Quality / format — malus, never reject ---------------------------
+    quality_outcome = ProfileEvaluator.evaluate_quality(
+        quality_profile, facts
+    )
     if quality_outcome.decision is Decision.REJECT:
-        code_map = {
-            "format_not_allowed": RejectionCode.FORMAT_NOT_ALLOWED,
-            "dat_required": RejectionCode.DAT_REQUIRED,
-        }
-        reason_code = quality_outcome.reason.code if quality_outcome.reason else ""
-        return _reject(
-            result=result,
-            code=code_map.get(reason_code, RejectionCode.FORMAT_NOT_ALLOWED),
-            field="format",
-            message=quality_outcome.reason.message if quality_outcome.reason else "",
-            matched_game_id=matched_game.id,
-            matched_release_id=matched_release_id,
-            platform_id=matched_game.platform_id,
-            pre_grab_dat_match=dat_outcome,
-            pre_grab_dat_entry_name=dat_entry_name,
-            pre_grab_dat_entry_source=dat_entry_source,
-            already_owned=already_owned,
-            title_match_score=title_match_score,
+        reason_code = (
+            quality_outcome.reason.code if quality_outcome.reason else ""
         )
+        if reason_code == "dat_required":
+            contributions.append(
+                ScoreContribution(
+                    source="quality",
+                    name="profile wants DAT-verified; release is not",
+                    value=PENALTY_DAT_REQUIRED,
+                )
+            )
+        else:
+            # ``format_not_allowed`` — but the quality profile's
+            # ``allowed_formats`` list is disc/archive-centric and
+            # doesn't enumerate cartridge extensions. A ``.gba`` on
+            # a GBA game is the platform's NATIVE format and must
+            # not be penalised. Check the platform-format table
+            # first; only a format that's neither native nor in
+            # the profile list takes the malus.
+            native_exts = {
+                b.extension.lower().lstrip(".")
+                for b in library_state.platform_format_bounds
+                if b.platform_id == matched_game.platform_id
+            }
+            fmt = (facts.file_format or "").lower().lstrip(".")
+            if fmt and fmt not in native_exts:
+                contributions.append(
+                    ScoreContribution(
+                        source="quality",
+                        name=(
+                            f"file format {facts.file_format!r} not the "
+                            "platform's native format"
+                        ),
+                        value=PENALTY_FORMAT_NOT_NATIVE,
+                    )
+                )
 
-    # ---- 10: Custom Format scoring -------------------------------------------
+    # ---- 10: Custom Format scoring — rejector becomes a heavy malus ----------
     cf_score = compute_custom_format_score(custom_formats, facts)
     if cf_score <= -1000:  # Configurable rejector threshold per FR-011
-        return _reject(
-            result=result,
-            code=RejectionCode.CUSTOM_FORMAT_REJECT,
-            field="custom_format",
-            message=f"custom format score {cf_score} below rejector threshold",
-            matched_game_id=matched_game.id,
-            matched_release_id=matched_release_id,
-            platform_id=matched_game.platform_id,
-            pre_grab_dat_match=dat_outcome,
-            pre_grab_dat_entry_name=dat_entry_name,
-            pre_grab_dat_entry_source=dat_entry_source,
-            already_owned=already_owned,
-            title_match_score=title_match_score,
+        contributions.append(
+            ScoreContribution(
+                source="custom_format",
+                name="custom-format rejector matched",
+                value=PENALTY_CUSTOM_FORMAT_REJECTOR,
+            )
         )
-    if cf_score:
+    elif cf_score:
         contributions.append(
             ScoreContribution(
                 source="custom_format",
@@ -475,7 +564,7 @@ def run_pipeline(
             )
         )
 
-    # ---- 11: Size bounds ------------------------------------------------------
+    # ---- 11: Size bounds — malus, never reject -------------------------------
     if file_format and matched_release is not None:
         accepted, reason = _check_size_bounds(
             size_bytes=result.size_bytes,
@@ -484,21 +573,15 @@ def run_pipeline(
             bounds=library_state.platform_format_bounds,
         )
         if not accepted:
-            return _reject(
-                result=result,
-                code=RejectionCode.SIZE_OUT_OF_BOUNDS,
-                field="size_bytes",
-                message=reason or "",
-                matched_game_id=matched_game.id,
-                matched_release_id=matched_release_id,
-                platform_id=matched_game.platform_id,
-                pre_grab_dat_match=dat_outcome,
-            pre_grab_dat_entry_name=dat_entry_name,
-            pre_grab_dat_entry_source=dat_entry_source,
-            already_owned=already_owned,
+            contributions.append(
+                ScoreContribution(
+                    source="size",
+                    name=reason or "size out of bounds",
+                    value=PENALTY_SIZE_OUT_OF_BOUNDS,
+                )
             )
 
-    # ---- 12: Seeders threshold ------------------------------------------------
+    # ---- 12: Seeders threshold — malus, never reject -------------------------
     indexer = next(
         (m for m in library_state.indexer_meta if m.id == result.indexer_id),
         None,
@@ -508,22 +591,15 @@ def run_pipeline(
         and result.seeders is not None
         and result.seeders < indexer.min_seeders
     ):
-        return _reject(
-            result=result,
-            code=RejectionCode.SEEDERS_BELOW_THRESHOLD,
-            field="seeders",
-            message=(
-                f"seeders={result.seeders} below indexer "
-                f"min_seeders={indexer.min_seeders}"
-            ),
-            matched_game_id=matched_game.id,
-            matched_release_id=matched_release_id,
-            platform_id=matched_game.platform_id,
-            pre_grab_dat_match=dat_outcome,
-            pre_grab_dat_entry_name=dat_entry_name,
-            pre_grab_dat_entry_source=dat_entry_source,
-            already_owned=already_owned,
-            title_match_score=title_match_score,
+        contributions.append(
+            ScoreContribution(
+                source="seeders",
+                name=(
+                    f"seeders {result.seeders} below indexer floor "
+                    f"{indexer.min_seeders}"
+                ),
+                value=PENALTY_SEEDERS_LOW,
+            )
         )
 
     # ---- 13: Aggregate --------------------------------------------------------
@@ -540,7 +616,21 @@ def run_pipeline(
         already_owned=already_owned,
         platform_id=matched_game.platform_id,
         title_match_score=title_match_score,
+        naming_convention=facts.naming_convention,
     )
+
+
+# Slice 456 — a verified DAT match implies the naming
+# convention: the entry came from a No-Intro / Redump / TOSEC /
+# GoodTools authority, so the release IS that convention even
+# when the indexer's filename parser couldn't tell. Maps the
+# DAT-source string onto the NamingConvention enum.
+_DAT_SOURCE_TO_CONVENTION: dict[str, str] = {
+    "no-intro": "no-intro",
+    "redump": "redump",
+    "tosec": "tosec",
+    "goodtools": "goodtools",
+}
 
 
 def _release_facts_from_result(
@@ -548,6 +638,8 @@ def _release_facts_from_result(
     matched_release: MonitoredRelease | None,
     *,
     file_format: str,
+    dat_outcome: str = "none",
+    dat_entry_source: str | None = None,
 ) -> ReleaseFacts:
     """Project a Torznab :class:`SearchResult` + matched Release into the
     Pydantic :class:`ReleaseFacts` shape the profile evaluator + scorer
@@ -570,9 +662,17 @@ def _release_facts_from_result(
         dump_status = result.dump_status
     else:
         dump_status = DumpStatus.UNKNOWN
-    naming_convention = (
-        result.naming_convention or NamingConvention.UNKNOWN
-    )
+
+    dat_verified = dat_outcome == "verified"
+    # Slice 456 — when the cascade verified the hash, the naming
+    # convention is whatever DAT authority owns the entry, no
+    # matter what the filename parser guessed. Falls back to the
+    # parsed value otherwise.
+    naming_convention = result.naming_convention or NamingConvention.UNKNOWN
+    if dat_verified and dat_entry_source:
+        mapped = _DAT_SOURCE_TO_CONVENTION.get(dat_entry_source.lower())
+        if mapped is not None:
+            naming_convention = NamingConvention(mapped)
 
     return ReleaseFacts(
         title=result.title,
@@ -583,7 +683,7 @@ def _release_facts_from_result(
         tags=tuple(result.dump_tags or ()),
         naming_convention=naming_convention,
         file_format=file_format,
-        dat_verified=False,
+        dat_verified=dat_verified,
         indexer_source=None,
         release_size=result.size_bytes,
         release_group=None,

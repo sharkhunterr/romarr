@@ -152,8 +152,11 @@ def test_custom_format_rejector_short_circuits(
     region_profile: Any,
     language_profile: Any,
 ) -> None:
-    """A custom format with score=-10000 hitting an OR-grouped condition
-    rejects the candidate regardless of other contributions."""
+    """Slice 456 — a custom-format rejector is now a heavy *malus*,
+    not a hard reject. The candidate still resolves with a
+    ``score_breakdown`` carrying the negative contribution and is
+    flagged ``would_auto_reject`` because the total lands below
+    the auto-grab floor."""
     from romarr.domain.enums import DumpStatus, NamingConvention
     from romarr.search.state import IndexerMeta, MonitoredGame, MonitoredRelease
 
@@ -196,8 +199,15 @@ def test_custom_format_rejector_short_circuits(
         custom_formats=[rejector_format],
         file_format="7z",
     )
-    assert candidate.rejection is not None
-    assert candidate.rejection.code == RejectionCode.CUSTOM_FORMAT_REJECT
+    assert candidate.rejection is None
+    assert candidate.would_auto_reject is True
+    assert candidate.score_breakdown is not None
+    cf = [
+        c
+        for c in candidate.score_breakdown.contributions
+        if c.source == "custom_format"
+    ]
+    assert cf and cf[0].value < 0
 
 
 # ---------------------------------------------------------------------------
@@ -357,8 +367,15 @@ def test_size_below_minimum_rejects(
         custom_formats=custom_formats,
         file_format="7z",
     )
-    assert candidate.rejection is not None
-    assert candidate.rejection.code == RejectionCode.SIZE_OUT_OF_BOUNDS
+    # Slice 456 — size-out-of-bounds is a malus, not a reject.
+    assert candidate.rejection is None
+    assert candidate.score_breakdown is not None
+    sz = [
+        c
+        for c in candidate.score_breakdown.contributions
+        if c.source == "size"
+    ]
+    assert sz and sz[0].value < 0
 
 
 # ---------------------------------------------------------------------------
@@ -406,8 +423,16 @@ def test_seeders_below_threshold_rejects(
         custom_formats=custom_formats,
         file_format="7z",
     )
-    assert candidate.rejection is not None
-    assert candidate.rejection.code == RejectionCode.SEEDERS_BELOW_THRESHOLD
+    # Slice 456 — seeders below the indexer floor is a malus, not
+    # a reject.
+    assert candidate.rejection is None
+    assert candidate.score_breakdown is not None
+    sd = [
+        c
+        for c in candidate.score_breakdown.contributions
+        if c.source == "seeders"
+    ]
+    assert sd and sd[0].value < 0
 
 
 # ---------------------------------------------------------------------------
