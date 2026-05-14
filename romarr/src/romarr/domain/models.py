@@ -802,3 +802,34 @@ class RomPackItem(Base, TimestampMixin):
             name="ck_rom_pack_item_status",
         ),
     )
+
+
+class RomPackConfig(Base, TimestampMixin):
+    """Global defaults for the ROM-pack subsystem — a singleton row.
+
+    Slice 464. Holds operator-tunable defaults that aren't worth a
+    per-pack column: where url-sourced archives stream to disk,
+    and the size ceiling a pack inherits when it doesn't pin its
+    own ``max_size_bytes``. Exactly one row exists (``id = 1``);
+    the API get-or-creates it.
+    """
+
+    __tablename__ = "rom_pack_config"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # Where url-sourced pack archives stream to + extract under.
+    # grab-sourced packs ignore this — their archive is wherever
+    # the download client dropped it.
+    download_dir: Mapped[str] = mapped_column(
+        String(2048), nullable=False, default="/downloads/rom_packs"
+    )
+    # Default per-pack download ceiling in bytes; a pack's own
+    # ``max_size_bytes`` overrides it. NULL = the hard-coded
+    # 50 GiB fallback in the ingest pipeline.
+    default_max_size_bytes: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True
+    )
+
+    __table_args__ = (
+        CheckConstraint("id = 1", name="ck_rom_pack_config_singleton"),
+    )

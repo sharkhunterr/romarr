@@ -21,6 +21,7 @@ import {
   Library as LibraryIcon,
   Monitor,
   Moon,
+  Package,
   Search,
   Settings as SettingsIcon,
   Star,
@@ -42,7 +43,7 @@ import { LanguageToggle } from "./LanguageToggle";
 // the only way to move between top-level pages.
 const DESKTOP_NAV: ReadonlyArray<{
   to: string;
-  i18nKey: "home" | "library" | "wanted" | "activity" | "settings";
+  i18nKey: "home" | "library" | "wanted" | "activity" | "romPacks" | "settings";
   Icon: LucideIcon;
   end?: boolean;
 }> = [
@@ -50,6 +51,7 @@ const DESKTOP_NAV: ReadonlyArray<{
   { to: "/library", i18nKey: "library", Icon: LibraryIcon },
   { to: "/wanted", i18nKey: "wanted", Icon: Star },
   { to: "/activity", i18nKey: "activity", Icon: Activity },
+  { to: "/rom-packs", i18nKey: "romPacks", Icon: Package },
   { to: "/settings", i18nKey: "settings", Icon: SettingsIcon },
 ];
 

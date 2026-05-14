@@ -24,6 +24,7 @@ from romarr.domain.models import (
     PlatformPack,
     Release,
     RomPack,
+    RomPackConfig,
     RomPackItem,
     UnidentifiedDump,
 )
@@ -42,6 +43,7 @@ __all__ = [
     "PlatformPack",
     "Release",
     "RomPack",
+    "RomPackConfig",
     "RomPackItem",
     "UnidentifiedDump",
 ]

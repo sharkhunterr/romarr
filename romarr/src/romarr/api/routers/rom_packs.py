@@ -41,10 +41,16 @@ from romarr.api.dependencies import (
     require_readonly,
 )
 from romarr.auth import Principal
-from romarr.domain.models import Game, Platform, RomPack, RomPackItem
+from romarr.domain.models import (
+    Game,
+    Platform,
+    RomPack,
+    RomPackItem,
+)
 from romarr.importer._park import park_in_unidentified
 from romarr.importer.orchestrator import run_import
 from romarr.importer.types import ImportContext
+from romarr.rom_packs.config import get_or_create_rom_pack_config
 from romarr.rom_packs.ingest import ingest_rom_pack
 
 _log = logging.getLogger(__name__)
@@ -151,6 +157,24 @@ class RomPackGrabRequest(_Base):
     title: Annotated[str, Field(min_length=1, max_length=512)]
 
 
+class RomPackConfigRead(_Base):
+    """Global ROM-pack defaults (the singleton config row)."""
+
+    download_dir: str
+    default_max_size_bytes: int | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class RomPackConfigUpdate(_Base):
+    download_dir: Annotated[
+        str | None, Field(default=None, min_length=1, max_length=2048)
+    ] = None
+    default_max_size_bytes: Annotated[
+        int | None, Field(default=None, gt=0)
+    ] = None
+
+
 router = APIRouter(prefix="/api/v3/rom-pack", tags=["ROM Packs"])
 
 
@@ -194,6 +218,47 @@ async def _platform_for(
             select(Platform).where(Platform.id == platform_id)
         )
     ).scalar_one_or_none()
+
+
+# ---------------------------------------------------------------------------
+# Global config (declared before ``/{pack_id}`` so ``/config`` wins
+# the route match — ``pack_id`` is an int and would 422 on "config").
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/config",
+    response_model=RomPackConfigRead,
+    summary="Global ROM-pack defaults (any authenticated user).",
+)
+async def get_config(
+    _user: Annotated[Principal, Depends(require_readonly)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> RomPackConfigRead:
+    config = await get_or_create_rom_pack_config(db)
+    await db.commit()
+    return RomPackConfigRead.model_validate(config)
+
+
+@router.put(
+    "/config",
+    response_model=RomPackConfigRead,
+    summary="Update the global ROM-pack defaults (admin only).",
+)
+async def update_config(
+    payload: RomPackConfigUpdate,
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> RomPackConfigRead:
+    config = await get_or_create_rom_pack_config(db)
+    fields = payload.model_dump(exclude_unset=True)
+    if "download_dir" in fields and fields["download_dir"] is not None:
+        config.download_dir = fields["download_dir"].strip()
+    if "default_max_size_bytes" in fields:
+        config.default_max_size_bytes = fields["default_max_size_bytes"]
+    await db.commit()
+    await db.refresh(config)
+    return RomPackConfigRead.model_validate(config)
 
 
 # ---------------------------------------------------------------------------

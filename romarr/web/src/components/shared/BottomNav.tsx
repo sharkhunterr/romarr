@@ -16,6 +16,7 @@ import {
   Activity,
   Home,
   Library as LibraryIcon,
+  Package,
   Search,
   Settings,
   Star,
@@ -31,7 +32,7 @@ import { useSearchStore } from "@/lib/store/search";
 type RouteEntry = {
   kind: "route";
   to: string;
-  i18nKey: "home" | "library" | "wanted" | "activity" | "settings";
+  i18nKey: "home" | "library" | "wanted" | "activity" | "romPacks" | "settings";
   Icon: LucideIcon;
 };
 
@@ -48,6 +49,7 @@ const ENTRIES: readonly NavEntry[] = [
   { kind: "route", to: "/library", i18nKey: "library", Icon: LibraryIcon },
   { kind: "route", to: "/wanted", i18nKey: "wanted", Icon: Star },
   { kind: "route", to: "/activity", i18nKey: "activity", Icon: Activity },
+  { kind: "route", to: "/rom-packs", i18nKey: "romPacks", Icon: Package },
   { kind: "route", to: "/settings", i18nKey: "settings", Icon: Settings },
   { kind: "action", i18nKey: "search", Icon: Search },
 ];

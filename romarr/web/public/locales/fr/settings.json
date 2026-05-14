@@ -18,7 +18,7 @@
     "ui": "Interface",
     "general": "Général",
     "logs": "Logs",
-    "rom-packs": "Packs de ROMs"
+    "rom-packs": "Réglages des packs"
   },
   "logs": {
     "title": "Logs système",
@@ -405,6 +405,18 @@
       "deletedToast": "“{{file}}” supprimée",
       "actionErrorToast": "Échec de l'action de triage"
     }
+  },
+  "romPackSettings": {
+    "title": "Réglages des packs de ROMs",
+    "subtitle": "Réglages globaux du sous-système de packs de ROMs. La liste des packs, l'ingestion et le triage sont sur la page Packs du menu principal.",
+    "downloadDirLabel": "Dossier de téléchargement",
+    "downloadDirHint": "Où les archives de packs depuis URL sont téléchargées et extraites. Doit être accessible en écriture par Romarr ; les packs via grab utilisent le chemin du client de téléchargement.",
+    "maxSizeLabel": "Limite de taille par défaut (Gio)",
+    "maxSizeHint": "Héritée par les nouveaux packs qui ne définissent pas leur propre limite. Laisser vide pour le repli intégré de 50 Gio.",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "savedToast": "Réglages des packs enregistrés",
+    "saveErrorToast": "Impossible d'enregistrer les réglages"
   },
   "qualityDefinitions": {
     "title": "Définitions de qualité",

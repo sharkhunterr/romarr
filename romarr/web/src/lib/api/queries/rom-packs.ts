@@ -312,3 +312,46 @@ export function useDeleteRomPackItem(): UseMutationResult<
     onSuccess: (_data, vars) => _invalidatePack(qc, vars.packId),
   });
 }
+
+// ---- global config (slice 464) ---------------------------------------
+
+export interface RomPackConfig {
+  download_dir: string;
+  default_max_size_bytes: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RomPackConfigUpdate {
+  download_dir?: string;
+  default_max_size_bytes?: number | null;
+}
+
+const CONFIG_KEY = ["settings", "rom-pack-config"] as const;
+
+export function useRomPackConfig(): UseQueryResult<
+  RomPackConfig,
+  ApiError
+> {
+  return useQuery<RomPackConfig, ApiError>({
+    queryKey: CONFIG_KEY,
+    queryFn: () => apiFetch<RomPackConfig>("/api/v3/rom-pack/config"),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useUpdateRomPackConfig(): UseMutationResult<
+  RomPackConfig,
+  ApiError,
+  RomPackConfigUpdate
+> {
+  const qc = useQueryClient();
+  return useMutation<RomPackConfig, ApiError, RomPackConfigUpdate>({
+    mutationFn: (payload) =>
+      apiFetch<RomPackConfig>("/api/v3/rom-pack/config", {
+        method: "PUT",
+        json: payload,
+      }),
+    onSuccess: (data) => qc.setQueryData(CONFIG_KEY, data),
+  });
+}

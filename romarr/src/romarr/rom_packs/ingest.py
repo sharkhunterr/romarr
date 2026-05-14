@@ -45,6 +45,7 @@ from romarr.identification.hasher import Hasher
 from romarr.importer.orchestrator import run_import
 from romarr.importer.steps.extract import extract as extract_archive
 from romarr.importer.types import ImportContext
+from romarr.rom_packs.config import get_or_create_rom_pack_config
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -342,15 +343,16 @@ async def ingest_rom_pack(
     *,
     sessionmaker: Callable[[], AsyncSession],
     rom_pack_id: int,
-    download_root: str | Path = "/downloads/rom_packs",
+    download_root: str | Path | None = None,
 ) -> None:
     """Drive one :class:`RomPack` through download → extract →
     import. Updates the row's ``status`` + counters as it goes;
     never raises (fatal errors land in ``status='failed'`` +
-    ``last_error``)."""
-    root = Path(download_root)
-    root.mkdir(parents=True, exist_ok=True)
+    ``last_error``).
 
+    ``download_root`` overrides the global ``rom_pack_config``
+    default — handy in tests. Production callers leave it None
+    so the operator-tuned Settings value applies."""
     # ── Load + mark downloading ──────────────────────────────
     async with sessionmaker() as session:
         pack = (
@@ -361,15 +363,24 @@ async def ingest_rom_pack(
         if pack is None:
             logger.warning("rom_pack.ingest: id=%s not found", rom_pack_id)
             return
+        config = await get_or_create_rom_pack_config(session)
         pack.status = "downloading"
         pack.last_error = None
         pack.last_ingest_at = datetime.now(UTC)
         url = pack.url
         source_kind = pack.source_kind
         platform_id = pack.platform_id
-        max_bytes = pack.max_size_bytes or DEFAULT_MAX_PACK_BYTES
+        max_bytes = (
+            pack.max_size_bytes
+            or config.default_max_size_bytes
+            or DEFAULT_MAX_PACK_BYTES
+        )
         existing_path = pack.downloaded_path
+        config_dir = config.download_dir
         await session.commit()
+
+    root = Path(download_root) if download_root is not None else Path(config_dir)
+    root.mkdir(parents=True, exist_ok=True)
 
     archive_path: Path | None = None
     try:

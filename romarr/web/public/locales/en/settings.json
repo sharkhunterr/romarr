@@ -18,7 +18,7 @@
     "ui": "UI",
     "general": "General",
     "logs": "Logs",
-    "rom-packs": "Content Packs"
+    "rom-packs": "ROM Pack Defaults"
   },
   "logs": {
     "title": "System Logs",
@@ -409,6 +409,18 @@
       "deletedToast": "“{{file}}” deleted",
       "actionErrorToast": "Triage action failed"
     }
+  },
+  "romPackSettings": {
+    "title": "ROM Pack Defaults",
+    "subtitle": "Global defaults for the ROM-pack subsystem. The pack list, ingest and triage live on the top-level Packs page.",
+    "downloadDirLabel": "Download directory",
+    "downloadDirHint": "Where URL-sourced pack archives stream to disk and extract. Must be writable by Romarr; grab-sourced packs use the download client's path instead.",
+    "maxSizeLabel": "Default size cap (GiB)",
+    "maxSizeHint": "Inherited by new packs that don't set their own cap. Leave empty for the built-in 50 GiB fallback.",
+    "save": "Save",
+    "saving": "Saving…",
+    "savedToast": "ROM-pack defaults saved",
+    "saveErrorToast": "Couldn't save defaults"
   },
   "qualityDefinitions": {
     "title": "Quality Definitions",

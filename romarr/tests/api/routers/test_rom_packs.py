@@ -45,6 +45,44 @@ async def test_list_empty(authed_client: httpx.AsyncClient) -> None:
     assert resp.json() == []
 
 
+# ---------------------------------------------------------------------------
+# Global config (slice 464)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_config_get_creates_singleton_with_defaults(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    """First GET get-or-creates the singleton with the schema
+    defaults — and ``/config`` resolves ahead of ``/{pack_id}``."""
+    resp = await authed_client.get("/api/v3/rom-pack/config")
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["download_dir"] == "/downloads/rom_packs"
+    assert body["default_max_size_bytes"] is None
+
+
+@pytest.mark.asyncio
+async def test_config_update_persists(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    resp = await authed_client.put(
+        "/api/v3/rom-pack/config",
+        json={
+            "download_dir": "/data/rom_packs",
+            "default_max_size_bytes": 10 * 1024**3,
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["download_dir"] == "/data/rom_packs"
+
+    # The update is durable + the singleton is reused (not duplicated).
+    again = await authed_client.get("/api/v3/rom-pack/config")
+    assert again.json()["download_dir"] == "/data/rom_packs"
+    assert again.json()["default_max_size_bytes"] == 10 * 1024**3
+
+
 @pytest.mark.asyncio
 async def test_create_then_list_and_get(
     authed_client: httpx.AsyncClient, api_engine: AsyncEngine
