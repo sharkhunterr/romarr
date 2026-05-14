@@ -631,3 +631,174 @@ class PlatformPack(Base, TimestampMixin):
         ),
         CheckConstraint("schema_version >= 1", name="ck_platform_pack_schema_version"),
     )
+
+
+class RomPack(Base, TimestampMixin):
+    """A downloadable archive holding many ROMs — a "content pack".
+
+    Slice 460. Distinct from :class:`PlatformPack` (which carries
+    *platform metadata*): a RomPack is actual ROM content — a
+    No-Intro full set, an archive.org romset, a curated starter
+    bundle. The ingest task downloads the archive, extracts it
+    recursively, and runs every ROM through the importer; a
+    :class:`RomPackItem` row tracks each file's outcome.
+
+    Two ``source_kind`` values:
+    - ``url`` — operator pasted a direct-download URL (mirrors the
+      ``dat_source`` pattern);
+    - ``grab`` — the pack came through the grab pipeline / a
+      download client, flagged multi-ROM (slice 463).
+    """
+
+    __tablename__ = "rom_pack"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_kind: Mapped[str] = mapped_column(
+        String(8), nullable=False, default="url"
+    )
+    # ``url`` source: the direct-download URL. NULL for grab-sourced.
+    url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    # ``grab`` source: the download-client pair the archive came
+    # from. NULL for url-sourced.
+    download_client_id: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
+    download_client_native_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    # Optional platform hint — multi-platform packs leave it NULL
+    # and rely on per-ROM DAT identification to scatter across
+    # platforms.
+    platform_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("platform.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    # Operator-configurable size ceiling for the download, in
+    # bytes. NULL = use the global default. Guards against a
+    # mistyped URL pulling a 200 GB blob.
+    max_size_bytes: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True
+    )
+
+    # Lifecycle: pending → downloading → extracting → importing →
+    # awaiting_triage (if any unmatched) → done | failed.
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="pending", index=True
+    )
+    # Where the archive landed on disk (cleared once extracted +
+    # the archive itself is purged).
+    downloaded_path: Mapped[str | None] = mapped_column(
+        String(2048), nullable=True
+    )
+    size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+
+    # Per-pack telemetry, surfaced on the Content Packs settings
+    # page so the operator sees the outcome at a glance.
+    total_files: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
+    imported_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
+    unmatched_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
+    parked_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
+    failed_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
+    last_error: Mapped[str | None] = mapped_column(
+        String(500), nullable=True
+    )
+    last_ingest_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    items: Mapped[list[RomPackItem]] = relationship(
+        back_populates="rom_pack",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "source_kind IN ('url', 'grab')",
+            name="ck_rom_pack_source_kind",
+        ),
+        CheckConstraint(
+            "status IN ('pending','downloading','extracting','importing',"
+            "'awaiting_triage','done','failed')",
+            name="ck_rom_pack_status",
+        ),
+        CheckConstraint(
+            "(source_kind = 'url' AND url IS NOT NULL) "
+            "OR (source_kind = 'grab' AND download_client_native_id IS NOT NULL)",
+            name="ck_rom_pack_source_fields",
+        ),
+    )
+
+
+class RomPackItem(Base, TimestampMixin):
+    """One ROM file extracted from a :class:`RomPack`.
+
+    Slice 460. The ingest task creates one row per extracted ROM
+    and records what the importer did with it:
+
+    - ``imported`` — DAT-matched (or auto-created) and placed in a
+      Library; ``game_id`` / ``dump_id`` point at the result;
+    - ``unmatched`` — no DAT entry matched the hash; awaits the
+      operator's triage-modal decision (slice 462);
+    - ``parked`` — operator (or auto-policy) sent it to
+      ``unidentified_dump``;
+    - ``deleted`` — operator discarded it from the triage modal;
+    - ``failed`` — the per-file import raised.
+    """
+
+    __tablename__ = "rom_pack_item"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    rom_pack_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("rom_pack.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    original_filename: Mapped[str] = mapped_column(String, nullable=False)
+    extracted_path: Mapped[str | None] = mapped_column(
+        String(2048), nullable=True
+    )
+    size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+
+    crc32: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    md5: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    sha1: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
+    status: Mapped[str] = mapped_column(
+        String(12), nullable=False, default="unmatched", index=True
+    )
+    # The DAT entry / Game / Dump the importer resolved, when it
+    # did. All NULL for an ``unmatched`` row.
+    dat_entry_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("dat_entry.id", ondelete="SET NULL"), nullable=True
+    )
+    game_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("game.id", ondelete="SET NULL"), nullable=True
+    )
+    dump_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("dump.id", ondelete="SET NULL"), nullable=True
+    )
+    error_msg: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    rom_pack: Mapped[RomPack] = relationship(back_populates="items")
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('imported','unmatched','parked','deleted','failed')",
+            name="ck_rom_pack_item_status",
+        ),
+    )

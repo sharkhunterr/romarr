@@ -1,0 +1,475 @@
+"""ROM content-pack ingest pipeline (slice 460).
+
+``ingest_rom_pack`` drives one :class:`RomPack` row through its
+full lifecycle:
+
+    pending → downloading → extracting → importing
+            → awaiting_triage (if any unmatched) | done | failed
+
+Stages:
+
+1. **Download** — stream the archive to disk in 1 MiB chunks
+   (never buffered in RAM), guarded by a free-space pre-check
+   and a per-pack / global size cap. ``grab``-sourced packs
+   skip this — their archive is already on disk.
+2. **Extract** — hand the archive to the importer's recursive
+   ``extract()`` (zip / 7z / rar, bomb + depth guards).
+3. **Import** — for every extracted ROM:
+   - hash it, look it up in the DAT cache;
+   - on a verified match → find-or-create the Game from the
+     DAT entry and run the normal importer with a
+     ``pre_matched_game_id`` so the ROM lands in a Library;
+   - on no match → record the item ``unmatched`` and leave the
+     extracted file in place for the triage modal (slice 462).
+
+Per-file failures are isolated — one bad ROM never aborts the
+pack. Every file gets exactly one :class:`RomPackItem` row.
+"""
+
+from __future__ import annotations
+
+import logging
+import shutil
+import tempfile
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import TYPE_CHECKING
+from uuid import uuid4
+
+import httpx
+from sqlalchemy import select
+
+from romarr.domain.models import DatEntry, Game, RomPack, RomPackItem
+from romarr.identification.dat.manager import _resolve_authority
+from romarr.identification.hasher import Hasher
+from romarr.importer.orchestrator import run_import
+from romarr.importer.steps.extract import extract as extract_archive
+from romarr.importer.types import ImportContext
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
+
+# Default ceiling for a pack download when the row carries no
+# ``max_size_bytes`` override. 50 GiB comfortably fits a full
+# No-Intro cartridge set; a mistyped URL pulling something
+# larger trips the cap instead of the disk.
+DEFAULT_MAX_PACK_BYTES = 50 * 1024 * 1024 * 1024
+
+# Headroom we insist on having free *beyond* the archive size
+# before starting a download — the archive plus its extracted
+# contents both have to fit. 2x the (known) archive size, or a
+# flat floor when the size is unknown up front.
+_FREE_SPACE_FLOOR = 5 * 1024 * 1024 * 1024
+
+# Extensions we treat as importable ROMs after extraction.
+# Mirrors the importer's ``_ROM_SUFFIXES``; archives are
+# excluded here because ``extract()`` already unwrapped them.
+_ROM_SUFFIXES: frozenset[str] = frozenset({
+    ".gba", ".nds", ".sfc", ".smc", ".n64", ".z64", ".v64",
+    ".gb", ".gbc", ".nes", ".md", ".smd", ".iso", ".cue",
+    ".bin", ".chd", ".rvz", ".pbp", ".cso", ".wbfs", ".wia",
+    ".nkit", ".ciso", ".gdi", ".gcm", ".3ds", ".cia", ".nsp",
+    ".xci", ".unif", ".fds", ".vb", ".min", ".sms", ".gg",
+    ".vpk", ".32x",
+})
+
+_CHUNK = 1024 * 1024  # 1 MiB streaming chunk
+
+
+class RomPackIngestError(Exception):
+    """Fatal, pack-level ingest failure (download / extract).
+
+    Per-file failures never raise — they're recorded on the
+    individual :class:`RomPackItem` and the pack continues.
+    """
+
+
+# ---------------------------------------------------------------------------
+# Download
+# ---------------------------------------------------------------------------
+
+
+async def _stream_download(
+    *, url: str, dest: Path, max_bytes: int
+) -> int:
+    """Stream ``url`` to ``dest`` in chunks. Returns bytes written.
+
+    Enforces ``max_bytes`` incrementally — a server lying about
+    Content-Length can't blow past the cap. Cleans up the partial
+    file on overrun.
+    """
+    written = 0
+    async with httpx.AsyncClient(
+        timeout=httpx.Timeout(60.0, read=300.0), follow_redirects=True
+    ) as client, client.stream("GET", url) as resp:
+        if resp.status_code >= 400:
+            raise RomPackIngestError(
+                f"upstream {resp.status_code} fetching {url}"
+            )
+        with dest.open("wb") as fh:
+            async for chunk in resp.aiter_bytes(_CHUNK):
+                written += len(chunk)
+                if written > max_bytes:
+                    fh.close()
+                    dest.unlink(missing_ok=True)
+                    raise RomPackIngestError(
+                        f"download exceeded the {max_bytes}-byte cap "
+                        f"for {url}"
+                    )
+                fh.write(chunk)
+    return written
+
+
+def _precheck_free_space(target: Path, archive_size_hint: int | None) -> None:
+    """Raise :class:`RomPackIngestError` when ``target``'s volume
+    hasn't got room for the archive + its extracted payload."""
+    try:
+        free = shutil.disk_usage(target).free
+    except OSError as exc:  # pragma: no cover - unusual FS state
+        raise RomPackIngestError(
+            f"cannot stat free space on {target}: {exc}"
+        ) from exc
+    # Need the archive itself + its extraction. 2x the archive
+    # size when we have a hint, the flat floor otherwise.
+    needed = (
+        archive_size_hint * 2
+        if archive_size_hint
+        else _FREE_SPACE_FLOOR
+    )
+    if free < needed:
+        raise RomPackIngestError(
+            f"insufficient disk space at {target}: "
+            f"{free / 1e9:.1f} GB free, need ~{needed / 1e9:.1f} GB"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Per-ROM import
+# ---------------------------------------------------------------------------
+
+
+async def _resolve_dat_match(
+    session: AsyncSession, *, sha1: str, platform_id: int | None
+) -> DatEntry | None:
+    """Best DAT entry for ``sha1`` (CL001 authority order).
+
+    Scoped to ``platform_id`` when the pack pins one; otherwise
+    searches every platform — a multi-platform pack relies on
+    the per-ROM hash to scatter ROMs to the right console.
+    """
+    stmt = select(DatEntry).where(DatEntry.sha1 == sha1.lower())
+    if platform_id is not None:
+        stmt = stmt.where(DatEntry.platform_id == platform_id)
+    rows = list((await session.execute(stmt)).scalars().all())
+    best = _resolve_authority(rows)
+    return best.winner if best is not None else None
+
+
+async def _find_or_create_game(
+    session: AsyncSession, *, dat_entry: DatEntry
+) -> Game:
+    """Return the monitored Game for ``dat_entry``'s platform +
+    canonical name, creating it when the operator doesn't track
+    it yet. The auto-created Game is flagged
+    ``needs_metadata_refresh`` so the aggregator enriches it
+    (cover, summary, …) on the next cycle."""
+    # Lazy import: ``romarr.metadata.api`` eagerly pulls in the
+    # FastAPI routers, which would form an import cycle if this
+    # module were imported at app-startup time.
+    from romarr.metadata.api.lookup import (
+        _allocate_unique_slug,
+        slugify_title,
+    )
+
+    base_slug = slugify_title(dat_entry.name)
+    existing = (
+        await session.execute(
+            select(Game).where(
+                Game.platform_id == dat_entry.platform_id,
+                Game.slug == base_slug,
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return existing
+    slug = await _allocate_unique_slug(
+        session, platform_id=dat_entry.platform_id, base=base_slug
+    )
+    game = Game(
+        platform_id=dat_entry.platform_id,
+        slug=slug,
+        title=dat_entry.name.strip(),
+        monitored=True,
+        needs_metadata_refresh=True,
+    )
+    session.add(game)
+    await session.flush()
+    logger.info(
+        "rom_pack.auto_created_game id=%s title=%r platform=%s",
+        game.id,
+        game.title,
+        dat_entry.platform_id,
+    )
+    return game
+
+
+async def _import_one_rom(
+    *,
+    sessionmaker: Callable[[], AsyncSession],
+    rom_pack_id: int,
+    rom_path: Path,
+    pack_platform_id: int | None,
+) -> RomPackItem:
+    """Hash + DAT-match + import one extracted ROM. Always
+    returns a :class:`RomPackItem` (never raises) — caller adds
+    it to the session and rolls the pack counters."""
+    item = RomPackItem(
+        rom_pack_id=rom_pack_id,
+        original_filename=rom_path.name,
+        extracted_path=str(rom_path),
+    )
+    try:
+        hashes = Hasher().hash_path(rom_path)
+        item.sha1 = hashes.sha1
+        item.md5 = hashes.md5
+        item.crc32 = hashes.crc32
+        item.size_bytes = hashes.size_bytes
+    except OSError as exc:
+        item.status = "failed"
+        item.error_msg = f"hash: {exc}"[:500]
+        return item
+
+    # DAT lookup + (find-or-create) Game resolution need their
+    # own session; the actual import opens yet another (run_import
+    # owns its transaction).
+    async with sessionmaker() as session:
+        dat_entry = await _resolve_dat_match(
+            session, sha1=hashes.sha1, platform_id=pack_platform_id
+        )
+        if dat_entry is None:
+            # No DAT match — leave the extracted file in place and
+            # hand it to the triage modal (slice 462).
+            item.status = "unmatched"
+            return item
+        item.dat_entry_id = dat_entry.id
+        game = await _find_or_create_game(session, dat_entry=dat_entry)
+        game_id = game.id
+        await session.commit()
+
+    # Run the standard importer with the resolved game pinned —
+    # it creates the Release, re-verifies the DAT at import time
+    # (slice 452), moves the ROM into the Library and persists
+    # the Dump.
+    context = ImportContext(
+        source_path=rom_path,
+        correlation_id=uuid4(),
+        imported_via="api",
+        pre_matched_game_id=game_id,
+    )
+    async with sessionmaker() as session:
+        try:
+            outcome = await run_import(context, session=session)
+            await session.commit()
+        except Exception as exc:
+            await session.rollback()
+            item.status = "failed"
+            item.error_msg = f"import: {type(exc).__name__}: {exc}"[:500]
+            return item
+
+    if outcome.success:
+        item.status = "imported"
+        item.game_id = game_id
+        item.dump_id = getattr(outcome, "dump_id", None)
+    else:
+        # The importer parked it (extract failure, profile gate,
+        # destination collision …). Surface it as ``parked`` so
+        # the operator finds it in unidentified_dump.
+        item.status = "parked"
+        item.error_msg = (outcome.error_msg or "import did not succeed")[:500]
+    return item
+
+
+# ---------------------------------------------------------------------------
+# Orchestrator
+# ---------------------------------------------------------------------------
+
+
+async def ingest_rom_pack(
+    *,
+    sessionmaker: Callable[[], AsyncSession],
+    rom_pack_id: int,
+    download_root: str | Path = "/downloads/rom_packs",
+) -> None:
+    """Drive one :class:`RomPack` through download → extract →
+    import. Updates the row's ``status`` + counters as it goes;
+    never raises (fatal errors land in ``status='failed'`` +
+    ``last_error``)."""
+    root = Path(download_root)
+    root.mkdir(parents=True, exist_ok=True)
+
+    # ── Load + mark downloading ──────────────────────────────
+    async with sessionmaker() as session:
+        pack = (
+            await session.execute(
+                select(RomPack).where(RomPack.id == rom_pack_id)
+            )
+        ).scalar_one_or_none()
+        if pack is None:
+            logger.warning("rom_pack.ingest: id=%s not found", rom_pack_id)
+            return
+        pack.status = "downloading"
+        pack.last_error = None
+        pack.last_ingest_at = datetime.now(UTC)
+        url = pack.url
+        source_kind = pack.source_kind
+        platform_id = pack.platform_id
+        max_bytes = pack.max_size_bytes or DEFAULT_MAX_PACK_BYTES
+        existing_path = pack.downloaded_path
+        await session.commit()
+
+    archive_path: Path | None = None
+    try:
+        # ── Download (url-sourced) ──────────────────────────
+        if source_kind == "grab":
+            # Slice 463 fills download_client fields; the archive
+            # is already on disk.
+            if not existing_path or not Path(existing_path).exists():
+                raise RomPackIngestError(
+                    "grab-sourced pack has no archive on disk"
+                )
+            archive_path = Path(existing_path)
+        else:
+            if not url:
+                raise RomPackIngestError("url-sourced pack has no url")
+            _precheck_free_space(root, None)
+            suffix = Path(url.split("?")[0]).suffix or ".zip"
+            archive_path = root / f"rom_pack_{rom_pack_id}{suffix}"
+            written = await _stream_download(
+                url=url, dest=archive_path, max_bytes=max_bytes
+            )
+            async with sessionmaker() as session:
+                pack = (
+                    await session.execute(
+                        select(RomPack).where(RomPack.id == rom_pack_id)
+                    )
+                ).scalar_one()
+                pack.downloaded_path = str(archive_path)
+                pack.size_bytes = written
+                await session.commit()
+
+        # ── Extract ─────────────────────────────────────────
+        async with sessionmaker() as session:
+            pack = (
+                await session.execute(
+                    select(RomPack).where(RomPack.id == rom_pack_id)
+                )
+            ).scalar_one()
+            pack.status = "extracting"
+            await session.commit()
+
+        extract_dir = Path(
+            tempfile.mkdtemp(prefix=f"rom_pack_{rom_pack_id}_", dir=str(root))
+        )
+        rom_files: list[Path]
+        suffix_l = archive_path.suffix.lower()
+        if suffix_l in {".zip", ".7z", ".rar"}:
+            result = await extract_archive(
+                archive_path=archive_path, dest_dir=extract_dir
+            )
+            rom_files = [
+                p
+                for p in result.extracted_paths
+                if p.suffix.lower() in _ROM_SUFFIXES
+            ]
+        else:
+            # The "archive" is a bare ROM — treat it as a
+            # one-file pack.
+            rom_files = (
+                [archive_path]
+                if archive_path.suffix.lower() in _ROM_SUFFIXES
+                else []
+            )
+
+        # ── Import each ROM ─────────────────────────────────
+        async with sessionmaker() as session:
+            pack = (
+                await session.execute(
+                    select(RomPack).where(RomPack.id == rom_pack_id)
+                )
+            ).scalar_one()
+            pack.status = "importing"
+            pack.total_files = len(rom_files)
+            await session.commit()
+
+        imported = unmatched = parked = failed = 0
+        for rom_path in rom_files:
+            item = await _import_one_rom(
+                sessionmaker=sessionmaker,
+                rom_pack_id=rom_pack_id,
+                rom_path=rom_path,
+                pack_platform_id=platform_id,
+            )
+            if item.status == "imported":
+                imported += 1
+            elif item.status == "unmatched":
+                unmatched += 1
+            elif item.status == "parked":
+                parked += 1
+            else:
+                failed += 1
+            async with sessionmaker() as session:
+                session.add(item)
+                await session.commit()
+
+        # ── Finalise ────────────────────────────────────────
+        async with sessionmaker() as session:
+            pack = (
+                await session.execute(
+                    select(RomPack).where(RomPack.id == rom_pack_id)
+                )
+            ).scalar_one()
+            pack.imported_count = imported
+            pack.unmatched_count = unmatched
+            pack.parked_count = parked
+            pack.failed_count = failed
+            pack.status = "awaiting_triage" if unmatched > 0 else "done"
+            await session.commit()
+
+        logger.info(
+            "rom_pack.ingest done id=%s imported=%d unmatched=%d "
+            "parked=%d failed=%d",
+            rom_pack_id,
+            imported,
+            unmatched,
+            parked,
+            failed,
+        )
+    except Exception as exc:
+        logger.exception("rom_pack.ingest failed id=%s", rom_pack_id)
+        async with sessionmaker() as session:
+            pack = (
+                await session.execute(
+                    select(RomPack).where(RomPack.id == rom_pack_id)
+                )
+            ).scalar_one_or_none()
+            if pack is not None:
+                pack.status = "failed"
+                pack.last_error = f"{type(exc).__name__}: {exc}"[:500]
+                await session.commit()
+    finally:
+        # Purge the downloaded archive — only when *we* fetched
+        # it (url-sourced). grab-sourced archives belong to the
+        # download client's lifecycle.
+        if (
+            archive_path is not None
+            and source_kind != "grab"
+            and archive_path.exists()
+        ):
+            archive_path.unlink(missing_ok=True)
+
+
+__all__ = ["DEFAULT_MAX_PACK_BYTES", "RomPackIngestError", "ingest_rom_pack"]

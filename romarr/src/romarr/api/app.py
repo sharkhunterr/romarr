@@ -38,6 +38,7 @@ from romarr.api.routers.history import router as history_router
 from romarr.api.routers.language import router as language_router
 from romarr.api.routers.log import router as log_router
 from romarr.api.routers.dat_sources import router as dat_sources_router
+from romarr.api.routers.rom_packs import router as rom_packs_router
 from romarr.api.routers.rootfolder import router as rootfolder_router
 from romarr.api.routers.quality_definitions import (
     router as quality_definitions_router,
@@ -635,6 +636,7 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     app.include_router(refresh_router)
     app.include_router(packs_router)
     app.include_router(platform_pack_platforms_router)
+    app.include_router(rom_packs_router)
     app.include_router(applications_router)
     # Grabarr wizard must mount BEFORE indexers_router so its
     # ``/api/v3/indexer/grabarr`` POST handler wins over indexers_router's
