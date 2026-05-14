@@ -76,6 +76,16 @@ class Platform(Base, TimestampMixin):
         JSON, nullable=False, default=list
     )
 
+    # Slice 401 — operator-facing alias strings used by the
+    # title-match (manual search) and filename-parser (importer)
+    # paths so a release titled "Final Fantasy VII (PSX)" /
+    # "(PS1)" / "(PlayStation)" all bind to the same Platform
+    # row. Empty list when no aliases are configured; the slug +
+    # short_name + name are always considered alongside.
+    aliases: Mapped[list[str]] = mapped_column(
+        JSON, nullable=False, default=list
+    )
+
     # Pack provenance (spec 003 populates).
     pack_source: Mapped[str] = mapped_column(
         String(16), nullable=False, default="builtin"
@@ -241,6 +251,20 @@ class Game(Base, TimestampMixin):
     # touched by the spec-002 aggregator — distinct from
     # ``summary``, which is provider-owned.
     notes: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # Slice 385 — Sonarr-style library binding. The operator picks
+    # a library at add-time; the importer reads this back when
+    # auto-creating a Release for a manual grab so the file lands
+    # under the right root with that library's profile cascade.
+    # Nullable for backward compat with rows added before this
+    # column existed; the importer falls back to platform routing
+    # when unset.
+    library_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("library.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
     # Relationships
     platform: Mapped[Platform] = relationship(back_populates="games")
@@ -451,6 +475,71 @@ class DatEntry(Base, TimestampMixin):
         UniqueConstraint(
             "platform_id", "source", "sha1",
             name="uq_dat_entry_platform_source_sha1",
+        ),
+    )
+
+
+class DatSource(Base, TimestampMixin):
+    """A persistent DAT source URL + per-platform binding.
+
+    Slice 443 — pre-slice the only DAT-related table was ``dat_entry``
+    (the parsed entries cache). The list of URLs to fetch lived in
+    code / settings only; ``DatUpdateRunner`` accepted
+    ``DatSourceSpec`` triples passed in by the caller, with no
+    persistence layer. This row holds the URL + binding so:
+
+    - the bootstrap helper can seed recommended URLs at first boot
+      from the ``identification/dat/recommended.py`` catalog;
+    - operators can add custom URLs via ``POST /api/v3/dat-source``;
+    - the scheduled DAT-update task refreshes every enabled row;
+    - the Settings → DAT Sources UI shows last-refresh status +
+      entry-count per source so operators see at a glance what's
+      loaded and when it last succeeded.
+
+    ``source`` is the DAT-authority literal that pairs with each
+    fetched entry's ``DatEntry.source`` (no-intro / redump / tosec
+    / …) — same CHECK literals on both tables.
+    """
+
+    __tablename__ = "dat_source"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    url: Mapped[str] = mapped_column(String(1024), nullable=False)
+    source: Mapped[str] = mapped_column(String(32), nullable=False)
+    platform_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("platform.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="1", index=True
+    )
+    last_refresh_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_refresh_status: Mapped[str | None] = mapped_column(
+        String(16), nullable=True
+    )
+    last_refresh_error: Mapped[str | None] = mapped_column(
+        String(500), nullable=True
+    )
+    last_entry_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "source", "platform_id", name="uq_dat_source_source_platform"
+        ),
+        CheckConstraint(
+            "source IN ('no-intro','redump','tosec','goodtools','hasheous',"
+            "'playmatch','custom')",
+            name="ck_dat_source_source",
+        ),
+        CheckConstraint(
+            "last_refresh_status IS NULL "
+            "OR last_refresh_status IN ('ok','failed','running')",
+            name="ck_dat_source_status",
         ),
     )
 

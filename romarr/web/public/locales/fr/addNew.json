@@ -11,6 +11,34 @@
   },
   "loadError": "La recherche a échoué",
   "noResults": "Aucun candidat pour « {{q}} ». Essayez une autre orthographe ou vérifiez la configuration des fournisseurs sous Paramètres > Sources de métadonnées.",
+  "detail": {
+    "modalTitle": "{{title}} — détails",
+    "subhead": "Depuis {{provider}} (id {{id}})",
+    "fields": {
+      "platform": "Plateforme",
+      "manufacturer": "Fabricant",
+      "year": "Année de sortie",
+      "confidence": "Confiance",
+      "rank": "Rang",
+      "coverUrl": "URL jaquette"
+    },
+    "actions": {
+      "close": "Fermer",
+      "openAddModal": "Choisir ludothèque / plateforme…"
+    }
+  },
+  "filters": {
+    "title": "Filtres",
+    "summary": "{{count}} résultats",
+    "platform": "Plateforme",
+    "platformAll": "Toutes plateformes",
+    "year": "Année",
+    "yearAll": "Toutes années",
+    "provider": "Fournisseur",
+    "providerAll": "Tous fournisseurs",
+    "clear": "Effacer les filtres",
+    "noMatches": "Aucun candidat ne correspond aux filtres actuels."
+  },
   "addButton": "Ajouter",
   "addHint": "Une fois ajouté, l'agrégateur de métadonnées enrichira automatiquement le reste des champs (résumé, jaquette, date de sortie, …) au prochain cycle de rafraîchissement. Les éditions par champ restent disponibles sur la page de détail.",
   "recent": {
@@ -24,6 +52,9 @@
     "platformLabel": "Plateforme",
     "loadingPlatforms": "Chargement des plateformes…",
     "noPlatforms": "Aucune plateforme configurée. Ajoutez-en une depuis Paramètres > Plateformes.",
+    "libraryLabel": "Ludothèque",
+    "loadingLibraries": "Chargement des ludothèques…",
+    "noLibraries": "Aucune ludothèque configurée. Ajoutez-en une depuis Paramètres > Ludothèques.",
     "monitoredLabel": "Surveiller pour les mises à niveau",
     "refreshHint": "Romarr récupère le reste des métadonnées en arrière-plan — le jeu apparaît immédiatement dans la ludothèque.",
     "cancel": "Annuler",

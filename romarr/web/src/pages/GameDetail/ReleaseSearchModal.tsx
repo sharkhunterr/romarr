@@ -15,6 +15,7 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
+import { DatVerifiedBadge } from "@/components/rom";
 import { useDownloadClients } from "@/lib/api/queries/download-clients";
 import { useIndexersById } from "@/lib/api/queries/indexers";
 import { usePlatformsById } from "@/lib/api/queries/platforms";
@@ -213,6 +214,7 @@ function CandidateRow(props: {
   } = props;
   const grab = useManualGrab();
   const pushToast = useToastStore((s) => s.push);
+  const [expanded, setExpanded] = useState(false);
   const onClick = (): void => {
     grab.mutate(
       {
@@ -287,9 +289,28 @@ function CandidateRow(props: {
       ].join(" ")}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-100">
+        {/* Slice 400 — title is now a toggle button. The row
+            stays compact by default (truncate); tap the title to
+            expand inline details (full title, download URL,
+            score breakdown, indexer GUID, …). Modal would crowd
+            the already-modal search; collapsible keeps the list
+            scannable while still surfacing every field. */}
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          className={[
+            "min-w-0 flex-1 text-left text-sm font-medium text-zinc-100",
+            "hover:text-brand focus-visible:outline-none focus-visible:text-brand",
+            expanded ? "" : "truncate",
+          ].join(" ")}
+          title={candidate.title}
+        >
+          <span aria-hidden="true" className="mr-1 text-zinc-500">
+            {expanded ? "▾" : "▸"}
+          </span>
           {candidate.title}
-        </p>
+        </button>
         <div className="flex shrink-0 flex-col items-end gap-1">
           {/* Match-quality column: profile score for accepted
               candidates, "Rejected" badge for rejected ones. The
@@ -408,36 +429,68 @@ function CandidateRow(props: {
           }
           title={t("search.facet.languages")}
         />
-        <FacetChip
-          label={
-            candidate.dump_status
-              ? t(
-                  `search.dumpStatus.${candidate.dump_status}` as never,
-                  { defaultValue: candidate.dump_status },
-                )
-              : t("search.facet.unknownLabel.dumpStatus")
-          }
-          tone={_toneFor(
-            candidate,
-            "dump_status",
-            candidate.dump_status
-              ? (_DUMP_TONE[candidate.dump_status] ?? "neutral")
-              : "neutral",
-          )}
-          title={t("search.facet.dumpStatus")}
-        />
-        <FacetChip
-          label={
-            candidate.naming_convention &&
-            candidate.naming_convention !== "unknown"
-              ? candidate.naming_convention
-              : t("search.facet.unknownLabel.naming")
-          }
-          tone={
-            candidate.naming_convention === "scene" ? "warn" : "neutral"
-          }
-          title={t("search.facet.naming")}
-        />
+        {(() => {
+          // Slice 457 — the DAT cascade is authoritative for both
+          // the type and the naming convention. When the hash
+          // verified, the release IS a clean complete dump from a
+          // known authority → paint both chips green. When the
+          // DAT flagged it (hack / baddump) → red. Otherwise fall
+          // back to the natural per-value tone.
+          const datValidated = candidate.pre_grab_dat_match === "verified";
+          const datFlagged = candidate.pre_grab_dat_match === "hack";
+          const dumpTone: FacetTone = datValidated
+            ? "good"
+            : datFlagged
+              ? "bad"
+              : _toneFor(
+                  candidate,
+                  "dump_status",
+                  candidate.dump_status
+                    ? (_DUMP_TONE[candidate.dump_status] ?? "neutral")
+                    : "neutral",
+                );
+          const conventionTone: FacetTone = datValidated
+            ? "good"
+            : datFlagged
+              ? "bad"
+              : candidate.naming_convention === "scene"
+                ? "warn"
+                : "neutral";
+          return (
+            <>
+              <FacetChip
+                label={
+                  candidate.dump_status
+                    ? t(
+                        `search.dumpStatus.${candidate.dump_status}` as never,
+                        { defaultValue: candidate.dump_status },
+                      )
+                    : t("search.facet.unknownLabel.dumpStatus")
+                }
+                tone={dumpTone}
+                title={
+                  datValidated
+                    ? t("search.facet.dumpStatusDatValidated")
+                    : t("search.facet.dumpStatus")
+                }
+              />
+              <FacetChip
+                label={
+                  candidate.naming_convention &&
+                  candidate.naming_convention !== "unknown"
+                    ? candidate.naming_convention
+                    : t("search.facet.unknownLabel.naming")
+                }
+                tone={conventionTone}
+                title={
+                  datValidated
+                    ? t("search.facet.namingDatValidated")
+                    : t("search.facet.naming")
+                }
+              />
+            </>
+          );
+        })()}
         <FacetChip
           label={
             candidate.file_format
@@ -465,21 +518,34 @@ function CandidateRow(props: {
             <span>{t("search.seeders", { count: candidate.seeders })}</span>
           </>
         )}
-        {candidate.pre_grab_dat_match !== "skipped" && (
-          <span
-            className={[
-              "ml-auto rounded px-1.5 py-0.5 font-mono uppercase",
-              "tracking-wider",
-              candidate.pre_grab_dat_match === "verified"
-                ? "bg-emerald-950/40 text-emerald-300"
-                : candidate.pre_grab_dat_match === "hack"
-                  ? "bg-amber-950/40 text-amber-300"
-                  : "bg-zinc-800 text-zinc-400",
-            ].join(" ")}
-          >
-            DAT {candidate.pre_grab_dat_match}
-          </span>
-        )}
+        <span className="ml-auto flex items-center gap-1">
+          {/* Slice 451 — duplicate warning: hash already on disk
+              for this game. Sits next to the DAT badge so the
+              operator sees both at a glance before grabbing. */}
+          {candidate.already_owned && (
+            <span
+              className="rounded-md bg-rose-700/30 px-1.5 py-0.5 text-[0.65rem] font-medium text-rose-200 ring-1 ring-inset ring-rose-500/50"
+              title={t("search.alreadyOwnedTooltip")}
+            >
+              {t("search.alreadyOwnedPill")}
+            </span>
+          )}
+          {/* Pure-icon DAT badge. Four cascade outcomes mapped:
+              verified → ✓ green, hack → ⚠ amber, none → ?
+              zinc (we had a hash but no DAT row), skipped →
+              nothing (no hash was available to check). */}
+          {candidate.pre_grab_dat_match !== "skipped" && (
+            <DatVerifiedBadge
+              status={
+                candidate.pre_grab_dat_match === "verified"
+                  ? "verified"
+                  : candidate.pre_grab_dat_match === "hack"
+                    ? "invalid"
+                    : "unknown"
+              }
+            />
+          )}
+        </span>
       </div>
 
       {candidate.rejection && (
@@ -492,7 +558,222 @@ function CandidateRow(props: {
             : ""}
         </p>
       )}
+
+      {expanded && (
+        <div className="mt-1 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 rounded border border-zinc-800/70 bg-zinc-950/40 p-2 text-[0.7rem]">
+          {/* Slice 451 — DAT match panel. Surfaces *what* the
+              hash matched against (canonical entry name, DAT
+              authority) so the operator can confirm before
+              clicking Grab. Only renders when the cascade
+              actually resolved a row. */}
+          {(candidate.pre_grab_dat_match === "verified" ||
+            candidate.pre_grab_dat_match === "hack") &&
+            candidate.pre_grab_dat_entry_name && (
+              <>
+                <DetailKv
+                  label={t("search.detail.fields.datMatchSource")}
+                  value={candidate.pre_grab_dat_entry_source ?? "—"}
+                />
+                <DetailKv
+                  label={t("search.detail.fields.datMatchEntry")}
+                  value={candidate.pre_grab_dat_entry_name}
+                />
+                <DetailKv
+                  label={t("search.detail.fields.datMatchStatus")}
+                  value={t(
+                    candidate.pre_grab_dat_match === "verified"
+                      ? "search.detail.datStatus.verified"
+                      : "search.detail.datStatus.invalid",
+                  )}
+                />
+              </>
+            )}
+          {candidate.already_owned && (
+            <DetailKv
+              label={t("search.detail.fields.alreadyOwned")}
+              value={t("search.detail.alreadyOwnedBody")}
+            />
+          )}
+          {candidate.hash_sha1 && (
+            <DetailKv
+              label="SHA-1"
+              value={candidate.hash_sha1}
+              mono
+            />
+          )}
+          {candidate.hash_md5 && (
+            <DetailKv label="MD5" value={candidate.hash_md5} mono />
+          )}
+          {candidate.hash_crc32 && (
+            <DetailKv
+              label="CRC32"
+              value={candidate.hash_crc32}
+              mono
+            />
+          )}
+          <DetailKv
+            label={t("search.detail.fields.indexer")}
+            value={
+              indexerName
+                ? `${indexerName} (#${candidate.indexer_id})`
+                : `#${candidate.indexer_id}`
+            }
+          />
+          <DetailKv
+            label={t("search.detail.fields.guid")}
+            value={candidate.indexer_guid}
+            mono
+          />
+          {candidate.size_bytes !== null &&
+            candidate.size_bytes !== undefined && (
+              <DetailKv
+                label={t("search.detail.fields.size")}
+                value={`${(candidate.size_bytes / 1_048_576).toFixed(1)} MiB · ${candidate.size_bytes} B`}
+              />
+            )}
+          {candidate.languages && candidate.languages.length > 0 && (
+            <DetailKv
+              label={t("search.detail.fields.languages")}
+              value={candidate.languages.join(", ")}
+            />
+          )}
+          {candidate.file_format && (
+            <DetailKv
+              label={t("search.detail.fields.fileFormat")}
+              value={candidate.file_format}
+            />
+          )}
+          {typeof candidate.title_match_score === "number" && (
+            <DetailKv
+              label={t("search.detail.fields.titleScore")}
+              value={`${Math.round((candidate.title_match_score ?? 0) * 100)} %`}
+            />
+          )}
+          {typeof candidate.grabs === "number" && (
+            <DetailKv
+              label={t("search.detail.fields.grabs")}
+              value={String(candidate.grabs)}
+            />
+          )}
+          {typeof candidate.download_volume_factor === "number" && (
+            <DetailKv
+              label={t("search.detail.fields.downloadVolumeFactor")}
+              value={
+                candidate.download_volume_factor === 0
+                  ? t("search.detail.fields.freeleech")
+                  : `${candidate.download_volume_factor}×`
+              }
+            />
+          )}
+          {typeof candidate.upload_volume_factor === "number" &&
+            candidate.upload_volume_factor !== 1 && (
+              <DetailKv
+                label={t("search.detail.fields.uploadVolumeFactor")}
+                value={`${candidate.upload_volume_factor}×`}
+              />
+            )}
+          {typeof candidate.year === "number" && (
+            <DetailKv
+              label={t("search.detail.fields.year")}
+              value={String(candidate.year)}
+            />
+          )}
+          {candidate.genre && (
+            <DetailKv
+              label={t("search.detail.fields.genre")}
+              value={candidate.genre}
+            />
+          )}
+          {candidate.description && (
+            <DetailKv
+              label={t("search.detail.fields.description")}
+              value={candidate.description}
+              pre
+            />
+          )}
+          {candidate.info_url && (
+            <>
+              <dt className="font-mono text-[0.6rem] uppercase tracking-widest text-zinc-500">
+                {t("search.detail.fields.infoUrl")}
+              </dt>
+              <dd className="min-w-0">
+                <a
+                  href={candidate.info_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block truncate text-[0.65rem] text-brand hover:underline"
+                >
+                  {candidate.info_url}
+                </a>
+              </dd>
+            </>
+          )}
+          {candidate.nfo_url && (
+            <>
+              <dt className="font-mono text-[0.6rem] uppercase tracking-widest text-zinc-500">
+                {t("search.detail.fields.nfoUrl")}
+              </dt>
+              <dd className="min-w-0">
+                <a
+                  href={candidate.nfo_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block truncate text-[0.65rem] text-brand hover:underline"
+                >
+                  {candidate.nfo_url}
+                </a>
+              </dd>
+            </>
+          )}
+          {breakdownTooltip && (
+            <DetailKv
+              label={t("search.detail.fields.scoreBreakdown")}
+              value={breakdownTooltip}
+              pre
+            />
+          )}
+          <dt className="font-mono text-[0.6rem] uppercase tracking-widest text-zinc-500">
+            {t("search.detail.fields.downloadUrl")}
+          </dt>
+          <dd className="min-w-0">
+            <a
+              href={candidate.download_url}
+              target="_blank"
+              rel="noreferrer"
+              className="block truncate font-mono text-[0.65rem] text-brand hover:underline"
+            >
+              {candidate.download_url}
+            </a>
+          </dd>
+        </div>
+      )}
     </li>
+  );
+}
+
+function DetailKv(props: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  pre?: boolean;
+}): ReactElement {
+  return (
+    <>
+      <dt className="font-mono text-[0.6rem] uppercase tracking-widest text-zinc-500">
+        {props.label}
+      </dt>
+      <dd
+        className={[
+          "min-w-0 break-words text-zinc-200",
+          props.mono ? "font-mono text-[0.65rem]" : "",
+          props.pre ? "whitespace-pre-line" : "",
+        ]
+          .join(" ")
+          .trim()}
+      >
+        {props.value}
+      </dd>
+    </>
   );
 }
 
@@ -637,9 +918,41 @@ export function ReleaseSearchModal(
           )}
 
           {search.isSuccess && (search.data.candidates ?? []).length === 0 && (
-            <p className="rounded-md border border-zinc-800 bg-zinc-900/40 p-3 text-xs text-zinc-400">
-              {t("search.empty")}
-            </p>
+            <>
+              {/* Slice 404 — when no candidates came back, look at
+                  ``indexer_outcomes`` and surface a precise
+                  diagnostic. Rate-limited indexers are the
+                  common case for a fresh "no candidates" — they
+                  silently dropped every result. */}
+              {(() => {
+                const outcomes = search.data.indexer_outcomes ?? {};
+                const rateLimited = Object.values(outcomes).filter(
+                  (v) => v === "rate_limited",
+                ).length;
+                const failed = Object.values(outcomes).filter(
+                  (v) => v === "failed",
+                ).length;
+                if (rateLimited > 0) {
+                  return (
+                    <p className="rounded-md border border-amber-900/50 bg-amber-950/20 p-3 text-xs text-amber-200">
+                      {t("search.outcome.rateLimited", { count: rateLimited })}
+                    </p>
+                  );
+                }
+                if (failed > 0) {
+                  return (
+                    <p className="rounded-md border border-red-900/50 bg-red-950/20 p-3 text-xs text-red-300">
+                      {t("search.outcome.failed", { count: failed })}
+                    </p>
+                  );
+                }
+                return (
+                  <p className="rounded-md border border-zinc-800 bg-zinc-900/40 p-3 text-xs text-zinc-400">
+                    {t("search.empty")}
+                  </p>
+                );
+              })()}
+            </>
           )}
 
           {search.isSuccess && (search.data.candidates ?? []).length > 0 && (

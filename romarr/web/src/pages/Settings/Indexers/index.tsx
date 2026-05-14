@@ -23,6 +23,7 @@ import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useIndexers } from "@/lib/api/queries/indexers";
 
 import { ApplicationsPanel } from "./ApplicationsPanel";
+import { CreateGrabarrModal } from "./CreateGrabarrModal";
 import { CreateIndexerModal } from "./CreateIndexerModal";
 import { IndexerRow } from "./IndexerRow";
 
@@ -46,6 +47,7 @@ export function IndexersPage(): ReactElement {
   };
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [grabarrOpen, setGrabarrOpen] = useState(false);
 
   const filtered = useMemo(() => {
     if (!indexers.data) return [];
@@ -68,17 +70,29 @@ export function IndexersPage(): ReactElement {
             {t("indexers.subtitle")}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setCreateOpen(true)}
-          className="shrink-0 rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        >
-          {t("indexers.create.openButton")}
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setGrabarrOpen(true)}
+            className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            {t("indexers.grabarr.openButton")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            className="rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            {t("indexers.create.openButton")}
+          </button>
+        </div>
       </header>
 
       {createOpen && (
         <CreateIndexerModal onClose={() => setCreateOpen(false)} />
+      )}
+      {grabarrOpen && (
+        <CreateGrabarrModal onClose={() => setGrabarrOpen(false)} />
       )}
 
       <ApplicationsPanel />

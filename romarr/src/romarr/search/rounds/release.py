@@ -43,8 +43,11 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
 
-def _none_dat(_a: str | None, _b: str | None) -> Literal["verified", "hack", "none"]:
-    return "none"
+from romarr.search.state import DatMatchInfo, _NONE_DAT_INFO
+
+
+def _none_dat(_a: str | None, _b: str | None) -> DatMatchInfo:
+    return _NONE_DAT_INFO
 
 
 async def run_release_search(

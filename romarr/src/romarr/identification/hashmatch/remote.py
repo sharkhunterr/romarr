@@ -48,6 +48,100 @@ class HasheousBackend:
         self._timeout = timeout
         self._client = client
 
+    async def lookup_cross_refs(
+        self,
+        *,
+        sha1: str | None = None,
+        md5: str | None = None,
+        crc32: str | None = None,
+    ) -> dict[str, str | None]:
+        """Slice 414 — Hasheous cross-reference lookup.
+
+        Posts a ``/api/v1/Lookup/ByHash`` request with whatever
+        hash the caller has and parses the response's
+        ``metadata`` array for the IGDB / RetroAchievements /
+        TheGamesDB / MobyGames immutable IDs. Returns a dict
+        keyed on Romarr's metadata provider names:
+
+            {
+                "igdb": "1234",            # or None
+                "retroachievements": "...",
+                "mobygames": "...",
+                "tgdb": "...",
+            }
+
+        Empty values when Hasheous doesn't know the hash (404)
+        or the response doesn't carry that source. Mirrors
+        RomM's ``HasheousHandler.lookup_rom`` shape.
+        """
+        if not (sha1 or md5 or crc32):
+            return {}
+        url = f"{self._base_url}/v1/Lookup/ByHash"
+        body: dict[str, str] = {}
+        if md5:
+            body["mD5"] = md5.lower()
+        if sha1:
+            body["shA1"] = sha1.lower()
+        if crc32:
+            body["crc"] = crc32.lower()
+        params = {
+            "returnAllSources": "true",
+            "returnFields": "Metadata",
+        }
+        headers: dict[str, str] = {"Content-Type": "application/json"}
+        if self._token:
+            headers["X-API-Key"] = self._token
+
+        try:
+            if self._client is not None:
+                response = await self._client.post(
+                    url,
+                    params=params,
+                    json=body,
+                    headers=headers,
+                    timeout=self._timeout,
+                )
+            else:
+                async with httpx.AsyncClient(timeout=self._timeout) as client:
+                    response = await client.post(
+                        url, params=params, json=body, headers=headers
+                    )
+        except httpx.HTTPError:
+            return {}
+        if response.status_code != 200:
+            return {}
+        try:
+            payload = response.json()
+        except ValueError:
+            return {}
+        if not isinstance(payload, dict):
+            return {}
+        metadata = payload.get("metadata") or []
+        if not isinstance(metadata, list):
+            return {}
+        out: dict[str, str | None] = {
+            "igdb": None,
+            "retroachievements": None,
+            "tgdb": None,
+            "mobygames": None,
+        }
+        for meta in metadata:
+            if not isinstance(meta, dict):
+                continue
+            source = str(meta.get("source") or "").lower()
+            immutable_id = meta.get("immutableId")
+            if immutable_id is None:
+                continue
+            if source == "igdb":
+                out["igdb"] = str(immutable_id)
+            elif source in ("retroachievements", "ra"):
+                out["retroachievements"] = str(immutable_id)
+            elif source in ("thegamesdb", "tgdb"):
+                out["tgdb"] = str(immutable_id)
+            elif source in ("mobygames", "moby"):
+                out["mobygames"] = str(immutable_id)
+        return out
+
     async def lookup_sha1(
         self, *, platform_id: int, sha1: str
     ) -> HashLookupResult:

@@ -104,6 +104,33 @@ def _project_attr(
     elif n in ("hash_crc32", "crc32"):
         fields["hash_crc32"] = value.lower()
         fields["hash_crc32_provenance"] = provenance
+    elif n in ("hash_md5", "md5"):
+        # Stored on the SearchResult only so the importer can
+        # cross-check during fingerprint resolution; not used by
+        # the pre-grab DAT cascade today.
+        fields["hash_md5"] = value.lower()
+        fields["hash_md5_provenance"] = provenance
+    elif n == "hash":
+        # Generic ``<attr name="hash">`` emitter — grabarr (and
+        # some Torznab indexers) ship the per-file content hash
+        # without naming the algorithm. Infer by hex length:
+        # 8 hex = CRC32, 32 hex = MD5, 40 hex = SHA-1. Anything
+        # else is ignored — silently, because a torrent info-hash
+        # is also 40 hex and we can't distinguish it here. The
+        # parser keeps the ``infohash`` attr in its own slot
+        # via the dedicated branch below, so the generic ``hash``
+        # branch is safe to alias to SHA-1.
+        clean = value.strip().lower()
+        if all(c in "0123456789abcdef" for c in clean):
+            if len(clean) == 8 and "hash_crc32" not in fields:
+                fields["hash_crc32"] = clean
+                fields["hash_crc32_provenance"] = provenance
+            elif len(clean) == 32 and "hash_md5" not in fields:
+                fields["hash_md5"] = clean
+                fields["hash_md5_provenance"] = provenance
+            elif len(clean) == 40 and "hash_sha1" not in fields:
+                fields["hash_sha1"] = clean
+                fields["hash_sha1_provenance"] = provenance
     elif n in ("naming_convention", "convention"):
         try:
             fields["naming_convention"] = NamingConvention(value.lower())
@@ -145,6 +172,35 @@ def _project_attr(
         if cat not in cats:
             cats.append(cat)
         fields["categories"] = cats
+    # Slice 402 — extra standard attrs we now project onto
+    # ``SearchResult``. ``downloadvolumefactor`` / ``upload...``
+    # are private-tracker freeleech / bonus signals; ``grabs`` is
+    # the download counter used as a popularity signal; the rest
+    # carry operator-facing context (year, genre, NFO link).
+    elif n == "grabs":
+        with contextlib.suppress(TypeError, ValueError):
+            fields["grabs"] = int(value)
+    elif n in ("downloadvolumefactor", "download_volume_factor"):
+        with contextlib.suppress(TypeError, ValueError):
+            fields["download_volume_factor"] = float(value)
+    elif n in ("uploadvolumefactor", "upload_volume_factor"):
+        with contextlib.suppress(TypeError, ValueError):
+            fields["upload_volume_factor"] = float(value)
+    elif n in ("description", "comments", "release_notes"):
+        if value and "description" not in fields:
+            fields["description"] = value
+    elif n == "year":
+        with contextlib.suppress(TypeError, ValueError):
+            fields["year"] = int(value)
+    elif n == "genre":
+        if value:
+            fields["genre"] = value
+    elif n in ("info", "info_url", "infourl"):
+        if value:
+            fields["info_url"] = value
+    elif n in ("nfo", "nfo_url", "nfourl"):
+        if value:
+            fields["nfo_url"] = value
 
 
 def _parse_item(item: etree._Element, *, indexer_id: int) -> SearchResult | None:

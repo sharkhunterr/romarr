@@ -62,8 +62,8 @@ def resolve_to_game(
     the DAT lookup returns ``"none"``.
     """
     if hash_sha1 or hash_crc32:
-        outcome = dat_lookup(hash_sha1, hash_crc32)
-        if outcome != "none":
+        info = dat_lookup(hash_sha1, hash_crc32)
+        if info.outcome != "none":
             # The DAT layer doesn't yet hand us the matched Game id
             # directly (that lookup is the future Importer's job);
             # for now we fall through to fuzzy matching with a high
@@ -105,15 +105,17 @@ def fuzzy_match_query(
     indexer result that has no hash material.
     """
 
-    def _none_dat(_a: str | None, _b: str | None) -> str:
-        return "none"
+    from romarr.search.state import _NONE_DAT_INFO
+
+    def _none_dat(_a: str | None, _b: str | None):  # noqa: ANN202
+        return _NONE_DAT_INFO
 
     match = resolve_to_game(
         title=query.text,
         hash_sha1=None,
         hash_crc32=None,
         monitored_games=monitored_games,
-        dat_lookup=_none_dat,  # type: ignore[arg-type]
+        dat_lookup=_none_dat,
     )
     return match[0] if match is not None else None
 

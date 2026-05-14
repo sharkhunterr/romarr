@@ -45,6 +45,11 @@ class RejectionCode(StrEnum):
     BLOCKLISTED_HASH = "blocklisted_hash"
     SIZE_OUT_OF_BOUNDS = "size_out_of_bounds"
     SEEDERS_BELOW_THRESHOLD = "seeders_below_threshold"
+    # Slice 458 — the title advertises a different console than
+    # the one the operator searched on. Hard reject: platform
+    # mismatch is the one thing the soft-scoring model still
+    # excludes outright (slice 456).
+    PLATFORM_MISMATCH = "platform_mismatch"
 
 
 SearchType = Literal["manual", "auto_added", "missing_scheduled", "cutoff_scheduled", "rss"]
@@ -53,7 +58,19 @@ column's CHECK constraint vocabulary in sync with consumer code."""
 
 
 _ContributionSource = Literal[
-    "region", "language", "custom_format", "dat_match", "size_bonus"
+    "region",
+    "language",
+    "custom_format",
+    "dat_match",
+    "size_bonus",
+    # Slice 456 — soft-scoring sources. The pipeline no longer
+    # hard-rejects on these gates; each appends a (usually
+    # negative) malus contribution instead.
+    "dump_status",
+    "quality",
+    "size",
+    "seeders",
+    "already_owned",
 ]
 
 
@@ -129,14 +146,48 @@ class Candidate(_Base):
     rejection: Rejection | None = None
     would_auto_reject: bool = False
     pre_grab_dat_match: _DatMatchOutcome = "skipped"
+    # Slice 451 — when the cascade matched (outcome="verified" or
+    # "hack"), carry the matched ``dat_entry`` row's canonical
+    # name + DAT authority so the search modal's row-expand panel
+    # can surface *what* the hash matched against, not just *that*
+    # it matched. Both stay None for outcome ∈ {none, skipped}.
+    pre_grab_dat_entry_name: str | None = None
+    pre_grab_dat_entry_source: str | None = None
+    # Hashes the indexer shipped on this candidate (lowercase
+    # hex). Empty when the indexer / source page didn't expose
+    # one. Surfaced in the expand panel so the operator can copy
+    # them and cross-reference manually if needed.
+    hash_sha1: str | None = None
+    hash_md5: str | None = None
+    hash_crc32: str | None = None
+    # Slice 451 — True iff at least one Dump bound to the matched
+    # game already carries an identical hash (SHA-1 / MD5 / CRC32).
+    # Drives the "déjà possédé" badge in the search modal so
+    # operators don't re-grab a duplicate.
+    already_owned: bool = False
     # Identification confidence (0-100). 100 = exact title hit or
     # hash match, ≥ FUZZY_THRESHOLD (85) = fuzzy hit. Surfaces in
     # the manual-search UI as the "title match" half of the
     # operator-facing % score.
     title_match_score: int | None = None
 
+    # Slice 402 — extra indexer metadata projected through from
+    # ``SearchResult`` so the search modal's expanded-row view +
+    # the scorer can use them. All optional; the parser fills in
+    # whatever the torznab/grabarr extended-attrs surfaced.
+    grabs: int | None = None
+    download_volume_factor: float | None = None
+    upload_volume_factor: float | None = None
+    description: str | None = None
+    year: int | None = None
+    genre: str | None = None
+    info_url: str | None = None
+    nfo_url: str | None = None
 
-_IndexerOutcome = Literal["ok", "failed", "cache-hit", "cache-miss"]
+
+_IndexerOutcome = Literal[
+    "ok", "failed", "rate_limited", "cache-hit", "cache-miss"
+]
 
 
 class SearchRoundReport(_Base):

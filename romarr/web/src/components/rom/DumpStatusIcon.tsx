@@ -29,6 +29,9 @@ export interface DumpStatusIconProps {
   className?: string;
   /** Hide the textual label (icon-only) — used in dense lists. */
   iconOnly?: boolean;
+  /** Hide the emoji glyph — surfaces the textual label only.
+   * Wins over ``iconOnly`` when both are set. */
+  noEmoji?: boolean;
 }
 
 const STATUS_ICON: Record<DumpStatus, string> = {
@@ -87,6 +90,24 @@ export function DumpStatusIcon(
     .join(" ")
     .trim();
 
+  if (props.noEmoji) {
+    return (
+      <span
+        className={[
+          "inline-flex items-center rounded-md bg-zinc-800 px-2 py-0.5",
+          "text-xs font-mono font-medium ring-1 ring-inset ring-zinc-700",
+          STATUS_COLORS[props.status],
+          props.className ?? "",
+        ]
+          .join(" ")
+          .trim()}
+        title={STATUS_LABEL[props.status]}
+        aria-label={STATUS_LABEL[props.status]}
+      >
+        {STATUS_LABEL[props.status]}
+      </span>
+    );
+  }
   return (
     <span
       className={className}

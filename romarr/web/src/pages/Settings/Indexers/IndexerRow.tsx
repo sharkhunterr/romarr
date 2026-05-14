@@ -60,11 +60,15 @@ interface IndexerRowProps {
 }
 
 type ToggleField =
+  | "enabled"
   | "enable_rss"
   | "enable_automatic_search"
   | "enable_interactive_search";
 
 const TOGGLE_LABELS: Record<ToggleField, string> = {
+  // Slice 432 — master kill-switch label. When off the indexer
+  // is excluded from every search round / RSS poll / grab.
+  enabled: "indexers.toggle.enabled",
   enable_rss: "indexers.rss",
   enable_automatic_search: "indexers.auto",
   enable_interactive_search: "indexers.interactive",
@@ -153,6 +157,7 @@ export function IndexerRow(props: IndexerRowProps): ReactElement {
             <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-zinc-400">
               {t(`indexers.health.${health}`)}
             </span>
+            <ToggleChip field="enabled" />
             <ToggleChip field="enable_rss" />
             <ToggleChip field="enable_automatic_search" />
             <ToggleChip field="enable_interactive_search" />
@@ -204,6 +209,24 @@ export function IndexerRow(props: IndexerRowProps): ReactElement {
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => flip("enabled")}
+          disabled={toggle.isPending}
+          aria-pressed={indexer.enabled}
+          className={[
+            "min-h-[36px] rounded-md px-3 text-xs font-medium",
+            indexer.enabled
+              ? "border border-zinc-700 bg-brand/15 text-brand hover:bg-brand/25"
+              : "border border-zinc-700 bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+            "disabled:cursor-not-allowed disabled:opacity-60",
+          ].join(" ")}
+        >
+          {indexer.enabled
+            ? t("indexers.action.disable")
+            : t("indexers.action.enable")}
+        </button>
         <button
           type="button"
           onClick={runTest}

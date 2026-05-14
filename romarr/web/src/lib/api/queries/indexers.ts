@@ -33,6 +33,10 @@ export type IndexerTestResult =
   components["schemas"][
     "romarr__indexers__connectivity__ConnectivityTestResult"
   ];
+export type GrabarrWizardRequest =
+  components["schemas"]["GrabarrWizardRequest"];
+export type GrabarrWizardResponse =
+  components["schemas"]["GrabarrWizardResponse"];
 
 const INDEXERS_KEY = ["settings", "indexers"] as const;
 
@@ -80,6 +84,36 @@ export function useCreateIndexer(): UseMutationResult<
   });
 }
 
+/**
+ * Slice 428 / R3b — atomic "Add Grabarr" wizard.
+ *
+ * Hits POST /api/v3/indexer/grabarr, which probes /health on the
+ * operator's Grabarr deploy and then creates the linked
+ * download_client + indexer pair under a single transaction.
+ * Invalidates both the indexer list AND the download-client list
+ * so the Settings → Download Clients view picks the new row up
+ * too without a manual refresh.
+ */
+export function useCreateGrabarrIntegration(): UseMutationResult<
+  GrabarrWizardResponse,
+  ApiError,
+  GrabarrWizardRequest
+> {
+  const qc = useQueryClient();
+  return useMutation<GrabarrWizardResponse, ApiError, GrabarrWizardRequest>({
+    mutationFn: (payload) =>
+      apiFetch<GrabarrWizardResponse>("/api/v3/indexer/grabarr", {
+        method: "POST",
+        json: payload,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: INDEXERS_KEY });
+      // Reuse the same key the download-client queries use.
+      void qc.invalidateQueries({ queryKey: ["settings", "downloadClients"] });
+    },
+  });
+}
+
 export function useDeleteIndexer(): UseMutationResult<
   void,
   ApiError,
@@ -100,11 +134,19 @@ export function useTestIndexer(): UseMutationResult<
   ApiError,
   number
 > {
+  // Slice 431 — the backend now persists ``last_health_*`` on the
+  // row after every manual test. Invalidate the list query so the
+  // row's health dot + badge re-render with the fresh outcome
+  // instead of staying stuck on "untested".
+  const qc = useQueryClient();
   return useMutation<IndexerTestResult, ApiError, number>({
     mutationFn: (id) =>
       apiFetch<IndexerTestResult>(`/api/v3/indexer/${id}/test`, {
         method: "POST",
       }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: INDEXERS_KEY });
+    },
   });
 }
 
@@ -144,6 +186,10 @@ export function useProbeIndexer(): UseMutationResult<
  */
 export interface ToggleIndexerVariables {
   id: number;
+  // Slice 432 — master kill-switch. When false the indexer is
+  // hidden from every search round + RSS poll + grab dispatch
+  // regardless of the per-capability flags below.
+  enabled?: boolean;
   enable_rss?: boolean;
   enable_automatic_search?: boolean;
   enable_interactive_search?: boolean;

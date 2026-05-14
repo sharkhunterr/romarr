@@ -14,6 +14,7 @@
 
 import {
   Activity,
+  Home,
   Library as LibraryIcon,
   Search,
   Settings,
@@ -24,12 +25,13 @@ import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
 
+import { useQueue } from "@/lib/api/queries/queue";
 import { useSearchStore } from "@/lib/store/search";
 
 type RouteEntry = {
   kind: "route";
   to: string;
-  i18nKey: "library" | "wanted" | "activity" | "settings";
+  i18nKey: "home" | "library" | "wanted" | "activity" | "settings";
   Icon: LucideIcon;
 };
 
@@ -42,6 +44,7 @@ type ActionEntry = {
 type NavEntry = RouteEntry | ActionEntry;
 
 const ENTRIES: readonly NavEntry[] = [
+  { kind: "route", to: "/", i18nKey: "home", Icon: Home },
   { kind: "route", to: "/library", i18nKey: "library", Icon: LibraryIcon },
   { kind: "route", to: "/wanted", i18nKey: "wanted", Icon: Star },
   { kind: "route", to: "/activity", i18nKey: "activity", Icon: Activity },
@@ -62,11 +65,34 @@ function entryClass(isActive: boolean): string {
   ].join(" ");
 }
 
-function NavEntryNode(props: { entry: NavEntry; index: number }): ReactElement {
+function NavEntryNode(props: {
+  entry: NavEntry;
+  index: number;
+  badgeCount?: number;
+  badgeTone?: "info" | "warn";
+}): ReactElement {
   const { t } = useTranslation();
   const openSearch = useSearchStore((s) => s.openModal);
   const { entry } = props;
   const label = t(`nav.${entry.i18nKey}`);
+
+  const badge =
+    props.badgeCount && props.badgeCount > 0 ? (
+      <span
+        aria-hidden="true"
+        className={[
+          "absolute -top-0.5 right-1/2 translate-x-[14px]",
+          "min-w-[18px] rounded-full px-1 text-center",
+          "text-[0.55rem] font-bold leading-[16px]",
+          "ring-2 ring-zinc-950",
+          props.badgeTone === "warn"
+            ? "bg-red-500 text-zinc-50"
+            : "bg-brand text-zinc-950",
+        ].join(" ")}
+      >
+        {props.badgeCount > 99 ? "99+" : props.badgeCount}
+      </span>
+    ) : null;
 
   if (entry.kind === "action") {
     return (
@@ -76,9 +102,10 @@ function NavEntryNode(props: { entry: NavEntry; index: number }): ReactElement {
         onClick={openSearch}
         aria-label={label}
         title={label}
-        className={entryClass(false)}
+        className={`relative ${entryClass(false)}`}
       >
         <entry.Icon size={24} strokeWidth={2} aria-hidden="true" />
+        {badge}
       </button>
     );
   }
@@ -87,17 +114,20 @@ function NavEntryNode(props: { entry: NavEntry; index: number }): ReactElement {
     <NavLink
       key={`${entry.to}-${props.index}`}
       to={entry.to}
-      end={entry.to === "/library"}
+      end={entry.to === "/" || entry.to === "/library"}
       aria-label={label}
       title={label}
-      className={({ isActive }) => entryClass(isActive)}
+      className={({ isActive }) => `relative ${entryClass(isActive)}`}
     >
       {({ isActive }) => (
-        <entry.Icon
-          size={24}
-          strokeWidth={isActive ? 2.4 : 2}
-          aria-hidden="true"
-        />
+        <>
+          <entry.Icon
+            size={24}
+            strokeWidth={isActive ? 2.4 : 2}
+            aria-hidden="true"
+          />
+          {badge}
+        </>
       )}
     </NavLink>
   );
@@ -105,6 +135,21 @@ function NavEntryNode(props: { entry: NavEntry; index: number }): ReactElement {
 
 export function BottomNav(): ReactElement {
   const { t } = useTranslation();
+  // Slice 397 — Activity icon badge: queue rows in any state
+  // other than ``completed`` are surfaced as a count. The
+  // queue endpoint already prunes completed entries on
+  // successful import (slice 384), so this reflects "stuff
+  // still happening or stuck". Failed rows count too — they
+  // need operator attention, and a red tone hints at it.
+  const queue = useQueue({ pageSize: 1, sortKey: "last_updated_at", sortDirection: "desc" });
+  const failedCount = useQueue({
+    pageSize: 1,
+    sortKey: "last_updated_at",
+    sortDirection: "desc",
+    state: "failed",
+  });
+  const totalActive = queue.data?.totalRecords ?? 0;
+  const totalFailed = failedCount.data?.totalRecords ?? 0;
   return (
     <nav
       aria-label={t("nav.primary")}
@@ -116,9 +161,21 @@ export function BottomNav(): ReactElement {
         "flex items-stretch",
       ].join(" ")}
     >
-      {ENTRIES.map((entry, index) => (
-        <NavEntryNode key={index} entry={entry} index={index} />
-      ))}
+      {ENTRIES.map((entry, index) => {
+        const isActivity =
+          entry.kind === "route" && entry.i18nKey === "activity";
+        return (
+          <NavEntryNode
+            key={index}
+            entry={entry}
+            index={index}
+            badgeCount={isActivity ? totalActive : undefined}
+            badgeTone={
+              isActivity && totalFailed > 0 ? "warn" : "info"
+            }
+          />
+        );
+      })}
     </nav>
   );
 }

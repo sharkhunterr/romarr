@@ -27,11 +27,15 @@ CL003 (FR-005a) min-version gate: ``test_connection`` queries
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import re
 from datetime import UTC, datetime
 from typing import Any, ClassVar
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 from romarr.downloaders.base import DownloadClient
 from romarr.downloaders.errors import (
@@ -62,6 +66,31 @@ MIN_WEBAPI_VERSION = (2, 8, 3)
 """Minimum supported qBittorrent Web API version (qBit >= 4.4.0)."""
 
 _INFO_HASH_RE = re.compile(r"xt=urn:btih:([0-9a-fA-F]{40}|[A-Z2-7]{32})")
+
+# Slice 416 — token helpers for meta-torrent file selection.
+# Match the orchestrator's slice-415 walker so a file qBit
+# picks at grab time is the same file the importer walks at
+# import time.
+_PATH_TOKEN_RE = re.compile(r"[a-z0-9]+")
+_PATH_STOPWORDS: frozenset[str] = frozenset(
+    {"the", "of", "a", "an", "and", "in", "on", "no", "intro",
+     "rom", "roms", "usa", "europe", "japan", "rev", "rerelease",
+     "nintendo", "sega", "sony", "atari"}
+)
+
+
+def _significant_path_tokens(text: str) -> set[str]:
+    """Lowercase alphanumeric tokens minus noise + ubiquitous
+    manufacturer words. A file living under
+    ``No-Intro/Nintendo - Game Boy Advance/`` shouldn't score
+    against an ``N64 / Nintendo 64`` platform purely on
+    ``nintendo`` — drop manufacturer names so the title /
+    platform-name signal dominates."""
+    return {
+        t
+        for t in _PATH_TOKEN_RE.findall(text.lower())
+        if len(t) >= 2 and t not in _PATH_STOPWORDS
+    }
 """Magnet info-hash extractor: SHA-1 hex (40) or base32 (32)."""
 
 
@@ -287,6 +316,31 @@ class QBittorrentClient(DownloadClient):
                                 "tags": ",".join(tags),
                             },
                         )
+                    # Slice 405 — meta-torrent re-grab (Minerva /
+                    # Erista archives surface many "individual"
+                    # results that all share the same big info-
+                    # hash). When this torrent was already tagged
+                    # ``romarr-imported`` from a prior grab, the
+                    # watcher would skip it and the new
+                    # queue_entry would freeze forever. Strip the
+                    # tag so the watcher re-processes the meta-
+                    # torrent with the fresh queue_entry's
+                    # pre_matched_game_id pointing at the new
+                    # game.
+                    existing_tags = {
+                        t.strip()
+                        for t in str(existing.get("tags") or "").split(",")
+                        if t.strip()
+                    }
+                    if TAG_IMPORTED in existing_tags:
+                        await self._post(
+                            client,
+                            "/torrents/removeTags",
+                            data={
+                                "hashes": magnet_hash.lower(),
+                                "tags": TAG_IMPORTED,
+                            },
+                        )
                     return magnet_hash.lower()
 
             await self._submit_torrent(
@@ -408,7 +462,285 @@ class QBittorrentClient(DownloadClient):
                 },
             )
 
+    async def select_only_matching_file(
+        self,
+        client_native_id: str,
+        *,
+        title_tokens: set[str],
+        platform_tokens: set[str] | None = None,
+        allowed_extensions: frozenset[str] | None = None,
+        target_path: str | None = None,
+    ) -> str | None:
+        """Slice 416 — narrow a meta-torrent to one file via qBit's
+        ``/torrents/filePrio`` API.
+
+        For multi-file torrents (Minerva_Myrient, Erista archives,
+        …), the indexer's "grab this game" result points at a
+        specific file inside a giant shared torrent. Without
+        intervention qBit picks files based on swarm availability
+        and the operator often ends up with the wrong ROM
+        downloaded. We score every file in the torrent by token
+        overlap against the matched game's title + platform,
+        priority-zero everything else, and priority-1 the
+        winning file so qBit only fetches what the operator
+        asked for.
+
+        Single-file torrents are a no-op. Returns the matched
+        file's path inside the torrent on success, ``None`` when
+        no candidate clears the title-overlap floor.
+        """
+        platform_tokens = platform_tokens or set()
+        async with self._new_client() as client:
+            await self._login(client)
+            # Slice 417 — a freshly-added magnet has no metadata
+            # yet (qBit fetches the file list from the DHT, takes
+            # a few seconds). If we read ``/torrents/files``
+            # before that, qBit returns an empty list and we
+            # short-circuit without setting any priority, so qBit
+            # quietly downloads the WHOLE archive (Minerva is
+            # 7.6 TB — never completes, never imports). Poll
+            # ``has_metadata`` first.
+            if not await self._wait_for_metadata(
+                client, client_native_id.lower()
+            ):
+                logger.warning(
+                    "qbit.select_only_matching_file.metadata_timeout "
+                    "native_id=%s",
+                    client_native_id,
+                )
+                return None
+            response = await self._get(
+                client, "/torrents/files", hash=client_native_id.lower()
+            )
+            try:
+                files = response.json()
+            except ValueError:
+                return None
+            if not isinstance(files, list) or len(files) <= 1:
+                # Single-file torrent or unparseable — nothing
+                # to narrow.
+                return None
+
+            # Slice 442 — when the caller provided an explicit
+            # ``target_path`` (Grabarr's ``internal_file_path``
+            # from /resolve, identifying the exact file the
+            # operator picked from the search result), short-
+            # circuit the token-overlap scoring and select that
+            # file directly. Pre-slice the scoring could land on
+            # a different release sharing parent-dir tokens
+            # (user's Crash 3 (Europe) .zip grab losing to a USA
+            # Demo .chd in the same Minerva meta-torrent).
+            #
+            # Path normalisation: Minerva ships paths like
+            # ``./No-Intro/.../file.zip``; qBit prefixes every
+            # entry with the torrent name (``Minerva_Myrient/No-
+            # Intro/.../file.zip``). Compare on the lowercase
+            # suffix — qBit's name should END with the
+            # ``.``-stripped target_path. This handles both the
+            # torrent-name prefix AND the leading-``./`` quirk
+            # without needing to know either side's exact format.
+            if target_path is not None:
+                stripped_target = target_path.lstrip("./").lower()
+                exact_idx: int | None = None
+                for idx, entry in enumerate(files):
+                    if not isinstance(entry, dict):
+                        continue
+                    name = str(entry.get("name") or "")
+                    if not name:
+                        continue
+                    if name.lower().endswith(stripped_target):
+                        exact_idx = idx
+                        break
+                if exact_idx is not None:
+                    all_ids = "|".join(str(i) for i in range(len(files)))
+                    if all_ids:
+                        await self._post(
+                            client,
+                            "/torrents/filePrio",
+                            hash=client_native_id.lower(),
+                            id=all_ids,
+                            priority="0",
+                        )
+                    await self._post(
+                        client,
+                        "/torrents/filePrio",
+                        hash=client_native_id.lower(),
+                        id=str(exact_idx),
+                        priority="1",
+                    )
+                    logger.info(
+                        "qbit.select_only_matching_file.target_path_match "
+                        "native_id=%s idx=%d path=%s",
+                        client_native_id,
+                        exact_idx,
+                        target_path,
+                    )
+                    return str(files[exact_idx].get("name") or target_path)
+                # ``target_path`` was supposed to match but the
+                # qBit-side metadata doesn't carry that path —
+                # fall through to the token-overlap scoring as
+                # a defensive fallback instead of refusing
+                # outright.
+                logger.warning(
+                    "qbit.select_only_matching_file.target_path_miss "
+                    "native_id=%s target=%s candidate_count=%d",
+                    client_native_id,
+                    target_path,
+                    len(files),
+                )
+
+            # Slice 418 — two-pass selection so a meta-torrent
+            # never picks a wrong-platform file. Minerva bundles
+            # 46 000+ ROMs across every platform; an N64
+            # ``GoldenEye 007`` grab against an archive that
+            # only ships the DS apfix versions used to match
+            # the DS file (title overlap = 2, platform overlap
+            # = 0) and qBit downloaded the wrong rom.
+            #
+            # Pass 1: title AND platform overlap (≥ 1 each).
+            # Pass 2 fallback: only when NO candidate anywhere
+            # had any platform overlap — that means the
+            # archive doesn't encode platform info in paths
+            # (e.g. an Erista single-platform release), so
+            # title-only is the best we can do.
+            # Slice 437 — pre-filter to ``allowed_extensions``
+            # when the caller provided them. Pre-slice the loop
+            # scored every file in the torrent, which meant a
+            # PSN ``.rap`` license token sitting next to the
+            # real ``.chd`` in a meta-torrent's per-game folder
+            # scored identically on the parent-dir tokens (same
+            # "Crash", "Bandicoot", "Warped" tokens from the
+            # folder) and could win alphabetically. The .chd
+            # downloaded but the user's queue ended up pointing
+            # at the 16-byte .rap, which the importer then
+            # dumped as the game's release.
+            #
+            # ``allowed_extensions`` comes from grab.py querying
+            # ``platform_format`` for the target game's platform
+            # — built-in pack + user additions, no hardcoded
+            # sets in the download-client layer. ``None`` keeps
+            # the legacy any-extension scoring for callers that
+            # don't know the platform yet (scan-driven imports,
+            # tests).
+            title_matches: list[tuple[int, int, int]] = []  # idx, t_ov, p_ov
+            any_platform_overlap = False
+            for idx, entry in enumerate(files):
+                if not isinstance(entry, dict):
+                    continue
+                name = str(entry.get("name") or "")
+                if not name:
+                    continue
+                if allowed_extensions is not None:
+                    suffix = (
+                        f".{name.rsplit('.', 1)[-1].lower()}"
+                        if "." in name
+                        else ""
+                    )
+                    if suffix not in allowed_extensions:
+                        continue
+                path_tokens = _significant_path_tokens(name)
+                title_overlap = len(title_tokens & path_tokens)
+                platform_overlap = len(platform_tokens & path_tokens)
+                if platform_overlap > 0:
+                    any_platform_overlap = True
+                if title_overlap == 0:
+                    continue
+                title_matches.append((idx, title_overlap, platform_overlap))
+
+            strict = [m for m in title_matches if m[2] > 0]
+            pool = strict if strict else (
+                title_matches if not any_platform_overlap else []
+            )
+            if not pool:
+                logger.warning(
+                    "qbit.select_only_matching_file.no_platform_match "
+                    "native_id=%s title=%s platform=%s candidates=%d",
+                    client_native_id,
+                    sorted(title_tokens),
+                    sorted(platform_tokens),
+                    len(title_matches),
+                )
+                # Block the torrent from downloading anything —
+                # we know the operator's target file isn't in
+                # this archive. Caller (grab.py) sees the None
+                # return and the queue_entry stays as-is for
+                # manual cleanup, but at least qBit doesn't
+                # wander off downloading 7.6 TB.
+                all_ids = "|".join(str(i) for i in range(len(files)))
+                if all_ids:
+                    await self._post(
+                        client,
+                        "/torrents/filePrio",
+                        data={
+                            "hash": client_native_id.lower(),
+                            "id": all_ids,
+                            "priority": "0",
+                        },
+                    )
+                return None
+
+            best_idx, _, _ = max(pool, key=lambda m: (m[1], m[2]))
+
+            other_ids = "|".join(
+                str(i) for i in range(len(files)) if i != best_idx
+            )
+            # Two POSTs — qBit's filePrio takes one priority value
+            # at a time but accepts a list of file ids.
+            if other_ids:
+                await self._post(
+                    client,
+                    "/torrents/filePrio",
+                    data={
+                        "hash": client_native_id.lower(),
+                        "id": other_ids,
+                        "priority": "0",
+                    },
+                )
+            await self._post(
+                client,
+                "/torrents/filePrio",
+                data={
+                    "hash": client_native_id.lower(),
+                    "id": str(best_idx),
+                    "priority": "1",
+                },
+            )
+            picked = files[best_idx]
+            return str(picked.get("name") or "")
+
     # ---- internals ------------------------------------------------------------
+
+    async def _wait_for_metadata(
+        self,
+        client: httpx.AsyncClient,
+        info_hash: str,
+        *,
+        timeout: float = 30.0,
+        interval: float = 0.5,
+    ) -> bool:
+        """Slice 417 — block until qBit reports ``has_metadata=true``
+        for the given hash, or ``timeout`` seconds elapse.
+
+        Magnet adds give qBit only the info-hash; the file list
+        comes later via the DHT/peer metadata exchange. Reading
+        ``/torrents/files`` before metadata is in returns an
+        empty list, so callers (slice 416's filePrio narrowing)
+        must wait or they silently no-op and qBit downloads the
+        whole torrent.
+
+        Returns ``True`` once ``has_metadata`` flips to true,
+        ``False`` on timeout. qBit's piece-request engine is
+        gated on metadata anyway, so no data is downloaded
+        during the wait — the only cost is the operator
+        watching a brief delay between grab and download start.
+        """
+        deadline = asyncio.get_event_loop().time() + timeout
+        while asyncio.get_event_loop().time() < deadline:
+            row = await self._fetch_torrent_by_hash(client, info_hash)
+            if row is not None and bool(row.get("has_metadata")):
+                return True
+            await asyncio.sleep(interval)
+        return False
 
     async def _fetch_torrent_by_hash(
         self, client: httpx.AsyncClient, info_hash: str
@@ -467,16 +799,30 @@ class QBittorrentClient(DownloadClient):
               ``.torrent`` payload directly;
             * ``None`` when the URL is plain HTTP and qBit can
               fetch it itself (the original behaviour).
+
+        Raises :class:`DownloaderError` on 4xx / 5xx so the
+        caller doesn't fall through to qBit's silent failure
+        path (slice 406 — the user observed a Prowlarr 429 on
+        the download URL leading qBit to list the *previous*
+        torrent in the category as the "just-added" one,
+        polluting the queue_entry with a stale hash).
         """
         try:
+            # Slice 420 — share the download client's configured
+            # timeout. Indexers that proxy through a slow upstream
+            # (Prowlarr -> Grabarr) routinely take past 15 s; the
+            # operator now controls this from Settings → Download
+            # Clients.
             async with httpx.AsyncClient(
-                timeout=15.0,
+                timeout=self._timeout,
                 verify=self._verify,
                 follow_redirects=False,
             ) as probe:
                 response = await probe.get(url)
-        except httpx.HTTPError:
-            return None
+        except httpx.HTTPError as exc:
+            raise DownloaderError(
+                f"indexer download URL fetch failed: {exc}"
+            ) from exc
 
         if response.status_code in (301, 302, 303, 307, 308):
             location = response.headers.get("location", "")
@@ -501,8 +847,18 @@ class QBittorrentClient(DownloadClient):
             )
             if looks_like_torrent and body:
                 return TorrentBytes(data=body)
+            # 200 OK with non-torrent payload — let qBit have a
+            # shot (might be HTML the operator can debug).
+            return None
 
-        return None
+        # 4xx / 5xx from the indexer (Prowlarr 429 is the common
+        # case). Surfacing as a DownloaderError keeps the grab
+        # flow from silently storing a stale hash via
+        # ``_discover_added_hash``.
+        raise DownloaderError(
+            f"indexer download URL returned HTTP {response.status_code} — "
+            "the torrent file was not delivered (likely rate-limited)"
+        )
 
     async def _discover_added_hash(
         self, client: httpx.AsyncClient, source: TorrentSource

@@ -20,7 +20,7 @@
  * sticky-top so it stays in reach as the operator scrolls.
  */
 
-import { Search, Trash2 } from "lucide-react";
+import { Check, Clock, Search, ShieldCheck, Trash2 } from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -108,6 +108,24 @@ export function GameHeader(props: GameHeaderProps): ReactElement {
               🔒
             </span>
           )}
+          {/* Slice 447 — DAT-verified shield overlay on the
+              cover so the operator sees the verification status
+              at a glance, even before tabbing into Files. */}
+          {(game.dat_verified_dump_count ?? 0) > 0 && (
+            <span
+              aria-hidden="true"
+              title={t("header.datVerifiedTooltip", {
+                count: game.dat_verified_dump_count ?? 0,
+              })}
+              className={[
+                "absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center",
+                "rounded-full bg-emerald-700/85 text-emerald-100 ring-1 ring-inset ring-emerald-400/60",
+                "backdrop-blur-sm",
+              ].join(" ")}
+            >
+              <ShieldCheck size={12} strokeWidth={2.5} />
+            </span>
+          )}
         </button>
 
         {coverEditOpen && (
@@ -133,6 +151,37 @@ export function GameHeader(props: GameHeaderProps): ReactElement {
             {releaseYear !== null && (
               <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-zinc-400">
                 {releaseYear}
+              </span>
+            )}
+            {/* Slice 395 — acquired / wanted status pill. */}
+            {game.acquired ? (
+              <span
+                title={t("header.status.acquiredTooltip")}
+                className="inline-flex items-center gap-0.5 rounded-full bg-emerald-700/30 px-1.5 py-0.5 font-medium text-emerald-200 ring-1 ring-inset ring-emerald-500/40"
+              >
+                <Check size={10} strokeWidth={3} aria-hidden="true" />
+                {t("header.status.acquired")}
+              </span>
+            ) : game.monitored ? (
+              <span
+                title={t("header.status.wantedTooltip")}
+                className="inline-flex items-center gap-0.5 rounded-full bg-amber-700/30 px-1.5 py-0.5 font-medium text-amber-200 ring-1 ring-inset ring-amber-500/40"
+              >
+                <Clock size={10} strokeWidth={2.5} aria-hidden="true" />
+                {t("header.status.wanted")}
+              </span>
+            ) : null}
+            {(game.dat_verified_dump_count ?? 0) > 0 && (
+              <span
+                title={t("header.datVerifiedTooltip", {
+                  count: game.dat_verified_dump_count ?? 0,
+                })}
+                className="inline-flex items-center gap-0.5 rounded-full bg-emerald-700/30 px-1.5 py-0.5 font-medium text-emerald-200 ring-1 ring-inset ring-emerald-500/40"
+              >
+                <ShieldCheck size={10} strokeWidth={2.5} aria-hidden="true" />
+                {t("header.datVerifiedPill", {
+                  count: game.dat_verified_dump_count ?? 0,
+                })}
               </span>
             )}
             {game.publisher && (

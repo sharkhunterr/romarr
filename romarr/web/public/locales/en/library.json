@@ -37,6 +37,9 @@
     "reset": {
       "label": "✕ Clear filters",
       "aria": "Clear every active filter (search, platform, library, tag, monitored, genre, region, year)"
+    },
+    "advanced": {
+      "label": "Filters"
     }
   },
   "fab": {
@@ -70,11 +73,19 @@
   "count_other": "{{count}} games",
   "card": {
     "unmonitoredTooltip": "Not monitored — Romarr won't search for upgrades",
-    "unmonitoredAria": "{{title}} (not monitored)",
+    "unmonitoredAria": "Not monitored",
+    "acquiredTooltip": "On disk — at least one Release imported",
+    "acquiredAria": "On disk",
+    "wantedTooltip": "Wanted — monitored but the file isn't here yet",
+    "wantedAria": "Wanted",
     "selectAria": "Select {{title}}",
     "deselectAria": "Deselect {{title}}",
     "tagsAria_one": "{{count}} tag",
-    "tagsAria_other": "{{count}} tags"
+    "tagsAria_other": "{{count}} tags",
+    "datVerifiedTooltip_one": "{{count}} file verified against a DAT (No-Intro / Redump / …)",
+    "datVerifiedTooltip_other": "{{count}} files verified against a DAT (No-Intro / Redump / …)",
+    "datVerifiedAria_one": "{{count}} DAT-verified file",
+    "datVerifiedAria_other": "{{count}} DAT-verified files"
   },
   "bulk": {
     "enterSelection": "Select",

@@ -71,6 +71,9 @@ export function CreateDownloadClientModal(
   const [enableUsenet, setEnableUsenet] = useState(
     props.editing?.enable_for_usenet ?? false,
   );
+  const [timeoutSeconds, setTimeoutSeconds] = useState<number>(
+    props.editing?.timeout_seconds ?? 60,
+  );
 
   // qBittorrent / Transmission / Deluge: username + password.
   // SAB / NZBGet (Newznab): api_key.
@@ -83,7 +86,10 @@ export function CreateDownloadClientModal(
     host.trim().length > 0 &&
     Number.isFinite(port) &&
     port > 0 &&
-    port <= 65535;
+    port <= 65535 &&
+    Number.isFinite(timeoutSeconds) &&
+    timeoutSeconds >= 5 &&
+    timeoutSeconds <= 600;
 
   // Build the same payload the backend's create / probe / update
   // endpoints all consume. For edit-without-secret-rewrite we
@@ -111,6 +117,7 @@ export function CreateDownloadClientModal(
       category_default: props.editing?.category_default ?? "romarr",
       priority: props.editing?.priority ?? 1,
       ssl_cert_validation: props.editing?.ssl_cert_validation ?? "enabled",
+      timeout_seconds: timeoutSeconds,
       api_key: includeSecrets && usesApiKey ? apiKey.trim() || null : null,
       username: !usesApiKey ? username.trim() || null : null,
       password:
@@ -137,6 +144,7 @@ export function CreateDownloadClientModal(
         enable_for_torrents: enableTorrents,
         enable_for_usenet: enableUsenet,
         username: !usesApiKey ? username.trim() || null : null,
+        timeout_seconds: timeoutSeconds,
       };
       if (!usesApiKey && password.trim().length > 0) {
         payload.password = password.trim();
@@ -407,6 +415,27 @@ export function CreateDownloadClientModal(
               />
             </label>
           </fieldset>
+
+          <label className="block">
+            <span className="mb-1 block text-[0.65rem] uppercase tracking-widest text-zinc-500">
+              {t("downloadClients.create.timeoutLabel")}
+            </span>
+            <input
+              type="number"
+              min={5}
+              max={600}
+              step={5}
+              value={timeoutSeconds}
+              onChange={(e) =>
+                setTimeoutSeconds(Number.parseInt(e.target.value, 10) || 0)
+              }
+              disabled={submitting}
+              className="w-28 rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
+            />
+            <p className="mt-1 text-[0.65rem] text-zinc-500">
+              {t("downloadClients.create.timeoutHint")}
+            </p>
+          </label>
 
           {(probeResult || probeError) && (
             <div

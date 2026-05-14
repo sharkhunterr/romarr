@@ -228,8 +228,18 @@ async def preload_indexers(
     indexer_ids: list[int] | None = None,
     require_rss: bool = False,
 ) -> list[Indexer]:
-    """Return enabled indexer rows; optionally filtered by id or RSS gating."""
-    stmt = select(Indexer)
+    """Return enabled indexer rows; optionally filtered by id or RSS gating.
+
+    Slice 434 — actually respects the ``Indexer.enabled`` master
+    switch (slice 432 added the column + chip; the registry's
+    ``load_enabled`` honoured it but every search round goes
+    through THIS preload helper instead, so disabled indexers
+    were still showing up in manual search results, Wanted
+    refresh, RSS polls, etc.). Filtering at the source means the
+    three callers (manual / release / rss rounds) all benefit
+    without each having to add their own predicate.
+    """
+    stmt = select(Indexer).where(Indexer.enabled.is_(True))
     if indexer_ids is not None:
         stmt = stmt.where(Indexer.id.in_(indexer_ids))
     rows = (await session.execute(stmt)).scalars().all()

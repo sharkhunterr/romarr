@@ -73,6 +73,29 @@ export function useCreateQualityProfile(): UseMutationResult<
   });
 }
 
+export interface UpdateQualityProfileVariables {
+  id: number;
+  payload: Partial<QualityProfileCreate>;
+}
+
+export function useUpdateQualityProfile(): UseMutationResult<
+  QualityProfile,
+  ApiError,
+  UpdateQualityProfileVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<QualityProfile, ApiError, UpdateQualityProfileVariables>({
+    mutationFn: ({ id, payload }) =>
+      apiFetch<QualityProfile>(`/api/v3/qualityprofile/${id}`, {
+        method: "PUT",
+        json: payload,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: QUALITY_PROFILES_KEY });
+    },
+  });
+}
+
 export function useDeleteQualityProfile(): UseMutationResult<
   void,
   ApiError,

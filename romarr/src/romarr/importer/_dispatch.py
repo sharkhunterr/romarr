@@ -92,6 +92,7 @@ def build_managed_download_dispatcher(
             from sqlalchemy import select as _select
 
             from romarr.api.models import QueueEntry
+            from romarr.importer.models import ImportHistory
 
             qrow = (
                 await lookup_session.execute(
@@ -106,6 +107,50 @@ def build_managed_download_dispatcher(
                 pre_game_id = qrow.game_id
                 pre_release_id = qrow.release_id
 
+            # Slice 459 — double-dispatch guard. If the source file
+            # is already gone AND a prior import for this exact
+            # (client, native_id) pair succeeded, a previous
+            # dispatch already consumed it (extracted + moved). The
+            # second dispatch — watcher re-tick after a restart,
+            # reconciler recovery, manual re-trigger — must NOT
+            # raise FileNotFoundError and flip the queue_entry to
+            # ``failed``. Treat it as the no-op coalesced success
+            # it really is: settle the queue_entry clean and
+            # return.
+            if not Path(save_path).exists():
+                prior_ok = (
+                    await lookup_session.execute(
+                        _select(ImportHistory.id)
+                        .where(
+                            ImportHistory.download_client_id
+                            == item.client_id,
+                            ImportHistory.download_client_native_id
+                            == item.client_native_id,
+                            ImportHistory.success.is_(True),
+                        )
+                        .limit(1)
+                    )
+                ).scalar_one_or_none()
+                if prior_ok is not None:
+                    logger.info(
+                        "watcher_dispatch.already_imported "
+                        "client_id=%s native_id=%s — source gone, "
+                        "prior import #%s succeeded; settling clean",
+                        item.client_id,
+                        item.client_native_id,
+                        prior_ok,
+                    )
+                    await _settle_queue_entry(
+                        session=lookup_session,
+                        client_id=item.client_id,
+                        native_id=item.client_native_id,
+                        title=item.name,
+                        success=True,
+                        error_msg=None,
+                    )
+                    await lookup_session.commit()
+                    return
+
         context = ImportContext(
             source_path=Path(save_path),
             correlation_id=uuid4(),
@@ -117,34 +162,49 @@ def build_managed_download_dispatcher(
         )
 
         async with sessionmaker() as session:
+            success: bool
+            error_msg: str | None
             try:
                 outcome = await run_import(
                     context,
                     session=session,
                     event_channel=event_channel,
                 )
-            except Exception:
+                success = outcome.success
+                error_msg = outcome.error_msg
+            except Exception as exc:
+                # Slice 390 — an *uncaught* run_import failure
+                # (PermissionError on the library tree, DB error,
+                # etc.) used to leave the queue_entry frozen at
+                # ``completed`` forever and the operator saw
+                # nothing in the UI. Treat it as a hard failure
+                # for queue purposes — the dispatcher's ``raise``
+                # below still notifies the watcher, but the queue
+                # row gets the truthful ``state='failed'`` plus
+                # a class-name+message so the operator can act
+                # without digging into logs.
+                success = False
+                error_msg = f"{type(exc).__name__}: {exc}"
                 logger.exception(
                     "watcher_dispatch.run_import_failed "
                     "client_id=%s native_id=%s",
                     item.client_id,
                     item.client_native_id,
                 )
-                raise
 
-            # Slice 384 — settle the originating queue_entry. On
-            # success the row vanishes (Activity → Queue is for
-            # in-flight or failed work; the audit trail lives in
-            # ``import_history``). On failure the row flips to
-            # ``failed`` with the rejection reason on
-            # ``error_msg`` so the operator can see + retry.
+            # Slice 384/389 — settle the originating queue_entry.
+            # On success the row vanishes; on failure it flips to
+            # ``state='failed'`` (or a synthetic row gets inserted
+            # when no queue_entry matches the (client_id,
+            # native_id) pair).
             try:
                 await _settle_queue_entry(
                     session=session,
                     client_id=item.client_id,
                     native_id=item.client_native_id,
-                    success=outcome.success,
-                    error_msg=outcome.error_msg,
+                    title=item.name,
+                    success=success,
+                    error_msg=error_msg,
                 )
             except Exception:
                 logger.exception(
@@ -154,6 +214,15 @@ def build_managed_download_dispatcher(
                     item.client_native_id,
                 )
 
+            # We deliberately don't re-raise even on the
+            # unstructured exception path: the queue_entry is now
+            # the authoritative surface for the operator, and the
+            # watcher's per-item exception handler would just log
+            # the same thing twice. The next tick re-evaluates
+            # the same download (no ``romarr-imported`` tag yet)
+            # so a transient cause (permissions just chowned,
+            # disk just remounted) auto-recovers.
+
     return dispatch
 
 
@@ -162,18 +231,24 @@ async def _settle_queue_entry(
     session: "AsyncSession",
     client_id: int,
     native_id: str,
+    title: str | None,
     success: bool,
     error_msg: str | None,
 ) -> None:
     """Reconcile the queue_entry mirror with the import outcome.
 
-    Success → delete the row so the Activity → Queue tab only
-    keeps in-flight or failed work visible.
+    Success + matching row → delete the row so the
+    Activity → Queue tab only keeps in-flight or failed work
+    visible. Success + no matching row → no-op (nothing to
+    surface).
 
-    Failure → set ``state='failed'`` + populate ``error_msg`` so
-    the operator's queue list surfaces the rejection reason
-    (e.g. ``extract:bad-archive``, ``match:no_game``) without
-    needing to dig into history.
+    Failure + matching row → set ``state='failed'`` + populate
+    ``error_msg`` so the queue list surfaces the rejection
+    reason (e.g. ``extract:bad-archive``, ``match:no_game``).
+    Failure + no matching row → insert a synthetic row in the
+    same state so the operator sees the failure even when the
+    download didn't go through ``manual_grab`` (Sonarr-compat
+    add, hash drift, etc.).
     """
     from sqlalchemy import select as _select
 
@@ -188,6 +263,19 @@ async def _settle_queue_entry(
         )
     ).scalar_one_or_none()
     if row is None:
+        if success:
+            return
+        session.add(
+            QueueEntry(
+                download_client_id=client_id,
+                download_client_native_id=native_id,
+                title=title,
+                state="failed",
+                progress=1.0,
+                error_msg=error_msg or "import_failed",
+            )
+        )
+        await session.commit()
         return
     if success:
         await session.delete(row)

@@ -59,16 +59,91 @@ async def authed_client(
 async def test_paginated_log_entries_returns_canonical_envelope(
     authed_client: httpx.AsyncClient, log_dir: Path
 ) -> None:
-    """MVP — empty list with the pinned schema. Frontend wires
-    against the documented camelCase keys today; entries
-    materialise once the structlog → JSON-line file sink ships."""
+    """The endpoint returns the canonical pagination envelope,
+    even when the in-memory ring buffer is empty (it may still
+    hold app-startup records — we just check the shape)."""
     resp = await authed_client.get("/api/v3/system/log?page=1&pageSize=10")
     assert resp.status_code == 200
     body = resp.json()
     assert body["page"] == 1
     assert body["pageSize"] == 10
-    assert body["totalRecords"] == 0
-    assert body["records"] == []
+    # totalRecords + records are buffer-driven; we just check
+    # types so the contract holds even when the buffer has any
+    # number of entries.
+    assert isinstance(body["totalRecords"], int)
+    assert isinstance(body["records"], list)
+
+
+@pytest.mark.asyncio
+async def test_log_entries_capture_emitted_records(
+    authed_client: httpx.AsyncClient, log_dir: Path
+) -> None:
+    """Slice 391 — emitted log records surface on the endpoint
+    via the in-memory ring buffer."""
+    import logging
+
+    from romarr.api.log_capture import LOG_BUFFER, install
+
+    install()  # idempotent — the lifespan also calls this
+    LOG_BUFFER.clear()
+    test_logger = logging.getLogger("romarr.test_capture")
+    test_logger.setLevel(logging.DEBUG)
+    test_logger.error("boom: %s", "kapow")
+    try:
+        raise ValueError("explicit traceback")
+    except ValueError:
+        test_logger.exception("with_traceback")
+
+    resp = await authed_client.get(
+        "/api/v3/system/log?page=1&pageSize=50&logger=test_capture"
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    titles = [r["message"] for r in body["records"]]
+    assert "boom: kapow" in titles
+    assert "with_traceback" in titles
+    # Newest first.
+    assert body["records"][0]["message"] == "with_traceback"
+    # Exception payload includes the traceback.
+    excepted = next(
+        r for r in body["records"] if r["message"] == "with_traceback"
+    )
+    assert "ValueError" in (excepted["exception"] or "")
+
+
+@pytest.mark.asyncio
+async def test_log_entries_level_filter(
+    authed_client: httpx.AsyncClient, log_dir: Path
+) -> None:
+    """``?level=error`` keeps only ERROR + CRITICAL records."""
+    import logging
+
+    from romarr.api.log_capture import LOG_BUFFER, install
+
+    install()
+    LOG_BUFFER.clear()
+    lg = logging.getLogger("romarr.test_capture_level")
+    lg.setLevel(logging.DEBUG)
+    lg.info("info-line")
+    lg.error("error-line")
+
+    resp = await authed_client.get(
+        "/api/v3/system/log?page=1&pageSize=50&logger=test_capture_level&level=error"
+    )
+    assert resp.status_code == 200
+    msgs = [r["message"] for r in resp.json()["records"]]
+    assert msgs == ["error-line"]
+
+
+@pytest.mark.asyncio
+async def test_log_entries_invalid_level_400(
+    authed_client: httpx.AsyncClient, log_dir: Path
+) -> None:
+    resp = await authed_client.get(
+        "/api/v3/system/log?level=screaming"
+    )
+    assert resp.status_code == 400
+    assert resp.json()["errorCode"] == "invalid_log_level"
 
 
 # ---------------------------------------------------------------------------

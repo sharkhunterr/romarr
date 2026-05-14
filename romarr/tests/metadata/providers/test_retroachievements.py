@@ -41,7 +41,7 @@ async def test_get_game_populates_only_achievements_count(
         "NumAchievements": 42,
     }
     with respx.mock:
-        respx.get("https://retroachievements.org/API/API_GetGame.php").mock(
+        respx.get("https://retroachievements.org/API/API_GetGameExtended.php").mock(
             return_value=httpx.Response(200, json=payload)
         )
         meta = await p.get_game("1234")
@@ -58,7 +58,7 @@ async def test_get_game_no_achievements_returns_empty_fields(
     p = _make_provider(ra_client)
 
     with respx.mock:
-        respx.get("https://retroachievements.org/API/API_GetGame.php").mock(
+        respx.get("https://retroachievements.org/API/API_GetGameExtended.php").mock(
             return_value=httpx.Response(
                 200,
                 json={"ID": 1, "Title": "Some Game", "NumAchievements": 0},
@@ -74,7 +74,7 @@ async def test_get_game_unknown_id_raises_not_found(
 ) -> None:
     p = _make_provider(ra_client)
     with respx.mock:
-        respx.get("https://retroachievements.org/API/API_GetGame.php").mock(
+        respx.get("https://retroachievements.org/API/API_GetGameExtended.php").mock(
             return_value=httpx.Response(200, json={})
         )
         with pytest.raises(NotFoundError):
@@ -95,7 +95,7 @@ async def test_search_games_filters_by_console(
         respx.get("https://retroachievements.org/API/API_GetGameList.php").mock(
             return_value=httpx.Response(200, json=payload)
         )
-        results = await p.search_games("Sonic", platform_slug="megadrive")
+        results = await p.search_games("Sonic", platform_slug="genesis")
 
     titles = {r.title for r in results}
     assert titles == {"Sonic the Hedgehog", "Sonic 2"}
@@ -142,11 +142,14 @@ def test_capabilities_only_achievements_count() -> None:
     assert cap.invoked_in_scan is True
 
 
-def test_platform_mapping_megadrive_is_1() -> None:
+def test_platform_mapping_genesis_is_1() -> None:
     p = RetroAchievementsProvider(
         rate_limit_rps=100,
         rate_limit_burst=100,
         client=httpx.AsyncClient(),
     )
-    assert p.get_platform_mapping("megadrive") == 1
-    assert p.get_platform_mapping("psx") is None
+    # Slice 411 widened the default mapping to cover most major
+    # consoles including disc-based ones.
+    assert p.get_platform_mapping("genesis") == 1
+    assert p.get_platform_mapping("psx") == 12
+    assert p.get_platform_mapping("unknown-slug") is None

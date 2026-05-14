@@ -6,8 +6,36 @@
     "releases": "Releases",
     "history": "Historique",
     "files": "Fichiers",
+    "metadata": "Métadonnées",
     "notes": "Notes",
     "ariaLabel": "Onglets Jeu"
+  },
+  "metadata": {
+    "title": "Sources de métadonnées",
+    "subtitle": "Snapshot par fournisseur — IDs, payloads en cache, hashes des fichiers sur disque.",
+    "loadError": "Impossible de charger les métadonnées.",
+    "open": "ouvrir",
+    "fetchedAt": "récupéré {{value}}",
+    "expiresAt": "TTL jusqu'au {{value}}",
+    "noCache": "Pas encore de payload en cache — rafraîchissez l'agrégateur de métadonnées pour remplir la contribution de ce fournisseur.",
+    "providerName": {
+      "igdb": "IGDB",
+      "mobygames": "MobyGames",
+      "screenscraper": "ScreenScraper",
+      "launchbox": "LaunchBox",
+      "retroachievements": "RetroAchievements"
+    },
+    "fields": {
+      "title": "Titre"
+    },
+    "empty": {
+      "title": "Aucune donnée provider",
+      "body": "Liez un ID provider via le lookup-add, ou lancez un refresh métadonnées pour remplir cet onglet."
+    },
+    "hashes": {
+      "title": "Hashes fichiers",
+      "subtitle": "SHA-1 / MD5 / CRC32 de chaque Dump importé pour ce jeu. Utile pour vérifier vis-à-vis des DAT files externes."
+    }
   },
   "delete": {
     "button": "Supprimer le jeu"
@@ -16,7 +44,17 @@
     "summary": {
       "showMore": "Afficher plus",
       "showLess": "Réduire"
-    }
+    },
+    "status": {
+      "acquired": "Sur disque",
+      "acquiredTooltip": "Au moins une release importée et présente sur le disque.",
+      "wanted": "Souhaité",
+      "wantedTooltip": "Suivi — Romarr cherchera jusqu'à ce qu'une release arrive."
+    },
+    "datVerifiedPill_one": "DAT ✓",
+    "datVerifiedPill_other": "DAT ✓ ×{{count}}",
+    "datVerifiedTooltip_one": "1 fichier vérifié contre une base DAT (No-Intro / Redump / …).",
+    "datVerifiedTooltip_other": "{{count}} fichiers vérifiés contre une base DAT (No-Intro / Redump / …)."
   },
   "notes": {
     "heading": "Notes",
@@ -119,7 +157,22 @@
       "on": "Suivie",
       "off": "Pause"
     },
-    "multiDiscTitle": "{{title}} — {{total}} disques"
+    "multiDiscTitle": "{{title}} — {{total}} disques",
+    "expand": "Plus d'infos",
+    "collapse": "Réduire",
+    "disc": "Disc {{n}}/{{total}}",
+    "detail": {
+      "datSource": "Autorité DAT",
+      "datEntry": "Nom canonique",
+      "datStatus": "Statut DAT",
+      "datStatusVerified": "Vérifié",
+      "datStatusInvalid": "BADDUMP / HACK / OVERDUMP",
+      "releaseId": "ID release",
+      "namingConvention": "Convention de nommage",
+      "revision": "Révision",
+      "cutoff": "Cutoff",
+      "cutoffMet": "Atteint"
+    }
   },
   "history": {
     "loadError": "Impossible de charger l'historique",
@@ -192,7 +245,17 @@
       "title": "Aucun fichier importé",
       "body": "Dès qu'une release est importée, le dump sur disque (hashes, vérif DAT, taille, format) apparaît ici."
     },
-    "importedAt": "importé le {{when}} via {{via}}"
+    "importedAt": "importé le {{when}} via {{via}}",
+    "datMatch": {
+      "title": "Correspondance DAT",
+      "source": "Autorité",
+      "entryName": "Nom canonique",
+      "entrySize": "Taille indexée",
+      "entryStatus": "Statut",
+      "ok": "Hash vérifié contre la base — fichier conforme à l'entrée DAT.",
+      "warning": "Hash trouvé dans le DAT mais l'entrée est marquée non-conforme (BADDUMP / HACK / OVERDUMP)."
+    },
+    "verifiedHeader": "Vérifié DAT"
   },
   "pendingDownloads": {
     "title_one": "{{count}} téléchargement en cours",
@@ -205,6 +268,10 @@
     "headerButton": "Recherche manuelle",
     "title": "Recherche manuelle",
     "close": "Fermer",
+    "datBadge": {
+      "verifiedTooltip": "Hash de cette release reconnu comme conforme dans la base DAT.",
+      "hackTooltip": "Hash de cette release trouvé dans la base DAT mais marqué hack/baddump."
+    },
     "empty": "Aucun candidat. Essayez une autre requête ou vérifiez que des indexers sont activés.",
     "noIndexers": "Aucun indexer configuré — la recherche ne renverra rien tant qu'au moins un indexer Newznab/Torznab n'est pas activé dans Réglages → Indexers.",
     "query": {
@@ -238,12 +305,52 @@
     "seeders_one": "{{count}} seeder",
     "seeders_other": "{{count}} seeders",
     "rejected": "Rejeté",
+    "outcome": {
+      "rateLimited_one": "Indexeur rate-limité (HTTP 429). Patientez puis réessayez — l'indexeur en amont nous a demandé de ralentir, tous les résultats ont été ignorés.",
+      "rateLimited_other": "{{count}} indexeurs rate-limités (HTTP 429). Patientez puis réessayez — l'indexeur en amont a demandé de ralentir.",
+      "failed_one": "L'indexeur a renvoyé une erreur. Vérifiez sa santé dans Paramètres → Indexeurs.",
+      "failed_other": "{{count}} indexeurs en erreur. Vérifiez Paramètres → Indexeurs."
+    },
+    "detail": {
+      "fields": {
+        "indexer": "Indexeur",
+        "guid": "GUID",
+        "size": "Taille",
+        "languages": "Langues",
+        "fileFormat": "Format fichier",
+        "titleScore": "Score titre",
+        "scoreBreakdown": "Décomposition score",
+        "downloadUrl": "URL téléchargement",
+        "grabs": "Téléchargements",
+        "downloadVolumeFactor": "Ratio téléchargement",
+        "uploadVolumeFactor": "Ratio upload",
+        "freeleech": "Freeleech",
+        "year": "Année",
+        "genre": "Genre",
+        "description": "Notes",
+        "infoUrl": "Page du tracker",
+        "nfoUrl": "NFO",
+        "datMatchSource": "Autorité DAT",
+        "datMatchEntry": "Nom canonique DAT",
+        "datMatchStatus": "Statut DAT",
+        "alreadyOwned": "Doublon"
+      },
+      "datStatus": {
+        "verified": "Vérifié — l'entrée DAT confirme un dump conforme.",
+        "invalid": "Non valide — l'entrée DAT est marquée BADDUMP / HACK / OVERDUMP."
+      },
+      "alreadyOwnedBody": "Une release du jeu possède déjà un fichier avec ce hash."
+    },
+    "alreadyOwnedPill": "Déjà possédé",
+    "alreadyOwnedTooltip": "Le hash de cette release correspond à un fichier déjà importé pour ce jeu — éviter le re-grab.",
     "facet": {
       "platform": "Plateforme",
       "region": "Région",
       "languages": "Langues",
       "dumpStatus": "Statut du dump",
+      "dumpStatusDatValidated": "Type confirmé par le DAT — dump complet et conforme",
       "naming": "Convention de nommage",
+      "namingDatValidated": "Convention confirmée par l'autorité DAT (No-Intro / Redump / …)",
       "fileFormat": "Format de fichier",
       "unknownLabel": {
         "platform": "Plateforme ?",
@@ -270,6 +377,10 @@
     },
     "rejection": {
       "blocklisted": "Déjà sur la blocklist",
+      "blocklisted_guid": "Déjà sur la blocklist (GUID)",
+      "blocklisted_hash": "Déjà sur la blocklist (hash)",
+      "no_game_match": "Aucun jeu suivi ne correspond",
+      "platform_mismatch": "Mauvaise console — le titre indique une autre plateforme",
       "below_quality_floor": "Sous le seuil qualité",
       "size_out_of_range": "Taille hors plage autorisée",
       "below_score_floor": "Sous le seuil de score",

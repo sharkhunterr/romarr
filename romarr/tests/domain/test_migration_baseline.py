@@ -60,11 +60,15 @@ def test_migration_creates_nine_tables_and_seeds_five_platforms(tmp_path: Path) 
         platforms = cur.execute(
             "SELECT slug FROM platform ORDER BY id"
         ).fetchall()
+        # Slice 401 — alembic 0019 renames ``megadrive`` to the
+        # RomM-canonical ``genesis`` for folder-name alignment.
+        # Slice 455 — alembic 0028 likewise renames ``gameboy`` to
+        # ``gb`` (matching the gbc / gba siblings + RomM).
         assert [r[0] for r in platforms] == [
             "nes",
             "snes",
-            "megadrive",
-            "gameboy",
+            "genesis",
+            "gb",
             "gba",
         ]
 

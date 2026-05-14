@@ -4,6 +4,7 @@
   },
   "nav": {
     "primary": "Primary navigation",
+    "home": "Home",
     "library": "Library",
     "wanted": "Wanted",
     "activity": "Activity",

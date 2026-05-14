@@ -16,7 +16,34 @@
     "tags": "Étiquettes",
     "unidentified": "Non identifiés",
     "ui": "Interface",
-    "general": "Général"
+    "general": "Général",
+    "logs": "Logs"
+  },
+  "logs": {
+    "title": "Logs système",
+    "subtitle": "Lecture en direct du tampon mémoire des logs. Les 2000 derniers enregistrements sont conservés ; cliquez une ligne pour le message complet + la stack trace.",
+    "filters": {
+      "all": "Tous niveaux",
+      "debug": "Debug+",
+      "info": "Info+",
+      "warn": "Avertissement+",
+      "error": "Erreur+",
+      "levelLabel": "Niveau minimum",
+      "loggerLabel": "Filtre logger",
+      "loggerPlaceholder": "ex. importer, search, downloaders…"
+    },
+    "loadError": "Chargement des logs impossible.",
+    "empty": {
+      "title": "Aucun log ne correspond",
+      "body": "Ajustez les filtres au-dessus ou patientez — Romarr écrit une ligne chaque fois que l'importer / scheduler / API fait quelque chose de notable."
+    },
+    "hasTraceback": "trace",
+    "detail": {
+      "title": "Entrée de log",
+      "messageLabel": "Message",
+      "tracebackLabel": "Stack trace",
+      "close": "Fermer"
+    }
   },
   "home": {
     "welcomeTitle": "Bienvenue dans les paramètres",
@@ -139,6 +166,8 @@
         "enableTorrents": "Accepter les grabs torrent",
         "enableUsenet": "Accepter les grabs Usenet"
       },
+      "timeoutLabel": "Timeout (s)",
+      "timeoutHint": "Durée maximale pour chaque appel HTTP vers ce client ET pour récupérer le .torrent depuis l'indexeur au moment du grab. Augmentez-la si Prowlarr proxifie un upstream lent comme Grabarr (5–600 s).",
       "cancel": "Annuler",
       "submit": "Ajouter le client",
       "submitting": "Ajout…",
@@ -198,6 +227,10 @@
     "toggle": {
       "enabled": "Activé",
       "errorFallback": "Bascule échouée."
+    },
+    "action": {
+      "enable": "Activer",
+      "disable": "Désactiver"
     }
   },
   "datSources": {
@@ -206,14 +239,64 @@
     "loadError": "Impossible de charger les sources DAT",
     "empty": {
       "title": "Aucune source DAT chargée",
-      "body": "Déclenchez la tâche dat-update via Système > Tâches pour charger le premier bundle."
+      "body": "Ajoutez une source DAT via le bouton ci-dessus puis lancez Rafraîchir pour ingérer le premier bundle."
     },
-    "refreshHint": "Relancez la tâche dat-update via Système > Tâches pour rafraîchir.",
+    "summaryTitle": "Cache agrégé",
+    "summaryHint": "Lignes consolidées par autorité (No-Intro, Redump, …) — alimentées par les ingestions ci-dessous.",
+    "rowsTitle": "Sources configurées",
+    "rowsHint": "URL directes vers des DAT Logiqx. Romarr télécharge puis ingère à chaque rafraîchissement.",
+    "rowsEmpty": "Aucune source configurée pour l'instant.",
+    "addButton": "Ajouter une source",
+    "refreshAllButton": "Tout rafraîchir",
+    "refreshAllRunning": "Rafraîchissement…",
+    "refreshAllDoneToast": "{{ok}}/{{total}} sources rafraîchies",
+    "refreshAllErrorToast": "Échec du rafraîchissement global",
     "cols": {
       "source": "Source",
       "entries": "Entrées",
       "platforms": "Plateformes",
-      "latestUpdate": "Dernière mise à jour"
+      "latestUpdate": "Dernière mise à jour",
+      "platform": "Plateforme",
+      "name": "Nom",
+      "status": "Statut",
+      "lastEntries": "Entrées (dernier)",
+      "actions": "Actions"
+    },
+    "status": {
+      "never": "Jamais",
+      "ok": "OK",
+      "failed": "Échec",
+      "running": "En cours"
+    },
+    "action": {
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "refresh": "Rafraîchir",
+      "refreshing": "…"
+    },
+    "deleteConfirm": "Supprimer la source « {{name}} » ?",
+    "deletedToast": "Source supprimée",
+    "deleteErrorToast": "Suppression impossible",
+    "refreshDoneToast": "Source « {{name}} » rafraîchie ({{count}} entrées)",
+    "refreshFailedToast": "Échec : {{error}}",
+    "modal": {
+      "titleAdd": "Ajouter une source DAT",
+      "titleEdit": "Modifier la source DAT",
+      "subhead": "URL directe vers un fichier Logiqx (.dat / .xml). Les pages d'accueil avec captcha ne fonctionnent pas — utilisez un miroir direct.",
+      "nameLabel": "Nom",
+      "urlLabel": "URL du DAT",
+      "urlHint": "Doit pointer directement sur un XML Logiqx, pas une page de téléchargement.",
+      "sourceLabel": "Autorité",
+      "platformLabel": "Plateforme",
+      "platformPlaceholder": "— Choisir une plateforme —",
+      "enabledLabel": "Activée",
+      "errorTitle": "Échec de l'opération",
+      "cancel": "Annuler",
+      "submitting": "Enregistrement…",
+      "submitAdd": "Ajouter",
+      "submitEdit": "Enregistrer",
+      "toastCreated": "Source « {{name}} » ajoutée",
+      "toastUpdated": "Source « {{name}} » mise à jour"
     }
   },
   "qualityDefinitions": {
@@ -526,6 +609,16 @@
         "successTitle": "Profil qualité ajouté",
         "successBody": "{{name}} est disponible pour être lié à une ludothèque.",
         "errorTitle": "Impossible d'ajouter le profil"
+      },
+      "edit": {
+        "button": "Modifier",
+        "modalTitle": "Modifier le profil qualité",
+        "subhead": "Ajustez les formats acceptés. Les archives (zip / rar / 7z / …) passent toujours — l'importeur les extrait.",
+        "submit": "Enregistrer",
+        "submitting": "Enregistrement…",
+        "successTitle": "Profil qualité mis à jour",
+        "successBody": "{{name}} enregistré.",
+        "errorTitle": "Échec de l'enregistrement"
       }
     }
   },
@@ -589,6 +682,16 @@
       "successTitle": "Ludothèque ajoutée",
       "successBody": "{{name}} est prête pour les imports.",
       "errorTitle": "Impossible d'ajouter la ludothèque"
+    },
+    "edit": {
+      "button": "Modifier",
+      "modalTitle": "Modifier la ludothèque",
+      "subhead": "Ajustez la destination, les profils ou la politique de cycle de vie. Les releases existantes gardent leur ludothèque sauf si vous les réassignez.",
+      "submit": "Enregistrer",
+      "submitting": "Enregistrement…",
+      "successTitle": "Ludothèque mise à jour",
+      "successBody": "{{name}} enregistrée.",
+      "errorTitle": "Échec de l'enregistrement"
     },
     "lifecycle": {
       "hardlink_and_seed": "Hardlink + seed",
@@ -657,7 +760,36 @@
       "platformsAffected_one": "Plateforme",
       "platformsAffected_other": "Plateformes"
     },
-    "uploadHint": "L'envoi de packs (YAML multipart) + les bascules d'override par plateforme arriveront dans un slice à venir."
+    "uploadHint": "L'envoi de packs (YAML multipart) + les bascules d'override par plateforme arriveront dans un slice à venir.",
+    "catalogue": {
+      "heading": "Plateformes configurées",
+      "subhead": "{{count}} plateformes prêtes pour le suivi + grab.",
+      "filterPlaceholder": "Filtrer (nom / slug / alias)…",
+      "loadError": "Impossible de charger le catalogue.",
+      "noMatches": "Aucune plateforme ne correspond au filtre."
+    },
+    "packs": {
+      "heading": "Platform Packs",
+      "subhead": "Définitions en masse via YAML packs. Audit log par application."
+    },
+    "detail": {
+      "modalTitle": "{{name}} — détails",
+      "close": "Fermer",
+      "sections": {
+        "identity": "Identité",
+        "aliases": "Alias (utilisés par la détection grab + recherche manuelle)",
+        "providerIds": "IDs fournisseurs de métadonnées",
+        "newznabCategories": "Catégories Newznab"
+      },
+      "fields": {
+        "slug": "Slug (nom de dossier)",
+        "name": "Nom complet",
+        "shortName": "Nom court",
+        "manufacturer": "Fabricant",
+        "releaseYear": "Année de sortie",
+        "pack": "Issu du pack"
+      }
+    }
   },
   "general": {
     "title": "Général",
@@ -805,6 +937,8 @@
       "saving": "Enregistrement…",
       "cancel": "Annuler",
       "close": "Fermer",
+      "advanced": "Avancé (optionnel)",
+      "ssDevKeyNote": "Romarr embarque la même clé développeur ScreenScraper que RomM et Skraper — seuls vos identifiants utilisateur screenscraper.fr sont nécessaires. Si vous avez votre propre clé dev, collez-la dans Avancé pour utiliser son quota.",
       "required": "Champ(s) requis : {{fields}}"
     },
     "fieldPriorityHint": "L'ordre par champ se configure via /api/v3/metadata/field-priority — l'éditeur drag-and-drop arrive dans un slice à venir."
@@ -914,6 +1048,8 @@
         "enableAutomatic": "Activer la recherche automatique (rafraîchissement Wanted)",
         "enableInteractive": "Activer la recherche interactive (UI manuelle)"
       },
+      "timeoutLabel": "Timeout (s)",
+      "timeoutHint": "Durée maximale que Romarr attend pour une recherche sur l'indexeur. Augmentez-la si Prowlarr proxifie un upstream lent comme Grabarr (5–600 s).",
       "prowlarrHint": "Conseil : préférez le setup Prowlarr push. Ajoutez Romarr à votre instance Prowlarr et les indexeurs se synchronisent sans la saisie manuelle ci-dessous.",
       "cancel": "Annuler",
       "submit": "Ajouter l'indexeur",
@@ -921,6 +1057,29 @@
       "successTitle": "Indexeur ajouté",
       "successBody": "{{name}} est branché.",
       "errorTitle": "Impossible d'ajouter l'indexeur"
+    },
+    "grabarr": {
+      "openButton": "+ Ajouter Grabarr",
+      "modalTitle": "Ajouter Grabarr",
+      "subhead": "Intégration directe — contourne Prowlarr sur la voie du grab pour que les sources HTTP-direct (Internet Archive, RomsFun, Edge Emulation, …) descendent directement sur disque au lieu de transiter par BitTorrent. Crée la paire indexeur + client de téléchargement liée en une seule étape.",
+      "nameLabel": "Nom",
+      "namePlaceholder": "ex. Grabarr local",
+      "baseUrlLabel": "URL de base Grabarr",
+      "baseUrlHint": "URL racine du déploiement Grabarr — Romarr ajoute /torznab/{slug}/api pour la recherche et /romarr/{slug}/api/v1/resolve pour le grab.",
+      "profileSlugLabel": "Slug du profil Grabarr",
+      "profileSlugHint": "Quel profil utiliser. Reprenez le slug affiché dans la liste des profils Grabarr (ex. roms_all, ebooks_general).",
+      "apiKeyLabel": "Clé API",
+      "timeoutLabel": "Timeout (s)",
+      "timeoutHint": "Attente max sur /health, /resolve, et le streaming http_direct. 5–600 s, défaut 60.",
+      "downloadRootLabel": "Répertoire de téléchargement (optionnel)",
+      "downloadRootHint": "Où le streamer http_direct écrit les fichiers (joint avec la catégorie par-grab). Défaut /downloads. Les opérateurs avec un point de montage personnalisé peuvent pin un sous-arbre dédié par instance Grabarr.",
+      "connectivityHint": "Romarr sonde /romarr/api/v1/health avant d'enregistrer. Une discordance de protocol_version, une mauvaise clé API, ou un hôte injoignable font échouer l'assistant sans laisser de config bancale.",
+      "errorTitle": "Impossible d'ajouter Grabarr",
+      "errorCode": "Code",
+      "cancel": "Annuler",
+      "submit": "Ajouter Grabarr",
+      "submitting": "Sondage /health…",
+      "toastSuccess": "Grabarr « {{name}} » câblé"
     },
     "edit": {
       "button": "Modifier",
@@ -974,7 +1133,12 @@
     "auto": "Auto",
     "interactive": "Interactif",
     "toggle": {
+      "enabled": "Activé",
       "errorFallback": "Bascule échouée."
+    },
+    "action": {
+      "enable": "Activer",
+      "disable": "Désactiver"
     }
   },
   "unidentified": {

@@ -122,6 +122,7 @@ async def _insert_or_update_platforms(
                 short_name=plat.get("short_name"),
                 manufacturer=plat["manufacturer"],
                 release_year=plat.get("release_year"),
+                aliases=plat.get("aliases") or [],
                 igdb_id=meta_ids.get("igdb_id"),
                 screenscraper_id=meta_ids.get("screenscraper_id"),
                 mobygames_id=meta_ids.get("mobygames_id"),
@@ -145,6 +146,7 @@ async def _insert_or_update_platforms(
             row.short_name = plat.get("short_name")
             row.manufacturer = plat["manufacturer"]
             row.release_year = plat.get("release_year")
+            row.aliases = plat.get("aliases") or []
             row.igdb_id = meta_ids.get("igdb_id")
             row.screenscraper_id = meta_ids.get("screenscraper_id")
             row.mobygames_id = meta_ids.get("mobygames_id")

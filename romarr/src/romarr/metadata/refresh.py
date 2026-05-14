@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import select
 
+from romarr.config.settings import get_settings
 from romarr.domain.models import Game, Platform
 from romarr.metadata.aggregator import aggregate
 from romarr.metadata.cache import get_cached, put_cached
@@ -56,6 +57,36 @@ logger = logging.getLogger(__name__)
 # Process-local; FR-013a's "cross-process coalescing via Redis" is
 # documented as deferred-to-v1.
 _GAME_LOCKS: dict[int, asyncio.Lock] = {}
+
+
+# Slice 388 — provider canonical name → Game ORM column that
+# stores its primary id. Mirrors the LookupAdd table in
+# ``romarr.metadata.api.lookup`` so the refresh path honours the
+# same FK contract the add path writes.
+_PROVIDER_FK_COLUMN: dict[str, str] = {
+    "igdb": "igdb_id",
+    "mobygames": "mobygames_id",
+    "screenscraper": "screenscraper_id",
+    "launchbox": "launchbox_id",
+    "retroachievements": "retroachievements_id",
+}
+
+
+def _pinned_provider_id(game: Game, provider_name: str) -> str | None:
+    """Return the provider FK on ``game`` as a string, or None.
+
+    The lookup-add endpoint pins the chosen provider's id on the
+    matching FK column (igdb_id / mobygames_id / …). When that FK
+    is set we trust it: the refresh calls ``get_game(pinned)``
+    directly instead of re-running ``search_games(title)`` which
+    can stop on a title-collision sibling and overwrite the
+    operator's pick.
+    """
+    column = _PROVIDER_FK_COLUMN.get(provider_name.lower())
+    if column is None:
+        return None
+    raw = getattr(game, column, None)
+    return str(raw) if raw is not None else None
 
 
 def _lock_for(game_id: int) -> asyncio.Lock:
@@ -171,20 +202,28 @@ async def _ensure_provider_payload(
         if row is not None:
             return _meta_from_cache_row(provider, row)
 
+    # Slice 388 — when the Game already carries the provider's FK
+    # (because it was added from a lookup candidate that pinned
+    # the id), trust it and call ``get_game`` directly. Re-running
+    # ``search_games(title)`` and grabbing ``candidates[0]`` is a
+    # title-collision footgun: searching IGDB for "Sonic Advance"
+    # often returns "Combo Pack: Sonic Advance + Sonic Pinball
+    # Party" first, which then overwrites the operator's pick.
+    pinned_id = _pinned_provider_id(game, provider.name)
     try:
-        candidates = await provider.search_games(
-            game.title, platform_slug=platform_slug
-        )
-        if not candidates:
-            logger.info(
-                "metadata.refresh.no_match", extra={"provider": provider.name}
+        if pinned_id is not None:
+            meta = await provider.get_game(pinned_id)
+        else:
+            candidates = await provider.search_games(
+                game.title, platform_slug=platform_slug
             )
-            return None
-        # Take the first / best candidate. Smarter selection lives in
-        # the search/decision spec; for now the providers' own ranking
-        # is authoritative.
-        provider_game_id = candidates[0].provider_game_id
-        meta = await provider.get_game(provider_game_id)
+            if not candidates:
+                logger.info(
+                    "metadata.refresh.no_match", extra={"provider": provider.name}
+                )
+                return None
+            provider_game_id = candidates[0].provider_game_id
+            meta = await provider.get_game(provider_game_id)
     except NotFoundError:
         return None
     except NotImplementedError:
@@ -326,6 +365,86 @@ async def refresh_game_metadata(
         return await _refresh_inner(session, game_id=game_id, force=force)
 
 
+async def _resolve_provider_ids_via_hash(
+    session: AsyncSession, *, game: Game
+) -> None:
+    """Slice 414 — use Hasheous to populate missing provider FK
+    columns on ``game`` from the file hash of any imported Dump.
+
+    Hasheous is a hash-keyed cross-reference service: given a
+    SHA-1 / MD5 / CRC, it returns the corresponding IGDB,
+    RetroAchievements, TheGamesDB and MobyGames immutable IDs.
+    We only write FK columns that are currently NULL — the
+    operator's manual pin (or a previous Hasheous lookup) wins.
+
+    Failure modes are all silent: Hasheous unreachable, hash
+    unknown, no Dump rows yet. The per-provider refresh loop
+    handles the no-id case by falling back to title search.
+    """
+    from romarr.domain.models import Dump, Release
+    from romarr.identification.hashmatch.remote import HasheousBackend
+
+    # Pick the first Dump with at least one hash. The Hasheous
+    # ``ByHash`` endpoint accepts any of (md5, sha1, crc) so a
+    # single Dump is enough.
+    dump_row = (
+        await session.execute(
+            select(Dump.sha1, Dump.md5, Dump.crc32)
+            .join(Release, Release.id == Dump.release_id)
+            .where(Release.game_id == game.id)
+            .limit(1)
+        )
+    ).one_or_none()
+    if dump_row is None:
+        return
+    sha1, md5, crc32 = dump_row
+    if not (sha1 or md5 or crc32):
+        return
+
+    try:
+        backend = HasheousBackend(get_settings())
+    except Exception:
+        return
+    try:
+        refs = await backend.lookup_cross_refs(
+            sha1=sha1, md5=md5, crc32=crc32
+        )
+    except Exception:
+        logger.exception("metadata.refresh.hasheous_lookup_failed")
+        return
+    if not refs:
+        return
+
+    # Provider FK column on Game keyed by Romarr's metadata
+    # provider name. Mirrors ``_PROVIDER_FK_COLUMN`` in
+    # ``lookup.py`` so the refresh path and the lookup-add path
+    # write the same columns.
+    column_by_provider = {
+        "igdb": "igdb_id",
+        "mobygames": "mobygames_id",
+        "retroachievements": "retroachievements_id",
+    }
+    populated: list[str] = []
+    for provider_name, column in column_by_provider.items():
+        existing = getattr(game, column, None)
+        if existing is not None:
+            continue  # operator pin / prior lookup wins
+        raw = refs.get(provider_name)
+        if raw is None:
+            continue
+        try:
+            setattr(game, column, int(raw))
+            populated.append(provider_name)
+        except (TypeError, ValueError):
+            continue
+    if populated:
+        await session.flush()
+        logger.info(
+            "metadata.refresh.hasheous_cross_refs_pinned",
+            extra={"game_id": game.id, "providers": populated},
+        )
+
+
 async def _refresh_inner(
     session: AsyncSession, *, game_id: int, force: bool
 ) -> AggregationResult:
@@ -341,6 +460,15 @@ async def _refresh_inner(
         )
     ).scalar_one_or_none()
     platform_slug = platform.slug if platform is not None else None
+
+    # Slice 414 — RomM-style hash-driven cross-reference. If
+    # this game has at least one Dump on disk and Hasheous is
+    # enabled, look up the hash and pin any missing per-
+    # provider FK column on the Game. The per-provider refresh
+    # loop below then calls ``get_game(pinned_id)`` directly —
+    # no more fuzzy title matching against ``Disney's Tarzan``
+    # / ``Tom Clancy's …`` / publisher-prefix variants.
+    await _resolve_provider_ids_via_hash(session, game=game)
 
     providers = await load_enabled_providers(session, scan=True)
     providers_by_name = {p.name: p for p in providers}

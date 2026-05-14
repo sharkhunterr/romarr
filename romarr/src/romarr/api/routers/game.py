@@ -30,7 +30,8 @@ spec 010.
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from datetime import datetime
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -40,7 +41,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from romarr.api.dependencies import get_db, require_admin, require_readonly
 from romarr.api.models import Tag, TagAssignment
 from romarr.auth import Principal
-from romarr.domain.models import Dump, Game, Release
+from romarr.domain.models import DatEntry, Dump, Game, Release
 from romarr.domain.schemas import DumpRead, GameRead, ReleaseRead
 from romarr.metadata.types import ProviderField
 
@@ -462,9 +463,65 @@ async def list_games(
     stmt = stmt.limit(limit).offset(offset)
 
     rows = (await db.execute(stmt)).scalars().all()
-    return [
-        GameRead.model_validate(row, from_attributes=True) for row in rows
-    ]
+    ids = [row.id for row in rows]
+    acquired_ids = await _games_with_imported_release(db, ids)
+    dat_counts = await _games_dat_verified_dump_counts(db, ids)
+    out: list[GameRead] = []
+    for row in rows:
+        read = GameRead.model_validate(row, from_attributes=True)
+        read.acquired = row.id in acquired_ids
+        read.dat_verified_dump_count = dat_counts.get(row.id, 0)
+        out.append(read)
+    return out
+
+
+async def _games_with_imported_release(
+    db: AsyncSession, game_ids: list[int]
+) -> set[int]:
+    """Slice 394 — return the subset of ``game_ids`` that have at
+    least one Release whose status is ``imported`` or
+    ``cutoff_met`` (i.e. the game's file is on disk).
+
+    Single batched query: cheaper than per-row scalar() calls,
+    and the set lookup is O(1) when the caller projects each
+    GameRead.
+    """
+    if not game_ids:
+        return set()
+    rows = (
+        await db.execute(
+            select(Release.game_id)
+            .where(
+                Release.game_id.in_(game_ids),
+                Release.status.in_(("imported", "cutoff_met")),
+            )
+            .distinct()
+        )
+    ).scalars().all()
+    return {int(g) for g in rows}
+
+
+async def _games_dat_verified_dump_counts(
+    db: AsyncSession, game_ids: list[int]
+) -> dict[int, int]:
+    """Slice 447 — per-game count of Dumps whose SHA-1 cleared
+    the DAT cascade with a VERIFIED entry. Drives the green
+    ``DAT ✓`` icon on Library cards + Game Detail header.
+    """
+    if not game_ids:
+        return {}
+    rows = (
+        await db.execute(
+            select(Release.game_id, func.count(Dump.id))
+            .join(Dump, Dump.release_id == Release.id)
+            .where(
+                Release.game_id.in_(game_ids),
+                Dump.dat_verified.is_(True),
+            )
+            .group_by(Release.game_id)
+        )
+    ).all()
+    return {int(g): int(n) for g, n in rows}
 
 
 @router.post(
@@ -702,7 +759,193 @@ async def read_game(
                 "errorCode": "game_not_found",
             },
         )
-    return GameRead.model_validate(row, from_attributes=True)
+    read = GameRead.model_validate(row, from_attributes=True)
+    acquired = await _games_with_imported_release(db, [row.id])
+    read.acquired = row.id in acquired
+    dat_counts = await _games_dat_verified_dump_counts(db, [row.id])
+    read.dat_verified_dump_count = dat_counts.get(row.id, 0)
+    return read
+
+
+# ---------------------------------------------------------------------------
+# Slice 409 — per-game metadata audit
+# ---------------------------------------------------------------------------
+
+
+class GameMetadataProviderRead(BaseModel):
+    """One per-provider snapshot for a Game's metadata audit page."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    provider_name: str = Field(alias="providerName")
+    provider_game_id: str | None = Field(alias="providerGameId", default=None)
+    """The id Romarr uses to look this game up on the provider's
+    API (``igdb_id`` for IGDB, etc.). Pulled from the Game row;
+    ``None`` when the operator hasn't bound the provider yet."""
+
+    cached_provider_game_id: str | None = Field(
+        alias="cachedProviderGameId", default=None
+    )
+    """The id the provider's cached payload reports. Almost
+    always equal to ``provider_game_id`` — divergence flags a
+    Game whose FK was edited without re-fetching the cache."""
+
+    fields: dict[str, Any] = Field(default_factory=dict)
+    """The provider's contribution snapshot (title, summary,
+    genres, cover_url, release_date, …). Empty when no cache
+    row exists yet (the aggregator hasn't run, or the
+    provider's TTL has expired)."""
+
+    cover_url: str | None = Field(alias="coverUrl", default=None)
+    fetched_at: datetime | None = Field(alias="fetchedAt", default=None)
+    expires_at: datetime | None = Field(alias="expiresAt", default=None)
+
+
+class GameMetadataRead(BaseModel):
+    """Aggregate metadata payload for the game's Metadata tab."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    game_id: int = Field(alias="gameId")
+    providers: list[GameMetadataProviderRead] = Field(default_factory=list)
+    file_hashes: dict[str, list[str]] = Field(
+        default_factory=dict, alias="fileHashes"
+    )
+    """Per-algo distinct hashes pulled from every Dump on every
+    Release of this Game. Operator-facing — surfaces what
+    Romarr fingerprinted on disk so identification can be
+    cross-checked against external DAT files."""
+
+
+# Maps each provider's canonical name to the Game column that
+# holds the provider's primary id.
+_GAME_PROVIDER_FK_COLUMN: dict[str, str] = {
+    "igdb": "igdb_id",
+    "mobygames": "mobygames_id",
+    "screenscraper": "screenscraper_id",
+    "launchbox": "launchbox_id",
+    "retroachievements": "retroachievements_id",
+}
+
+
+@router.get(
+    "/{game_id}/metadata",
+    response_model=GameMetadataRead,
+    response_model_by_alias=True,
+    summary=(
+        "Per-provider metadata snapshot for a Game — IDs, cached "
+        "payloads, fetched-at timestamps, plus per-algo file "
+        "hashes from every imported Dump. Drives the Game "
+        "detail's Metadata tab (slice 409)."
+    ),
+)
+async def read_game_metadata(
+    game_id: int,
+    _user: Annotated[Principal, Depends(require_readonly)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> GameMetadataRead:
+    from romarr.metadata.models import MetadataCache
+
+    row = (
+        await db.execute(select(Game).where(Game.id == game_id))
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "errorMessage": f"game_id={game_id} not found",
+                "errorCode": "game_not_found",
+            },
+        )
+
+    from romarr.metadata.models import MetadataProviderConfig
+
+    cache_rows = (
+        await db.execute(
+            select(MetadataCache).where(MetadataCache.game_id == game_id)
+        )
+    ).scalars().all()
+    cache_by_provider = {c.provider_name: c for c in cache_rows}
+
+    # Slice 410 — include every enabled provider, even when no
+    # cache row exists yet, so the operator can see that SS is
+    # configured but the aggregator hasn't pulled from it for
+    # this game (typical after enabling a provider on an old
+    # game that was previously bound to a single source).
+    enabled_provider_names = set(
+        (
+            await db.execute(
+                select(MetadataProviderConfig.provider_name).where(
+                    MetadataProviderConfig.enabled.is_(True)
+                )
+            )
+        ).scalars().all()
+    )
+
+    providers: list[GameMetadataProviderRead] = []
+    for provider_name, column in _GAME_PROVIDER_FK_COLUMN.items():
+        pinned = getattr(row, column, None)
+        cached = cache_by_provider.get(provider_name)
+        if (
+            pinned is None
+            and cached is None
+            and provider_name not in enabled_provider_names
+        ):
+            # Disabled + never used → drop from the audit view
+            # entirely. Enabled-but-empty shows up so the
+            # operator notices and can trigger a refresh.
+            continue
+        cache_data = cached.data if cached else {}
+        fields_payload: dict[str, Any] = {}
+        cover_url: str | None = None
+        cached_pgid: str | None = None
+        if isinstance(cache_data, dict):
+            raw_fields = cache_data.get("fields") or {}
+            if isinstance(raw_fields, dict):
+                # Unwrap the ``{"__datetime__": "..."}`` sentinel
+                # the cache uses so the JSON is self-describing.
+                for k, v in raw_fields.items():
+                    if isinstance(v, dict) and "__datetime__" in v:
+                        fields_payload[k] = v["__datetime__"]
+                    else:
+                        fields_payload[k] = v
+            cover_url = cache_data.get("cover_url")
+            raw_cached_id = cache_data.get("provider_game_id")
+            cached_pgid = str(raw_cached_id) if raw_cached_id is not None else None
+        providers.append(
+            GameMetadataProviderRead(
+                providerName=provider_name,
+                providerGameId=str(pinned) if pinned is not None else None,
+                cachedProviderGameId=cached_pgid,
+                fields=fields_payload,
+                coverUrl=cover_url,
+                fetchedAt=cached.fetched_at if cached else None,
+                expiresAt=cached.expires_at if cached else None,
+            )
+        )
+
+    # File hashes from every Dump under this Game's Releases.
+    file_hashes: dict[str, list[str]] = {"sha1": [], "md5": [], "crc32": []}
+    hash_rows = (
+        await db.execute(
+            select(Dump.sha1, Dump.md5, Dump.crc32)
+            .join(Release, Release.id == Dump.release_id)
+            .where(Release.game_id == game_id)
+        )
+    ).all()
+    for sha1, md5, crc32 in hash_rows:
+        if sha1 and sha1 not in file_hashes["sha1"]:
+            file_hashes["sha1"].append(sha1)
+        if md5 and md5 not in file_hashes["md5"]:
+            file_hashes["md5"].append(md5)
+        if crc32 and crc32 not in file_hashes["crc32"]:
+            file_hashes["crc32"].append(crc32)
+
+    return GameMetadataRead(
+        gameId=game_id,
+        providers=providers,
+        fileHashes={k: v for k, v in file_hashes.items() if v},
+    )
 
 
 @router.get(
@@ -740,9 +983,46 @@ async def list_releases_for_game(
             .order_by(Release.disc_number.asc(), Release.name.asc())
         )
     ).scalars().all()
-    return [
-        ReleaseRead.model_validate(row, from_attributes=True) for row in rows
-    ]
+
+    # Slice 452 — Per-release DAT aggregate. Pre-fetch every Dump
+    # for these releases in one query, then collapse each
+    # release's outcome to {verified | invalid | absent} so the
+    # Releases tab can paint the same badge as the Files tab
+    # without a per-row roundtrip.
+    release_ids = [r.id for r in rows]
+    dat_by_release: dict[int, tuple[bool, str | None, str | None]] = {}
+    if release_ids:
+        dump_rows = (
+            await db.execute(
+                select(
+                    Dump.release_id,
+                    Dump.dat_verified,
+                    Dump.dat_source,
+                    DatEntry.name,
+                )
+                .outerjoin(DatEntry, DatEntry.id == Dump.dat_entry_id)
+                .where(Dump.release_id.in_(release_ids))
+            )
+        ).all()
+        for rel_id, verified, src, entry_name in dump_rows:
+            current = dat_by_release.get(rel_id)
+            # Prefer verified > matched-but-invalid > absent. Once
+            # we've seen a verified Dump for a release, keep it.
+            if current is None or (verified and not current[0]):
+                dat_by_release[rel_id] = (
+                    bool(verified), src, entry_name
+                )
+
+    out: list[ReleaseRead] = []
+    for row in rows:
+        read = ReleaseRead.model_validate(row, from_attributes=True)
+        agg = dat_by_release.get(row.id)
+        if agg is not None:
+            read.dat_verified = agg[0]
+            read.dat_source = agg[1]
+            read.dat_entry_name = agg[2]
+        out.append(read)
+    return out
 
 
 @router.patch(
@@ -1003,17 +1283,33 @@ async def list_dumps_for_game(
             },
         )
 
+    # Left-join the DatEntry so the FilesTab can render the
+    # canonical name + indexed size + status without a second
+    # round-trip. Most dumps won't have a match — those return
+    # NULLs across the joined columns and the UI treats them as
+    # "no DAT info".
     rows = (
         await db.execute(
-            select(Dump)
+            select(
+                Dump,
+                DatEntry.name,
+                DatEntry.size_bytes,
+                DatEntry.status,
+            )
             .join(Release, Dump.release_id == Release.id)
+            .outerjoin(DatEntry, DatEntry.id == Dump.dat_entry_id)
             .where(Release.game_id == game_id)
             .order_by(Release.disc_number.asc(), Dump.imported_at.desc())
         )
-    ).scalars().all()
-    return [
-        DumpRead.model_validate(row, from_attributes=True) for row in rows
-    ]
+    ).all()
+    out: list[DumpRead] = []
+    for dump, dat_name, dat_size, dat_status in rows:
+        read = DumpRead.model_validate(dump, from_attributes=True)
+        read.dat_entry_name = dat_name
+        read.dat_entry_size_bytes = dat_size
+        read.dat_entry_status = dat_status
+        out.append(read)
+    return out
 
 
 __all__ = ["router"]

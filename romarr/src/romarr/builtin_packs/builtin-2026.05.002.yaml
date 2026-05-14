@@ -1,6 +1,6 @@
-pack_version: "2026.05.001"
+pack_version: "2026.05.002"
 schema_version: 1
-description: "Romarr built-in platform pack — 52 consoles, handhelds, computers, and arcade aligned with the RomM ROMM_ON_PC catalog."
+description: "Romarr built-in platform pack — RomM-aligned folder slugs (genesis/ngc/dc) + per-platform aliases for grab + manual search detection."
 author: "Romarr"
 source_url: "https://romarr.example/packs/builtin"
 
@@ -14,21 +14,21 @@ parsing_strategies:
     regex: "^.{0,512}SUPER\\s*NES"
     apply_to_platforms: ["snes"]
   - id: megadrive-header
-    description: "Mega Drive ROM header"
+    description: "Mega Drive / Genesis ROM header"
     regex: "^.{0,256}SEGA"
-    apply_to_platforms: ["megadrive"]
+    apply_to_platforms: ["genesis"]
   - id: gameboy-header
     description: "Game Boy / GBC ROM header sniff"
     regex: "^.{0,335}NINTENDO"
-    apply_to_platforms: ["gameboy", "gbc"]
+    apply_to_platforms: ["gb", "gbc"]
   - id: iso9660
     description: "Generic ISO9660 disc filesystem"
     regex: "^.{0,33000}CD001"
     apply_to_platforms:
       - psx
       - saturn
-      - dreamcast
-      - gamecube
+      - dc
+      - ngc
       - wii
       - ps2
       - ps3
@@ -48,6 +48,7 @@ platforms:
     name: "Nintendo Entertainment System"
     short_name: "NES"
     manufacturer: Nintendo
+    aliases: ["nintendo entertainment system", "famicom", "fc"]
     generation: 3
     release_year: 1983
     is_handheld: false
@@ -88,6 +89,7 @@ platforms:
     name: "Super Nintendo Entertainment System"
     short_name: "SNES"
     manufacturer: Nintendo
+    aliases: ["super nintendo", "super famicom", "sfc", "super nes"]
     generation: 4
     release_year: 1990
     is_handheld: false
@@ -127,6 +129,7 @@ platforms:
     name: "Nintendo 64"
     short_name: "N64"
     manufacturer: Nintendo
+    aliases: ["nintendo 64"]
     generation: 5
     release_year: 1996
     is_handheld: false
@@ -145,10 +148,11 @@ platforms:
       - extension: ".v64"
         format_type: cartridge
 
-  - slug: gamecube
+  - slug: ngc
     name: "Nintendo GameCube"
     short_name: "GameCube"
     manufacturer: Nintendo
+    aliases: ["nintendo gamecube", "gamecube", "gcn", "gc"]
     generation: 6
     release_year: 2001
     is_handheld: false
@@ -235,10 +239,11 @@ platforms:
   # ============================================================
   # Nintendo — handhelds
   # ============================================================
-  - slug: gameboy
+  - slug: gb
     name: "Nintendo Game Boy"
     short_name: "Game Boy"
     manufacturer: Nintendo
+    aliases: ["gameboy", "game boy", "nintendo game boy", "dmg"]
     generation: 4
     release_year: 1989
     is_handheld: true
@@ -258,6 +263,7 @@ platforms:
     name: "Nintendo Game Boy Color"
     short_name: "GBC"
     manufacturer: Nintendo
+    aliases: ["gbc", "game boy color", "gameboy color", "cgb"]
     generation: 5
     release_year: 1998
     is_handheld: true
@@ -277,6 +283,7 @@ platforms:
     name: "Nintendo Game Boy Advance"
     short_name: "GBA"
     manufacturer: Nintendo
+    aliases: ["gba", "game boy advance", "gameboy advance", "agb"]
     generation: 6
     release_year: 2001
     is_handheld: true
@@ -295,6 +302,7 @@ platforms:
     name: "Nintendo DS"
     short_name: "NDS"
     manufacturer: Nintendo
+    aliases: ["ds", "nintendo ds", "ndsi"]
     generation: 7
     release_year: 2004
     is_handheld: true
@@ -313,6 +321,7 @@ platforms:
     name: "Nintendo 3DS"
     short_name: "3DS"
     manufacturer: Nintendo
+    aliases: ["3ds", "nintendo 3ds", "n3ds"]
     generation: 8
     release_year: 2011
     is_handheld: true
@@ -354,6 +363,7 @@ platforms:
     name: "Sega Master System"
     short_name: "SMS"
     manufacturer: Sega
+    aliases: ["sms", "master system", "mark iii"]
     generation: 3
     release_year: 1985
     is_handheld: false
@@ -372,6 +382,7 @@ platforms:
     name: "Sega Game Gear"
     short_name: "Game Gear"
     manufacturer: Sega
+    aliases: ["game gear", "gamegear", "gg"]
     generation: 4
     release_year: 1990
     is_handheld: true
@@ -386,10 +397,11 @@ platforms:
         format_type: cartridge
         is_primary: true
 
-  - slug: megadrive
-    name: "Sega Mega Drive"
+  - slug: genesis
+    name: "Sega Mega Drive / Genesis"
     short_name: "Mega Drive"
     manufacturer: Sega
+    aliases: ["mega drive", "megadrive", "md", "smd", "genesis", "sega genesis"]
     generation: 4
     release_year: 1988
     is_handheld: false
@@ -413,14 +425,15 @@ platforms:
         format_type: cartridge
 
   - slug: segacd
-    name: "Sega CD"
+    name: "Sega CD / Mega-CD"
     short_name: "Mega-CD"
     manufacturer: Sega
+    aliases: ["sega cd", "segacd", "mega cd", "mega-cd", "mcd"]
     generation: 4
     release_year: 1991
     is_handheld: false
     is_disc_based: true
-    parent_platform_slug: megadrive
+    parent_platform_slug: genesis
     metadata_ids:
       igdb_id: 78
       screenscraper_id: 20
@@ -440,11 +453,12 @@ platforms:
     name: "Sega 32X"
     short_name: "32X"
     manufacturer: Sega
+    aliases: ["32x", "sega 32x", "super 32x", "mega drive 32x"]
     generation: 4
     release_year: 1994
     is_handheld: false
     is_disc_based: false
-    parent_platform_slug: megadrive
+    parent_platform_slug: genesis
     metadata_ids:
       igdb_id: 30
       screenscraper_id: 19
@@ -459,6 +473,7 @@ platforms:
     name: "Sega Saturn"
     short_name: "Saturn"
     manufacturer: Sega
+    aliases: ["saturn", "sat", "sega saturn"]
     generation: 5
     release_year: 1994
     is_handheld: false
@@ -480,10 +495,11 @@ platforms:
       - extension: ".iso"
         format_type: disc
 
-  - slug: dreamcast
+  - slug: dc
     name: "Sega Dreamcast"
     short_name: "Dreamcast"
     manufacturer: Sega
+    aliases: ["dreamcast", "sega dreamcast", "dc"]
     generation: 6
     release_year: 1998
     is_handheld: false
@@ -510,6 +526,7 @@ platforms:
     name: "Sony PlayStation"
     short_name: "PSX"
     manufacturer: Sony
+    aliases: ["ps1", "psone", "ps one", "playstation", "playstation 1", "psx"]
     generation: 5
     release_year: 1994
     is_handheld: false
@@ -535,6 +552,7 @@ platforms:
     name: "Sony PlayStation 2"
     short_name: "PS2"
     manufacturer: Sony
+    aliases: ["ps2", "playstation 2"]
     generation: 6
     release_year: 2000
     is_handheld: false
@@ -556,6 +574,7 @@ platforms:
     name: "Sony PlayStation 3"
     short_name: "PS3"
     manufacturer: Sony
+    aliases: ["ps3", "playstation 3"]
     generation: 7
     release_year: 2006
     is_handheld: false
@@ -575,6 +594,7 @@ platforms:
     name: "Sony PlayStation Portable"
     short_name: "PSP"
     manufacturer: Sony
+    aliases: ["psp", "playstation portable"]
     generation: 7
     release_year: 2004
     is_handheld: true
@@ -596,6 +616,7 @@ platforms:
     name: "Sony PlayStation Vita"
     short_name: "PS Vita"
     manufacturer: Sony
+    aliases: ["ps vita", "psvita", "playstation vita", "vita"]
     generation: 8
     release_year: 2011
     is_handheld: true

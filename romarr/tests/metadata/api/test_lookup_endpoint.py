@@ -159,13 +159,18 @@ async def test_lookup_merges_and_ranks_by_confidence(
     resp = await api_client.get("/api/v3/game/lookup?q=sonic")
     assert resp.status_code == 200, resp.json()
     body = resp.json()
-    assert len(body) == 4
-    # Confidence-descending order across providers.
+    # Slice 410 — the two fake providers both return "Sonic 1"
+    # and "Sonic 2"; cross-provider dedupe collapses to 2 rows,
+    # each tagged with both provider hits.
+    assert len(body) == 2
     confidences = [row["confidence"] for row in body]
     assert confidences == sorted(confidences, reverse=True)
-    # Rank is the row index in the response.
     ranks = [row["rank"] for row in body]
-    assert ranks == [0, 1, 2, 3]
+    assert ranks == [0, 1]
+    # Every row carries both providers (igdb + screenscraper).
+    for row in body:
+        names = sorted(p["name"] for p in row["providers"])
+        assert names == ["igdb", "screenscraper"]
 
 
 @pytest.mark.asyncio
@@ -383,6 +388,126 @@ async def test_lookup_add_rejects_auxiliary_provider(
     )
     assert resp.status_code == 400
     assert resp.json()["errorCode"] == "unsupported_provider"
+
+
+async def _seed_library_with_profiles(
+    api_engine: AsyncEngine, *, name: str = "Cartridges"
+) -> int:
+    """Seed a Library with the five required profile FKs so the
+    lookup/add tests can verify the library_id round-trip
+    (slice 385). The profile values themselves don't matter — the
+    endpoint only stamps Game.library_id and lets the importer
+    consume the cascade later."""
+    from romarr.libraries.models import Library
+    from romarr.profiles.models import (
+        DumpProfile,
+        LanguageProfile,
+        NamingProfile,
+        QualityProfile,
+        RegionProfile,
+    )
+
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        quality = QualityProfile(
+            name=f"quality-{name}",
+            allowed_formats=["raw", "zip"],
+            preferred_format="raw",
+            upgrade_until_format="raw",
+        )
+        region = RegionProfile(
+            name=f"region-{name}",
+            priorities=["USA"],
+            allow_fallback_outside_priorities=True,
+            exclude_regions=[],
+        )
+        dump = DumpProfile(
+            name=f"dump-{name}",
+            allowed_dump_status=["verified"],
+            allow_proto_beta=False,
+            allow_hacks=False,
+            allow_trainers=False,
+            allow_translations=False,
+            prefer_revision="latest",
+        )
+        language = LanguageProfile(
+            name=f"language-{name}",
+            required_languages=[],
+            preferred_languages=["en"],
+            exclude_japanese_only=False,
+        )
+        naming = NamingProfile(
+            name=f"naming-{name}",
+            convention="romm",
+            template="{{ game.title }}",
+        )
+        session.add_all([quality, region, dump, language, naming])
+        await session.commit()
+        for p in (quality, region, dump, language, naming):
+            await session.refresh(p)
+
+        library = Library(
+            name=name,
+            path=f"/tmp/{name}",
+            quality_profile_id=quality.id,
+            region_profile_id=region.id,
+            dump_profile_id=dump.id,
+            language_profile_id=language.id,
+            naming_profile_id=naming.id,
+        )
+        session.add(library)
+        await session.commit()
+        await session.refresh(library)
+        return library.id
+
+
+@pytest.mark.asyncio
+async def test_lookup_add_persists_library_id(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Slice 385 — operator's library pick from the AddGame
+    modal lands on Game.library_id so the importer routes the
+    eventual download to the right root + profile cascade."""
+    await _seed_admin_and_login(api_engine, api_client)
+    platform_id = await _seed_platform(api_engine)
+    library_id = await _seed_library_with_profiles(api_engine)
+
+    resp = await api_client.post(
+        "/api/v3/game/lookup/add",
+        json={
+            "providerName": "igdb",
+            "providerGameId": "42",
+            "title": "Sonic with library",
+            "platformId": platform_id,
+            "libraryId": library_id,
+        },
+    )
+    assert resp.status_code == 201, resp.json()
+    assert resp.json()["library_id"] == library_id
+
+
+@pytest.mark.asyncio
+async def test_lookup_add_rejects_unknown_library(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """An invalid libraryId surfaces 404 with errorCode
+    ``library_not_found`` rather than letting the FK fail at
+    flush time with a 500."""
+    await _seed_admin_and_login(api_engine, api_client)
+    platform_id = await _seed_platform(api_engine)
+
+    resp = await api_client.post(
+        "/api/v3/game/lookup/add",
+        json={
+            "providerName": "igdb",
+            "providerGameId": "1",
+            "title": "Sonic",
+            "platformId": platform_id,
+            "libraryId": 99999,
+        },
+    )
+    assert resp.status_code == 404
+    assert resp.json()["errorCode"] == "library_not_found"
 
 
 @pytest.mark.asyncio

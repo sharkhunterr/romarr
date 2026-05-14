@@ -34,13 +34,54 @@ from romarr.metadata.types import GameMetadata, GameSearchResult, ProviderField
 
 _BASE = "https://api.mobygames.com/v1"
 
-# Mirror of foundation 0001's mobygames_id seed for MVP-5.
+# Slice 411 — MobyGames platform_id mapping, aligned to the
+# RomM-canonical Romarr slugs (slice 401). IDs from
+# https://www.mobygames.com/info/platforms.
 _DEFAULT_PLATFORM_MAPPING: dict[str, int] = {
     "nes": 22,
+    "fds": 22,
     "snes": 15,
-    "megadrive": 16,
-    "gameboy": 10,
+    "n64": 9,
+    "ngc": 14,        # GameCube
+    "wii": 82,
+    "wiiu": 132,
+    "switch": 203,
+    "virtualboy": 38,
+    "gb": 10,
+    "gbc": 11,
     "gba": 12,
+    "nds": 44,
+    "3ds": 101,
+    "pokemon-mini": 152,
+    "master-system": 26,
+    "gamegear": 25,
+    "genesis": 16,    # Mega Drive / Genesis
+    "segacd": 20,
+    "sega32x": 21,
+    "saturn": 23,
+    "dc": 8,          # Dreamcast
+    "psx": 6,
+    "ps2": 7,
+    "ps3": 81,
+    "psp": 46,
+    "psvita": 105,
+    "xbox": 13,
+    "xbox360": 69,
+    "atari-2600": 28,
+    "atari-5200": 33,
+    "atari-7800": 34,
+    "atari-jaguar": 17,
+    "atari-lynx": 18,
+    "neogeo": 36,
+    "ngp": 52,
+    "ngpc": 53,
+    "pcengine": 40,
+    "pce-cd": 45,
+    "wonderswan": 48,
+    "wonderswan-color": 49,
+    "colecovision": 29,
+    "intellivision": 30,
+    "threedo": 35,
 }
 
 # MobyGames "genre_category" labels we treat as "genre" for the

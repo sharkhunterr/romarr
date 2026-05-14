@@ -100,4 +100,20 @@ export async function registerServiceWorker(): Promise<void> {
       });
     },
   });
+
+  // Poll the registered SW every 5 min so long-open sessions
+  // pick up new container builds without the operator having to
+  // hard-refresh manually. Calling ``updateSW(false)`` (or the
+  // registration's ``update()``) is a no-op when no new SW is
+  // waiting; when one is, vite-plugin-pwa fires the
+  // ``onNeedRefresh`` callback above and the toast surfaces.
+  if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+    const POLL_MS = 5 * 60 * 1000;
+    setInterval(() => {
+      void navigator.serviceWorker
+        .getRegistration()
+        .then((reg) => reg?.update())
+        .catch(() => undefined);
+    }, POLL_MS);
+  }
 }

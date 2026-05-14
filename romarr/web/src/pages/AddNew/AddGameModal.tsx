@@ -12,6 +12,7 @@ import { useEffect, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
+import { useLibraries } from "@/lib/api/queries/libraries";
 import {
   useAddGameFromLookup,
   type GameLookupRow,
@@ -29,9 +30,11 @@ export function AddGameModal(props: AddGameModalProps): ReactElement {
   const navigate = useNavigate();
   const pushToast = useToastStore((s) => s.push);
   const platforms = usePlatforms();
+  const libraries = useLibraries();
   const add = useAddGameFromLookup();
 
   const [platformId, setPlatformId] = useState<number | null>(null);
+  const [libraryId, setLibraryId] = useState<number | null>(null);
   const [monitored, setMonitored] = useState(true);
 
   // Pre-fill the platform from the lookup candidate when IGDB
@@ -52,6 +55,17 @@ export function AddGameModal(props: AddGameModalProps): ReactElement {
     setPlatformId((matched ?? fallback!).id);
   }, [platforms.data, platformId, props.candidate.platformSlug]);
 
+  // Slice 386 — Sonarr-style library picker. Default to the
+  // first library so the modal stays one-click for the
+  // single-library setup; the operator overrides when they have
+  // multiple roots.
+  useEffect(() => {
+    if (libraryId !== null) return;
+    const list = libraries.data ?? [];
+    if (list.length === 0) return;
+    setLibraryId(list[0]!.id);
+  }, [libraries.data, libraryId]);
+
   function submit(): void {
     if (platformId === null) return;
     add.mutate(
@@ -60,6 +74,7 @@ export function AddGameModal(props: AddGameModalProps): ReactElement {
         providerGameId: props.candidate.providerGameId,
         title: props.candidate.title,
         platformId,
+        libraryId: libraryId ?? undefined,
         monitored,
       },
       {
@@ -129,6 +144,33 @@ export function AddGameModal(props: AddGameModalProps): ReactElement {
                 {platforms.data!.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-[0.65rem] uppercase tracking-widest text-zinc-500">
+              {t("add.libraryLabel")}
+            </span>
+            {libraries.isPending ? (
+              <p className="text-xs text-zinc-500">{t("add.loadingLibraries")}</p>
+            ) : libraries.isError ? (
+              <p className="text-xs text-red-400">{libraries.error.message}</p>
+            ) : (libraries.data ?? []).length === 0 ? (
+              <p className="text-xs text-amber-400">
+                {t("add.noLibraries")}
+              </p>
+            ) : (
+              <select
+                value={libraryId ?? ""}
+                onChange={(e) => setLibraryId(Number(e.target.value))}
+                className="w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              >
+                {libraries.data!.map((lib) => (
+                  <option key={lib.id} value={lib.id}>
+                    {lib.name} — {lib.path}
                   </option>
                 ))}
               </select>

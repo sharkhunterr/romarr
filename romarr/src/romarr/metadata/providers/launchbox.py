@@ -42,13 +42,56 @@ from romarr.metadata.providers.base import (
 )
 from romarr.metadata.types import GameMetadata, GameSearchResult, ProviderField
 
-# Mirror of foundation 0001's launchbox_id seed (LB platform names).
+# Slice 411 — LaunchBox bulk-XML platform name mapping, aligned
+# to the RomM-canonical Romarr slugs (slice 401: megadrive →
+# genesis, gamecube → ngc, dreamcast → dc). Used by the
+# (deferred) bulk importer to find each platform's section in
+# the LB XML dump.
 _DEFAULT_PLATFORM_MAPPING: dict[str, str] = {
     "nes": "Nintendo Entertainment System",
+    "fds": "Famicom Disk System",
     "snes": "Super Nintendo Entertainment System",
-    "megadrive": "Sega Genesis",
-    "gameboy": "Nintendo Game Boy",
+    "n64": "Nintendo 64",
+    "ngc": "Nintendo GameCube",
+    "wii": "Nintendo Wii",
+    "wiiu": "Nintendo Wii U",
+    "switch": "Nintendo Switch",
+    "virtualboy": "Nintendo Virtual Boy",
+    "gb": "Nintendo Game Boy",
+    "gbc": "Nintendo Game Boy Color",
     "gba": "Nintendo Game Boy Advance",
+    "nds": "Nintendo DS",
+    "3ds": "Nintendo 3DS",
+    "pokemon-mini": "Nintendo Pokemon Mini",
+    "master-system": "Sega Master System",
+    "gamegear": "Sega Game Gear",
+    "genesis": "Sega Genesis",
+    "segacd": "Sega CD",
+    "sega32x": "Sega 32X",
+    "saturn": "Sega Saturn",
+    "dc": "Sega Dreamcast",
+    "psx": "Sony Playstation",
+    "ps2": "Sony Playstation 2",
+    "ps3": "Sony Playstation 3",
+    "psp": "Sony PSP",
+    "psvita": "Sony Playstation Vita",
+    "xbox": "Microsoft Xbox",
+    "xbox360": "Microsoft Xbox 360",
+    "atari-2600": "Atari 2600",
+    "atari-5200": "Atari 5200",
+    "atari-7800": "Atari 7800",
+    "atari-jaguar": "Atari Jaguar",
+    "atari-lynx": "Atari Lynx",
+    "neogeo": "SNK Neo Geo AES",
+    "ngp": "SNK Neo Geo Pocket",
+    "ngpc": "SNK Neo Geo Pocket Color",
+    "pcengine": "NEC TurboGrafx-16",
+    "pce-cd": "NEC TurboGrafx-CD",
+    "wonderswan": "WonderSwan",
+    "wonderswan-color": "WonderSwan Color",
+    "colecovision": "ColecoVision",
+    "intellivision": "Mattel Intellivision",
+    "threedo": "3DO Interactive Multiplayer",
 }
 
 

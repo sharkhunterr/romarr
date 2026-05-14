@@ -13,6 +13,7 @@ All endpoints require the admin role (FR-026a).
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
 import httpx
@@ -81,6 +82,7 @@ def _to_read(row: Indexer) -> IndexerRead:
         "is_configured": row.api_key_encrypted is not None,
         "categories": row.categories,
         "priority": row.priority,
+        "enabled": row.enabled,
         "enable_rss": row.enable_rss,
         "enable_automatic_search": row.enable_automatic_search,
         "enable_interactive_search": row.enable_interactive_search,
@@ -253,6 +255,7 @@ async def create_indexer(
         api_key_encrypted=encrypted,
         categories=payload.categories,
         priority=payload.priority,
+        enabled=payload.enabled,
         enable_rss=payload.enable_rss,
         enable_automatic_search=payload.enable_automatic_search,
         enable_interactive_search=payload.enable_interactive_search,
@@ -313,6 +316,7 @@ async def update_indexer(
         "url",
         "categories",
         "priority",
+        "enabled",
         "enable_rss",
         "enable_automatic_search",
         "enable_interactive_search",
@@ -410,9 +414,31 @@ async def test_indexer(
             },
         )
     try:
-        return await test_connectivity(client)
+        result = await test_connectivity(client)
     finally:
         await client.aclose()
+
+    # Slice 431 — persist the test outcome to the row so the
+    # Settings → Indexers list shows the actual health badge after
+    # an operator click ("tested ok" / "auth" / "connectivity" /
+    # ...) instead of staying at "untested" forever. Prior to this
+    # slice the test endpoint only returned the JSON — the
+    # ``last_health_*`` columns were only mutated by the automatic
+    # health-engine background task, so manual tests had zero
+    # visual feedback on the row dot.
+    row = (
+        await db.execute(select(Indexer).where(Indexer.id == indexer_id))
+    ).scalar_one_or_none()
+    if row is not None:
+        row.last_health_at = datetime.now(UTC)
+        row.last_health_ok = result.ok
+        row.last_health_error = (
+            None
+            if result.ok
+            else (result.category or result.message or "connectivity")
+        )
+        await db.commit()
+    return result
 
 
 class _TestProbePayload(BaseModel):

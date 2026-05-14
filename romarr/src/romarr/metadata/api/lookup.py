@@ -83,6 +83,47 @@ def slugify_title(title: str) -> str:
     return cleaned[:192]
 
 
+_DEDUPE_KEY_PUNCT = re.compile(r"[^a-z0-9]+")
+
+
+def _dedupe_key(r: GameSearchResult) -> tuple[str, int | None, str | None]:
+    """Slice 410 — group key for cross-provider dedupe.
+
+    Title is normalised (lower + strip punctuation, first 40
+    chars) so "Sonic the Hedgehog" / "sonic-the-hedgehog" /
+    "Sonic_the_Hedgehog" all collapse. The platform slug + year
+    finish disambiguating: same title on a different console
+    (NES Metroid vs SNES Super Metroid) stays separate.
+    """
+    title = _DEDUPE_KEY_PUNCT.sub("", r.title.lower())
+    return (title[:40], r.release_year, r.platform_slug)
+
+
+def _dedupe_across_providers(
+    results: list[GameSearchResult],
+) -> list[tuple[GameSearchResult, list[GameSearchResult]]]:
+    """Collapse same-game-across-providers into one canonical
+    :class:`GameSearchResult` per group, with the per-group list
+    of every provider hit (canonical included) attached.
+
+    Input must be sorted by ``confidence`` desc; the first row
+    in each group wins as the canonical hit. Returns
+    ``[(canonical, [hit1, hit2, ...]), ...]`` preserving the
+    confidence-desc order across groups.
+    """
+    seen: dict[tuple[str, int | None, str | None], int] = {}
+    groups: list[list[GameSearchResult]] = []
+    for r in results:
+        key = _dedupe_key(r)
+        idx = seen.get(key)
+        if idx is None:
+            seen[key] = len(groups)
+            groups.append([r])
+        else:
+            groups[idx].append(r)
+    return [(group[0], group) for group in groups]
+
+
 async def _allocate_unique_slug(
     db: AsyncSession, *, platform_id: int, base: str
 ) -> str:
@@ -107,12 +148,29 @@ async def _allocate_unique_slug(
         suffix += 1
 
 
-class GameLookupRow(BaseModel):
-    """One row in the lookup response — a single provider candidate.
+class ProviderHit(BaseModel):
+    """Slice 410 — one (provider, provider_game_id) pair carried
+    by a deduped lookup row. The same game returned by multiple
+    providers collapses into one ``GameLookupRow`` whose
+    ``providers`` list enumerates every provider that found it.
+    """
 
-    Mirrors :class:`GameSearchResult` plus a deterministic ``rank``
-    so the frontend can preserve the server-side ordering across
-    React Query cache hits.
+    model_config = ConfigDict(populate_by_name=True)
+
+    name: str
+    game_id: str = Field(alias="gameId")
+    confidence: float
+
+
+class GameLookupRow(BaseModel):
+    """One row in the lookup response — a deduped game.
+
+    Slice 410 — when the same game shows up in multiple
+    providers (IGDB + ScreenScraper + MobyGames…), they merge
+    into a single row whose ``providers`` list carries every
+    provider that returned it. The canonical ``providerName`` /
+    ``providerGameId`` point at the highest-confidence hit so
+    the one-click Add path stays unambiguous.
     """
 
     model_config = ConfigDict(
@@ -131,6 +189,7 @@ class GameLookupRow(BaseModel):
     )
     release_year: int | None = Field(default=None, alias="releaseYear")
     cover_url: str | None = Field(default=None, alias="coverUrl")
+    providers: list[ProviderHit] = Field(default_factory=list)
 
 
 @router.get(
@@ -195,7 +254,18 @@ async def lookup_games(
         merged.extend(results)
 
     merged.sort(key=lambda r: r.confidence, reverse=True)
-    truncated = merged[:limit]
+
+    # Slice 410 — dedupe across providers. The same game often
+    # appears in IGDB + ScreenScraper + MobyGames; collapsing
+    # those into one row + tagging the providers cuts noise in
+    # the AddNew list and gives the operator a clear "this hit
+    # is corroborated by N sources" signal.
+    deduped_groups = _dedupe_across_providers(merged)
+    truncated_groups = deduped_groups[:limit]
+    truncated = [canonical for canonical, _ in truncated_groups]
+    hits_by_index: dict[int, list[GameSearchResult]] = {
+        i: hits for i, (_, hits) in enumerate(truncated_groups)
+    }
 
     # Enrich platform_name + manufacturer from the Platform table
     # for any row that carries a Romarr slug. Single bulk SELECT
@@ -234,6 +304,26 @@ async def lookup_games(
         else:
             display_name = row.platform_name
             manufacturer = None
+        hits = hits_by_index.get(index, [row])
+        # Slice 412 — collapse same-provider hits inside a group
+        # so the badge stack reads as the set of providers that
+        # found this game (one badge per provider), not the raw
+        # list of every hit. The aggregator picked the
+        # highest-confidence hit as canonical already; for the
+        # other providers we keep their best hit too.
+        best_by_provider: dict[str, GameSearchResult] = {}
+        for h in hits:
+            existing = best_by_provider.get(h.provider_name)
+            if existing is None or h.confidence > existing.confidence:
+                best_by_provider[h.provider_name] = h
+        providers = [
+            ProviderHit(
+                name=h.provider_name,
+                gameId=h.provider_game_id,
+                confidence=h.confidence,
+            )
+            for h in best_by_provider.values()
+        ]
         out_rows.append(
             GameLookupRow(
                 rank=index,
@@ -250,6 +340,7 @@ async def lookup_games(
                 platformManufacturer=manufacturer,
                 releaseYear=row.release_year,
                 coverUrl=row.cover_url,
+                providers=providers,
             )
         )
     return out_rows
@@ -273,6 +364,11 @@ class LookupAddRequest(BaseModel):
     ]
     title: Annotated[str, Field(min_length=1, max_length=255)]
     platform_id: Annotated[int, Field(alias="platformId", ge=1)]
+    # Slice 385 — Sonarr-style library binding. Optional so an
+    # operator-less first-run / scripted add still works (the
+    # importer falls back to platform routing); the AddGame UI
+    # always sends it explicitly.
+    library_id: Annotated[int | None, Field(alias="libraryId", ge=1)] = None
     monitored: bool = True
 
 
@@ -340,6 +436,25 @@ async def add_game_from_lookup(
             },
         )
 
+    # Slice 385 — validate the library_id when supplied; the
+    # AddGame modal sends one but a scripted client may omit it.
+    if body.library_id is not None:
+        from romarr.libraries.models import Library
+
+        lib_exists = (
+            await db.execute(
+                select(Library.id).where(Library.id == body.library_id)
+            )
+        ).scalar_one_or_none()
+        if lib_exists is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "errorMessage": f"library_id={body.library_id} not found",
+                    "errorCode": "library_not_found",
+                },
+            )
+
     base_slug = slugify_title(body.title)
     slug = await _allocate_unique_slug(
         db, platform_id=body.platform_id, base=base_slug
@@ -350,6 +465,7 @@ async def add_game_from_lookup(
         slug=slug,
         title=body.title.strip(),
         monitored=body.monitored,
+        library_id=body.library_id,
         # The aggregator runs on the next refresh cycle and pulls
         # everything else (summary, cover, release date, …) from
         # the configured provider priority list.

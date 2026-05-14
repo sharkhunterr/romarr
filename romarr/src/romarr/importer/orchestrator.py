@@ -30,12 +30,13 @@ remain stubs — they land with the WATCH slice when the
 from __future__ import annotations
 
 import asyncio
+import re
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import func, select
 
-from romarr.domain.models import Game, Platform, Release
+from romarr.domain.models import Game, Platform, PlatformFormat, Release
 from romarr.identification.dat.manager import DatManager
 from romarr.identification.hasher import Hasher
 from romarr.identification.headers import (
@@ -152,26 +153,25 @@ async def run_import(
     # taxonomy hit (FR-005 / CL004).
     source_path = context.source_path
     extract_failure: ExtractError | None = None
-    # Slice 383: when qBit hands us a multi-file torrent, the
-    # save_path points at the torrent's top-level *directory*
-    # (e.g. ``Minerva_Myrient/No-Intro/.../Metroid.zip``). Walk
-    # the tree and pick the first archive or ROM-shaped file —
-    # that's the working source for the rest of the pipeline.
+    # Slice 383 / 415: when qBit hands us a multi-file
+    # meta-torrent (Minerva_Myrient et al.), the save_path
+    # points at the torrent's top-level *directory* containing
+    # thousands of files. The naive "first archive/ROM
+    # alphabetically" pick from slice 383 was wrong on every
+    # meta-torrent that contained a Disney's Tarzan release
+    # (it sorts before everything else).
+    #
+    # Slice 415 — title-aware walker: when ``context`` carries
+    # a ``pre_matched_game_id`` (manual-grab flow), score each
+    # candidate file by token overlap with the matched Game's
+    # title + platform short name and pick the highest. Falls
+    # back to the alphabetical-first heuristic when no pre-
+    # match is available (scan-driven imports).
     if source_path.exists() and source_path.is_dir():
-        nested = next(
-            (
-                p
-                for p in sorted(source_path.rglob("*"))
-                if p.is_file()
-                and (
-                    p.suffix.lower() in _ARCHIVE_SUFFIXES
-                    or p.suffix.lower()
-                    in {".gba", ".nds", ".sfc", ".smc", ".n64", ".z64",
-                        ".v64", ".gb", ".gbc", ".nes", ".md", ".smd",
-                        ".iso", ".cue", ".bin", ".chd", ".rvz"}
-                )
-            ),
-            None,
+        nested = await _pick_file_for_pre_matched_game(
+            session=session,
+            root=source_path,
+            pre_matched_game_id=context.pre_matched_game_id,
         )
         if nested is not None:
             source_path = nested
@@ -190,13 +190,71 @@ async def run_import(
             # sets) defer to the MULTIDISC slice; for now the
             # single-file shape is enough for the audit chain to
             # exercise the extract path.
+            #
+            # Slice 393: skip the ``.romarr-extracted-from-<sha>``
+            # sentinel (and any other dotfile metadata) — sorted
+            # rglob puts dotfiles first lexically, so the old
+            # ``roms[0]`` would happily pick the 40-byte marker
+            # and the rest of the pipeline would park it as
+            # ``match:no_game``.
+            # Slice 437 + 440 — pick the post-extract source by
+            # matching the target platform's recognised file
+            # formats (from ``platform_format``). Pre-slice the
+            # filter was "any non-archive, non-dotfile", which
+            # accepted PSN ``.rap`` license tokens as the game's
+            # dump when an archive contained nothing else (PS one
+            # Classics .zip on Minerva → 16-byte UP9000-*.rap).
+            #
+            # Three-tier preference:
+            #   1. Match the matched-game's platform_format (the
+            #      authoritative per-platform set: built-in pack
+            #      + community + user additions).
+            #   2. Fallback to the generic _ROM_SUFFIXES set when
+            #      we don't know the platform (scan-driven imports
+            #      with no pre-match) — still rejects license
+            #      artifacts since .rap isn't in that set.
+            #   3. ONLY when neither produces a candidate AND the
+            #      archive contains nothing but artifacts, the
+            #      orchestrator falls through to extract_failure
+            #      semantics so the import is parked with a clear
+            #      reason instead of dumping a license token as
+            #      the game's release.
+            platform_exts: frozenset[str] = frozenset()
+            if context.pre_matched_game_id is not None:
+                ext_rows = (
+                    await session.execute(
+                        select(PlatformFormat.extension)
+                        .join(Game, Game.platform_id == PlatformFormat.platform_id)
+                        .where(Game.id == context.pre_matched_game_id)
+                    )
+                ).scalars().all()
+                if ext_rows:
+                    platform_exts = frozenset(
+                        e.lower() if e.startswith(".") else f".{e.lower()}"
+                        for e in ext_rows
+                    )
+            allowed = platform_exts or _ROM_SUFFIXES
             roms = [
                 p
                 for p in result.extracted_paths
-                if p.suffix.lower() not in _ARCHIVE_SUFFIXES
+                if p.suffix.lower() in allowed
+                and not p.name.startswith(".")
             ]
             if roms:
                 source_path = roms[0]
+            else:
+                # No recognised ROM file in the archive. Mark the
+                # import as failed-extract with a structured reason
+                # so the operator sees "non_rom_archive" in the
+                # queue / history rather than the orchestrator
+                # silently dumping whatever non-archive bytes
+                # happened to be inside.
+                extract_failure = ExtractError(
+                    "non_rom_archive: archive contains no file matching "
+                    f"{'platform_format' if platform_exts else 'rom-extension'} "
+                    f"set (extracted: "
+                    f"{', '.join(sorted({p.suffix.lower() for p in result.extracted_paths}))[:80]})"
+                )
         except ExtractError as exc:
             extract_failure = exc
 
@@ -280,17 +338,46 @@ async def run_import(
         # the same file coalesce idempotently (FR-033). Multi-
         # Release ambiguity falls through to parking unless the
         # parser-derived regions disambiguate to exactly one.
-        candidate_rows = (
+        #
+        # Slice 441 — for manual grabs (``pre_matched_game_id``
+        # set), match candidate releases by NAME too. Pre-slice
+        # the orchestrator picked any wanted/imported release for
+        # the game, then ``steps/db_update`` deleted the prior
+        # dump and inserted the new one. User reported a Crash
+        # Bandicoot Warped grab where the second grab (Demo
+        # .chd) overwrote the first grab's dump (Beta) on
+        # release 16, leaving the release row labelled "Beta"
+        # but pointing at the Demo file. Including the filename
+        # match lets distinct releases coexist (Beta + Demo +
+        # Final, etc.) — when no name matches, the
+        # ``not candidates`` branch below creates a fresh
+        # release row.
+        # Slice 441 — match candidate releases by NAME (the
+        # filename stem the parser already produces on the create
+        # path lines 403-415). Same-filename re-runs find their
+        # existing release and coalesce idempotently (FR-033);
+        # different-filename grabs / scans get a fresh row. Both
+        # scanner-driven AND manual-grab paths take this branch —
+        # the operator-driven nature of either flow means a
+        # distinct filename signals a distinct release intent.
+        candidate_q = (
+            select(Release.id, Release.name, Release.regions)
+            .where(
+                Release.game_id == monitored_game_id,
+                Release.status.in_(("wanted", "imported")),
+                Release.name == source_path.stem,
+            )
+        )
+        raw_candidates = (
             await session.execute(
-                select(Release.id, Release.regions)
-                .where(
-                    Release.game_id == monitored_game_id,
-                    Release.status.in_(("wanted", "imported")),
-                )
-                .order_by(Release.id)
+                candidate_q.order_by(Release.id)
             )
         ).all()
-        candidates: list[int] = [int(r[0]) for r in candidate_rows]
+        # Strip the ``name`` column back out — downstream
+        # consumers (region-disambiguation at line ~456) unpack
+        # ``(id, regions)`` pairs.
+        candidate_rows = [(int(r[0]), r[2]) for r in raw_candidates]
+        candidates: list[int] = [rid for rid, _ in candidate_rows]
 
         # T040 / FR-014 — scanner-driven import: when the Game has no
         # wanted/imported Release yet but the filename has parseable
@@ -324,20 +411,22 @@ async def run_import(
                     if parsed_for_create.languages
                     else []
                 )
-                # Pick library binding from the matched Game's
-                # platform — when a Library covers this platform,
-                # bind to the first one. Falls back to the Release's
-                # parent Game's existing library hint when present.
-                library_id_for_release: int | None = None
-                from romarr.libraries.models import Library as _LibModel
-
-                lib_rows = (
-                    await session.execute(
-                        select(_LibModel.id).order_by(_LibModel.id)
-                    )
-                ).scalars().all()
-                library_id_for_release = (
-                    int(lib_rows[0]) if lib_rows else None
+                # Slice 385 — Sonarr-style library routing. Pick
+                # the binding from (in order):
+                #   1. ``Game.library_id`` — the operator's
+                #      add-time choice.
+                #   2. The single Library whose
+                #      ``library_platform`` allowlist contains the
+                #      Game's platform.
+                #   3. The single Library that has *no* platform
+                #      restriction (``platforms_restricted=false``)
+                #      when there's exactly one candidate.
+                #   4. The first library by id (last-resort
+                #      fallback so a single-library setup keeps
+                #      working).
+                library_id_for_release = await _pick_library_for_game(
+                    session=session,
+                    game_id=monitored_game_id,
                 )
 
                 new_release = Release(
@@ -524,6 +613,60 @@ async def run_import(
                 )
                 await session.commit()
                 return failure_outcome
+            # Slice 452 — Pre-persist DAT match: query dat_entry
+            # by SHA-1 for the matched platform and surface
+            # ``dat_verified`` / ``dat_source`` / ``dat_entry_id``
+            # on the Dump row directly at import time. Before this
+            # slice the cascade was wired but never actually
+            # consulted, so the FilesTab badge stayed grey on every
+            # fresh import. When the cascade returns a VERIFIED
+            # entry, also overwrite the Release.name with the
+            # canonical DAT name so the operator sees the
+            # authoritative title instead of the source filename.
+            dat_verified = False
+            dat_source: str | None = None
+            dat_entry_id: int | None = None
+            _import_platform_id = suggested_platform_id
+            if _import_platform_id is None:
+                _row = (
+                    await session.execute(
+                        select(Game.platform_id).where(
+                            Game.id == monitored_game_id
+                        )
+                    )
+                ).scalar_one_or_none()
+                _import_platform_id = int(_row) if _row is not None else None
+            try:
+                _best = (
+                    await DatManager(session).best_match_by_sha1(
+                        platform_id=_import_platform_id,
+                        sha1=hash_result.sha1,
+                    )
+                    if _import_platform_id is not None
+                    else None
+                )
+            except Exception:  # noqa: BLE001 — never block import
+                _best = None
+            if _best is not None:
+                _w = _best.winner
+                from romarr.domain.enums import (
+                    DumpStatus as _DS,
+                    NamingConvention as _NC,
+                )
+
+                dat_verified = _w.status == _DS.VERIFIED.value
+                dat_source = _w.source
+                dat_entry_id = _w.id
+                if dat_verified and _w.name:
+                    _rel = (
+                        await session.execute(
+                            select(Release).where(Release.id == release_id)
+                        )
+                    ).scalar_one_or_none()
+                    if _rel is not None and _rel.name != _w.name:
+                        _rel.name = _w.name
+                        _rel.naming_convention = _NC.NO_INTRO
+
             outcome = None
             try:
                 outcome = await manual_import_known(
@@ -535,6 +678,9 @@ async def run_import(
                     file_format=file_format,
                     original_filename=source_path.name,
                     hashes=hash_result,
+                    dat_verified=dat_verified,
+                    dat_source=dat_source,
+                    dat_entry_id=dat_entry_id,
                 )
                 await session.commit()
             except IntegrityError:
@@ -817,6 +963,213 @@ async def _dispatch_esde_exporter(
         pass
 
 
+_ILLEGAL_PATH_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+
+
+def _sanitise_path_component(name: str) -> str:
+    """Slice 396 — strip filesystem-illegal chars from a path
+    component (Game.Title used as a subdirectory name).
+
+    Keeps things readable on the host: ``Mario & Luigi: Bowser's
+    Inside Story`` → ``Mario & Luigi  Bowser's Inside Story``.
+    Falls back to ``unknown`` for empty / all-stripped input.
+    Trailing whitespace + dots are trimmed because Windows
+    rejects them on shared NAS targets.
+    """
+    cleaned = _ILLEGAL_PATH_CHARS.sub(" ", name).strip().rstrip(".")
+    return cleaned or "unknown"
+
+
+_ROM_SUFFIXES: frozenset[str] = frozenset({
+    ".gba", ".nds", ".sfc", ".smc", ".n64", ".z64", ".v64",
+    ".gb", ".gbc", ".nes", ".md", ".smd", ".iso", ".cue",
+    ".bin", ".chd", ".rvz", ".pbp", ".cso", ".wbfs", ".wia",
+    ".nkit", ".ciso", ".gdi", ".gcm", ".3ds", ".cia", ".nsp",
+    ".xci", ".unif", ".fds", ".vb", ".min", ".sms", ".gg",
+    ".vpk", ".32x",
+})
+
+
+async def _pick_file_for_pre_matched_game(
+    *,
+    session: AsyncSession,
+    root: "Path",
+    pre_matched_game_id: int | None,
+) -> "Path | None":
+    """Slice 415 — find the file in a meta-torrent that matches
+    a pre-matched Game.
+
+    Walks ``root`` for files with archive or ROM extensions,
+    scores each by token overlap against the matched Game's
+    title + platform short_name, and returns the highest
+    scorer. When no pre-match is available, returns the first
+    archive/ROM alphabetically (the original slice 383
+    behaviour for scan-driven imports).
+    """
+    candidates = [
+        p
+        for p in sorted(root.rglob("*"))
+        if p.is_file()
+        and not p.name.startswith(".")
+        and (
+            p.suffix.lower() in _ARCHIVE_SUFFIXES
+            or p.suffix.lower() in _ROM_SUFFIXES
+        )
+    ]
+    if not candidates:
+        return None
+    if pre_matched_game_id is None:
+        return candidates[0]
+
+    game_row = (
+        await session.execute(
+            select(Game.title, Platform.slug, Platform.name, Platform.short_name)
+            .join(Platform, Platform.id == Game.platform_id)
+            .where(Game.id == pre_matched_game_id)
+        )
+    ).one_or_none()
+    if game_row is None:
+        return candidates[0]
+    title, platform_slug, platform_name, platform_short = game_row
+
+    title_tokens = _significant_path_tokens(title or "")
+    platform_tokens: set[str] = set()
+    for v in (platform_slug, platform_name, platform_short):
+        if v:
+            platform_tokens.update(_significant_path_tokens(v))
+
+    # Require a minimum title-token overlap so we don't import
+    # the wrong ROM just because "Nintendo" matches both N64
+    # and GBA folders inside a meta-torrent (slice 415b — user
+    # reported GoldenEye 007 grabbing the Metroid Fusion file
+    # because Minerva's ``No-Intro/Nintendo - Game Boy Advance/``
+    # path scored on the shared "nintendo" token).
+    required_title_overlap = max(1, min(2, len(title_tokens)))
+
+    best: tuple["Path", int, int] | None = None  # (path, title_ov, platform_ov)
+    for p in candidates:
+        # Score over the *path* (parent dirs + filename) so
+        # Minerva's ``No-Intro/Nintendo - Game Boy Advance/``
+        # platform folder contributes to the match.
+        path_tokens = _significant_path_tokens(str(p.relative_to(root)))
+        title_overlap = len(title_tokens & path_tokens)
+        platform_overlap = len(platform_tokens & path_tokens)
+        if title_overlap < required_title_overlap:
+            continue
+        score = title_overlap * 3 + platform_overlap
+        if best is None or score > best[1] * 3 + best[2]:
+            best = (p, title_overlap, platform_overlap)
+    if best is None:
+        # No file in the meta-torrent matches the matched
+        # Game's title — fail cleanly as ``match:no_game``
+        # rather than importing a random ROM under the wrong
+        # game's folder.
+        return None
+    return best[0]
+
+
+_PATH_TOKEN_RE = re.compile(r"[a-z0-9]+")
+_PATH_STOPWORDS: frozenset[str] = frozenset(
+    {"the", "of", "a", "an", "and", "in", "on", "no", "intro",
+     "rom", "roms", "usa", "europe", "japan", "rev", "rerelease"}
+)
+
+
+def _significant_path_tokens(text: str) -> set[str]:
+    """Lowercase alphanumeric tokens minus noise words."""
+    return {
+        t
+        for t in _PATH_TOKEN_RE.findall(text.lower())
+        if len(t) >= 2 and t not in _PATH_STOPWORDS
+    }
+
+
+async def _pick_library_for_game(
+    *,
+    session: AsyncSession,
+    game_id: int,
+) -> int | None:
+    """Slice 385 — Sonarr-style library routing.
+
+    Resolution order:
+      1. ``Game.library_id`` — the operator's add-time choice
+         from the AddGame modal.
+      2. The single Library whose ``library_platform`` allowlist
+         covers the Game's platform.
+      3. The single Library with no platform restriction
+         (``platforms_restricted=false``) when there's exactly
+         one candidate.
+      4. The first library by id (last-resort fallback for the
+         single-library setup so legacy installs keep working).
+
+    Returns ``None`` only when there are no libraries at all
+    — the caller leaves ``Release.library_id`` NULL and skips
+    the move/profile-gate steps that depend on a binding.
+    """
+    from romarr.domain.models import Game as _Game
+    from romarr.libraries.models import (
+        Library as _Library,
+        LibraryPlatform as _LibPlatform,
+    )
+
+    game_row = (
+        await session.execute(
+            select(_Game.platform_id, _Game.library_id).where(_Game.id == game_id)
+        )
+    ).one_or_none()
+    if game_row is None:
+        return None
+    platform_id, hinted_library_id = game_row
+
+    if hinted_library_id is not None:
+        return int(hinted_library_id)
+
+    # Platform-routed: a library that whitelists this platform
+    # via ``library_platform`` is the strongest implicit signal.
+    matching = (
+        (
+            await session.execute(
+                select(_Library.id)
+                .join(_LibPlatform, _LibPlatform.library_id == _Library.id)
+                .where(_LibPlatform.platform_id == platform_id)
+                .order_by(_Library.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if len(matching) == 1:
+        return int(matching[0])
+
+    # Unrestricted libraries: a library that explicitly accepts
+    # any platform is the next-best fit. Only auto-pick when
+    # there's exactly one — multiple unrestricted libraries are
+    # an ambiguous shape the operator should resolve via
+    # ``Game.library_id``.
+    unrestricted = (
+        (
+            await session.execute(
+                select(_Library.id)
+                .where(_Library.platforms_restricted.is_(False))
+                .order_by(_Library.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if len(unrestricted) == 1:
+        return int(unrestricted[0])
+
+    # Last-resort fallback: the first library by id. Keeps the
+    # legacy single-library install working without operator
+    # action; ambiguous multi-library setups should hit one of
+    # the upper branches first.
+    first = (
+        await session.execute(select(_Library.id).order_by(_Library.id))
+    ).scalar_one_or_none()
+    return int(first) if first is not None else None
+
+
 async def _maybe_move_to_library(
     *,
     session: AsyncSession,
@@ -868,19 +1221,31 @@ async def _maybe_move_to_library(
         # Test fixture / pre-deployment — keep the file in-place.
         return None
 
-    # Resolve platform via Game.platform_id (avoid the
-    # ORM relationship which would trigger lazy load on the
-    # session's connection — async-incompatible).
-    platform_slug_row = (
+    # Resolve platform slug + game title in one round-trip
+    # (avoid the ORM relationship which would trigger lazy load
+    # on the session's connection — async-incompatible).
+    game_row = (
         await session.execute(
-            select(Platform.slug)
+            select(Platform.slug, Game.title)
             .join(Game, Game.platform_id == Platform.id)
             .where(Game.id == release.game_id)
         )
-    ).scalar_one_or_none()
-    platform_slug = platform_slug_row or "unknown"
+    ).one_or_none()
+    if game_row is not None:
+        platform_slug = game_row[0] or "unknown"
+        game_title = game_row[1] or "unknown"
+    else:
+        platform_slug = "unknown"
+        game_title = "unknown"
 
-    dest_path = library_path / platform_slug / source_path.name
+    # Slice 396 — RomM-style layout: every Game gets its own
+    # subfolder under the platform, and Releases for that Game
+    # land inside as siblings. Lets the operator stash multiple
+    # ROMs per Game (regional variants, hacks, …) without
+    # filename collisions and matches what RomM scans on the
+    # other side.
+    safe_game_dir = _sanitise_path_component(game_title)
+    dest_path = library_path / platform_slug / safe_game_dir / source_path.name
     # In-place fast path: source already lives at the destination.
     # The scanner-driven import case (`imported_via="scan"`) hits
     # this — the file is already under the library tree, so the

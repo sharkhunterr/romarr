@@ -67,7 +67,11 @@ from romarr.importer.api import (
     unidentified_router as importer_unidentified_router,
 )
 from romarr.importer.webhook import router as importer_webhook_router
-from romarr.indexers.api import applications_router, indexers_router
+from romarr.indexers.api import (
+    applications_router,
+    grabarr_wizard_router,
+    indexers_router,
+)
 from romarr.libraries.api import (
     exporters_router,
     libraries_router,
@@ -154,6 +158,13 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     the lifespan starts.
     """
     database_url = getattr(app.state, "_test_database_url", None)
+
+    # Slice 391 — install the in-memory log capture so the
+    # Settings → Logs page has data to surface. Idempotent
+    # across re-creates of the app (test harness loops, etc.).
+    from romarr.api.log_capture import install as install_log_capture
+
+    install_log_capture()
 
     # Slice 187 — settings-driven lifespan toggles. Tests can
     # still override via ``app.state._enable_bootstrap`` /
@@ -625,6 +636,11 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     app.include_router(packs_router)
     app.include_router(platform_pack_platforms_router)
     app.include_router(applications_router)
+    # Grabarr wizard must mount BEFORE indexers_router so its
+    # ``/api/v3/indexer/grabarr`` POST handler wins over indexers_router's
+    # parameterized ``/{indexer_id}`` route (FastAPI dispatches by
+    # registration order).
+    app.include_router(grabarr_wizard_router)
     app.include_router(indexers_router)
     app.include_router(libraries_router)
     # Spec 009 T076 + T081 — manual scan triggers.

@@ -8,7 +8,7 @@
  * (mirrors the Tags `tag_in_use` flow from slice 51).
  */
 
-import { AlertTriangle, Check } from "lucide-react";
+import { AlertTriangle, Check, Pencil } from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -17,6 +17,8 @@ import {
   type Library,
 } from "@/lib/api/queries/libraries";
 import { useTriggerCommand } from "@/lib/api/queries/system";
+
+import { CreateLibraryModal } from "./CreateLibraryModal";
 
 interface LibraryRowProps {
   library: Library;
@@ -52,6 +54,7 @@ export function LibraryRow(props: LibraryRowProps): ReactElement {
   const scan = useTriggerCommand();
   const [confirming, setConfirming] = useState(false);
   const [needsForce, setNeedsForce] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const lifecycleLabel =
     t(`mediaManagement.lifecycle.${library.lifecycle_policy}`, {
@@ -184,6 +187,18 @@ export function LibraryRow(props: LibraryRowProps): ReactElement {
         </button>
         <button
           type="button"
+          onClick={() => setEditOpen(true)}
+          className={[
+            "min-h-[36px] inline-flex items-center gap-1 rounded-md border border-zinc-700 px-3 text-xs font-medium",
+            "text-zinc-200 hover:bg-zinc-800",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+          ].join(" ")}
+        >
+          <Pencil size={12} aria-hidden="true" />
+          {t("mediaManagement.edit.button")}
+        </button>
+        <button
+          type="button"
           onClick={() => setConfirming(true)}
           className={[
             "min-h-[36px] rounded-md border border-red-900/50 px-3 text-xs font-medium",
@@ -194,6 +209,13 @@ export function LibraryRow(props: LibraryRowProps): ReactElement {
           {t("mediaManagement.delete.button")}
         </button>
       </div>
+
+      {editOpen && (
+        <CreateLibraryModal
+          library={library}
+          onClose={() => setEditOpen(false)}
+        />
+      )}
 
       {confirming && (
         <div className="mt-3 rounded-md border border-red-900/50 bg-red-950/20 p-3">

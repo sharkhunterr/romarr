@@ -30,7 +30,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 from romarr.domain.base import Base, TimestampMixin
 
 _TYPE_CHECK = (
-    "type IN ('qbittorrent','sabnzbd','transmission','deluge','nzbget')"
+    "type IN ('qbittorrent','sabnzbd','transmission','deluge',"
+    "'nzbget','grabarr_direct')"
 )
 _SSL_CHECK = (
     "ssl_cert_validation IN ('enabled','disabled','disabled-for-local')"
@@ -83,6 +84,22 @@ class DownloadClient(Base, TimestampMixin):
     client_version_seen: Mapped[str | None] = mapped_column(
         String(64), nullable=True
     )
+    # Slice 420 — controls every HTTP call this client makes:
+    # the client's own API (qBit, SAB) AND the indexer-side
+    # ``/download`` URL fetch we do during torrent add when an
+    # indexer proxies through a slow upstream (Prowlarr ->
+    # Grabarr can take well past the prior hard-coded 15 s).
+    timeout_seconds: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=60
+    )
+    # Slice 427 / R3a — base directory the grabarr_direct streamer
+    # writes to for http_direct grabs. NULL for every other client
+    # type (qBit / SAB own their own save paths). When NULL the
+    # client falls back to the ``ROMARR_GRABARR_DIRECT_DOWNLOAD_ROOT``
+    # env var (default ``/downloads``).
+    download_root: Mapped[str | None] = mapped_column(
+        String(512), nullable=True
+    )
 
     __table_args__ = (
         UniqueConstraint(
@@ -97,6 +114,10 @@ class DownloadClient(Base, TimestampMixin):
         CheckConstraint(
             "priority BETWEEN 1 AND 100",
             name="ck_download_client_priority_range",
+        ),
+        CheckConstraint(
+            "timeout_seconds BETWEEN 5 AND 600",
+            name="ck_download_client_timeout_range",
         ),
     )
 

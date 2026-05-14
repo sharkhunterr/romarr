@@ -37,6 +37,10 @@ class IndexerRead(_Base):
     is_configured: bool
     categories: list[int]
     priority: int
+    # Slice 432 — master enable/disable. When False, the indexer
+    # is hidden from every search round / RSS poll / grab dispatch
+    # regardless of the per-capability flags below.
+    enabled: bool
     enable_rss: bool
     enable_automatic_search: bool
     enable_interactive_search: bool
@@ -59,11 +63,17 @@ class IndexerRead(_Base):
 
 class IndexerCreate(_Base):
     name: Annotated[str, Field(min_length=1, max_length=128)]
-    implementation: Literal["newznab", "torznab"]
+    # ``'grabarr'`` accepted at the API layer so the (future) "Add
+    # Grabarr" wizard can POST through the same /api/v3/indexer
+    # endpoint. The DB CHECK was widened in migration 0022; the
+    # Add Indexer modal's ``_IMPLEMENTATIONS`` array still only
+    # surfaces newznab/torznab today.
+    implementation: Literal["newznab", "torznab", "grabarr"]
     url: Annotated[str, Field(min_length=1)]
     api_key: Annotated[str | None, Field(default=None, max_length=255)] = None
     categories: list[int] = Field(default_factory=list)
     priority: Annotated[int, Field(ge=1, le=100)] = 25
+    enabled: bool = True
     enable_rss: bool = True
     enable_automatic_search: bool = True
     enable_interactive_search: bool = True
@@ -77,17 +87,18 @@ class IndexerCreate(_Base):
     seed_time_minutes: Annotated[int | None, Field(default=None, ge=0)] = None
     discount_only: bool = False
     priority_indexer: bool = False
-    timeout_seconds: Annotated[int, Field(ge=5, le=120)] = 30
+    timeout_seconds: Annotated[int, Field(ge=5, le=600)] = 30
     result_limit: Annotated[int, Field(ge=1, le=500)] = 100
 
 
 class IndexerUpdate(_Base):
     name: Annotated[str | None, Field(default=None, min_length=1, max_length=128)] = None
-    implementation: Literal["newznab", "torznab"] | None = None
+    implementation: Literal["newznab", "torznab", "grabarr"] | None = None
     url: Annotated[str | None, Field(default=None, min_length=1)] = None
     api_key: Annotated[str | None, Field(default=None, max_length=255)] = None
     categories: list[int] | None = None
     priority: Annotated[int | None, Field(default=None, ge=1, le=100)] = None
+    enabled: bool | None = None
     enable_rss: bool | None = None
     enable_automatic_search: bool | None = None
     enable_interactive_search: bool | None = None
@@ -99,7 +110,7 @@ class IndexerUpdate(_Base):
     seed_time_minutes: Annotated[int | None, Field(default=None, ge=0)] = None
     discount_only: bool | None = None
     priority_indexer: bool | None = None
-    timeout_seconds: Annotated[int | None, Field(default=None, ge=5, le=120)] = None
+    timeout_seconds: Annotated[int | None, Field(default=None, ge=5, le=600)] = None
     result_limit: Annotated[int | None, Field(default=None, ge=1, le=500)] = None
 
 

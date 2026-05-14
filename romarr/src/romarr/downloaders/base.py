@@ -126,6 +126,31 @@ class DownloadClient(ABC):
         lifecycle policy can act.
         """
 
+    async def select_only_matching_file(
+        self,
+        client_native_id: str,
+        *,
+        title_tokens: set[str],
+        platform_tokens: set[str] | None = None,
+        allowed_extensions: frozenset[str] | None = None,
+        target_path: str | None = None,
+    ) -> str | None:
+        """Slice 416 — narrow a multi-file torrent to a single
+        file by setting per-file priorities so the client only
+        downloads the file matching ``title_tokens`` (and
+        ``platform_tokens`` as a tiebreaker).
+
+        Default implementation is a no-op — only multi-file
+        torrent clients (qBittorrent) override. SAB downloads
+        an NZB as a single archive so file selection doesn't
+        apply.
+
+        Returns the matched file's path inside the torrent
+        when a match was found and priorities set, ``None``
+        otherwise.
+        """
+        return None
+
     @abstractmethod
     async def list_managed_downloads(self) -> list[ManagedDownload]:
         """Return every Romarr-managed download the client knows about

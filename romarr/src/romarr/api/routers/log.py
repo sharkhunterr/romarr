@@ -24,16 +24,18 @@ stack traces with paths).
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from romarr.api.dependencies import require_admin, require_readonly
 from romarr.api.envelopes import PaginationEnvelope
+from romarr.api.log_capture import LOG_BUFFER
 from romarr.api.pagination import PageRequest, page_request
 from romarr.auth import Principal
 from romarr.config import get_settings
@@ -113,33 +115,120 @@ def _safe_log_path(filename: str) -> Path:
 # ---------------------------------------------------------------------------
 
 
+# Slice 391 — minimum-level filter mapping. Operator-friendly
+# vocabulary; backend stores numeric ``logging`` level.
+_LEVEL_NAME_TO_NO: dict[str, int] = {
+    "debug": logging.DEBUG,
+    "info": logging.INFO,
+    "warn": logging.WARNING,
+    "warning": logging.WARNING,
+    "error": logging.ERROR,
+    "fatal": logging.CRITICAL,
+    "critical": logging.CRITICAL,
+}
+
+
 @router.get(
     "",
     response_model=PaginationEnvelope[LogEntry],
     response_model_by_alias=True,
     summary=(
-        "Paginated structured log entries. MVP returns an empty "
-        "envelope with the pinned schema; entries materialise once "
-        "the structlog → JSON-line file sink is configured."
+        "Paginated structured log entries pulled from the in-process "
+        "ring buffer. Newest first. Optional ``level`` (minimum level "
+        "to keep) and ``logger`` (case-insensitive substring) filters."
     ),
 )
 async def list_log_entries(
     _principal: Annotated[Principal, Depends(require_readonly)],
     page_req: Annotated[PageRequest, Depends(page_request)],
+    level: Annotated[
+        str | None,
+        Query(
+            description=(
+                "Minimum level to keep — debug / info / warn / "
+                "error / fatal. Default: include everything."
+            ),
+        ),
+    ] = None,
+    logger: Annotated[
+        str | None,
+        Query(
+            description=(
+                "Case-insensitive substring match on the logger "
+                "name (e.g. ``importer`` to scope the view to "
+                "every ``romarr.importer.*`` line)."
+            ),
+        ),
+    ] = None,
 ) -> PaginationEnvelope[LogEntry]:
-    """MVP — returns the empty canonical envelope. The frontend
-    Logs UI wires against the documented camelCase keys
-    (id / time / level / logger / message / exception /
-    exceptionType); a future slice swaps the empty list for a
-    real reader without contract churn."""
+    """Slice 391 — surface the in-memory ring buffer.
+
+    The handler installed by :func:`romarr.api.log_capture.install`
+    keeps the most recent ~2000 records. We project each into the
+    Sonarr-shape :class:`LogEntry` so the frontend Logs page can
+    render without contract churn.
+    """
+    min_level: int | None = None
+    if level is not None:
+        min_level = _LEVEL_NAME_TO_NO.get(level.lower())
+        if min_level is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "errorMessage": (
+                        f"unknown level={level!r} — expected one of "
+                        f"{sorted(set(_LEVEL_NAME_TO_NO))}"
+                    ),
+                    "errorCode": "invalid_log_level",
+                },
+            )
+
+    offset = (page_req.page - 1) * page_req.page_size
+    records, total = LOG_BUFFER.snapshot(
+        limit=page_req.page_size,
+        offset=offset,
+        min_level=min_level,
+        logger_substring=logger,
+    )
+
+    entries = [
+        LogEntry(
+            id=r["id"],
+            time=datetime.fromisoformat(r["timestamp"]),
+            level=_level_to_sonarr(r["level_no"]),
+            logger=r["logger"],
+            message=r["message"],
+            exception=r["exception_text"],
+            exceptionType=(
+                r["exception_text"].splitlines()[-1].split(":", 1)[0]
+                if r["exception_text"]
+                else None
+            ),
+        )
+        for r in records
+    ]
+
     return PaginationEnvelope[LogEntry](
         page=page_req.page,
         page_size=page_req.page_size,
         sort_key=page_req.sort_key or "time",
         sort_direction=page_req.sort_direction,
-        total_records=0,
-        records=[],
+        total_records=total,
+        records=entries,
     )
+
+
+def _level_to_sonarr(level_no: int) -> str:
+    """Project numeric :mod:`logging` level → Sonarr vocabulary."""
+    if level_no >= logging.CRITICAL:
+        return "fatal"
+    if level_no >= logging.ERROR:
+        return "error"
+    if level_no >= logging.WARNING:
+        return "warn"
+    if level_no >= logging.INFO:
+        return "info"
+    return "debug"
 
 
 # ---------------------------------------------------------------------------

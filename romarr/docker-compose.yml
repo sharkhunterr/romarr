@@ -111,3 +111,64 @@ services:
     volumes:
       - ./data/qbittorrent:/config
       - ./data/downloads:/downloads
+
+  # Slice 421 — RomM side-by-side with Romarr against the same
+  # ``./data/library`` mount so the operator can validate that
+  # Romarr's import layout (RomM-canonical slugs + per-game
+  # folders, see slice 401's 0019 migration) is what RomM
+  # expects. RomM scans ``/romm/library/roms/<platform-slug>/<game>``
+  # and Romarr writes to ``./data/library/roms/<platform-slug>/
+  # <game>/<file>`` so the mount target maps 1:1.
+  #
+  # RomM needs an external database + Redis (the image doesn't
+  # bundle either). We use mariadb + redis here for the dev
+  # stack; production deployments can swap to managed services.
+  # See https://docs.romm.app/latest/Getting-Started/Installation/
+  # for the upstream env-var reference.
+  romm-db:
+    image: mariadb:latest
+    container_name: romarr-romm-db
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: rommroot
+      MARIADB_DATABASE: romm
+      MARIADB_USER: romm
+      MARIADB_PASSWORD: rommpass
+    volumes:
+      - ./data/romm/mysql:/var/lib/mysql
+
+  romm-redis:
+    image: redis:alpine
+    container_name: romarr-romm-redis
+    restart: unless-stopped
+
+  romm:
+    image: rommapp/romm:latest
+    container_name: romarr-romm
+    restart: unless-stopped
+    environment:
+      ROMM_AUTH_SECRET_KEY: romm-dev-not-secret-rotate-for-prod
+      DB_HOST: romm-db
+      DB_PORT: "3306"
+      DB_NAME: romm
+      DB_USER: romm
+      DB_PASSWD: rommpass
+      REDIS_HOST: romm-redis
+      REDIS_PORT: "6379"
+      # External metadata API keys are optional for the smoke
+      # test — RomM scans local files without them, just no
+      # cover art / IGDB enrichment.
+    ports:
+      - "8089:8080"
+    volumes:
+      # Same library Romarr writes to. RomM expects the
+      # ``library/roms/<platform-slug>/`` shape underneath this
+      # mount point.
+      - ./data/library:/romm/library
+      - ./data/romm/resources:/romm/resources
+      - ./data/romm/redis-data:/redis-data
+      - ./data/romm/assets:/romm/assets
+      - ./data/romm/config:/romm/config
+    depends_on:
+      - romm-db
+      - romm-redis

@@ -15,6 +15,7 @@
 import { Suspense, type ReactElement } from "react";
 import {
   createBrowserRouter,
+  Navigate,
   RouterProvider,
   Outlet,
 } from "react-router-dom";
@@ -39,12 +40,12 @@ import { DatSourcesPage } from "@/pages/Settings/DatSources";
 import { DownloadClientsPage } from "@/pages/Settings/DownloadClients";
 import { GeneralPage } from "@/pages/Settings/General";
 import { IndexersPage } from "@/pages/Settings/Indexers";
+import { LogsPage } from "@/pages/Settings/Logs";
 import { MediaManagementPage } from "@/pages/Settings/MediaManagement";
 import { MetadataSourcesPage } from "@/pages/Settings/MetadataSources";
 import { PlatformsPage } from "@/pages/Settings/Platforms";
 import { ProfilesPage } from "@/pages/Settings/Profiles";
 import { QualityDefinitionsPage } from "@/pages/Settings/QualityDefinitions";
-import { SettingsHome } from "@/pages/Settings/SettingsHome";
 import { SettingsLayout } from "@/pages/Settings/SettingsLayout";
 import { SettingsPlaceholder } from "@/pages/Settings/SettingsPlaceholder";
 import { TagsPage } from "@/pages/Settings/Tags";
@@ -88,7 +89,10 @@ const router = createBrowserRouter([
             path: "/settings",
             element: <SettingsLayout />,
             children: [
-              { index: true, element: <SettingsHome /> },
+              {
+                index: true,
+                element: <Navigate to="/settings/general" replace />,
+              },
               { path: "tags", element: <TagsPage /> },
               { path: "ui", element: <SettingsUiPage /> },
               { path: "indexers", element: <IndexersPage /> },
@@ -114,6 +118,7 @@ const router = createBrowserRouter([
               { path: "platforms", element: <PlatformsPage /> },
               { path: "general", element: <GeneralPage /> },
               { path: "unidentified", element: <UnidentifiedPage /> },
+              { path: "logs", element: <LogsPage /> },
               { path: ":sub", element: <SettingsPlaceholder /> },
             ],
           },

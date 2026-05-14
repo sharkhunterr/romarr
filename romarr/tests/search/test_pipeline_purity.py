@@ -26,12 +26,17 @@ from romarr.search.state import (
 )
 
 
-def _none_dat(_a: object, _b: object) -> str:
-    return "none"
+from romarr.search.state import DatMatchInfo, _NONE_DAT_INFO
 
 
-def _verified_dat(_a: object, _b: object) -> str:
-    return "verified"
+def _none_dat(_a: object, _b: object):  # noqa: ANN202
+    return _NONE_DAT_INFO
+
+
+def _verified_dat(_a: object, _b: object):  # noqa: ANN202
+    return DatMatchInfo(
+        outcome="verified", entry_name="test", entry_source="no-intro"
+    )
 
 
 @dataclass

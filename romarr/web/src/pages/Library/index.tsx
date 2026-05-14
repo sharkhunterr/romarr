@@ -13,6 +13,12 @@
  * /api/v3/game/bulk-monitor.
  */
 
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronDown,
+  SlidersHorizontal,
+} from "lucide-react";
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
@@ -291,6 +297,26 @@ export function LibraryPage(): ReactElement {
     regionFilter !== "" ||
     yearFilter !== null;
 
+  // Count of active filters living inside the collapsible panel
+  // (everything except the always-visible search box). Badges
+  // the "Filtres" toggle so the operator sees there are active
+  // filters without expanding.
+  const panelFiltersCount =
+    (platformFilter !== ALL_PLATFORMS ? 1 : 0) +
+    (tagFilter !== ALL_TAGS ? 1 : 0) +
+    (libraryFilter !== ALL_LIBRARIES ? 1 : 0) +
+    (monitoredOnly ? 1 : 0) +
+    (genreFilter !== "" ? 1 : 0) +
+    (regionFilter !== "" ? 1 : 0) +
+    (yearFilter !== null ? 1 : 0);
+
+  // Auto-open on first render when a panel filter is already set
+  // (e.g. shared URL / refresh) so the operator isn't surprised
+  // by a hidden active filter.
+  const [filtersOpen, setFiltersOpen] = useState(
+    () => panelFiltersCount > 0,
+  );
+
   const resetFilters = (): void => {
     // Clear the local query input so the debounced URL writer
     // doesn't immediately re-set ``q`` from the stale state
@@ -390,8 +416,13 @@ export function LibraryPage(): ReactElement {
           <p className="mt-1 text-sm text-zinc-400">{t("subtitle")}</p>
         </div>
 
-        <div className="flex flex-col gap-2 md:flex-row md:items-center">
-          <label className="block flex-1">
+        {/* Always-visible row: search box + "Filtres" toggle +
+            selection-mode toggle. Everything else (platform,
+            sort, tag, library, genre, region, year, monitored,
+            reset) lives in the collapsible panel below — opened
+            via the Filtres button. */}
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="block min-w-[12rem] flex-1">
             <span className="sr-only">{t("search.label")}</span>
             <input
               type="search"
@@ -407,228 +438,37 @@ export function LibraryPage(): ReactElement {
             />
           </label>
 
-          <label className="block md:w-56">
-            <span className="sr-only">{t("filters.platform.label")}</span>
-            <select
-              value={platformFilter === ALL_PLATFORMS ? "" : String(platformFilter)}
-              onChange={(e) => {
-                const v = e.target.value;
-                setPlatformFilter(
-                  v === "" ? ALL_PLATFORMS : Number.parseInt(v, 10),
-                );
-              }}
-              aria-label={t("filters.platform.label")}
-              disabled={!platforms.isSuccess}
-              className={[
-                "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
-                "ring-1 ring-inset ring-zinc-700",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-                "disabled:cursor-not-allowed disabled:opacity-60",
-              ].join(" ")}
-            >
-              <option value="">{t("filters.platform.all")}</option>
-              {platforms.data?.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block md:w-44">
-            <span className="sr-only">{t("filters.tag.label")}</span>
-            <select
-              value={tagFilter === ALL_TAGS ? "" : String(tagFilter)}
-              onChange={(e) => {
-                const v = e.target.value;
-                setTagFilter(
-                  v === "" ? ALL_TAGS : Number.parseInt(v, 10),
-                );
-              }}
-              aria-label={t("filters.tag.label")}
-              disabled={!tags.isSuccess}
-              className={[
-                "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
-                "ring-1 ring-inset ring-zinc-700",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-                "disabled:cursor-not-allowed disabled:opacity-60",
-              ].join(" ")}
-            >
-              <option value="">{t("filters.tag.all")}</option>
-              {tags.data?.map((tag) => (
-                <option key={tag.id} value={tag.id}>
-                  {tag.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block md:w-44">
-            <span className="sr-only">{t("filters.library.label")}</span>
-            <select
-              value={libraryFilter === ALL_LIBRARIES ? "" : String(libraryFilter)}
-              onChange={(e) => {
-                const v = e.target.value;
-                setLibraryFilter(
-                  v === "" ? ALL_LIBRARIES : Number.parseInt(v, 10),
-                );
-              }}
-              aria-label={t("filters.library.label")}
-              disabled={!libraries.isSuccess}
-              className={[
-                "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
-                "ring-1 ring-inset ring-zinc-700",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-                "disabled:cursor-not-allowed disabled:opacity-60",
-              ].join(" ")}
-            >
-              <option value="">{t("filters.library.all")}</option>
-              {libraries.data?.map((lib) => (
-                <option key={lib.id} value={lib.id}>
-                  {lib.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="flex items-stretch gap-1">
-            <label className="block md:w-44">
-              <span className="sr-only">{t("sort.label")}</span>
-              <select
-                value={sortKey}
-                onChange={(e) => setSortKey(e.target.value as GameSortKey)}
-                aria-label={t("sort.label")}
-                className={[
-                  "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
-                  "ring-1 ring-inset ring-zinc-700",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-                ].join(" ")}
-              >
-                {SORT_KEYS.map((k) => (
-                  <option key={k} value={k}>
-                    {t(`sort.key.${k}`)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              type="button"
-              onClick={toggleSortDirection}
-              aria-label={
-                sortDirection === "asc"
-                  ? t("sort.direction.asc")
-                  : t("sort.direction.desc")
-              }
-              title={
-                sortDirection === "asc"
-                  ? t("sort.direction.asc")
-                  : t("sort.direction.desc")
-              }
-              className={[
-                "rounded-md bg-zinc-950 px-3 text-sm text-zinc-100",
-                "ring-1 ring-inset ring-zinc-700 hover:bg-zinc-900",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-              ].join(" ")}
-            >
-              {sortDirection === "asc" ? "↑" : "↓"}
-            </button>
-          </div>
-
-          <label className="block md:w-32">
-            <span className="sr-only">{t("filters.genre.label")}</span>
-            <input
-              type="text"
-              defaultValue={genreFilter}
-              onBlur={(e) => setGenreFilter(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  setGenreFilter((e.target as HTMLInputElement).value);
-                }
-              }}
-              placeholder={t("filters.genre.placeholder")}
-              aria-label={t("filters.genre.label")}
-              className={[
-                "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
-                "ring-1 ring-inset ring-zinc-700",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-              ].join(" ")}
-            />
-          </label>
-
-          <label className="block md:w-24">
-            <span className="sr-only">{t("filters.region.label")}</span>
-            <input
-              type="text"
-              defaultValue={regionFilter}
-              onBlur={(e) => setRegionFilter(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  setRegionFilter((e.target as HTMLInputElement).value);
-                }
-              }}
-              placeholder={t("filters.region.placeholder")}
-              aria-label={t("filters.region.label")}
-              maxLength={4}
-              className={[
-                "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm uppercase text-zinc-100",
-                "ring-1 ring-inset ring-zinc-700",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-              ].join(" ")}
-            />
-          </label>
-
-          <label className="block md:w-24">
-            <span className="sr-only">{t("filters.year.label")}</span>
-            <input
-              type="number"
-              defaultValue={yearFilter ?? ""}
-              onBlur={(e) => setYearFilter(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  setYearFilter((e.target as HTMLInputElement).value);
-                }
-              }}
-              placeholder={t("filters.year.placeholder")}
-              aria-label={t("filters.year.label")}
-              min={1970}
-              max={2100}
-              className={[
-                "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
-                "ring-1 ring-inset ring-zinc-700",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-              ].join(" ")}
-            />
-          </label>
-
           <button
             type="button"
-            onClick={() => setMonitoredOnly(!monitoredOnly)}
-            aria-pressed={monitoredOnly}
+            onClick={() => setFiltersOpen((v) => !v)}
+            aria-expanded={filtersOpen}
             className={[
-              "shrink-0 rounded-md px-3 py-2 text-xs font-medium ring-1 ring-inset",
-              "transition-colors",
-              monitoredOnly
+              "inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-2",
+              "text-xs font-medium ring-1 ring-inset transition-colors",
+              panelFiltersCount > 0
                 ? "bg-brand/20 text-brand ring-brand/40 hover:bg-brand/30"
-                : "bg-zinc-950 text-zinc-400 ring-zinc-700 hover:bg-zinc-900",
+                : "bg-zinc-950 text-zinc-200 ring-zinc-700 hover:bg-zinc-900",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
             ].join(" ")}
           >
-            {monitoredOnly
-              ? t("filters.monitoredOnly.on")
-              : t("filters.monitoredOnly.off")}
+            <SlidersHorizontal
+              size={13}
+              strokeWidth={2.2}
+              aria-hidden="true"
+            />
+            <span>{t("filters.advanced.label")}</span>
+            {panelFiltersCount > 0 && (
+              <span className="rounded-full bg-brand/30 px-1.5 py-0 text-[0.6rem] font-bold leading-4 text-brand">
+                {panelFiltersCount}
+              </span>
+            )}
+            <ChevronDown
+              size={13}
+              strokeWidth={2.2}
+              aria-hidden="true"
+              className={`transition-transform ${filtersOpen ? "rotate-180" : ""}`}
+            />
           </button>
-
-          {filtersActive && (
-            <button
-              type="button"
-              onClick={resetFilters}
-              aria-label={t("filters.reset.aria")}
-              title={t("filters.reset.aria")}
-              className="shrink-0 rounded-md border border-zinc-700 px-3 py-2 text-xs font-medium text-zinc-400 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-            >
-              {t("filters.reset.label")}
-            </button>
-          )}
 
           <button
             type="button"
@@ -641,7 +481,7 @@ export function LibraryPage(): ReactElement {
               "transition-colors",
               selectionActive
                 ? "bg-brand/20 text-brand ring-brand/40 hover:bg-brand/30"
-                : "bg-zinc-950 text-zinc-400 ring-zinc-700 hover:bg-zinc-900",
+                : "bg-zinc-950 text-zinc-200 ring-zinc-700 hover:bg-zinc-900",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
             ].join(" ")}
           >
@@ -650,6 +490,255 @@ export function LibraryPage(): ReactElement {
               : t("bulk.enterSelection")}
           </button>
         </div>
+
+        {/* Collapsible filter panel — platform, sort, tag,
+            library, genre, region, year, monitored, reset. Opens
+            on the Filtres toggle; auto-open on first render when
+            a panel filter is already set from the URL. */}
+        {filtersOpen && (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/30 p-3">
+            <label className="block min-w-[12rem] flex-1">
+              <span className="mb-1 block text-[0.6rem] uppercase tracking-widest text-zinc-500">
+                {t("filters.platform.label")}
+              </span>
+              <select
+                value={platformFilter === ALL_PLATFORMS ? "" : String(platformFilter)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setPlatformFilter(
+                    v === "" ? ALL_PLATFORMS : Number.parseInt(v, 10),
+                  );
+                }}
+                aria-label={t("filters.platform.label")}
+                disabled={!platforms.isSuccess}
+                className={[
+                  "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
+                  "ring-1 ring-inset ring-zinc-700",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                  "disabled:cursor-not-allowed disabled:opacity-60",
+                ].join(" ")}
+              >
+                <option value="">{t("filters.platform.all")}</option>
+                {platforms.data?.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="flex items-end gap-1">
+              <label className="block w-44">
+                <span className="mb-1 block text-[0.6rem] uppercase tracking-widest text-zinc-500">
+                  {t("sort.label")}
+                </span>
+                <select
+                  value={sortKey}
+                  onChange={(e) => setSortKey(e.target.value as GameSortKey)}
+                  aria-label={t("sort.label")}
+                  className={[
+                    "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
+                    "ring-1 ring-inset ring-zinc-700",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                  ].join(" ")}
+                >
+                  {SORT_KEYS.map((k) => (
+                    <option key={k} value={k}>
+                      {t(`sort.key.${k}`)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={toggleSortDirection}
+                aria-label={
+                  sortDirection === "asc"
+                    ? t("sort.direction.asc")
+                    : t("sort.direction.desc")
+                }
+                title={
+                  sortDirection === "asc"
+                    ? t("sort.direction.asc")
+                    : t("sort.direction.desc")
+                }
+                className={[
+                  "inline-flex items-center justify-center rounded-md bg-zinc-950 px-3 py-2",
+                  "text-zinc-200 ring-1 ring-inset ring-zinc-700 hover:bg-zinc-900",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                ].join(" ")}
+              >
+                {sortDirection === "asc" ? (
+                  <ArrowUp size={14} strokeWidth={2.2} aria-hidden="true" />
+                ) : (
+                  <ArrowDown size={14} strokeWidth={2.2} aria-hidden="true" />
+                )}
+              </button>
+            </div>
+
+            <label className="block min-w-[10rem] flex-1">
+              <span className="mb-1 block text-[0.6rem] uppercase tracking-widest text-zinc-500">
+                {t("filters.tag.label")}
+              </span>
+              <select
+                value={tagFilter === ALL_TAGS ? "" : String(tagFilter)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setTagFilter(
+                    v === "" ? ALL_TAGS : Number.parseInt(v, 10),
+                  );
+                }}
+                aria-label={t("filters.tag.label")}
+                disabled={!tags.isSuccess}
+                className={[
+                  "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
+                  "ring-1 ring-inset ring-zinc-700",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                  "disabled:cursor-not-allowed disabled:opacity-60",
+                ].join(" ")}
+              >
+                <option value="">{t("filters.tag.all")}</option>
+                {tags.data?.map((tag) => (
+                  <option key={tag.id} value={tag.id}>
+                    {tag.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block min-w-[10rem] flex-1">
+              <span className="mb-1 block text-[0.6rem] uppercase tracking-widest text-zinc-500">
+                {t("filters.library.label")}
+              </span>
+              <select
+                value={libraryFilter === ALL_LIBRARIES ? "" : String(libraryFilter)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setLibraryFilter(
+                    v === "" ? ALL_LIBRARIES : Number.parseInt(v, 10),
+                  );
+                }}
+                aria-label={t("filters.library.label")}
+                disabled={!libraries.isSuccess}
+                className={[
+                  "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
+                  "ring-1 ring-inset ring-zinc-700",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                  "disabled:cursor-not-allowed disabled:opacity-60",
+                ].join(" ")}
+              >
+                <option value="">{t("filters.library.all")}</option>
+                {libraries.data?.map((lib) => (
+                  <option key={lib.id} value={lib.id}>
+                    {lib.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block w-32">
+              <span className="mb-1 block text-[0.6rem] uppercase tracking-widest text-zinc-500">
+                {t("filters.genre.label")}
+              </span>
+              <input
+                type="text"
+                defaultValue={genreFilter}
+                onBlur={(e) => setGenreFilter(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setGenreFilter((e.target as HTMLInputElement).value);
+                  }
+                }}
+                placeholder={t("filters.genre.placeholder")}
+                aria-label={t("filters.genre.label")}
+                className={[
+                  "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
+                  "ring-1 ring-inset ring-zinc-700",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                ].join(" ")}
+              />
+            </label>
+
+            <label className="block w-24">
+              <span className="mb-1 block text-[0.6rem] uppercase tracking-widest text-zinc-500">
+                {t("filters.region.label")}
+              </span>
+              <input
+                type="text"
+                defaultValue={regionFilter}
+                onBlur={(e) => setRegionFilter(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setRegionFilter((e.target as HTMLInputElement).value);
+                  }
+                }}
+                placeholder={t("filters.region.placeholder")}
+                aria-label={t("filters.region.label")}
+                maxLength={4}
+                className={[
+                  "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm uppercase text-zinc-100",
+                  "ring-1 ring-inset ring-zinc-700",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                ].join(" ")}
+              />
+            </label>
+
+            <label className="block w-24">
+              <span className="mb-1 block text-[0.6rem] uppercase tracking-widest text-zinc-500">
+                {t("filters.year.label")}
+              </span>
+              <input
+                type="number"
+                defaultValue={yearFilter ?? ""}
+                onBlur={(e) => setYearFilter(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setYearFilter((e.target as HTMLInputElement).value);
+                  }
+                }}
+                placeholder={t("filters.year.placeholder")}
+                aria-label={t("filters.year.label")}
+                min={1970}
+                max={2100}
+                className={[
+                  "w-full rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100",
+                  "ring-1 ring-inset ring-zinc-700",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                ].join(" ")}
+              />
+            </label>
+
+            <button
+              type="button"
+              onClick={() => setMonitoredOnly(!monitoredOnly)}
+              aria-pressed={monitoredOnly}
+              className={[
+                "shrink-0 self-end rounded-md px-3 py-2 text-xs font-medium ring-1 ring-inset",
+                "transition-colors",
+                monitoredOnly
+                  ? "bg-brand/20 text-brand ring-brand/40 hover:bg-brand/30"
+                  : "bg-zinc-950 text-zinc-400 ring-zinc-700 hover:bg-zinc-900",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+              ].join(" ")}
+            >
+              {monitoredOnly
+                ? t("filters.monitoredOnly.on")
+                : t("filters.monitoredOnly.off")}
+            </button>
+
+            {filtersActive && (
+              <button
+                type="button"
+                onClick={resetFilters}
+                aria-label={t("filters.reset.aria")}
+                title={t("filters.reset.aria")}
+                className="shrink-0 self-end rounded-md border border-zinc-700 px-3 py-2 text-xs font-medium text-zinc-400 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              >
+                {t("filters.reset.label")}
+              </button>
+            )}
+          </div>
+        )}
 
         {selectionActive && (
           <div

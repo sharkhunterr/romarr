@@ -8,6 +8,7 @@ provider's role is purely additive.
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from typing import Any
 
@@ -30,12 +31,93 @@ _BASE = "https://retroachievements.org/API"
 
 # RA's console_id table for Romarr's MVP-5. Source: the GetConsoleIDs
 # RA endpoint. Static enough to ship as a built-in.
+# Slice 413 — publisher-prefix stripping helpers for the
+# relaxed title-match. RA lists most games under the bare
+# franchise title (``Tarzan``, ``Splinter Cell``) while the
+# operator-side title carries the publisher prefix (``Disney's
+# Tarzan``, ``Tom Clancy's Splinter Cell``). We strip these
+# prefixes when the strict substring match fails so the search
+# still binds the right RA row.
+_PUBLISHER_PREFIXES: tuple[str, ...] = (
+    "disney's ",
+    "disneys ",
+    "tom clancy's ",
+    "tom clancys ",
+    "sid meier's ",
+    "sid meiers ",
+    "ea sports ",
+    "ea sports nhl ",
+    "ea sports fifa ",
+    "lego ",
+    "marvel's ",
+    "marvels ",
+    "nickelodeon ",
+)
+
+# Tokens that don't help disambiguate — strip from the
+# set-overlap heuristic.
+_STOPWORDS: frozenset[str] = frozenset(
+    {"the", "a", "an", "of", "and", "&", "with", "in", "on"}
+)
+
+_WORD_RE = re.compile(r"[a-z0-9]+")
+
+
+def _strip_publisher_prefix(title_cf: str) -> str:
+    """Drop a leading publisher / franchise prefix when present."""
+    for prefix in _PUBLISHER_PREFIXES:
+        if title_cf.startswith(prefix):
+            return title_cf[len(prefix):].strip()
+    return title_cf
+
+
+def _significant_tokens(title_cf: str) -> set[str]:
+    """Lowercase alphanumeric tokens minus the stopword list."""
+    return {t for t in _WORD_RE.findall(title_cf) if t not in _STOPWORDS}
+
+
+# Slice 411 — RetroAchievements console-id mapping aligned with
+# the RomM-canonical Romarr slugs (slice 401: megadrive →
+# genesis, gamecube → ngc, dreamcast → dc). Without this every
+# RA search returned an empty list because the slug key didn't
+# match, even though the operator had RA enabled.
+# Console IDs from https://api.retroachievements.org/v1.
 _DEFAULT_PLATFORM_MAPPING: dict[str, int] = {
     "nes": 7,
     "snes": 3,
-    "megadrive": 1,
-    "gameboy": 4,
+    "n64": 2,
+    "ngc": 16,       # GameCube
+    "wii": 19,
+    "wiiu": 41,
+    "gb": 4,
+    "gbc": 6,
     "gba": 5,
+    "nds": 18,
+    "3ds": 62,
+    "virtualboy": 28,
+    "pokemon-mini": 24,
+    "master-system": 11,
+    "gamegear": 15,
+    "genesis": 1,    # Mega Drive / Genesis
+    "segacd": 9,
+    "sega32x": 10,
+    "saturn": 39,
+    "dc": 40,        # Dreamcast
+    "psx": 12,
+    "ps2": 21,
+    "psp": 41,
+    "atari-2600": 25,
+    "atari-7800": 51,
+    "atari-jaguar": 17,
+    "atari-lynx": 13,
+    "neogeo": 14,
+    "ngp": 14,
+    "pcengine": 8,
+    "pce-cd": 76,
+    "wonderswan": 53,
+    "colecovision": 44,
+    "intellivision": 45,
+    "threedo": 43,
 }
 
 
@@ -135,28 +217,66 @@ class RetroAchievementsProvider(MetadataProvider):
         if not isinstance(rows, list):
             return []
 
-        normalized = query.casefold()
+        # Slice 413 — more permissive title matching. The strict
+        # substring used to miss "Tarzan" when the operator's
+        # game was titled "Disney's Tarzan" (publisher prefix
+        # on Romarr's side, bare title on RA's). Try several
+        # progressively-relaxed matches so the publisher /
+        # franchise prefix variants ("Tom Clancy's …", "EA
+        # Sports …", "Disney's …", subtitle differences) all
+        # bind to the same canonical RA row.
+        normalized = query.casefold().strip()
+        stripped_query = _strip_publisher_prefix(normalized)
+        query_tokens = _significant_tokens(normalized)
+
         out: list[GameSearchResult] = []
         for row in rows:
             title = row.get("Title") or ""
             game_id = row.get("ID")
             if not title or game_id is None:
                 continue
-            if normalized in title.casefold():
-                out.append(
-                    GameSearchResult(
-                        provider_name=self.name,
-                        provider_game_id=str(game_id),
-                        title=title,
-                        confidence=1.0 if normalized == title.casefold() else 0.6,
-                    )
+            title_cf = title.casefold().strip()
+            confidence: float | None = None
+            if normalized == title_cf:
+                confidence = 1.0
+            elif normalized in title_cf or title_cf in normalized:
+                confidence = 0.8
+            elif stripped_query and (
+                stripped_query in title_cf or title_cf in stripped_query
+            ):
+                confidence = 0.7
+            else:
+                title_tokens = _significant_tokens(title_cf)
+                shared = query_tokens & title_tokens
+                if (
+                    shared
+                    and query_tokens
+                    and len(shared) / len(query_tokens) >= 0.6
+                ):
+                    confidence = 0.5
+            if confidence is None:
+                continue
+            out.append(
+                GameSearchResult(
+                    provider_name=self.name,
+                    provider_game_id=str(game_id),
+                    title=title,
+                    confidence=confidence,
                 )
+            )
+        # Sort by confidence desc so the canonical hit floats to
+        # the top — callers usually take ``candidates[0]``.
+        out.sort(key=lambda r: r.confidence, reverse=True)
         return out
 
     async def get_game(self, provider_game_id: str) -> GameMetadata:
+        # ``API_GetGame.php`` is the minimal endpoint and does NOT
+        # include ``NumAchievements``; ``Extended`` does. Without
+        # this switch the achievements_count stayed null on every
+        # match because the field never appeared in the payload.
         payload = await self._call(
             lambda: self._get(
-                "/API_GetGame.php",
+                "/API_GetGameExtended.php",
                 params={"i": int(provider_game_id)},
             )
         )

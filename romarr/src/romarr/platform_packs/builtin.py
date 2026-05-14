@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 # The version baked into the wheel. Bumping the built-in pack means
 # bumping this string AND adding a new ``builtin-<version>.yaml`` next
 # to it under ``src/romarr/builtin_packs/``.
-_BUILTIN_PACK_VERSION = "2026.05.001"
+_BUILTIN_PACK_VERSION = "2026.05.002"
 
 _OPERATOR_DROP_DIR = Path("/opt/romarr/builtin-packs")
 

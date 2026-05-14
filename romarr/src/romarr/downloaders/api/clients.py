@@ -16,6 +16,7 @@ caller role — :func:`_to_read` projects the row to
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -26,7 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from romarr.api.dependencies import get_db, require_admin
 from romarr.auth import Principal
 from romarr.downloaders.connectivity import test_connectivity
-from romarr.downloaders.factory import build_client_from_row
+from romarr.downloaders.factory import build_client_from_row, forget_grabarr_direct
 from romarr.downloaders.implementations import (
     QBittorrentClient,
     SabnzbdClient,
@@ -81,6 +82,8 @@ def _to_read(row: DownloadClientRow) -> DownloadClientRead:
             "last_health_ok": row.last_health_ok,
             "last_health_error": row.last_health_error,
             "client_version_seen": row.client_version_seen,
+            "timeout_seconds": row.timeout_seconds,
+            "download_root": row.download_root,
         }
     )
 
@@ -134,6 +137,7 @@ def _ephemeral_client_from_create(
             url_base=payload.url_base,
             ssl_cert_validation=payload.ssl_cert_validation,
             category_default=payload.category_default,
+            timeout_seconds=payload.timeout_seconds,
         )
     if payload.type is ClientType.SABNZBD:
         assert payload.api_key is not None
@@ -147,6 +151,7 @@ def _ephemeral_client_from_create(
             url_base=payload.url_base,
             ssl_cert_validation=payload.ssl_cert_validation,
             category_default=payload.category_default,
+            timeout_seconds=payload.timeout_seconds,
         )
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
@@ -256,6 +261,8 @@ async def create_client(
         remove_completed_downloads=payload.remove_completed_downloads,
         remove_failed_downloads=payload.remove_failed_downloads,
         ssl_cert_validation=payload.ssl_cert_validation,
+        timeout_seconds=payload.timeout_seconds,
+        download_root=payload.download_root,
     )
     db.add(row)
     try:
@@ -309,6 +316,8 @@ async def update_client(
         "enabled",
         "remove_completed_downloads",
         "remove_failed_downloads",
+        "timeout_seconds",
+        "download_root",
     ):
         if key in fields:
             setattr(row, key, fields[key])
@@ -340,6 +349,12 @@ async def update_client(
             },
         ) from exc
     await db.refresh(row)
+    # Slice 435 — config may have changed (host / api_key /
+    # download_root / timeout). Drop the singleton so the next
+    # factory call rebuilds with the new values; any in-flight
+    # stream on the old instance keeps running until completion
+    # via the asyncio event loop's strong ref to the task.
+    forget_grabarr_direct(client_id)
     return _to_read(row)
 
 
@@ -356,6 +371,11 @@ async def delete_client(
     row = await _get_or_404(db, client_id)
     await db.delete(row)
     await db.commit()
+    # Slice 435 — drop the singleton cache entry so the next
+    # ``build_client_from_row`` (if the operator recreates the
+    # client with the same id, unlikely but possible) starts fresh
+    # rather than serving the stale instance's pending dict.
+    forget_grabarr_direct(client_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -371,7 +391,24 @@ async def test_client(
 ) -> ConnectivityTestResult:
     row = await _get_or_404(db, client_id)
     impl = build_client_from_row(row)
-    return await test_connectivity(impl)
+    result = await test_connectivity(impl)
+    # Slice 431 — persist outcome on the row so the Settings →
+    # Download Clients list reflects a successful manual test on
+    # the health dot + badge. Pre-slice the test result was JSON
+    # only; the row stayed at last_health_at=NULL forever which
+    # rendered as "non testé" badge regardless of how many times
+    # the operator clicked Test and saw the green inline message.
+    row.last_health_at = datetime.now(UTC)
+    row.last_health_ok = result.ok
+    row.last_health_error = (
+        None
+        if result.ok
+        else (result.error_code or result.error_message or "connectivity")
+    )
+    if result.client_version:
+        row.client_version_seen = result.client_version
+    await db.commit()
+    return result
 
 
 @router.post(

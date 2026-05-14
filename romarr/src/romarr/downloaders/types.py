@@ -18,8 +18,10 @@ class ClientType(StrEnum):
     """The set of supported download-client implementations.
 
     The two MVP impls are ``QBITTORRENT`` and ``SABNZBD``; the three
-    stubs surface in the registry / schema endpoint with
-    ``available = False`` so the UI can grey them out.
+    v1-deferred stubs (Transmission, Deluge, NZBGet) and the
+    Grabarr-direct foundation stub surface in the registry / schema
+    endpoint with ``available = False`` so the UI can grey them out
+    (or hide them entirely until wiring lands).
     """
 
     QBITTORRENT = "qbittorrent"
@@ -27,6 +29,11 @@ class ClientType(StrEnum):
     TRANSMISSION = "transmission"  # stub — deferred to v1
     DELUGE = "deluge"              # stub — deferred to v1
     NZBGET = "nzbget"              # stub — deferred to v1
+    # Slice 422 — Grabarr-direct foundation. Stub with
+    # ``available = False`` until the resolve-dispatcher lands; the
+    # DB CHECK constraint accepts the literal so future wiring slices
+    # can persist rows without another migration.
+    GRABARR_DIRECT = "grabarr_direct"
 
 
 class SourceKind(StrEnum):
@@ -153,6 +160,15 @@ class DownloadStatus(_Base):
     save_path: str | None = None
     completed_paths: list[str] = Field(default_factory=list)
     fetched_at: datetime
+    # Slice 438 — operator-actionable error string for FAILED /
+    # STALLED state. Implementations populate it when the
+    # underlying daemon (qBit / SAB / grabarr_direct's streamer)
+    # surfaces a reason — e.g. ``checksum_mismatch``, ``upstream
+    # 404``, ``CF challenge``. The queue_reconciler writes this
+    # through to ``queue_entry.error_msg`` instead of clearing it
+    # on state transitions, so the queue page + history pull it
+    # back out of the DB without a re-poll.
+    error: str | None = None
 
 
 _WARNING_CODE = Literal[

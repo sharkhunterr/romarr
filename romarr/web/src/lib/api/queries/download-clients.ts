@@ -100,12 +100,19 @@ export function useTestDownloadClient(): UseMutationResult<
   ApiError,
   number
 > {
+  // Slice 431 — backend persists last_health_* on the row after
+  // every test. Invalidate the list so the row health badge
+  // refreshes instead of staying on "untested".
+  const qc = useQueryClient();
   return useMutation<DownloadClientTestResult, ApiError, number>({
     mutationFn: (id) =>
       apiFetch<DownloadClientTestResult>(
         `/api/v3/downloadclient/${id}/test`,
         { method: "POST" },
       ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: CLIENTS_KEY });
+    },
   });
 }
 

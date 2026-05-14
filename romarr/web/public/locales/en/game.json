@@ -6,8 +6,36 @@
     "releases": "Releases",
     "history": "History",
     "files": "Files",
+    "metadata": "Metadata",
     "notes": "Notes",
     "ariaLabel": "Game tabs"
+  },
+  "metadata": {
+    "title": "Metadata sources",
+    "subtitle": "Per-provider snapshot — IDs, cached payloads, on-disk file hashes.",
+    "loadError": "Couldn't load the metadata snapshot.",
+    "open": "open",
+    "fetchedAt": "fetched {{value}}",
+    "expiresAt": "TTL until {{value}}",
+    "noCache": "No cached payload yet — refresh the metadata aggregator to populate this provider's contribution.",
+    "providerName": {
+      "igdb": "IGDB",
+      "mobygames": "MobyGames",
+      "screenscraper": "ScreenScraper",
+      "launchbox": "LaunchBox",
+      "retroachievements": "RetroAchievements"
+    },
+    "fields": {
+      "title": "Title"
+    },
+    "empty": {
+      "title": "No provider data yet",
+      "body": "Bind a provider ID via the lookup-add flow or run a metadata refresh to populate this tab."
+    },
+    "hashes": {
+      "title": "File hashes",
+      "subtitle": "SHA-1 / MD5 / CRC32 of every imported Dump under this game. Useful for cross-checking against external DAT files."
+    }
   },
   "delete": {
     "button": "Delete game"
@@ -16,7 +44,17 @@
     "summary": {
       "showMore": "Show more",
       "showLess": "Show less"
-    }
+    },
+    "status": {
+      "acquired": "On disk",
+      "acquiredTooltip": "At least one Release imported and on disk.",
+      "wanted": "Wanted",
+      "wantedTooltip": "Monitored — Romarr will search until a Release lands."
+    },
+    "datVerifiedPill_one": "DAT ✓",
+    "datVerifiedPill_other": "DAT ✓ ×{{count}}",
+    "datVerifiedTooltip_one": "1 file verified against a DAT database (No-Intro / Redump / …).",
+    "datVerifiedTooltip_other": "{{count}} files verified against a DAT database (No-Intro / Redump / …)."
   },
   "notes": {
     "heading": "Notes",
@@ -119,7 +157,22 @@
       "on": "Monitored",
       "off": "Paused"
     },
-    "multiDiscTitle": "{{title}} — {{total}} discs"
+    "multiDiscTitle": "{{title}} — {{total}} discs",
+    "expand": "More info",
+    "collapse": "Collapse",
+    "disc": "Disc {{n}}/{{total}}",
+    "detail": {
+      "datSource": "DAT authority",
+      "datEntry": "Canonical name",
+      "datStatus": "DAT status",
+      "datStatusVerified": "Verified",
+      "datStatusInvalid": "BADDUMP / HACK / OVERDUMP",
+      "releaseId": "Release ID",
+      "namingConvention": "Naming convention",
+      "revision": "Revision",
+      "cutoff": "Cutoff",
+      "cutoffMet": "Met"
+    }
   },
   "history": {
     "loadError": "Couldn't load history",
@@ -192,7 +245,17 @@
       "title": "No files imported yet",
       "body": "Once a Release is imported, the on-disk dump (hashes, DAT verify, size, format) appears here."
     },
-    "importedAt": "imported {{when}} via {{via}}"
+    "importedAt": "imported {{when}} via {{via}}",
+    "datMatch": {
+      "title": "DAT match",
+      "source": "Authority",
+      "entryName": "Canonical name",
+      "entrySize": "Indexed size",
+      "entryStatus": "Status",
+      "ok": "Hash verified against the database — file matches the indexed DAT entry.",
+      "warning": "Hash found in the DAT but the entry is flagged non-conforming (BADDUMP / HACK / OVERDUMP)."
+    },
+    "verifiedHeader": "DAT verified"
   },
   "pendingDownloads": {
     "title_one": "{{count}} download in progress",
@@ -205,6 +268,10 @@
     "headerButton": "Manual search",
     "title": "Manual search",
     "close": "Close",
+    "datBadge": {
+      "verifiedTooltip": "This release's hash matches a VERIFIED entry in the DAT cache.",
+      "hackTooltip": "This release's hash is in the DAT cache but the entry is flagged as a hack / baddump."
+    },
     "empty": "No candidates returned. Try a different query or check that indexers are enabled.",
     "noIndexers": "No indexer configured — the search will return nothing until you enable at least one Newznab/Torznab indexer in Settings → Indexers.",
     "query": {
@@ -238,12 +305,52 @@
     "seeders_one": "{{count}} seeder",
     "seeders_other": "{{count}} seeders",
     "rejected": "Rejected",
+    "outcome": {
+      "rateLimited_one": "Indexer rate-limited (HTTP 429). Wait a moment then retry — every result was dropped because the upstream indexer asked us to slow down.",
+      "rateLimited_other": "{{count}} indexers rate-limited (HTTP 429). Wait a moment then retry — every result was dropped because the upstream asked us to slow down.",
+      "failed_one": "Indexer responded with an error. Check the indexer's health in Settings → Indexers.",
+      "failed_other": "{{count}} indexers responded with errors. Check Settings → Indexers."
+    },
+    "detail": {
+      "fields": {
+        "indexer": "Indexer",
+        "guid": "GUID",
+        "size": "Size",
+        "languages": "Languages",
+        "fileFormat": "File format",
+        "titleScore": "Title match",
+        "scoreBreakdown": "Score breakdown",
+        "downloadUrl": "Download URL",
+        "grabs": "Downloads",
+        "downloadVolumeFactor": "Download ratio",
+        "uploadVolumeFactor": "Upload ratio",
+        "freeleech": "Freeleech",
+        "year": "Year",
+        "genre": "Genre",
+        "description": "Notes",
+        "infoUrl": "Tracker page",
+        "nfoUrl": "NFO",
+        "datMatchSource": "DAT authority",
+        "datMatchEntry": "Canonical DAT name",
+        "datMatchStatus": "DAT status",
+        "alreadyOwned": "Duplicate"
+      },
+      "datStatus": {
+        "verified": "Verified — the DAT entry confirms a clean dump.",
+        "invalid": "Invalid — the DAT entry is flagged BADDUMP / HACK / OVERDUMP."
+      },
+      "alreadyOwnedBody": "A Release of this game already carries a file with this hash."
+    },
+    "alreadyOwnedPill": "Already owned",
+    "alreadyOwnedTooltip": "This candidate's hash matches a file already imported for this game — skip the re-grab.",
     "facet": {
       "platform": "Platform",
       "region": "Region",
       "languages": "Languages",
       "dumpStatus": "Dump status",
+      "dumpStatusDatValidated": "Type confirmed by the DAT — clean, complete dump",
       "naming": "Naming convention",
+      "namingDatValidated": "Convention confirmed by the DAT authority (No-Intro / Redump / …)",
       "fileFormat": "File format",
       "unknownLabel": {
         "platform": "Platform ?",
@@ -270,6 +377,10 @@
     },
     "rejection": {
       "blocklisted": "Already blocklisted",
+      "blocklisted_guid": "Already blocklisted (GUID)",
+      "blocklisted_hash": "Already blocklisted (hash)",
+      "no_game_match": "No monitored game matches",
+      "platform_mismatch": "Wrong console — title advertises another platform",
       "below_quality_floor": "Below quality floor",
       "size_out_of_range": "Size out of allowed range",
       "below_score_floor": "Below score floor",

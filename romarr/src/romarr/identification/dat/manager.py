@@ -28,6 +28,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from romarr.domain.enums import DumpStatus
 from romarr.domain.models import DatEntry
+from romarr.identification.dat.clrmamepro import parse_clrmamepro
 from romarr.identification.dat.logiqx import parse_logiqx
 
 if TYPE_CHECKING:
@@ -150,9 +151,17 @@ class DatManager:
                 contents_hash=contents_hash,
             )
 
-        # Stream-parse + bulk-insert.
+        # Stream-parse + bulk-insert. Dispatch on body shape so
+        # operators can paste either a Logiqx XML DAT (No-Intro
+        # native, Redump native) or a clrmamepro-format DAT (what
+        # the libretro-database mirror serves for No-Intro sets).
+        parser = (
+            parse_logiqx
+            if dat_bytes.lstrip()[:1] == b"<"
+            else parse_clrmamepro
+        )
         rows: list[dict[str, object]] = []
-        for rom in parse_logiqx(dat_bytes):
+        for rom in parser(dat_bytes):
             if not (rom.crc32 or rom.md5 or rom.sha1):
                 # FR-006 — skip rows with no usable hash at all.
                 continue

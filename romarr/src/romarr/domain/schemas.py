@@ -60,6 +60,7 @@ class PlatformCreate(_SchemaBase):
     launchbox_id: int | None = None
     retroachievements_id: int | None = None
     newznab_category_ids: list[int] = Field(default_factory=list)
+    aliases: list[str] = Field(default_factory=list)
     pack_source: str = "builtin"
     pack_version: Annotated[str | None, Field(max_length=16)] = None
     extra_meta: dict[str, Any] = Field(default_factory=dict)
@@ -184,6 +185,7 @@ class GameCreate(_SchemaBase):
     monitored: bool = True
     needs_metadata_refresh: bool = False
     notes: str | None = None
+    library_id: int | None = None
 
     @model_validator(mode="after")
     def _check_slug(self) -> GameCreate:
@@ -218,12 +220,25 @@ class GameUpdate(_SchemaBase):
     custom_metadata: dict[str, Any] | None = None
     monitored: bool | None = None
     needs_metadata_refresh: bool | None = None
+    library_id: int | None = None
 
 
 class GameRead(GameCreate):
     id: int
     created_at: datetime
     updated_at: datetime
+    # Slice 394 — derived "do we already have this game on disk?"
+    # flag, projected by the API list/read endpoints from the
+    # Release/Dump tables. ``True`` when at least one Release
+    # has ``status='imported'`` or ``'cutoff_met'``. Optional so
+    # the schema stays usable from contexts that don't enrich
+    # (writes, the lookup-add endpoint, …).
+    acquired: bool | None = None
+    # Slice 447 — derived count of Dumps owned by this game whose
+    # SHA-1 matched a VERIFIED entry in the DAT cache. Drives the
+    # ``DAT ✓`` icon on Library cards + Game Detail header.
+    # Optional for the same reason ``acquired`` is.
+    dat_verified_dump_count: int | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -286,6 +301,12 @@ class ReleaseRead(ReleaseCreate):
     id: int
     created_at: datetime
     updated_at: datetime
+    # Slice 452 — aggregate from the release's Dumps so the
+    # Releases tab can paint the same DAT badge as the Files
+    # tab without re-fetching dumps per row.
+    dat_verified: bool | None = None
+    dat_source: str | None = None
+    dat_entry_name: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -334,6 +355,14 @@ class DumpRead(DumpCreate):
     id: int
     created_at: datetime
     updated_at: datetime
+    # Slice 447 — joined ``dat_entry`` columns surfaced for the
+    # GameDetail > Files panel. ``dat_entry_id`` already points at
+    # the row; the API resolves the join once so the UI can show
+    # the canonical DAT-published name + indexed size + status
+    # without a follow-up fetch.
+    dat_entry_name: str | None = None
+    dat_entry_size_bytes: int | None = None
+    dat_entry_status: str | None = None
 
 
 # ---------------------------------------------------------------------------

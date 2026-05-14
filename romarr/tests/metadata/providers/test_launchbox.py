@@ -44,7 +44,7 @@ async def test_per_game_query_finds_cached_row() -> None:
     }
     p = _make_provider(cache=cache)
 
-    results = await p.search_games("Sonic the Hedgehog", platform_slug="megadrive")
+    results = await p.search_games("Sonic the Hedgehog", platform_slug="genesis")
     assert len(results) == 1
     assert results[0].provider_game_id == "1234"
 
@@ -73,7 +73,7 @@ async def test_search_filters_by_platform() -> None:
     }
     p = _make_provider(cache=cache)
 
-    md = await p.search_games("sonic", platform_slug="megadrive")
+    md = await p.search_games("sonic", platform_slug="genesis")
     assert {r.title for r in md} == {"Sonic"}
 
     gba = await p.search_games("sonic", platform_slug="gba")
@@ -130,9 +130,9 @@ def test_capabilities_no_auth_required() -> None:
     assert cap.invoked_in_scan is True
 
 
-def test_platform_mapping_megadrive_is_genesis_string() -> None:
+def test_platform_mapping_genesis_is_genesis_string() -> None:
     p = LaunchBoxProvider(rate_limit_rps=100, rate_limit_burst=100)
-    assert p.get_platform_mapping("megadrive") == "Sega Genesis"
+    assert p.get_platform_mapping("genesis") == "Sega Genesis"
 
 
 async def test_health_check_reflects_cache_population() -> None:

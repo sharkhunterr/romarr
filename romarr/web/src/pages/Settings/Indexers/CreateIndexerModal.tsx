@@ -80,9 +80,17 @@ export function CreateIndexerModal(
   const [enableInteractive, setEnableInteractive] = useState(
     editing?.enable_interactive_search ?? true,
   );
+  const [timeoutSeconds, setTimeoutSeconds] = useState<number>(
+    editing?.timeout_seconds ?? 30,
+  );
 
   const submitting = create.isPending || update.isPending;
-  const canSubmit = name.trim().length > 0 && url.trim().length > 0;
+  const canSubmit =
+    name.trim().length > 0 &&
+    url.trim().length > 0 &&
+    Number.isFinite(timeoutSeconds) &&
+    timeoutSeconds >= 5 &&
+    timeoutSeconds <= 600;
 
   function commit(): void {
     if (!canSubmit) return;
@@ -94,6 +102,7 @@ export function CreateIndexerModal(
         enable_rss: enableRss,
         enable_automatic_search: enableAutomatic,
         enable_interactive_search: enableInteractive,
+        timeout_seconds: timeoutSeconds,
       };
       const trimmedKey = apiKey.trim();
       if (trimmedKey.length > 0) {
@@ -131,6 +140,7 @@ export function CreateIndexerModal(
       implementation,
       url: url.trim(),
       api_key: apiKey.trim() || null,
+      enabled: true,
       enable_rss: enableRss,
       enable_automatic_search: enableAutomatic,
       enable_interactive_search: enableInteractive,
@@ -142,7 +152,7 @@ export function CreateIndexerModal(
       discount_only: false,
       rate_limit_seconds: 5,
       result_limit: 100,
-      timeout_seconds: 30,
+      timeout_seconds: timeoutSeconds,
       source: "manual",
     } as IndexerCreate;
     create.mutate(payload, {
@@ -316,6 +326,27 @@ export function CreateIndexerModal(
               />
             </label>
           </fieldset>
+
+          <label className="block">
+            <span className="mb-1 block text-[0.65rem] uppercase tracking-widest text-zinc-500">
+              {t("indexers.create.timeoutLabel")}
+            </span>
+            <input
+              type="number"
+              min={5}
+              max={600}
+              step={5}
+              value={timeoutSeconds}
+              onChange={(e) =>
+                setTimeoutSeconds(Number.parseInt(e.target.value, 10) || 0)
+              }
+              disabled={submitting}
+              className="w-28 rounded-md bg-zinc-950 px-3 py-2 text-sm text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
+            />
+            <p className="mt-1 text-[0.65rem] text-zinc-500">
+              {t("indexers.create.timeoutHint")}
+            </p>
+          </label>
 
           <p className="rounded-md border border-dashed border-zinc-800 bg-zinc-900/40 px-3 py-2 text-[0.65rem] text-zinc-500">
             {t("indexers.create.prowlarrHint")}

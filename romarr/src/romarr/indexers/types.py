@@ -94,12 +94,36 @@ class SearchResult(_Base):
     hash_sha1_provenance: FieldProvenance | None = None
     hash_crc32: str | None = None
     hash_crc32_provenance: FieldProvenance | None = None
+    hash_md5: str | None = None
+    hash_md5_provenance: FieldProvenance | None = None
     naming_convention: NamingConvention | None = None
     naming_convention_provenance: FieldProvenance | None = None
     dat_source: DatSource | None = None
     dat_source_provenance: FieldProvenance | None = None
     file_format: str | None = None
     file_format_provenance: FieldProvenance | None = None
+
+    # Slice 402 — extra standard newznab/torznab + grabarr attrs
+    # that give the operator UI + the scorer more signal:
+    #   * ``grabs`` (download count) — popularity ranker.
+    #   * ``downloadvolumefactor`` (0..1) — 0 = freeleech; private
+    #     trackers expose this and it's a strong "grab this one"
+    #     signal.
+    #   * ``uploadvolumefactor`` (≥1) — 2× upload bonus etc.
+    #   * ``description`` — release notes / comments, shown in
+    #     the search modal's expanded row.
+    #   * ``year`` — release year, hardens game-match disambig.
+    #   * ``genre`` — provider-side genre.
+    #   * ``info_url`` / ``nfo_url`` — operator UI deep-links to
+    #     the tracker / NFO page.
+    grabs: int | None = None
+    download_volume_factor: float | None = None
+    upload_volume_factor: float | None = None
+    description: str | None = None
+    year: int | None = None
+    genre: str | None = None
+    info_url: str | None = None
+    nfo_url: str | None = None
 
 
 class RssResult(_Base):

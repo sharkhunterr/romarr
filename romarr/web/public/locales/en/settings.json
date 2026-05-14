@@ -16,7 +16,34 @@
     "tags": "Tags",
     "unidentified": "Unidentified",
     "ui": "UI",
-    "general": "General"
+    "general": "General",
+    "logs": "Logs"
+  },
+  "logs": {
+    "title": "System Logs",
+    "subtitle": "Live tail of the in-process log buffer. The newest 2000 records are kept; click a row for the full message and traceback.",
+    "filters": {
+      "all": "All levels",
+      "debug": "Debug+",
+      "info": "Info+",
+      "warn": "Warning+",
+      "error": "Error+",
+      "levelLabel": "Minimum level",
+      "loggerLabel": "Logger filter",
+      "loggerPlaceholder": "e.g. importer, search, downloaders…"
+    },
+    "loadError": "Couldn't load the logs.",
+    "empty": {
+      "title": "No log lines match",
+      "body": "Adjust the filters above or wait — Romarr writes a line every time the importer / scheduler / API does something noteworthy."
+    },
+    "hasTraceback": "trace",
+    "detail": {
+      "title": "Log entry",
+      "messageLabel": "Message",
+      "tracebackLabel": "Traceback",
+      "close": "Close"
+    }
   },
   "home": {
     "welcomeTitle": "Welcome to Settings",
@@ -105,6 +132,10 @@
     "toggle": {
       "enabled": "Enabled",
       "errorFallback": "Toggle failed."
+    },
+    "action": {
+      "enable": "Enable",
+      "disable": "Disable"
     }
   },
   "downloadClients": {
@@ -139,6 +170,8 @@
         "enableTorrents": "Accept torrent grabs",
         "enableUsenet": "Accept Usenet grabs"
       },
+      "timeoutLabel": "Timeout (s)",
+      "timeoutHint": "Max wait for any HTTP call to this client AND for fetching the torrent file from the indexer at grab time. Bump if Prowlarr proxies a slow upstream like Grabarr (5–600 s).",
       "cancel": "Cancel",
       "submit": "Add client",
       "submitting": "Adding…",
@@ -198,6 +231,10 @@
     "toggle": {
       "enabled": "Enabled",
       "errorFallback": "Toggle failed."
+    },
+    "action": {
+      "enable": "Enable",
+      "disable": "Disable"
     }
   },
   "datSources": {
@@ -206,14 +243,64 @@
     "loadError": "Couldn't load DAT sources",
     "empty": {
       "title": "No DAT sources loaded yet",
-      "body": "Trigger the dat-update task under System > Tasks to ingest the first DAT bundle."
+      "body": "Add a DAT source with the button above then hit Refresh to ingest the first bundle."
     },
-    "refreshHint": "Re-run the dat-update task under System > Tasks to refresh.",
+    "summaryTitle": "Aggregated cache",
+    "summaryHint": "Rows consolidated per authority (No-Intro, Redump, …) — populated by the ingestions below.",
+    "rowsTitle": "Configured sources",
+    "rowsHint": "Direct URLs to Logiqx DATs. Romarr downloads and ingests on each refresh.",
+    "rowsEmpty": "No sources configured yet.",
+    "addButton": "Add source",
+    "refreshAllButton": "Refresh all",
+    "refreshAllRunning": "Refreshing…",
+    "refreshAllDoneToast": "{{ok}}/{{total}} sources refreshed",
+    "refreshAllErrorToast": "Refresh-all failed",
     "cols": {
       "source": "Source",
       "entries": "Entries",
       "platforms": "Platforms",
-      "latestUpdate": "Last updated"
+      "latestUpdate": "Last updated",
+      "platform": "Platform",
+      "name": "Name",
+      "status": "Status",
+      "lastEntries": "Last entries",
+      "actions": "Actions"
+    },
+    "status": {
+      "never": "Never",
+      "ok": "OK",
+      "failed": "Failed",
+      "running": "Running"
+    },
+    "action": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "refresh": "Refresh",
+      "refreshing": "…"
+    },
+    "deleteConfirm": "Delete DAT source “{{name}}”?",
+    "deletedToast": "Source deleted",
+    "deleteErrorToast": "Couldn't delete source",
+    "refreshDoneToast": "Source “{{name}}” refreshed ({{count}} entries)",
+    "refreshFailedToast": "Refresh failed: {{error}}",
+    "modal": {
+      "titleAdd": "Add DAT source",
+      "titleEdit": "Edit DAT source",
+      "subhead": "Direct URL to a Logiqx XML (.dat / .xml). Landing pages with captchas won't work — use a direct mirror.",
+      "nameLabel": "Name",
+      "urlLabel": "DAT URL",
+      "urlHint": "Must resolve directly to a Logiqx XML, not a download page.",
+      "sourceLabel": "Authority",
+      "platformLabel": "Platform",
+      "platformPlaceholder": "— Pick a platform —",
+      "enabledLabel": "Enabled",
+      "errorTitle": "Operation failed",
+      "cancel": "Cancel",
+      "submitting": "Saving…",
+      "submitAdd": "Add",
+      "submitEdit": "Save",
+      "toastCreated": "Source “{{name}}” added",
+      "toastUpdated": "Source “{{name}}” updated"
     }
   },
   "qualityDefinitions": {
@@ -526,6 +613,16 @@
         "successTitle": "Quality profile added",
         "successBody": "{{name}} is now available to bind to a library.",
         "errorTitle": "Couldn't add the profile"
+      },
+      "edit": {
+        "button": "Edit",
+        "modalTitle": "Edit Quality profile",
+        "subhead": "Tweak which formats this profile accepts. Container archives (zip / rar / 7z / …) always pass — the importer unwraps them.",
+        "submit": "Save changes",
+        "submitting": "Saving…",
+        "successTitle": "Quality profile updated",
+        "successBody": "{{name}} saved.",
+        "errorTitle": "Couldn't save the profile"
       }
     }
   },
@@ -589,6 +686,16 @@
       "successTitle": "Library added",
       "successBody": "{{name}} is now ready for imports.",
       "errorTitle": "Couldn't add the library"
+    },
+    "edit": {
+      "button": "Edit",
+      "modalTitle": "Edit library",
+      "subhead": "Tweak the destination, profile bindings, or lifecycle policy. Existing Releases keep their library binding unless you reassign them.",
+      "submit": "Save changes",
+      "submitting": "Saving…",
+      "successTitle": "Library updated",
+      "successBody": "{{name}} saved.",
+      "errorTitle": "Couldn't save the library"
     },
     "lifecycle": {
       "hardlink_and_seed": "Hardlink + seed",
@@ -657,7 +764,36 @@
       "platformsAffected_one": "Platform",
       "platformsAffected_other": "Platforms"
     },
-    "uploadHint": "Pack upload (multipart YAML) + per-platform override toggles land in a follow-up slice."
+    "uploadHint": "Pack upload (multipart YAML) + per-platform override toggles land in a follow-up slice.",
+    "catalogue": {
+      "heading": "Configured platforms",
+      "subhead": "{{count}} platforms ready for monitoring + grab.",
+      "filterPlaceholder": "Filter (name / slug / alias)…",
+      "loadError": "Couldn't load the platform catalogue.",
+      "noMatches": "No platform matches the filter."
+    },
+    "packs": {
+      "heading": "Platform Packs",
+      "subhead": "Bulk platform definitions are shipped as YAML packs. Audit log per pack application."
+    },
+    "detail": {
+      "modalTitle": "{{name}} — details",
+      "close": "Close",
+      "sections": {
+        "identity": "Identity",
+        "aliases": "Aliases (used by grab + manual search detection)",
+        "providerIds": "Metadata provider IDs",
+        "newznabCategories": "Newznab category IDs"
+      },
+      "fields": {
+        "slug": "Slug (folder name)",
+        "name": "Full name",
+        "shortName": "Short name",
+        "manufacturer": "Manufacturer",
+        "releaseYear": "Release year",
+        "pack": "From pack"
+      }
+    }
   },
   "general": {
     "title": "General",
@@ -805,6 +941,8 @@
       "saving": "Saving…",
       "cancel": "Cancel",
       "close": "Close",
+      "advanced": "Advanced (optional)",
+      "ssDevKeyNote": "Romarr ships the same community ScreenScraper dev key RomM and Skraper use, so only your screenscraper.fr username + password are needed. Operators with their own dev key can paste it in the Advanced section to use its own quota.",
       "required": "Required field(s): {{fields}}"
     },
     "fieldPriorityHint": "Per-field provider order is configured at /api/v3/metadata/field-priority — the drag-and-drop editor lands in a follow-up slice."
@@ -914,6 +1052,8 @@
         "enableAutomatic": "Enable automatic search (Wanted refresh)",
         "enableInteractive": "Enable interactive search (manual search UI)"
       },
+      "timeoutLabel": "Timeout (s)",
+      "timeoutHint": "How long Romarr will wait for one indexer search response. Bump if Prowlarr proxies a slow upstream like Grabarr (5–600 s).",
       "prowlarrHint": "Tip: prefer the Prowlarr push setup. Add Romarr to your Prowlarr instance and the indexers sync over without you maintaining the manual entry below.",
       "cancel": "Cancel",
       "submit": "Add indexer",
@@ -921,6 +1061,29 @@
       "successTitle": "Indexer added",
       "successBody": "{{name}} is now wired up.",
       "errorTitle": "Couldn't add the indexer"
+    },
+    "grabarr": {
+      "openButton": "+ Add Grabarr",
+      "modalTitle": "Add Grabarr",
+      "subhead": "Direct integration — bypasses Prowlarr on the grab path so HTTP-direct sources (Internet Archive, RomsFun, Edge Emulation, …) stream straight to disk instead of routing through BitTorrent. Creates a linked indexer + download-client pair in one shot.",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. Local Grabarr",
+      "baseUrlLabel": "Grabarr base URL",
+      "baseUrlHint": "Root URL of the Grabarr deploy — Romarr appends /torznab/{slug}/api for search and /romarr/{slug}/api/v1/resolve for grab.",
+      "profileSlugLabel": "Grabarr profile slug",
+      "profileSlugHint": "Which profile to use. Pick the slug shown in Grabarr's profile list (e.g. roms_all, ebooks_general).",
+      "apiKeyLabel": "API key",
+      "timeoutLabel": "Timeout (s)",
+      "timeoutHint": "Max wait on /health, /resolve, and the http_direct streaming response. 5–600 s, default 60.",
+      "downloadRootLabel": "Download root (optional)",
+      "downloadRootHint": "Where the http_direct streamer writes files (joined with the per-grab category). Defaults to /downloads. Operators with a custom mount can pin a separate subtree per Grabarr instance.",
+      "connectivityHint": "Romarr probes Grabarr's /romarr/api/v1/health before persisting. Protocol version mismatch, bad apikey, or unreachable host fail the wizard without leaving a half-formed config.",
+      "errorTitle": "Couldn't add Grabarr",
+      "errorCode": "Code",
+      "cancel": "Cancel",
+      "submit": "Add Grabarr",
+      "submitting": "Probing /health…",
+      "toastSuccess": "Grabarr \"{{name}}\" wired up"
     },
     "edit": {
       "button": "Edit",
@@ -974,7 +1137,12 @@
     "auto": "Auto",
     "interactive": "Interactive",
     "toggle": {
+      "enabled": "Enabled",
       "errorFallback": "Toggle failed."
+    },
+    "action": {
+      "enable": "Enable",
+      "disable": "Disable"
     }
   },
   "unidentified": {

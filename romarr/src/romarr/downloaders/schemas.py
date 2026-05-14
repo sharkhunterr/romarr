@@ -112,6 +112,12 @@ class DownloadClientRead(_Base):
     last_health_ok: bool | None
     last_health_error: str | None
     client_version_seen: str | None
+    timeout_seconds: int
+    # Slice 427 / R3a — surfaces the per-row download_root the
+    # grabarr_direct streamer writes under. NULL for every other
+    # client type. Read-only in the API; mutated only via the
+    # "Add Grabarr" wizard endpoint.
+    download_root: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -144,6 +150,10 @@ class DownloadClientCreate(_Base):
     remove_completed_downloads: bool = False
     remove_failed_downloads: bool = True
     ssl_cert_validation: _SslValidation = "enabled"
+    timeout_seconds: Annotated[int, Field(ge=5, le=600)] = 60
+    # Optional override of the streamer base path; only relevant
+    # to type='grabarr_direct'. Other types leave it None.
+    download_root: Annotated[str | None, Field(default=None, max_length=512)] = None
 
     @model_validator(mode="after")
     def _check(self) -> Self:
@@ -194,6 +204,8 @@ class DownloadClientUpdate(_Base):
     remove_completed_downloads: bool | None = None
     remove_failed_downloads: bool | None = None
     ssl_cert_validation: _SslValidation | None = None
+    timeout_seconds: Annotated[int | None, Field(default=None, ge=5, le=600)] = None
+    download_root: Annotated[str | None, Field(default=None, max_length=512)] = None
 
 
 # ---------------------------------------------------------------------------

@@ -45,11 +45,16 @@ _DEFAULT_PLATFORM_MAPPING: dict[str, int] = {
     "snes": 19,
     "virtualboy": 87,
     "n64": 4,
-    "gamecube": 21,
+    # Slice 411 — RomM-canonical slugs after the slice 401
+    # rename (gamecube → ngc, megadrive → genesis, dreamcast →
+    # dc). Without this, IGDB lookups for those platforms used
+    # to silently match on the IGDB platform table without
+    # scoping → wrong-platform candidates surfaced.
+    "ngc": 21,
     "wii": 5,
     "wiiu": 41,
     "switch": 130,
-    "gameboy": 33,
+    "gb": 33,
     "gbc": 22,
     "gba": 24,
     "nds": 20,
@@ -57,11 +62,11 @@ _DEFAULT_PLATFORM_MAPPING: dict[str, int] = {
     "pokemon-mini": 166,
     "master-system": 64,
     "gamegear": 35,
-    "megadrive": 29,
+    "genesis": 29,
     "segacd": 78,
     "sega32x": 30,
     "saturn": 32,
-    "dreamcast": 23,
+    "dc": 23,
     "psx": 7,
     "ps2": 8,
     "ps3": 9,

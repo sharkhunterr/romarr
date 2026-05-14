@@ -177,7 +177,7 @@ async def test_search_games_returns_results(
             )
         )
         results = await provider.search_games(
-            "Sonic the Hedgehog", platform_slug="megadrive"
+            "Sonic the Hedgehog", platform_slug="genesis"
         )
 
     assert len(results) == 2
@@ -301,14 +301,17 @@ async def test_get_cover_returns_bytes(
 # ---------------------------------------------------------------------------
 
 
-def test_platform_mapping_megadrive_is_29(igdb_client: httpx.AsyncClient) -> None:
+def test_platform_mapping_genesis_is_29(igdb_client: httpx.AsyncClient) -> None:
     provider = _make_provider(client=igdb_client)
-    assert provider.get_platform_mapping("megadrive") == 29
+    assert provider.get_platform_mapping("genesis") == 29
 
 
 def test_platform_mapping_unknown_returns_none(igdb_client: httpx.AsyncClient) -> None:
+    # Slice 411 widened the default mapping (psx, ps2, ngc, dc
+    # etc. are all mapped now); pick a slug that really doesn't
+    # match anything to exercise the None branch.
     provider = _make_provider(client=igdb_client)
-    assert provider.get_platform_mapping("psx") is None
+    assert provider.get_platform_mapping("unknown-slug-xyz") is None
 
 
 def test_platform_mapping_can_be_overridden_via_configure(
@@ -319,12 +322,12 @@ def test_platform_mapping_can_be_overridden_via_configure(
         {
             "client_id": "id",
             "client_secret": "secret",
-            "platform_mapping": {"psx": 7, "megadrive": 999},
+            "platform_mapping": {"psx": 7, "genesis": 999},
         }
     )
     assert provider.get_platform_mapping("psx") == 7
     # Override wins.
-    assert provider.get_platform_mapping("megadrive") == 999
+    assert provider.get_platform_mapping("genesis") == 999
     # Defaults still present for non-overridden slugs.
     assert provider.get_platform_mapping("snes") == 19
 
@@ -365,14 +368,14 @@ async def test_query_carries_authorization_and_client_id_headers(
         )
         respx.post("https://api.igdb.com/v4/games").mock(side_effect=_record)
 
-        await provider.search_games("sonic", platform_slug="megadrive")
+        await provider.search_games("sonic", platform_slug="genesis")
 
     assert captured, "IGDB POST was not invoked"
     request = captured[-1]
     assert request.headers["client-id"] == "id-1"
     assert request.headers["authorization"] == "Bearer twitch-bearer-1"
     body = request.content.decode("utf-8")
-    assert "platforms = (29)" in body  # the megadrive mapping was applied
+    assert "platforms = (29)" in body  # the genesis mapping was applied
     # Sanity: Apicalypse "fields" clause present.
     assert "fields" in body
 

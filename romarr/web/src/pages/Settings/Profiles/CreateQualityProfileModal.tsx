@@ -18,12 +18,18 @@ import { useTranslation } from "react-i18next";
 
 import {
   useCreateQualityProfile,
+  useUpdateQualityProfile,
+  type QualityProfile,
   type QualityProfileCreate,
 } from "@/lib/api/queries/quality-profiles";
 import { useToastStore } from "@/lib/store/toast";
 
 interface CreateQualityProfileModalProps {
   onClose: () => void;
+  // Slice 403 — when set, the modal is in edit mode: form
+  // pre-fills from the profile, title swaps to "Edit", submit
+  // fires PUT instead of POST.
+  profile?: QualityProfile;
 }
 
 function _parseList(raw: string): string[] {
@@ -38,23 +44,33 @@ export function CreateQualityProfileModal(
 ): ReactElement {
   const { t } = useTranslation("settings");
   const create = useCreateQualityProfile();
+  const update = useUpdateQualityProfile();
   const pushToast = useToastStore((s) => s.push);
+  const editing = props.profile ?? null;
 
-  const [name, setName] = useState("");
+  const [name, setName] = useState(editing?.name ?? "");
   const [allowedFormatsRaw, setAllowedFormatsRaw] = useState(
-    "cartridge, cd_chd",
+    editing ? editing.allowed_formats.join(", ") : "cartridge, cd_chd",
   );
-  const [preferredFormat, setPreferredFormat] = useState("cartridge");
-  const [upgradeUntilFormat, setUpgradeUntilFormat] = useState("cartridge");
-  const [requireDatVerified, setRequireDatVerified] = useState(false);
-  const [allowArchive, setAllowArchive] = useState(false);
+  const [preferredFormat, setPreferredFormat] = useState(
+    editing?.preferred_format ?? "cartridge",
+  );
+  const [upgradeUntilFormat, setUpgradeUntilFormat] = useState(
+    editing?.upgrade_until_format ?? "cartridge",
+  );
+  const [requireDatVerified, setRequireDatVerified] = useState(
+    editing?.require_dat_verified ?? false,
+  );
+  const [allowArchive, setAllowArchive] = useState(
+    editing?.allow_archive_double_compression ?? false,
+  );
 
   const allowedFormats = useMemo(
     () => _parseList(allowedFormatsRaw),
     [allowedFormatsRaw],
   );
 
-  const submitting = create.isPending;
+  const submitting = create.isPending || update.isPending;
 
   const validationError: string | null = (() => {
     if (name.trim().length === 0) return t("profiles.quality.create.errors.name");
@@ -78,6 +94,34 @@ export function CreateQualityProfileModal(
       require_dat_verified: requireDatVerified,
       allow_archive_double_compression: allowArchive,
     };
+    const onError = (err: { message: string }) => {
+      pushToast({
+        kind: "error",
+        title: editing
+          ? t("profiles.quality.edit.errorTitle")
+          : t("profiles.quality.create.errorTitle"),
+        description: err.message,
+      });
+    };
+    if (editing) {
+      update.mutate(
+        { id: editing.id, payload },
+        {
+          onSuccess: (saved) => {
+            pushToast({
+              kind: "success",
+              title: t("profiles.quality.edit.successTitle"),
+              description: t("profiles.quality.edit.successBody", {
+                name: saved.name,
+              }),
+            });
+            props.onClose();
+          },
+          onError,
+        },
+      );
+      return;
+    }
     create.mutate(payload, {
       onSuccess: (created) => {
         pushToast({
@@ -89,13 +133,7 @@ export function CreateQualityProfileModal(
         });
         props.onClose();
       },
-      onError: (err) => {
-        pushToast({
-          kind: "error",
-          title: t("profiles.quality.create.errorTitle"),
-          description: err.message,
-        });
-      },
+      onError,
     });
   }
 
@@ -103,7 +141,11 @@ export function CreateQualityProfileModal(
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={t("profiles.quality.create.modalTitle")}
+      aria-label={
+        editing
+          ? t("profiles.quality.edit.modalTitle")
+          : t("profiles.quality.create.modalTitle")
+      }
       className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/70 px-4 pt-[8vh] backdrop-blur-sm"
       onClick={props.onClose}
     >
@@ -113,10 +155,14 @@ export function CreateQualityProfileModal(
       >
         <header className="border-b border-zinc-800 px-4 py-3">
           <h2 className="text-sm font-semibold text-zinc-100">
-            {t("profiles.quality.create.modalTitle")}
+            {editing
+              ? t("profiles.quality.edit.modalTitle")
+              : t("profiles.quality.create.modalTitle")}
           </h2>
           <p className="mt-0.5 text-[0.65rem] text-zinc-500">
-            {t("profiles.quality.create.subhead")}
+            {editing
+              ? t("profiles.quality.edit.subhead")
+              : t("profiles.quality.create.subhead")}
           </p>
         </header>
 
@@ -254,8 +300,12 @@ export function CreateQualityProfileModal(
             className="rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting
-              ? t("profiles.quality.create.submitting")
-              : t("profiles.quality.create.submit")}
+              ? editing
+                ? t("profiles.quality.edit.submitting")
+                : t("profiles.quality.create.submitting")
+              : editing
+                ? t("profiles.quality.edit.submit")
+                : t("profiles.quality.create.submit")}
           </button>
         </footer>
       </div>
