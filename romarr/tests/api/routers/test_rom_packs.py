@@ -369,6 +369,27 @@ async def test_associate_409_when_file_missing(
 
 
 @pytest.mark.asyncio
+async def test_grab_pack_404_for_unknown_platform(
+    authed_client: httpx.AsyncClient,
+) -> None:
+    """The platform check short-circuits before any indexer
+    dispatch — an unknown platform_id is a clean 404."""
+    resp = await authed_client.post(
+        "/api/v3/rom-pack/grab",
+        json={
+            "name": "Grab pack",
+            "platform_id": 99999,
+            "indexer_id": 1,
+            "indexer_guid": "guid-1",
+            "download_url": "https://example.com/pack.torrent",
+            "title": "No-Intro GBA",
+        },
+    )
+    assert resp.status_code == 404
+    assert resp.json()["errorMessage"] == "platform_not_found"
+
+
+@pytest.mark.asyncio
 async def test_triage_404_for_missing_item(
     authed_client: httpx.AsyncClient, api_engine: AsyncEngine
 ) -> None:

@@ -162,6 +162,37 @@ export function useCreateRomPack(): UseMutationResult<
   });
 }
 
+export interface RomPackGrabRequest {
+  name: string;
+  platform_id?: number | null;
+  max_size_bytes?: number | null;
+  indexer_id: number;
+  indexer_guid: string;
+  download_url: string;
+  title: string;
+}
+
+export interface GrabRomPackVariables {
+  payload: RomPackGrabRequest;
+  force?: boolean;
+}
+
+export function useGrabRomPack(): UseMutationResult<
+  RomPackRead,
+  ApiError,
+  GrabRomPackVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<RomPackRead, ApiError, GrabRomPackVariables>({
+    mutationFn: ({ payload, force }) =>
+      apiFetch<RomPackRead>(
+        `/api/v3/rom-pack/grab${force === true ? "?force=true" : ""}`,
+        { method: "POST", json: payload },
+      ),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: LIST_KEY }),
+  });
+}
+
 export interface UpdateRomPackVariables {
   id: number;
   payload: RomPackUpdate;

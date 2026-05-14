@@ -367,7 +367,19 @@
       "submitAdd": "Ajouter",
       "submitEdit": "Enregistrer",
       "toastCreated": "Pack “{{name}}” ajouté",
-      "toastUpdated": "Pack “{{name}}” mis à jour"
+      "toastUpdated": "Pack “{{name}}” mis à jour",
+      "mode": {
+        "url": "Depuis une URL",
+        "indexer": "Depuis un indexeur"
+      },
+      "searchPlaceholder": "Chercher un pack sur les indexeurs…",
+      "searchButton": "Chercher",
+      "searching": "Recherche…",
+      "noResults": "Aucun résultat — élargissez la requête.",
+      "seeders": "seeders",
+      "grabHint": "Choisissez un résultat pour l'envoyer à un client de téléchargement. Le watcher route le téléchargement terminé vers l'ingestion du pack.",
+      "nameRequiredForGrab": "Donnez un nom au pack avant de récupérer un résultat.",
+      "toastGrabbed": "Pack “{{name}}” récupéré — l'ingestion démarre à la fin du téléchargement"
     },
     "triage": {
       "title": "Triage — {{name}}",

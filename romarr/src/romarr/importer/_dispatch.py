@@ -30,6 +30,7 @@ Failure semantics (all swallowed at this boundary):
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 from pathlib import Path
@@ -38,13 +39,15 @@ from uuid import uuid4
 
 from sqlalchemy import select
 
+from romarr.domain.models import RomPack
 from romarr.downloaders.factory import build_client_from_row
 from romarr.downloaders.models import DownloadClient as DownloadClientRow
 from romarr.importer.orchestrator import run_import
 from romarr.importer.types import ImportContext
+from romarr.rom_packs.ingest import ingest_rom_pack
 
 if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import async_sessionmaker
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
     from romarr.downloaders.base import DownloadClient
     from romarr.downloaders.types import ManagedDownload
@@ -54,10 +57,10 @@ logger = logging.getLogger(__name__)
 
 
 def build_managed_download_dispatcher(
-    sessionmaker: "async_sessionmaker",
+    sessionmaker: async_sessionmaker,
     *,
-    event_channel: "EventChannel | None" = None,
-) -> Callable[["ManagedDownload"], Awaitable[None]]:
+    event_channel: EventChannel | None = None,
+) -> Callable[[ManagedDownload], Awaitable[None]]:
     """Build a watcher-compatible dispatcher closure over ``sessionmaker``.
 
     The returned callable takes a :class:`ManagedDownload`, opens a
@@ -71,7 +74,7 @@ def build_managed_download_dispatcher(
     the two operator-invisible signal paths.
     """
 
-    async def dispatch(item: "ManagedDownload") -> None:
+    async def dispatch(item: ManagedDownload) -> None:
         save_path = item.save_path or ""
         if not save_path:
             logger.warning(
@@ -80,6 +83,15 @@ def build_managed_download_dispatcher(
                 item.client_id,
                 item.client_native_id,
             )
+            return
+
+        # Slice 463 — a completed download bound to a ``grab``-
+        # sourced RomPack is a ROM *content pack*, not a single
+        # release: route it to the pack ingest pipeline instead
+        # of ``run_import``. The helper settles the queue_entry
+        # and fires the ingest as a detached task; returning
+        # True means "handled, don't fall through".
+        if await _maybe_route_to_rom_pack(sessionmaker, item, save_path):
             return
 
         # Look up the parent queue_entry so we thread the
@@ -228,7 +240,7 @@ def build_managed_download_dispatcher(
 
 async def _settle_queue_entry(
     *,
-    session: "AsyncSession",
+    session: AsyncSession,
     client_id: int,
     native_id: str,
     title: str | None,
@@ -285,9 +297,103 @@ async def _settle_queue_entry(
     await session.commit()
 
 
+async def _maybe_route_to_rom_pack(
+    sessionmaker: async_sessionmaker,
+    item: ManagedDownload,
+    save_path: str,
+) -> bool:
+    """Route a completed download to the ROM-pack ingest pipeline
+    when it's bound to a ``grab``-sourced :class:`RomPack`.
+
+    Returns ``True`` when the download was a pack (handled —
+    caller must not run the single-file importer), ``False``
+    when it's an ordinary release.
+
+    The download itself is complete (the watcher only dispatches
+    finished items), so the originating ``queue_entry`` is
+    settled as a success straight away — the pack's own
+    ``status`` field is the channel the Content Packs page polls
+    for the download-extract-import progress that follows.
+
+    Idempotent: only a pack still in ``pending`` triggers an
+    ingest. A watcher re-tick after a restart sees a non-pending
+    status and just re-settles the queue_entry.
+    """
+    async with sessionmaker() as session:
+        pack = (
+            await session.execute(
+                select(RomPack).where(
+                    RomPack.source_kind == "grab",
+                    RomPack.download_client_id == item.client_id,
+                    RomPack.download_client_native_id
+                    == item.client_native_id,
+                )
+            )
+        ).scalar_one_or_none()
+        if pack is None:
+            return False
+
+        pack_id = pack.id
+        already_started = pack.status != "pending"
+        if not already_started:
+            pack.downloaded_path = save_path
+            await session.commit()
+
+        try:
+            await _settle_queue_entry(
+                session=session,
+                client_id=item.client_id,
+                native_id=item.client_native_id,
+                title=item.name,
+                success=True,
+                error_msg=None,
+            )
+        except Exception:
+            logger.exception(
+                "watcher_dispatch.rom_pack.settle_failed "
+                "pack_id=%s client_id=%s native_id=%s",
+                pack_id,
+                item.client_id,
+                item.client_native_id,
+            )
+
+    if already_started:
+        logger.info(
+            "watcher_dispatch.rom_pack.already_handled pack_id=%s "
+            "client_id=%s native_id=%s",
+            pack_id,
+            item.client_id,
+            item.client_native_id,
+        )
+        return True
+
+    # Fire the ingest detached — a multi-GB pack must not block
+    # the watcher's serial per-item dispatch loop.
+    async def _run() -> None:
+        try:
+            await ingest_rom_pack(
+                sessionmaker=sessionmaker, rom_pack_id=pack_id
+            )
+        except Exception:
+            logger.exception(
+                "watcher_dispatch.rom_pack.ingest_crashed pack_id=%s",
+                pack_id,
+            )
+
+    asyncio.get_running_loop().create_task(_run())
+    logger.info(
+        "watcher_dispatch.rom_pack.ingest_started pack_id=%s "
+        "client_id=%s native_id=%s",
+        pack_id,
+        item.client_id,
+        item.client_native_id,
+    )
+    return True
+
+
 def build_get_enabled_clients(
-    sessionmaker: "async_sessionmaker",
-) -> Callable[[], Awaitable[list["DownloadClient"]]]:
+    sessionmaker: async_sessionmaker,
+) -> Callable[[], Awaitable[list[DownloadClient]]]:
     """Build a ``get_clients`` callable for the watcher loop.
 
     Each call queries DB for enabled rows + builds instances. Build
@@ -296,7 +402,7 @@ def build_get_enabled_clients(
     the remaining clients.
     """
 
-    async def get_clients() -> list["DownloadClient"]:
+    async def get_clients() -> list[DownloadClient]:
         async with sessionmaker() as session:
             rows = (
                 await session.execute(
@@ -306,7 +412,7 @@ def build_get_enabled_clients(
                 )
             ).scalars().all()
 
-        out: list["DownloadClient"] = []
+        out: list[DownloadClient] = []
         for row in rows:
             try:
                 out.append(build_client_from_row(row))

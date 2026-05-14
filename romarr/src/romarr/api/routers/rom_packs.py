@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Annotated, Literal
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 from sqlalchemy import delete, select
 
@@ -130,6 +130,25 @@ class RomPackUpdate(_Base):
     url: HttpUrl | None = None
     platform_id: int | None = None
     max_size_bytes: Annotated[int | None, Field(default=None, gt=0)] = None
+
+
+class RomPackGrabRequest(_Base):
+    """Grab one indexer result as a ROM content pack.
+
+    Mirrors the manual-search :class:`GrabRequest` shape — the
+    operator picked an exact result from a manual search — plus
+    the pack metadata (``name`` / ``platform_id`` / size cap).
+    The result is dispatched to a download client; the watcher
+    routes the completed download to the pack ingest pipeline
+    (slice 463) instead of the single-file importer."""
+
+    name: Annotated[str, Field(min_length=1, max_length=255)]
+    platform_id: int | None = None
+    max_size_bytes: Annotated[int | None, Field(default=None, gt=0)] = None
+    indexer_id: int
+    indexer_guid: Annotated[str, Field(min_length=1, max_length=255)]
+    download_url: Annotated[str, Field(min_length=1)]
+    title: Annotated[str, Field(min_length=1, max_length=512)]
 
 
 router = APIRouter(prefix="/api/v3/rom-pack", tags=["ROM Packs"])
@@ -267,6 +286,156 @@ async def create_pack(
         status="pending",
     )
     db.add(row)
+    await db.commit()
+    await db.refresh(row)
+    return _to_read(row, platform)
+
+
+@router.post(
+    "/grab",
+    response_model=RomPackRead,
+    status_code=status.HTTP_201_CREATED,
+    summary=(
+        "Grab one indexer result as a ROM content pack (admin only). "
+        "``?force=true`` overrides the blocklist gate."
+    ),
+)
+async def grab_pack(
+    payload: RomPackGrabRequest,
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    force: Annotated[
+        bool, Query(description="Override the blocklist gate")
+    ] = False,
+) -> RomPackRead:
+    """Dispatch a chosen indexer result to a download client and
+    register it as a ``grab``-sourced pack. When the download
+    completes the watcher routes it to the pack ingest pipeline.
+
+    The heavy search/dispatch deps are imported lazily — this
+    router is on the app's import-time critical path and most
+    requests never reach the grab branch."""
+    from romarr.downloaders.models import DownloadClient
+    from romarr.downloaders.routing import RoutingCandidate
+    from romarr.downloaders.types import SourceKind
+    from romarr.indexers.models import Indexer
+    from romarr.indexers.types import SearchResult
+    from romarr.search._clients import make_download_client_factory
+    from romarr.search.blocklist import is_blocklisted
+    from romarr.search.dispatch import DispatchStatus, dispatch_winner
+    from romarr.search.types import Candidate
+
+    platform = await _platform_for(db, payload.platform_id)
+    if payload.platform_id is not None and platform is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "errorMessage": "platform_not_found",
+                "errorCode": "not_found",
+            },
+        )
+
+    result = SearchResult(
+        indexer_id=payload.indexer_id,
+        guid=payload.indexer_guid,
+        title=payload.title,
+        link=payload.download_url,
+    )
+    if not force:
+        existing = await is_blocklisted(db, result=result)
+        if existing is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "errorMessage": "release_blocklisted",
+                    "errorCode": "blocklisted",
+                    "details": existing.reason,
+                },
+            )
+
+    candidate = Candidate(
+        indexer_id=payload.indexer_id,
+        indexer_guid=payload.indexer_guid,
+        title=payload.title,
+        download_url=payload.download_url,
+        matched_release_id=None,
+        score_breakdown=None,
+        rejection=None,
+        would_auto_reject=False,
+    )
+    routing_candidates = [
+        RoutingCandidate(
+            id=row.id,
+            priority=row.priority,
+            enabled=row.enabled,
+            enable_for_torrents=row.enable_for_torrents,
+            enable_for_usenet=row.enable_for_usenet,
+        )
+        for row in (await db.execute(select(DownloadClient))).scalars().all()
+    ]
+    indexer_row = (
+        await db.execute(
+            select(Indexer).where(Indexer.id == payload.indexer_id)
+        )
+    ).scalar_one_or_none()
+    source_kind = (
+        SourceKind.TORRENT
+        if indexer_row is not None
+        and indexer_row.implementation in ("torznab", "grabarr")
+        else SourceKind.USENET
+        if indexer_row is not None
+        and indexer_row.implementation == "newznab"
+        else None
+    )
+    indexer_pin = (
+        indexer_row.download_client_id if indexer_row is not None else None
+    )
+
+    outcome = await dispatch_winner(
+        candidate=candidate,
+        candidates=routing_candidates,
+        indexer_pin=indexer_pin,
+        client_factory=make_download_client_factory(db),
+        source_kind=source_kind,
+    )
+    if (
+        outcome.status is not DispatchStatus.GRABBED
+        or outcome.client_id is None
+        or outcome.client_native_id is None
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={
+                "errorMessage": "rom_pack_grab_failed",
+                "errorCode": "grab_failed",
+                "details": outcome.reason or outcome.status.value,
+            },
+        )
+
+    row = RomPack(
+        name=payload.name,
+        source_kind="grab",
+        download_client_id=outcome.client_id,
+        download_client_native_id=outcome.client_native_id,
+        platform_id=payload.platform_id,
+        max_size_bytes=payload.max_size_bytes,
+        status="pending",
+    )
+    db.add(row)
+    # Mirror the grab into queue_entry so Activity → Queue shows
+    # the download in flight; the watcher settles it once the
+    # download completes and routes it to pack ingest.
+    from romarr.api.models import QueueEntry
+
+    db.add(
+        QueueEntry(
+            title=payload.title,
+            download_client_id=outcome.client_id,
+            download_client_native_id=outcome.client_native_id,
+            state="downloading",
+            progress=0.0,
+        )
+    )
     await db.commit()
     await db.refresh(row)
     return _to_read(row, platform)

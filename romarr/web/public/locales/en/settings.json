@@ -371,7 +371,19 @@
       "submitAdd": "Add",
       "submitEdit": "Save",
       "toastCreated": "Pack “{{name}}” added",
-      "toastUpdated": "Pack “{{name}}” updated"
+      "toastUpdated": "Pack “{{name}}” updated",
+      "mode": {
+        "url": "From URL",
+        "indexer": "From indexer"
+      },
+      "searchPlaceholder": "Search indexers for a pack…",
+      "searchButton": "Search",
+      "searching": "Searching…",
+      "noResults": "No results — try a broader query.",
+      "seeders": "seeders",
+      "grabHint": "Pick a result to dispatch it to a download client. The watcher routes the finished download to pack ingest.",
+      "nameRequiredForGrab": "Give the pack a name before grabbing a result.",
+      "toastGrabbed": "Pack “{{name}}” grabbed — ingest starts when the download finishes"
     },
     "triage": {
       "title": "Triage — {{name}}",

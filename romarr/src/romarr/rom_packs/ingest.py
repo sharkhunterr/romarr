@@ -147,6 +147,46 @@ def _precheck_free_space(target: Path, archive_size_hint: int | None) -> None:
         )
 
 
+_ARCHIVE_SUFFIXES: frozenset[str] = frozenset({".zip", ".7z", ".rar"})
+
+
+async def _collect_rom_files(source: Path, extract_dir: Path) -> list[Path]:
+    """Resolve a downloaded pack source into the flat list of
+    importable ROM files.
+
+    ``source`` may be a single archive, a bare ROM, or a
+    directory of either — a ``grab``-sourced pack's
+    ``downloaded_path`` is whatever the download client's
+    ``save_path`` points at, which for a multi-file torrent is
+    the torrent's top-level directory.
+
+    Archives are unwrapped via the importer's recursive
+    ``extract()`` (zip / 7z / rar, bomb + depth guards); loose
+    ROMs pass through as-is.
+    """
+    sources = (
+        sorted(p for p in source.rglob("*") if p.is_file())
+        if source.is_dir()
+        else [source]
+    )
+
+    rom_files: list[Path] = []
+    for idx, path in enumerate(sources):
+        suffix = path.suffix.lower()
+        if suffix in _ARCHIVE_SUFFIXES:
+            sub = extract_dir / f"archive_{idx}"
+            sub.mkdir(parents=True, exist_ok=True)
+            result = await extract_archive(archive_path=path, dest_dir=sub)
+            rom_files.extend(
+                p
+                for p in result.extracted_paths
+                if p.suffix.lower() in _ROM_SUFFIXES
+            )
+        elif suffix in _ROM_SUFFIXES:
+            rom_files.append(path)
+    return rom_files
+
+
 # ---------------------------------------------------------------------------
 # Per-ROM import
 # ---------------------------------------------------------------------------
@@ -374,25 +414,7 @@ async def ingest_rom_pack(
         extract_dir = Path(
             tempfile.mkdtemp(prefix=f"rom_pack_{rom_pack_id}_", dir=str(root))
         )
-        rom_files: list[Path]
-        suffix_l = archive_path.suffix.lower()
-        if suffix_l in {".zip", ".7z", ".rar"}:
-            result = await extract_archive(
-                archive_path=archive_path, dest_dir=extract_dir
-            )
-            rom_files = [
-                p
-                for p in result.extracted_paths
-                if p.suffix.lower() in _ROM_SUFFIXES
-            ]
-        else:
-            # The "archive" is a bare ROM — treat it as a
-            # one-file pack.
-            rom_files = (
-                [archive_path]
-                if archive_path.suffix.lower() in _ROM_SUFFIXES
-                else []
-            )
+        rom_files = await _collect_rom_files(archive_path, extract_dir)
 
         # ── Import each ROM ─────────────────────────────────
         async with sessionmaker() as session:
