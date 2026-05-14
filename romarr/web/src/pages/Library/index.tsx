@@ -397,10 +397,13 @@ export function LibraryPage(): ReactElement {
                     selection mode toggle.
             Row 2 — tag + library + genre + region + year +
                     monitored-only toggle + reset (when active).
-            Each row stacks vertically on mobile via ``flex-col``
-            below md breakpoint. */}
-        <div className="flex flex-col gap-2 md:flex-row md:items-center">
-          <label className="block flex-1">
+            Each row is ``flex-wrap`` so it stays a single line
+            on a normal-width window and degrades gracefully to
+            2-3 wrapped lines on a narrow one — never the full
+            one-control-per-line stack the old ``flex-col``
+            breakpoint produced below 768 px. */}
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="block min-w-[12rem] flex-1">
             <span className="sr-only">{t("search.label")}</span>
             <input
               type="search"
@@ -416,7 +419,7 @@ export function LibraryPage(): ReactElement {
             />
           </label>
 
-          <label className="block md:w-56">
+          <label className="block w-56">
             <span className="sr-only">{t("filters.platform.label")}</span>
             <select
               value={platformFilter === ALL_PLATFORMS ? "" : String(platformFilter)}
@@ -512,8 +515,8 @@ export function LibraryPage(): ReactElement {
           </button>
         </div>
 
-        <div className="flex flex-col gap-2 md:flex-row md:items-center">
-          <label className="block md:flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="block min-w-[10rem] flex-1">
             <span className="sr-only">{t("filters.tag.label")}</span>
             <select
               value={tagFilter === ALL_TAGS ? "" : String(tagFilter)}
@@ -541,7 +544,7 @@ export function LibraryPage(): ReactElement {
             </select>
           </label>
 
-          <label className="block md:flex-1">
+          <label className="block min-w-[10rem] flex-1">
             <span className="sr-only">{t("filters.library.label")}</span>
             <select
               value={libraryFilter === ALL_LIBRARIES ? "" : String(libraryFilter)}
@@ -569,7 +572,7 @@ export function LibraryPage(): ReactElement {
             </select>
           </label>
 
-          <label className="block md:w-32">
+          <label className="block w-32">
             <span className="sr-only">{t("filters.genre.label")}</span>
             <input
               type="text"
@@ -590,7 +593,7 @@ export function LibraryPage(): ReactElement {
             />
           </label>
 
-          <label className="block md:w-24">
+          <label className="block w-24">
             <span className="sr-only">{t("filters.region.label")}</span>
             <input
               type="text"
@@ -612,7 +615,7 @@ export function LibraryPage(): ReactElement {
             />
           </label>
 
-          <label className="block md:w-24">
+          <label className="block w-24">
             <span className="sr-only">{t("filters.year.label")}</span>
             <input
               type="number"
