@@ -388,6 +388,11 @@ async def grab_pack(
     from romarr.search._clients import make_download_client_factory
     from romarr.search.blocklist import is_blocklisted
     from romarr.search.dispatch import DispatchStatus, dispatch_winner
+    from romarr.search.dispatch_grabarr import (
+        GrabarrPreResolveError,
+        filter_candidates_for_magnet,
+        maybe_pre_resolve,
+    )
     from romarr.search.types import Candidate
 
     platform = await _platform_for(db, payload.platform_id)
@@ -455,6 +460,37 @@ async def grab_pack(
     indexer_pin = (
         indexer_row.download_client_id if indexer_row is not None else None
     )
+
+    # Grabarr indexers (Minerva / Myrient et al.) hand back a
+    # token URL that has to be resolved before dispatch: a
+    # ``torrent_magnet`` result must route to the operator's qBit
+    # row (grabarr_direct rejects magnets), a ``http_direct`` one
+    # stays on the linked grabarr_direct client. ``maybe_pre_resolve``
+    # is a no-op for plain torznab / newznab indexers.
+    try:
+        candidate, indexer_pin, grabarr_resolved = await maybe_pre_resolve(
+            candidate=candidate,
+            indexer_row=indexer_row,
+            db=db,
+        )
+    except GrabarrPreResolveError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={
+                "errorMessage": "rom_pack_grab_failed",
+                "errorCode": "grab_failed",
+                "details": str(exc),
+            },
+        ) from exc
+    if (
+        grabarr_resolved is not None
+        and grabarr_resolved.method == "torrent_magnet"
+    ):
+        # Drop grabarr_direct rows from the pool so qBit wins the
+        # magnet by capability + priority.
+        routing_candidates = await filter_candidates_for_magnet(
+            candidates=routing_candidates, db=db
+        )
 
     outcome = await dispatch_winner(
         candidate=candidate,
