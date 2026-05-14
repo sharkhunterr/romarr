@@ -89,7 +89,7 @@ _DEFAULT_PLATFORM_MAPPING: dict[str, int] = {
     "ngc": 16,       # GameCube
     "wii": 19,
     "wiiu": 41,
-    "gameboy": 4,
+    "gb": 4,
     "gbc": 6,
     "gba": 5,
     "nds": 18,

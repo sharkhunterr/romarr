@@ -57,7 +57,7 @@ _DEFAULT_PLATFORM_MAPPING: dict[str, str] = {
     "wiiu": "Nintendo Wii U",
     "switch": "Nintendo Switch",
     "virtualboy": "Nintendo Virtual Boy",
-    "gameboy": "Nintendo Game Boy",
+    "gb": "Nintendo Game Boy",
     "gbc": "Nintendo Game Boy Color",
     "gba": "Nintendo Game Boy Advance",
     "nds": "Nintendo DS",

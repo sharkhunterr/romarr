@@ -20,7 +20,7 @@ parsing_strategies:
   - id: gameboy-header
     description: "Game Boy / GBC ROM header sniff"
     regex: "^.{0,335}NINTENDO"
-    apply_to_platforms: ["gameboy", "gbc"]
+    apply_to_platforms: ["gb", "gbc"]
   - id: iso9660
     description: "Generic ISO9660 disc filesystem"
     regex: "^.{0,33000}CD001"
@@ -239,11 +239,11 @@ platforms:
   # ============================================================
   # Nintendo — handhelds
   # ============================================================
-  - slug: gameboy
+  - slug: gb
     name: "Nintendo Game Boy"
     short_name: "Game Boy"
     manufacturer: Nintendo
-    aliases: ["gb", "gameboy", "nintendo game boy", "dmg"]
+    aliases: ["gameboy", "game boy", "nintendo game boy", "dmg"]
     generation: 4
     release_year: 1989
     is_handheld: true
