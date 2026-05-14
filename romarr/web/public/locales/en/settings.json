@@ -17,7 +17,8 @@
     "unidentified": "Unidentified",
     "ui": "UI",
     "general": "General",
-    "logs": "Logs"
+    "logs": "Logs",
+    "rom-packs": "Content Packs"
   },
   "logs": {
     "title": "System Logs",
@@ -301,6 +302,75 @@
       "submitEdit": "Save",
       "toastCreated": "Source “{{name}}” added",
       "toastUpdated": "Source “{{name}}” updated"
+    }
+  },
+  "romPacks": {
+    "title": "Content Packs",
+    "subtitle": "Downloadable archives holding many ROMs — a No-Intro full set, an archive.org romset, a curated bundle. Romarr streams, extracts and DAT-matches every ROM into your library in one pass.",
+    "loadError": "Couldn't load content packs",
+    "empty": {
+      "title": "No content packs yet",
+      "body": "Add a pack with the button above, then hit Ingest to download and import its ROMs."
+    },
+    "rowsTitle": "Registered packs",
+    "rowsHint": "Each pack is downloaded once, extracted, then every ROM is hashed and matched against the DAT cache.",
+    "addButton": "Add pack",
+    "platformAny": "Any platform",
+    "deleteConfirm": "Delete content pack “{{name}}”? Imported games stay in the library.",
+    "deletedToast": "Pack deleted",
+    "deleteErrorToast": "Couldn't delete pack",
+    "ingestStartedToast": "Ingest started for “{{name}}”",
+    "ingestErrorToast": "Couldn't start ingest",
+    "cols": {
+      "name": "Name",
+      "platform": "Platform",
+      "status": "Status",
+      "results": "Results",
+      "size": "Size",
+      "lastIngest": "Last ingest",
+      "actions": "Actions"
+    },
+    "status": {
+      "pending": "Pending",
+      "downloading": "Downloading",
+      "extracting": "Extracting",
+      "importing": "Importing",
+      "awaiting_triage": "Awaiting triage",
+      "done": "Done",
+      "failed": "Failed"
+    },
+    "results": {
+      "imported": "{{count}} imported",
+      "unmatched": "{{count}} unmatched",
+      "parked": "{{count}} parked",
+      "failed": "{{count}} failed"
+    },
+    "action": {
+      "ingest": "Ingest",
+      "reIngest": "Re-ingest",
+      "running": "Running…",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "modal": {
+      "titleAdd": "Add content pack",
+      "titleEdit": "Edit content pack",
+      "subhead": "A direct URL to a ROM archive (.zip / .7z / .rar). Romarr downloads it once, then extracts and imports every ROM inside.",
+      "nameLabel": "Name",
+      "urlLabel": "Archive URL",
+      "urlHint": "Must resolve directly to the archive file, not a download page.",
+      "platformLabel": "Platform",
+      "platformAny": "— Any (scatter by per-ROM hash) —",
+      "platformHint": "Pin a platform to scope DAT matching, or leave it open for a multi-platform archive.",
+      "maxSizeLabel": "Size cap (GiB)",
+      "maxSizeHint": "Optional. Aborts the download if the archive exceeds this. Defaults to 50 GiB.",
+      "errorTitle": "Operation failed",
+      "cancel": "Cancel",
+      "submitting": "Saving…",
+      "submitAdd": "Add",
+      "submitEdit": "Save",
+      "toastCreated": "Pack “{{name}}” added",
+      "toastUpdated": "Pack “{{name}}” updated"
     }
   },
   "qualityDefinitions": {

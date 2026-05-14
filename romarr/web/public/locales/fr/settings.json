@@ -17,7 +17,8 @@
     "unidentified": "Non identifiés",
     "ui": "Interface",
     "general": "Général",
-    "logs": "Logs"
+    "logs": "Logs",
+    "rom-packs": "Packs de ROMs"
   },
   "logs": {
     "title": "Logs système",
@@ -297,6 +298,75 @@
       "submitEdit": "Enregistrer",
       "toastCreated": "Source « {{name}} » ajoutée",
       "toastUpdated": "Source « {{name}} » mise à jour"
+    }
+  },
+  "romPacks": {
+    "title": "Packs de ROMs",
+    "subtitle": "Archives téléchargeables contenant de nombreuses ROMs — un set complet No-Intro, un romset archive.org, un lot organisé. Romarr télécharge, extrait et identifie chaque ROM via les DAT en une seule passe.",
+    "loadError": "Impossible de charger les packs",
+    "empty": {
+      "title": "Aucun pack pour l'instant",
+      "body": "Ajoutez un pack avec le bouton ci-dessus, puis lancez l'ingestion pour télécharger et importer ses ROMs."
+    },
+    "rowsTitle": "Packs enregistrés",
+    "rowsHint": "Chaque pack est téléchargé une fois, extrait, puis chaque ROM est hachée et comparée au cache DAT.",
+    "addButton": "Ajouter un pack",
+    "platformAny": "Toutes plateformes",
+    "deleteConfirm": "Supprimer le pack “{{name}}” ? Les jeux importés restent dans la bibliothèque.",
+    "deletedToast": "Pack supprimé",
+    "deleteErrorToast": "Impossible de supprimer le pack",
+    "ingestStartedToast": "Ingestion lancée pour “{{name}}”",
+    "ingestErrorToast": "Impossible de lancer l'ingestion",
+    "cols": {
+      "name": "Nom",
+      "platform": "Plateforme",
+      "status": "Statut",
+      "results": "Résultats",
+      "size": "Taille",
+      "lastIngest": "Dernière ingestion",
+      "actions": "Actions"
+    },
+    "status": {
+      "pending": "En attente",
+      "downloading": "Téléchargement",
+      "extracting": "Extraction",
+      "importing": "Import",
+      "awaiting_triage": "Triage requis",
+      "done": "Terminé",
+      "failed": "Échec"
+    },
+    "results": {
+      "imported": "{{count}} importées",
+      "unmatched": "{{count}} non identifiées",
+      "parked": "{{count}} en attente",
+      "failed": "{{count}} en échec"
+    },
+    "action": {
+      "ingest": "Ingérer",
+      "reIngest": "Ré-ingérer",
+      "running": "En cours…",
+      "edit": "Modifier",
+      "delete": "Supprimer"
+    },
+    "modal": {
+      "titleAdd": "Ajouter un pack de ROMs",
+      "titleEdit": "Modifier le pack de ROMs",
+      "subhead": "Une URL directe vers une archive de ROMs (.zip / .7z / .rar). Romarr la télécharge une fois, puis extrait et importe chaque ROM.",
+      "nameLabel": "Nom",
+      "urlLabel": "URL de l'archive",
+      "urlHint": "Doit pointer directement vers le fichier archive, pas vers une page de téléchargement.",
+      "platformLabel": "Plateforme",
+      "platformAny": "— Toutes (réparties par hash de ROM) —",
+      "platformHint": "Fixez une plateforme pour cadrer l'identification DAT, ou laissez ouvert pour une archive multi-plateformes.",
+      "maxSizeLabel": "Limite de taille (Gio)",
+      "maxSizeHint": "Optionnel. Annule le téléchargement si l'archive dépasse cette taille. Par défaut 50 Gio.",
+      "errorTitle": "Échec de l'opération",
+      "cancel": "Annuler",
+      "submitting": "Enregistrement…",
+      "submitAdd": "Ajouter",
+      "submitEdit": "Enregistrer",
+      "toastCreated": "Pack “{{name}}” ajouté",
+      "toastUpdated": "Pack “{{name}}” mis à jour"
     }
   },
   "qualityDefinitions": {

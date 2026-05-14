@@ -46,6 +46,7 @@ import { MetadataSourcesPage } from "@/pages/Settings/MetadataSources";
 import { PlatformsPage } from "@/pages/Settings/Platforms";
 import { ProfilesPage } from "@/pages/Settings/Profiles";
 import { QualityDefinitionsPage } from "@/pages/Settings/QualityDefinitions";
+import { RomPacksPage } from "@/pages/Settings/RomPacks";
 import { SettingsLayout } from "@/pages/Settings/SettingsLayout";
 import { SettingsPlaceholder } from "@/pages/Settings/SettingsPlaceholder";
 import { TagsPage } from "@/pages/Settings/Tags";
@@ -111,6 +112,7 @@ const router = createBrowserRouter([
                 element: <QualityDefinitionsPage />,
               },
               { path: "dat-sources", element: <DatSourcesPage /> },
+              { path: "rom-packs", element: <RomPacksPage /> },
               {
                 path: "media-management",
                 element: <MediaManagementPage />,
