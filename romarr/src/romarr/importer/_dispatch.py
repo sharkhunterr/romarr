@@ -92,6 +92,7 @@ def build_managed_download_dispatcher(
             from sqlalchemy import select as _select
 
             from romarr.api.models import QueueEntry
+            from romarr.importer.models import ImportHistory
 
             qrow = (
                 await lookup_session.execute(
@@ -105,6 +106,50 @@ def build_managed_download_dispatcher(
             if qrow is not None:
                 pre_game_id = qrow.game_id
                 pre_release_id = qrow.release_id
+
+            # Slice 459 — double-dispatch guard. If the source file
+            # is already gone AND a prior import for this exact
+            # (client, native_id) pair succeeded, a previous
+            # dispatch already consumed it (extracted + moved). The
+            # second dispatch — watcher re-tick after a restart,
+            # reconciler recovery, manual re-trigger — must NOT
+            # raise FileNotFoundError and flip the queue_entry to
+            # ``failed``. Treat it as the no-op coalesced success
+            # it really is: settle the queue_entry clean and
+            # return.
+            if not Path(save_path).exists():
+                prior_ok = (
+                    await lookup_session.execute(
+                        _select(ImportHistory.id)
+                        .where(
+                            ImportHistory.download_client_id
+                            == item.client_id,
+                            ImportHistory.download_client_native_id
+                            == item.client_native_id,
+                            ImportHistory.success.is_(True),
+                        )
+                        .limit(1)
+                    )
+                ).scalar_one_or_none()
+                if prior_ok is not None:
+                    logger.info(
+                        "watcher_dispatch.already_imported "
+                        "client_id=%s native_id=%s — source gone, "
+                        "prior import #%s succeeded; settling clean",
+                        item.client_id,
+                        item.client_native_id,
+                        prior_ok,
+                    )
+                    await _settle_queue_entry(
+                        session=lookup_session,
+                        client_id=item.client_id,
+                        native_id=item.client_native_id,
+                        title=item.name,
+                        success=True,
+                        error_msg=None,
+                    )
+                    await lookup_session.commit()
+                    return
 
         context = ImportContext(
             source_path=Path(save_path),
