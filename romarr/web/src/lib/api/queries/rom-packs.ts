@@ -210,3 +210,74 @@ export function useIngestRomPack(): UseMutationResult<
     onSuccess: () => void qc.invalidateQueries({ queryKey: LIST_KEY }),
   });
 }
+
+// ---- triage — per-item resolution of unmatched ROMs (slice 462) -------
+
+/** Invalidate both the pack list (counters / status change) and
+ * the per-pack item lists after a triage action. */
+function _invalidatePack(
+  qc: ReturnType<typeof useQueryClient>,
+  packId: number,
+): void {
+  void qc.invalidateQueries({ queryKey: LIST_KEY });
+  void qc.invalidateQueries({ queryKey: itemsKey(packId) });
+}
+
+export interface AssociateItemVariables {
+  packId: number;
+  itemId: number;
+  gameId: number;
+}
+
+export function useAssociateRomPackItem(): UseMutationResult<
+  RomPackItemRead,
+  ApiError,
+  AssociateItemVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<RomPackItemRead, ApiError, AssociateItemVariables>({
+    mutationFn: ({ packId, itemId, gameId }) =>
+      apiFetch<RomPackItemRead>(
+        `/api/v3/rom-pack/${packId}/items/${itemId}/associate`,
+        { method: "POST", json: { game_id: gameId } },
+      ),
+    onSuccess: (_data, vars) => _invalidatePack(qc, vars.packId),
+  });
+}
+
+export interface TriageItemVariables {
+  packId: number;
+  itemId: number;
+}
+
+export function useParkRomPackItem(): UseMutationResult<
+  RomPackItemRead,
+  ApiError,
+  TriageItemVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<RomPackItemRead, ApiError, TriageItemVariables>({
+    mutationFn: ({ packId, itemId }) =>
+      apiFetch<RomPackItemRead>(
+        `/api/v3/rom-pack/${packId}/items/${itemId}/park`,
+        { method: "POST" },
+      ),
+    onSuccess: (_data, vars) => _invalidatePack(qc, vars.packId),
+  });
+}
+
+export function useDeleteRomPackItem(): UseMutationResult<
+  RomPackItemRead,
+  ApiError,
+  TriageItemVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<RomPackItemRead, ApiError, TriageItemVariables>({
+    mutationFn: ({ packId, itemId }) =>
+      apiFetch<RomPackItemRead>(
+        `/api/v3/rom-pack/${packId}/items/${itemId}`,
+        { method: "DELETE" },
+      ),
+    onSuccess: (_data, vars) => _invalidatePack(qc, vars.packId),
+  });
+}

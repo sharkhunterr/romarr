@@ -31,6 +31,7 @@ import {
 import { useToastStore } from "@/lib/store/toast";
 
 import { CreateRomPackModal } from "./CreateRomPackModal";
+import { TriageModal } from "./TriageModal";
 
 const _GIB = 1024 ** 3;
 const _MIB = 1024 ** 2;
@@ -115,6 +116,7 @@ export function RomPacksPage(): ReactElement {
 
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<RomPackRead | null>(null);
+  const [triaging, setTriaging] = useState<RomPackRead | null>(null);
   const [ingestingId, setIngestingId] = useState<number | null>(null);
 
   function onDelete(row: RomPackRead): void {
@@ -294,6 +296,17 @@ export function RomPacksPage(): ReactElement {
                       </td>
                       <td className="px-3 py-2.5">
                         <div className="flex items-center justify-end gap-1">
+                          {row.status === "awaiting_triage" && (
+                            <button
+                              type="button"
+                              onClick={() => setTriaging(row)}
+                              className="rounded border border-amber-600/60 bg-amber-700/20 px-2 py-1 text-[0.65rem] font-medium text-amber-200 hover:bg-amber-700/30"
+                            >
+                              {t("romPacks.action.triage", {
+                                count: row.unmatched_count,
+                              })}
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => onIngest(row)}
@@ -339,6 +352,9 @@ export function RomPacksPage(): ReactElement {
           editing={editing}
           onClose={() => setEditing(null)}
         />
+      )}
+      {triaging !== null && (
+        <TriageModal pack={triaging} onClose={() => setTriaging(null)} />
       )}
     </div>
   );

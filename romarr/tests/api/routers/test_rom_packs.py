@@ -232,3 +232,149 @@ async def test_ingest_404_for_missing_pack(
 ) -> None:
     resp = await authed_client.post("/api/v3/rom-pack/424242/ingest")
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Triage — per-item resolution (slice 462)
+# ---------------------------------------------------------------------------
+
+
+async def _seed_pack_with_unmatched(
+    api_engine: AsyncEngine,
+    *,
+    extracted_path: str | None = "/tmp/rom_pack/x.gba",
+    unmatched_count: int = 1,
+) -> tuple[int, int]:
+    """Seed an ``awaiting_triage`` pack with one unmatched item.
+    Returns ``(pack_id, item_id)``."""
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        pack = RomPack(
+            name="Triage me",
+            source_kind="url",
+            url="https://e.com/t.zip",
+            status="awaiting_triage",
+            total_files=unmatched_count,
+            unmatched_count=unmatched_count,
+        )
+        session.add(pack)
+        await session.flush()
+        item = RomPackItem(
+            rom_pack_id=pack.id,
+            original_filename="x.gba",
+            extracted_path=extracted_path,
+            size_bytes=4096,
+            sha1="a" * 40,
+            status="unmatched",
+        )
+        session.add(item)
+        await session.commit()
+        return pack.id, item.id
+
+
+@pytest.mark.asyncio
+async def test_park_item_settles_pack_when_last_unmatched(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Parking the only unmatched ROM drains the counter and
+    flips the pack awaiting_triage → done."""
+    pack_id, item_id = await _seed_pack_with_unmatched(api_engine)
+
+    resp = await authed_client.post(
+        f"/api/v3/rom-pack/{pack_id}/items/{item_id}/park"
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["status"] == "parked"
+
+    pack = await authed_client.get(f"/api/v3/rom-pack/{pack_id}")
+    assert pack.json()["unmatched_count"] == 0
+    assert pack.json()["parked_count"] == 1
+    assert pack.json()["status"] == "done"
+
+
+@pytest.mark.asyncio
+async def test_delete_item_marks_deleted_and_decrements(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    # Two unmatched — deleting one leaves the pack awaiting_triage.
+    pack_id, item_id = await _seed_pack_with_unmatched(
+        api_engine, unmatched_count=2
+    )
+    resp = await authed_client.delete(
+        f"/api/v3/rom-pack/{pack_id}/items/{item_id}"
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "deleted"
+
+    pack = await authed_client.get(f"/api/v3/rom-pack/{pack_id}")
+    assert pack.json()["unmatched_count"] == 1
+    assert pack.json()["status"] == "awaiting_triage"
+
+
+@pytest.mark.asyncio
+async def test_triage_refuses_already_resolved_item(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    pack_id, item_id = await _seed_pack_with_unmatched(api_engine)
+    # Resolve it once.
+    await authed_client.post(
+        f"/api/v3/rom-pack/{pack_id}/items/{item_id}/park"
+    )
+    # A second triage action is a 409 — the UI shouldn't offer it.
+    again = await authed_client.delete(
+        f"/api/v3/rom-pack/{pack_id}/items/{item_id}"
+    )
+    assert again.status_code == 409
+    assert again.json()["errorMessage"] == "rom_pack_item_not_unmatched"
+
+
+@pytest.mark.asyncio
+async def test_associate_404_for_unknown_game(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    pack_id, item_id = await _seed_pack_with_unmatched(api_engine)
+    resp = await authed_client.post(
+        f"/api/v3/rom-pack/{pack_id}/items/{item_id}/associate",
+        json={"game_id": 99999},
+    )
+    assert resp.status_code == 404
+    assert resp.json()["errorMessage"] == "game_not_found"
+
+
+@pytest.mark.asyncio
+async def test_associate_409_when_file_missing(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """The extracted ROM was purged off disk between ingest and
+    triage — associate can't import a file that isn't there."""
+    platform_id = await _seed_platform(api_engine)
+    pack_id, item_id = await _seed_pack_with_unmatched(
+        api_engine, extracted_path="/tmp/rom_pack/does-not-exist.gba"
+    )
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        from romarr.domain.models import Game
+
+        game = Game(platform_id=platform_id, slug="g", title="G")
+        session.add(game)
+        await session.commit()
+        game_id = game.id
+
+    resp = await authed_client.post(
+        f"/api/v3/rom-pack/{pack_id}/items/{item_id}/associate",
+        json={"game_id": game_id},
+    )
+    assert resp.status_code == 409
+    assert resp.json()["errorMessage"] == "rom_pack_item_file_missing"
+
+
+@pytest.mark.asyncio
+async def test_triage_404_for_missing_item(
+    authed_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    pack_id, _ = await _seed_pack_with_unmatched(api_engine)
+    resp = await authed_client.post(
+        f"/api/v3/rom-pack/{pack_id}/items/424242/park"
+    )
+    assert resp.status_code == 404
+    assert resp.json()["errorMessage"] == "rom_pack_item_not_found"

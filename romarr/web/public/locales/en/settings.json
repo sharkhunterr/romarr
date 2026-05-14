@@ -350,7 +350,8 @@
       "reIngest": "Re-ingest",
       "running": "Running…",
       "edit": "Edit",
-      "delete": "Delete"
+      "delete": "Delete",
+      "triage": "Triage ({{count}})"
     },
     "modal": {
       "titleAdd": "Add content pack",
@@ -371,6 +372,30 @@
       "submitEdit": "Save",
       "toastCreated": "Pack “{{name}}” added",
       "toastUpdated": "Pack “{{name}}” updated"
+    },
+    "triage": {
+      "title": "Triage — {{name}}",
+      "subhead": "These ROMs hit no DAT entry. Associate each with a game, park it for later, or delete the file.",
+      "loadError": "Couldn't load unmatched ROMs",
+      "allDone": {
+        "title": "Everything triaged",
+        "body": "No unmatched ROMs left in this pack — it's now marked done."
+      },
+      "remaining": "{{count}} remaining",
+      "close": "Close",
+      "searchPlaceholder": "Search games…",
+      "searching": "Searching…",
+      "noGames": "No matching games.",
+      "action": {
+        "associate": "Associate",
+        "park": "Park",
+        "delete": "Delete"
+      },
+      "deleteConfirm": "Delete the extracted file “{{file}}”?",
+      "associatedToast": "“{{file}}” imported into {{game}}",
+      "parkedToast": "“{{file}}” parked in Unidentified",
+      "deletedToast": "“{{file}}” deleted",
+      "actionErrorToast": "Triage action failed"
     }
   },
   "qualityDefinitions": {

@@ -346,7 +346,8 @@
       "reIngest": "Ré-ingérer",
       "running": "En cours…",
       "edit": "Modifier",
-      "delete": "Supprimer"
+      "delete": "Supprimer",
+      "triage": "Triage ({{count}})"
     },
     "modal": {
       "titleAdd": "Ajouter un pack de ROMs",
@@ -367,6 +368,30 @@
       "submitEdit": "Enregistrer",
       "toastCreated": "Pack “{{name}}” ajouté",
       "toastUpdated": "Pack “{{name}}” mis à jour"
+    },
+    "triage": {
+      "title": "Triage — {{name}}",
+      "subhead": "Ces ROMs n'ont correspondu à aucune entrée DAT. Associez chacune à un jeu, mettez-la de côté, ou supprimez le fichier.",
+      "loadError": "Impossible de charger les ROMs non identifiées",
+      "allDone": {
+        "title": "Tout est trié",
+        "body": "Plus aucune ROM non identifiée dans ce pack — il est maintenant marqué terminé."
+      },
+      "remaining": "{{count}} restantes",
+      "close": "Fermer",
+      "searchPlaceholder": "Rechercher un jeu…",
+      "searching": "Recherche…",
+      "noGames": "Aucun jeu correspondant.",
+      "action": {
+        "associate": "Associer",
+        "park": "Mettre de côté",
+        "delete": "Supprimer"
+      },
+      "deleteConfirm": "Supprimer le fichier extrait “{{file}}” ?",
+      "associatedToast": "“{{file}}” importée dans {{game}}",
+      "parkedToast": "“{{file}}” mise de côté dans Non identifiés",
+      "deletedToast": "“{{file}}” supprimée",
+      "actionErrorToast": "Échec de l'action de triage"
     }
   },
   "qualityDefinitions": {

@@ -21,7 +21,9 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import datetime
+from pathlib import Path
 from typing import Annotated, Literal
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
@@ -39,7 +41,10 @@ from romarr.api.dependencies import (
     require_readonly,
 )
 from romarr.auth import Principal
-from romarr.domain.models import Platform, RomPack, RomPackItem
+from romarr.domain.models import Game, Platform, RomPack, RomPackItem
+from romarr.importer._park import park_in_unidentified
+from romarr.importer.orchestrator import run_import
+from romarr.importer.types import ImportContext
 from romarr.rom_packs.ingest import ingest_rom_pack
 
 _log = logging.getLogger(__name__)
@@ -363,3 +368,231 @@ async def ingest_pack(
 
     asyncio.get_running_loop().create_task(_run())
     return _to_read(row, await _platform_for(db, row.platform_id))
+
+
+# ---------------------------------------------------------------------------
+# Triage — per-item resolution of unmatched ROMs (slice 462)
+# ---------------------------------------------------------------------------
+
+
+class RomPackItemAssociate(BaseModel):
+    """Manual association payload — the operator picked the Game
+    this unmatched ROM belongs to."""
+
+    game_id: int
+
+
+async def _load_item(
+    db: AsyncSession, pack_id: int, item_id: int
+) -> tuple[RomPack, RomPackItem]:
+    """Load (pack, item) or 404. The item must belong to the pack."""
+    pack = await _load_pack(db, pack_id)
+    item = (
+        await db.execute(
+            select(RomPackItem).where(
+                RomPackItem.id == item_id,
+                RomPackItem.rom_pack_id == pack_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if item is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "errorMessage": "rom_pack_item_not_found",
+                "errorCode": "not_found",
+            },
+        )
+    return pack, item
+
+
+def _require_unmatched(item: RomPackItem) -> None:
+    """Triage actions only apply to ``unmatched`` items — an
+    already-resolved item is a no-op the UI shouldn't have
+    offered."""
+    if item.status != "unmatched":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "errorMessage": "rom_pack_item_not_unmatched",
+                "errorCode": "conflict",
+                "details": f"item is {item.status!r}, not 'unmatched'",
+            },
+        )
+
+
+def _settle_pack(pack: RomPack) -> None:
+    """Flip a fully-triaged pack from ``awaiting_triage`` to
+    ``done`` — every unmatched ROM has been resolved one way or
+    another."""
+    if pack.status == "awaiting_triage" and pack.unmatched_count <= 0:
+        pack.status = "done"
+
+
+@router.post(
+    "/{pack_id}/items/{item_id}/associate",
+    response_model=RomPackItemRead,
+    summary="Manually associate an unmatched ROM with a Game (admin only).",
+)
+async def associate_item(
+    pack_id: int,
+    item_id: int,
+    payload: RomPackItemAssociate,
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> RomPackItemRead:
+    """Run the standard importer against the extracted ROM with
+    the operator-chosen Game pinned. On success the ROM lands in
+    that Game's Library and the item flips to ``imported``."""
+    pack, item = await _load_item(db, pack_id, item_id)
+    _require_unmatched(item)
+
+    game = (
+        await db.execute(select(Game).where(Game.id == payload.game_id))
+    ).scalar_one_or_none()
+    if game is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "errorMessage": "game_not_found",
+                "errorCode": "not_found",
+            },
+        )
+    if item.extracted_path is None or not Path(item.extracted_path).exists():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "errorMessage": "rom_pack_item_file_missing",
+                "errorCode": "conflict",
+                "details": "the extracted ROM is no longer on disk",
+            },
+        )
+
+    context = ImportContext(
+        source_path=Path(item.extracted_path),
+        correlation_id=uuid4(),
+        imported_via="api",
+        pre_matched_game_id=game.id,
+    )
+    try:
+        outcome = await run_import(context, session=db)
+    except Exception as exc:
+        await db.rollback()
+        _log.exception(
+            "rom_pack.triage.associate_failed pack=%s item=%s",
+            pack_id,
+            item_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "errorMessage": "rom_pack_item_import_failed",
+                "errorCode": "import_failed",
+                "details": f"{type(exc).__name__}: {exc}",
+            },
+        ) from exc
+
+    if not outcome.success:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "errorMessage": "rom_pack_item_import_failed",
+                "errorCode": "import_failed",
+                "details": outcome.error_msg or "import did not succeed",
+            },
+        )
+
+    item.status = "imported"
+    item.game_id = game.id
+    item.dump_id = outcome.dump_id
+    item.error_msg = None
+    pack.unmatched_count = max(0, pack.unmatched_count - 1)
+    pack.imported_count += 1
+    _settle_pack(pack)
+    await db.commit()
+    await db.refresh(item)
+    return RomPackItemRead.model_validate(item)
+
+
+@router.post(
+    "/{pack_id}/items/{item_id}/park",
+    response_model=RomPackItemRead,
+    summary="Park an unmatched ROM in unidentified_dump (admin only).",
+)
+async def park_item(
+    pack_id: int,
+    item_id: int,
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> RomPackItemRead:
+    """Hand the ROM to ``unidentified_dump`` so it shows up in
+    Settings → Unidentified for later identification, leaving the
+    extracted file in place."""
+    pack, item = await _load_item(db, pack_id, item_id)
+    _require_unmatched(item)
+    if item.extracted_path is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "errorMessage": "rom_pack_item_file_missing",
+                "errorCode": "conflict",
+                "details": "the item has no extracted path to park",
+            },
+        )
+
+    await park_in_unidentified(
+        session=db,
+        source_path=Path(item.extracted_path),
+        size_bytes=item.size_bytes or 0,
+        rejection_reason="rom_pack:operator_parked",
+        crc32=item.crc32,
+        md5=item.md5,
+        sha1=item.sha1,
+        suggested_platform_id=pack.platform_id,
+    )
+    item.status = "parked"
+    pack.unmatched_count = max(0, pack.unmatched_count - 1)
+    pack.parked_count += 1
+    _settle_pack(pack)
+    await db.commit()
+    await db.refresh(item)
+    return RomPackItemRead.model_validate(item)
+
+
+@router.delete(
+    "/{pack_id}/items/{item_id}",
+    response_model=RomPackItemRead,
+    summary="Delete an unmatched ROM's extracted file (admin only).",
+)
+async def delete_item(
+    pack_id: int,
+    item_id: int,
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> RomPackItemRead:
+    """Remove the extracted ROM from disk and mark the item
+    ``deleted``. The row is kept as an audit trail of what the
+    pack contained — only the file goes."""
+    pack, item = await _load_item(db, pack_id, item_id)
+    _require_unmatched(item)
+
+    if item.extracted_path is not None:
+        try:
+            Path(item.extracted_path).unlink(missing_ok=True)
+        except OSError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={
+                    "errorMessage": "rom_pack_item_delete_failed",
+                    "errorCode": "delete_failed",
+                    "details": f"{type(exc).__name__}: {exc}",
+                },
+            ) from exc
+
+    item.status = "deleted"
+    pack.unmatched_count = max(0, pack.unmatched_count - 1)
+    _settle_pack(pack)
+    await db.commit()
+    await db.refresh(item)
+    return RomPackItemRead.model_validate(item)
