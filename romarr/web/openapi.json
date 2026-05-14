@@ -8160,7 +8160,8 @@
           "blocklisted_guid",
           "blocklisted_hash",
           "size_out_of_bounds",
-          "seeders_below_threshold"
+          "seeders_below_threshold",
+          "platform_mismatch"
         ],
         "title": "RejectionCode",
         "type": "string"
@@ -8468,7 +8469,12 @@
               "language",
               "custom_format",
               "dat_match",
-              "size_bonus"
+              "size_bonus",
+              "dump_status",
+              "quality",
+              "size",
+              "seeders",
+              "already_owned"
             ],
             "title": "Source",
             "type": "string"

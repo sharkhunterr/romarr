@@ -377,6 +377,10 @@
     },
     "rejection": {
       "blocklisted": "Déjà sur la blocklist",
+      "blocklisted_guid": "Déjà sur la blocklist (GUID)",
+      "blocklisted_hash": "Déjà sur la blocklist (hash)",
+      "no_game_match": "Aucun jeu suivi ne correspond",
+      "platform_mismatch": "Mauvaise console — le titre indique une autre plateforme",
       "below_quality_floor": "Sous le seuil qualité",
       "size_out_of_range": "Taille hors plage autorisée",
       "below_score_floor": "Sous le seuil de score",

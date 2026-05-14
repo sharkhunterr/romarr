@@ -5673,7 +5673,7 @@ export interface components {
          *     can group/filter without fragile string-matching.
          * @enum {string}
          */
-        RejectionCode: "no_game_match" | "region_excluded" | "region_out_of_priorities" | "language_required" | "japanese_only_excluded" | "dump_status_disallowed" | "hack_disallowed" | "trainer_disallowed" | "translation_disallowed" | "proto_beta_disallowed" | "format_not_allowed" | "dat_required" | "custom_format_reject" | "blocklisted_guid" | "blocklisted_hash" | "size_out_of_bounds" | "seeders_below_threshold";
+        RejectionCode: "no_game_match" | "region_excluded" | "region_out_of_priorities" | "language_required" | "japanese_only_excluded" | "dump_status_disallowed" | "hack_disallowed" | "trainer_disallowed" | "translation_disallowed" | "proto_beta_disallowed" | "format_not_allowed" | "dat_required" | "custom_format_reject" | "blocklisted_guid" | "blocklisted_hash" | "size_out_of_bounds" | "seeders_below_threshold" | "platform_mismatch";
         /** ReleaseRead */
         ReleaseRead: {
             /**
@@ -5828,7 +5828,7 @@ export interface components {
              * Source
              * @enum {string}
              */
-            source: "region" | "language" | "custom_format" | "dat_match" | "size_bonus";
+            source: "region" | "language" | "custom_format" | "dat_match" | "size_bonus" | "dump_status" | "quality" | "size" | "seeders" | "already_owned";
             /** Value */
             value: number;
         };

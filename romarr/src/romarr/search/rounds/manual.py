@@ -37,7 +37,12 @@ from romarr.search.preload import (
     preload_indexers,
     preload_library_state,
 )
-from romarr.search.types import Candidate, SearchRoundReport
+from romarr.search.types import (
+    Candidate,
+    Rejection,
+    RejectionCode,
+    SearchRoundReport,
+)
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -394,6 +399,35 @@ async def run_manual_search(
                 candidate = candidate.model_copy(
                     update={"platform_id": detected.id}
                 )
+                # Slice 458 — the title spells out a console that
+                # differs from the one the operator scoped the
+                # search to. Platform mismatch is the single hard
+                # reject the soft-scoring model still enforces
+                # (slice 456): a GameCube ISO has no business
+                # showing up "not rejected" in a GBA search just
+                # because the fuzzy title-match bound it to a
+                # same-named GBA library row.
+                if (
+                    platform_id is not None
+                    and detected.id != platform_id
+                    and candidate.rejection is None
+                ):
+                    candidate = candidate.model_copy(
+                        update={
+                            "rejection": Rejection(
+                                code=RejectionCode.PLATFORM_MISMATCH,
+                                field="platform_id",
+                                message=(
+                                    f"title advertises platform "
+                                    f"#{detected.id} ({detected.slug}); "
+                                    f"search is scoped to platform "
+                                    f"#{platform_id}"
+                                ),
+                            ),
+                            "would_auto_reject": True,
+                            "score_breakdown": None,
+                        }
+                    )
             per_indexer_candidates.append(candidate)
         for candidate in per_indexer_candidates:
             if strict and candidate.rejection is not None:

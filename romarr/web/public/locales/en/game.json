@@ -377,6 +377,10 @@
     },
     "rejection": {
       "blocklisted": "Already blocklisted",
+      "blocklisted_guid": "Already blocklisted (GUID)",
+      "blocklisted_hash": "Already blocklisted (hash)",
+      "no_game_match": "No monitored game matches",
+      "platform_mismatch": "Wrong console — title advertises another platform",
       "below_quality_floor": "Below quality floor",
       "size_out_of_range": "Size out of allowed range",
       "below_score_floor": "Below score floor",

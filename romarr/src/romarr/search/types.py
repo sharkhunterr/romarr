@@ -45,6 +45,11 @@ class RejectionCode(StrEnum):
     BLOCKLISTED_HASH = "blocklisted_hash"
     SIZE_OUT_OF_BOUNDS = "size_out_of_bounds"
     SEEDERS_BELOW_THRESHOLD = "seeders_below_threshold"
+    # Slice 458 — the title advertises a different console than
+    # the one the operator searched on. Hard reject: platform
+    # mismatch is the one thing the soft-scoring model still
+    # excludes outright (slice 456).
+    PLATFORM_MISMATCH = "platform_mismatch"
 
 
 SearchType = Literal["manual", "auto_added", "missing_scheduled", "cutoff_scheduled", "rss"]
