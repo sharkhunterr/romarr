@@ -16,13 +16,17 @@ import pytest
 import respx
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from romarr.api.models import QueueEntry
 from romarr.domain.models import DatEntry, Game, Platform
 from romarr.rom_packs.ingest import (
     RomPackIngestError,
     _find_or_create_game,
     _precheck_free_space,
     _resolve_dat_match,
+    _settle_queue_entry,
     _stream_download,
+    _update_queue_progress,
+    _upsert_queue_entry,
 )
 
 # --------------------------------------------------------------------------
@@ -208,3 +212,84 @@ async def test_find_or_create_game_reuses_existing(
     assert game.id == existing.id
     # Existing row is reused as-is — not flipped to monitored.
     assert game.monitored is False
+
+
+# --------------------------------------------------------------------------
+# queue_entry mirror — URL packs in Activity → Queue (slice 465)
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_queue_entry_mirror_lifecycle(
+    async_sessionmaker_factory: object,
+) -> None:
+    """A URL pack mirrors its transfer into ``queue_entry`` with a
+    NULL ``download_client_id``; progress refreshes it; a
+    successful settle deletes it."""
+    from sqlalchemy import select
+
+    sm = async_sessionmaker_factory
+
+    await _upsert_queue_entry(sm, rom_pack_id=7, title="No-Intro GBA")
+    async with sm() as session:
+        row = (
+            await session.execute(
+                select(QueueEntry).where(
+                    QueueEntry.download_client_native_id == "rom_pack:7"
+                )
+            )
+        ).scalar_one()
+        # Romarr-internal download — no originating client.
+        assert row.download_client_id is None
+        assert row.state == "downloading"
+        assert row.progress == 0.0
+
+    await _update_queue_progress(
+        sm, rom_pack_id=7, written=512, total=1024
+    )
+    async with sm() as session:
+        row = (
+            await session.execute(
+                select(QueueEntry).where(
+                    QueueEntry.download_client_native_id == "rom_pack:7"
+                )
+            )
+        ).scalar_one()
+        assert row.progress == 0.5
+        assert row.size_bytes == 1024
+
+    await _settle_queue_entry(sm, rom_pack_id=7, success=True)
+    async with sm() as session:
+        gone = (
+            await session.execute(
+                select(QueueEntry).where(
+                    QueueEntry.download_client_native_id == "rom_pack:7"
+                )
+            )
+        ).scalar_one_or_none()
+        assert gone is None
+
+
+@pytest.mark.asyncio
+async def test_queue_entry_settle_failure_keeps_row(
+    async_sessionmaker_factory: object,
+) -> None:
+    """A failed download flips the mirror to ``failed`` with the
+    error so Activity surfaces it — the row is kept, not deleted."""
+    from sqlalchemy import select
+
+    sm = async_sessionmaker_factory
+    await _upsert_queue_entry(sm, rom_pack_id=9, title="Broken pack")
+    await _settle_queue_entry(
+        sm, rom_pack_id=9, success=False, error="upstream 404"
+    )
+    async with sm() as session:
+        row = (
+            await session.execute(
+                select(QueueEntry).where(
+                    QueueEntry.download_client_native_id == "rom_pack:9"
+                )
+            )
+        ).scalar_one()
+        assert row.state == "failed"
+        assert row.error_msg == "upstream 404"

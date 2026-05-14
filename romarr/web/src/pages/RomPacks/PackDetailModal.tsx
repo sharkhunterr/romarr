@@ -1,15 +1,16 @@
 /**
- * TriageModal (slice 462).
+ * PackDetailModal (slices 462 + 465).
  *
- * Resolves the ROMs a pack ingest left ``unmatched`` — files
- * whose hash hit no DAT entry. Each row offers three exits:
+ * Opened by clicking a pack row. Shows the whole outcome of an
+ * ingest in one place:
  *
- *   - **Associate** — pick an existing Game; the backend runs
- *     the standard importer with that Game pinned and the ROM
- *     lands in its Library.
- *   - **Park** — hand the file to ``unidentified_dump`` so it
- *     shows up under Settings → Unidentified for later work.
- *   - **Delete** — remove the extracted file from disk.
+ *   - **To triage** — ROMs whose hash hit no DAT entry. Each row
+ *     offers three exits: Associate (pick a Game — the picker
+ *     pre-seeds a close suggestion from the filename), Park (hand
+ *     it to ``unidentified_dump``), or Delete the file.
+ *   - **Imported** — ROMs the ingest matched + placed in a
+ *     Library, with a link through to the game page.
+ *   - **Parked / failed** — a compact tail summary.
  *
  * Once every unmatched ROM is resolved the pack flips
  * ``awaiting_triage`` → ``done`` server-side; the list refetch
@@ -20,6 +21,7 @@
 
 import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
@@ -36,6 +38,21 @@ import {
 } from "@/lib/api/queries/rom-packs";
 import { useToastStore } from "@/lib/store/toast";
 
+/**
+ * Turn a ROM filename into a search seed for the "close
+ * suggestion" picker — drop the extension, the (Region) /
+ * [tag] groups and the separators, so "Super Mario Bros. 3
+ * (USA).nes" → "Super Mario Bros 3".
+ */
+function _searchSeed(filename: string): string {
+  return filename
+    .replace(/\.[a-z0-9]{1,5}$/i, "")
+    .replace(/[([{][^)\]}]*[)\]}]/g, " ")
+    .replace(/[._]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 interface TriageRowProps {
   pack: RomPackRead;
   item: RomPackItemRead;
@@ -49,7 +66,11 @@ function TriageRow({ pack, item }: TriageRowProps): ReactElement {
   const del = useDeleteRomPackItem();
 
   const [picking, setPicking] = useState(false);
-  const [query, setQuery] = useState("");
+  // Seeded from the filename so close suggestions show on the
+  // first click — the operator can still refine the query.
+  const [query, setQuery] = useState(() =>
+    _searchSeed(item.original_filename),
+  );
   const platformsById = usePlatformsById();
   const games = useGames({
     q: query.trim().length > 0 ? query : undefined,
@@ -221,14 +242,54 @@ function TriageRow({ pack, item }: TriageRowProps): ReactElement {
   );
 }
 
-interface TriageModalProps {
+/** Read-only row for a ROM the ingest already imported. */
+function ImportedRow({
+  item,
+  onClose,
+}: {
+  item: RomPackItemRead;
+  onClose: () => void;
+}): ReactElement {
+  const { t } = useTranslation("settings");
+  return (
+    <li className="flex items-center justify-between gap-3 rounded-md border border-zinc-800 bg-zinc-950/40 px-3 py-2">
+      <p className="min-w-0 truncate font-mono text-xs text-zinc-300">
+        {item.original_filename}
+      </p>
+      {item.game_id !== null ? (
+        <Link
+          to={`/game/${item.game_id}`}
+          onClick={onClose}
+          className="shrink-0 rounded border border-zinc-700 px-2 py-0.5 text-[0.65rem] font-medium text-zinc-200 hover:bg-zinc-800"
+        >
+          {t("romPacks.triage.viewGame")}
+        </Link>
+      ) : (
+        <span className="shrink-0 rounded bg-emerald-700/25 px-1.5 py-0.5 text-[0.6rem] text-emerald-200">
+          {t("romPacks.status.done")}
+        </span>
+      )}
+    </li>
+  );
+}
+
+interface PackDetailModalProps {
   pack: RomPackRead;
   onClose: () => void;
 }
 
-export function TriageModal({ pack, onClose }: TriageModalProps): ReactElement {
+export function PackDetailModal({
+  pack,
+  onClose,
+}: PackDetailModalProps): ReactElement {
   const { t } = useTranslation("settings");
-  const items = useRomPackItems(pack.id, "unmatched");
+  const items = useRomPackItems(pack.id);
+
+  const all = items.data ?? [];
+  const unmatched = all.filter((i) => i.status === "unmatched");
+  const imported = all.filter((i) => i.status === "imported");
+  const parked = all.filter((i) => i.status === "parked");
+  const failed = all.filter((i) => i.status === "failed");
 
   return (
     <div
@@ -251,7 +312,7 @@ export function TriageModal({ pack, onClose }: TriageModalProps): ReactElement {
           </p>
         </header>
 
-        <div className="flex-1 space-y-2 overflow-y-auto p-4">
+        <div className="flex-1 space-y-5 overflow-y-auto p-4">
           {items.isLoading && <ListSkeleton rows={4} />}
 
           {items.isError && (
@@ -261,26 +322,73 @@ export function TriageModal({ pack, onClose }: TriageModalProps): ReactElement {
             />
           )}
 
-          {items.isSuccess && items.data.length === 0 && (
+          {items.isSuccess && all.length === 0 && (
             <EmptyState
-              title={t("romPacks.triage.allDone.title")}
-              description={t("romPacks.triage.allDone.body")}
+              title={t("romPacks.triage.noItems.title")}
+              description={t("romPacks.triage.noItems.body")}
             />
           )}
 
-          {items.isSuccess && items.data.length > 0 && (
-            <ul className="space-y-2">
-              {items.data.map((item) => (
-                <TriageRow key={item.id} pack={pack} item={item} />
+          {/* ---- To triage ------------------------------------- */}
+          {unmatched.length > 0 && (
+            <section className="space-y-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-amber-300">
+                {t("romPacks.triage.toTriageTitle", {
+                  count: unmatched.length,
+                })}
+              </h3>
+              <ul className="space-y-2">
+                {unmatched.map((item) => (
+                  <TriageRow key={item.id} pack={pack} item={item} />
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* ---- Imported -------------------------------------- */}
+          {imported.length > 0 && (
+            <section className="space-y-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-emerald-300">
+                {t("romPacks.triage.importedTitle", {
+                  count: imported.length,
+                })}
+              </h3>
+              <ul className="space-y-1">
+                {imported.map((item) => (
+                  <ImportedRow key={item.id} item={item} onClose={onClose} />
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* ---- Parked / failed tail -------------------------- */}
+          {(parked.length > 0 || failed.length > 0) && (
+            <section className="space-y-1">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                {t("romPacks.triage.otherTitle")}
+              </h3>
+              {parked.length > 0 && (
+                <p className="text-[0.7rem] text-zinc-500">
+                  {t("romPacks.results.parked", { count: parked.length })}
+                </p>
+              )}
+              {failed.map((item) => (
+                <p
+                  key={item.id}
+                  className="truncate font-mono text-[0.65rem] text-rose-300"
+                >
+                  {item.original_filename}
+                  {item.error_msg !== null ? ` — ${item.error_msg}` : ""}
+                </p>
               ))}
-            </ul>
+            </section>
           )}
         </div>
 
         <footer className="flex items-center justify-between gap-2 border-t border-zinc-800 bg-zinc-950/50 px-4 py-3">
           <span className="text-[0.65rem] text-zinc-500">
             {items.isSuccess
-              ? t("romPacks.triage.remaining", { count: items.data.length })
+              ? t("romPacks.triage.remaining", { count: unmatched.length })
               : ""}
           </span>
           <button

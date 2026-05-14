@@ -403,7 +403,15 @@
       "associatedToast": "“{{file}}” importée dans {{game}}",
       "parkedToast": "“{{file}}” mise de côté dans Non identifiés",
       "deletedToast": "“{{file}}” supprimée",
-      "actionErrorToast": "Échec de l'action de triage"
+      "actionErrorToast": "Échec de l'action de triage",
+      "toTriageTitle": "À trier ({{count}})",
+      "importedTitle": "Importées ({{count}})",
+      "otherTitle": "Autres",
+      "viewGame": "Voir le jeu",
+      "noItems": {
+        "title": "Rien d'ingéré pour l'instant",
+        "body": "Ce pack n'a pas encore été ingéré — lancez-le depuis la liste pour voir le détail par fichier ici."
+      }
     }
   },
   "romPackSettings": {

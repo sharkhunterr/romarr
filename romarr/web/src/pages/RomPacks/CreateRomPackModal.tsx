@@ -27,6 +27,7 @@ import { usePlatforms } from "@/lib/api/queries/platforms";
 import {
   useCreateRomPack,
   useGrabRomPack,
+  useIngestRomPack,
   useUpdateRomPack,
   type RomPackRead,
 } from "@/lib/api/queries/rom-packs";
@@ -74,6 +75,7 @@ export function CreateRomPackModal(
   const create = useCreateRomPack();
   const update = useUpdateRomPack();
   const grab = useGrabRomPack();
+  const ingest = useIngestRomPack();
   const search = useManualSearch();
   const pushToast = useToastStore((s) => s.push);
 
@@ -135,7 +137,11 @@ export function CreateRomPackModal(
       create.mutate(
         { name: name.trim(), url: url.trim(), platform_id, max_size_bytes },
         {
-          onSuccess: () => {
+          onSuccess: (created) => {
+            // Kick the download off straight away — it streams
+            // through the queue and shows in Activity, just like
+            // a grab. No separate "Ingest" click needed.
+            ingest.mutate(created.id);
             pushToast({
               kind: "success",
               title: t("romPacks.modal.toastCreated", { name: name.trim() }),

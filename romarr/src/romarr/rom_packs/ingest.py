@@ -31,6 +31,7 @@ from __future__ import annotations
 import logging
 import shutil
 import tempfile
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -48,11 +49,22 @@ from romarr.importer.types import ImportContext
 from romarr.rom_packs.config import get_or_create_rom_pack_config
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
+
+# Awaited with ``(bytes_written, total_bytes_or_None)`` as the
+# stream progresses — the ingest pipeline uses it to mirror a
+# URL pack's transfer into ``queue_entry``.
+ProgressCallback = Callable[[int, "int | None"], Awaitable[None]]
+
+
+def _queue_native_id(rom_pack_id: int) -> str:
+    """A URL pack streamed by Romarr mirrors itself into
+    ``queue_entry`` under this synthetic native id so Activity →
+    Queue shows the transfer; ``download_client_id`` stays NULL
+    (slice 465)."""
+    return f"rom_pack:{rom_pack_id}"
 
 # Default ceiling for a pack download when the row carries no
 # ``max_size_bytes`` override. 50 GiB comfortably fits a full
@@ -94,14 +106,28 @@ class RomPackIngestError(Exception):
 # ---------------------------------------------------------------------------
 
 
+# Throttle progress callbacks — one DB write per ~8 MiB streamed
+# keeps Activity → Queue lively without hammering the session.
+_PROGRESS_STEP = 8 * 1024 * 1024
+
+
 async def _stream_download(
-    *, url: str, dest: Path, max_bytes: int
+    *,
+    url: str,
+    dest: Path,
+    max_bytes: int,
+    on_progress: ProgressCallback | None = None,
 ) -> int:
     """Stream ``url`` to ``dest`` in chunks. Returns bytes written.
 
     Enforces ``max_bytes`` incrementally — a server lying about
     Content-Length can't blow past the cap. Cleans up the partial
     file on overrun.
+
+    ``on_progress`` — when given — is awaited with
+    ``(bytes_written, total_bytes_or_None)`` roughly every
+    ``_PROGRESS_STEP`` bytes plus once at the end, so the caller
+    can mirror the transfer into ``queue_entry``.
     """
     written = 0
     async with httpx.AsyncClient(
@@ -111,6 +137,9 @@ async def _stream_download(
             raise RomPackIngestError(
                 f"upstream {resp.status_code} fetching {url}"
             )
+        cl = resp.headers.get("content-length")
+        total = int(cl) if cl is not None and cl.isdigit() else None
+        next_report = _PROGRESS_STEP
         with dest.open("wb") as fh:
             async for chunk in resp.aiter_bytes(_CHUNK):
                 written += len(chunk)
@@ -122,7 +151,120 @@ async def _stream_download(
                         f"for {url}"
                     )
                 fh.write(chunk)
+                if on_progress is not None and written >= next_report:
+                    await on_progress(written, total)
+                    next_report = written + _PROGRESS_STEP
+    if on_progress is not None:
+        await on_progress(written, total)
     return written
+
+
+async def _upsert_queue_entry(
+    sessionmaker: Callable[[], AsyncSession],
+    *,
+    rom_pack_id: int,
+    title: str,
+) -> None:
+    """Create (or reset, on a re-ingest) the ``queue_entry`` mirror
+    for a URL pack's transfer so it shows up in Activity → Queue.
+
+    ``download_client_id`` stays NULL — this is a Romarr-internal
+    download (slice 465); the reconciler leaves it alone and the
+    ingest pipeline drives its progress."""
+    # Lazy import: ``romarr.api`` eagerly pulls in the FastAPI app
+    # (which imports this module's router) — a module-level
+    # import here would close an import cycle at startup.
+    from romarr.api.models import QueueEntry
+
+    native_id = _queue_native_id(rom_pack_id)
+    async with sessionmaker() as session:
+        row = (
+            await session.execute(
+                select(QueueEntry).where(
+                    QueueEntry.download_client_native_id == native_id
+                )
+            )
+        ).scalar_one_or_none()
+        if row is None:
+            session.add(
+                QueueEntry(
+                    download_client_id=None,
+                    download_client_native_id=native_id,
+                    title=title,
+                    state="downloading",
+                    progress=0.0,
+                )
+            )
+        else:
+            row.state = "downloading"
+            row.progress = 0.0
+            row.error_msg = None
+            row.title = title
+        await session.commit()
+
+
+async def _update_queue_progress(
+    sessionmaker: Callable[[], AsyncSession],
+    *,
+    rom_pack_id: int,
+    written: int,
+    total: int | None,
+) -> None:
+    """Progress-callback body — refresh the ``queue_entry`` mirror's
+    ``progress`` + ``size_bytes`` as the archive streams in."""
+    from romarr.api.models import QueueEntry
+
+    native_id = _queue_native_id(rom_pack_id)
+    async with sessionmaker() as session:
+        row = (
+            await session.execute(
+                select(QueueEntry).where(
+                    QueueEntry.download_client_native_id == native_id
+                )
+            )
+        ).scalar_one_or_none()
+        if row is None:
+            return
+        row.size_bytes = total
+        row.progress = (
+            min(1.0, written / total) if total and total > 0 else 0.0
+        )
+        row.last_updated_at = datetime.now(UTC)
+        await session.commit()
+
+
+async def _settle_queue_entry(
+    sessionmaker: Callable[[], AsyncSession],
+    *,
+    rom_pack_id: int,
+    success: bool,
+    error: str | None = None,
+) -> None:
+    """Close out a URL pack's ``queue_entry`` mirror once the
+    *download* finishes: delete it on success (the transfer is
+    done — the pack page carries the extract/import story), or
+    flip it to ``failed`` with the error so Activity surfaces it."""
+    from romarr.api.models import QueueEntry
+
+    native_id = _queue_native_id(rom_pack_id)
+    async with sessionmaker() as session:
+        row = (
+            await session.execute(
+                select(QueueEntry).where(
+                    QueueEntry.download_client_native_id == native_id
+                )
+            )
+        ).scalar_one_or_none()
+        if row is None:
+            return
+        if success:
+            await session.delete(row)
+        else:
+            row.state = "failed"
+            row.progress = row.progress or 0.0
+            row.error_msg = (error or "download failed")[:500]
+            row.last_updated_at = datetime.now(UTC)
+        await session.commit()
 
 
 def _precheck_free_space(target: Path, archive_size_hint: int | None) -> None:
@@ -368,6 +510,7 @@ async def ingest_rom_pack(
         pack.last_error = None
         pack.last_ingest_at = datetime.now(UTC)
         url = pack.url
+        pack_name = pack.name
         source_kind = pack.source_kind
         platform_id = pack.platform_id
         max_bytes = (
@@ -399,9 +542,42 @@ async def ingest_rom_pack(
             _precheck_free_space(root, None)
             suffix = Path(url.split("?")[0]).suffix or ".zip"
             archive_path = root / f"rom_pack_{rom_pack_id}{suffix}"
-            written = await _stream_download(
-                url=url, dest=archive_path, max_bytes=max_bytes
+
+            # Mirror the transfer into queue_entry so the operator
+            # watches it in Activity → Queue, just like a grab.
+            await _upsert_queue_entry(
+                sessionmaker, rom_pack_id=rom_pack_id, title=pack_name
             )
+
+            async def _on_progress(written: int, total: int | None) -> None:
+                await _update_queue_progress(
+                    sessionmaker,
+                    rom_pack_id=rom_pack_id,
+                    written=written,
+                    total=total,
+                )
+
+            try:
+                written = await _stream_download(
+                    url=url,
+                    dest=archive_path,
+                    max_bytes=max_bytes,
+                    on_progress=_on_progress,
+                )
+            except Exception as exc:
+                await _settle_queue_entry(
+                    sessionmaker,
+                    rom_pack_id=rom_pack_id,
+                    success=False,
+                    error=f"{type(exc).__name__}: {exc}",
+                )
+                raise
+            # Download done — close the Activity row; the pack
+            # page carries the extract / import / triage story.
+            await _settle_queue_entry(
+                sessionmaker, rom_pack_id=rom_pack_id, success=True
+            )
+
             async with sessionmaker() as session:
                 pack = (
                     await session.execute(

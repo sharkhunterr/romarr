@@ -31,7 +31,7 @@ import {
 import { useToastStore } from "@/lib/store/toast";
 
 import { CreateRomPackModal } from "./CreateRomPackModal";
-import { TriageModal } from "./TriageModal";
+import { PackDetailModal } from "./PackDetailModal";
 
 const _GIB = 1024 ** 3;
 const _MIB = 1024 ** 2;
@@ -116,7 +116,7 @@ export function RomPacksPage(): ReactElement {
 
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<RomPackRead | null>(null);
-  const [triaging, setTriaging] = useState<RomPackRead | null>(null);
+  const [detailPack, setDetailPack] = useState<RomPackRead | null>(null);
   const [ingestingId, setIngestingId] = useState<number | null>(null);
 
   function onDelete(row: RomPackRead): void {
@@ -157,8 +157,8 @@ export function RomPacksPage(): ReactElement {
   }
 
   return (
-    <div className="space-y-6">
-      <header>
+    <div className="mx-auto w-full max-w-5xl px-4 py-6 md:px-6 md:py-8">
+      <header className="mb-6">
         <h1 className="font-mono text-xl font-semibold text-brand">
           {t("romPacks.title")}
         </h1>
@@ -231,9 +231,13 @@ export function RomPacksPage(): ReactElement {
                       className="border-t border-zinc-800 align-top hover:bg-zinc-900/40"
                     >
                       <td className="px-3 py-2.5">
-                        <p className="text-xs font-medium text-zinc-100">
+                        <button
+                          type="button"
+                          onClick={() => setDetailPack(row)}
+                          className="text-left text-xs font-medium text-zinc-100 hover:text-brand focus-visible:outline-none focus-visible:underline"
+                        >
                           {row.name}
-                        </p>
+                        </button>
                         {row.url !== null && (
                           <p className="max-w-xs truncate font-mono text-[0.6rem] text-zinc-500">
                             {row.url}
@@ -299,7 +303,7 @@ export function RomPacksPage(): ReactElement {
                           {row.status === "awaiting_triage" && (
                             <button
                               type="button"
-                              onClick={() => setTriaging(row)}
+                              onClick={() => setDetailPack(row)}
                               className="rounded border border-amber-600/60 bg-amber-700/20 px-2 py-1 text-[0.65rem] font-medium text-amber-200 hover:bg-amber-700/30"
                             >
                               {t("romPacks.action.triage", {
@@ -353,8 +357,11 @@ export function RomPacksPage(): ReactElement {
           onClose={() => setEditing(null)}
         />
       )}
-      {triaging !== null && (
-        <TriageModal pack={triaging} onClose={() => setTriaging(null)} />
+      {detailPack !== null && (
+        <PackDetailModal
+          pack={detailPack}
+          onClose={() => setDetailPack(null)}
+        />
       )}
     </div>
   );

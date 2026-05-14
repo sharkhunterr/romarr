@@ -153,10 +153,15 @@ class QueueEntry(Base):
         ForeignKey("game.id", ondelete="SET NULL"),
         nullable=True,
     )
-    download_client_id: Mapped[int] = mapped_column(
+    # Nullable since slice 465 — a Romarr-internal download (a
+    # URL-sourced ROM content pack Romarr streams itself) has no
+    # originating download client. The reconciler skips
+    # NULL-client rows; the ROM-pack ingest pipeline drives their
+    # progress instead.
+    download_client_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("download_client.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
     download_client_native_id: Mapped[str] = mapped_column(
         String, nullable=False

@@ -81,7 +81,11 @@ class QueueEntryRead(BaseModel):
     # (USA).gba" instead of the bare info-hash.
     title: str | None = None
     game_title: str | None = Field(alias="gameTitle", default=None)
-    download_client_id: int = Field(alias="downloadClientId")
+    # NULL for Romarr-internal downloads (URL-sourced ROM packs
+    # Romarr streams itself — slice 465).
+    download_client_id: int | None = Field(
+        alias="downloadClientId", default=None
+    )
     download_client_native_id: str = Field(alias="downloadClientNativeId")
     state: str
     progress: float

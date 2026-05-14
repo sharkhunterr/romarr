@@ -407,7 +407,15 @@
       "associatedToast": "“{{file}}” imported into {{game}}",
       "parkedToast": "“{{file}}” parked in Unidentified",
       "deletedToast": "“{{file}}” deleted",
-      "actionErrorToast": "Triage action failed"
+      "actionErrorToast": "Triage action failed",
+      "toTriageTitle": "To triage ({{count}})",
+      "importedTitle": "Imported ({{count}})",
+      "otherTitle": "Other",
+      "viewGame": "View game",
+      "noItems": {
+        "title": "Nothing ingested yet",
+        "body": "This pack hasn't been ingested — start it from the list to see per-file outcomes here."
+      }
     }
   },
   "romPackSettings": {
