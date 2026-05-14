@@ -177,6 +177,17 @@ class QueueEntry(Base):
     last_attempt_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # Slice 454 — durable "where did the finished file land" +
+    # "did we already hand it to run_import" so a completed
+    # download survives a container restart. The grabarr-direct
+    # client's in-memory ``_pending`` dict doesn't; without these
+    # the watcher loses the import trigger on restart.
+    content_path: Mapped[str | None] = mapped_column(
+        String(1024), nullable=True
+    )
+    import_attempted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utcnow
     )
