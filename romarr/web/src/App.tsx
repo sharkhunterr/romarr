@@ -15,6 +15,7 @@
 import { Suspense, type ReactElement } from "react";
 import {
   createBrowserRouter,
+  Navigate,
   RouterProvider,
   Outlet,
 } from "react-router-dom";
@@ -45,7 +46,6 @@ import { MetadataSourcesPage } from "@/pages/Settings/MetadataSources";
 import { PlatformsPage } from "@/pages/Settings/Platforms";
 import { ProfilesPage } from "@/pages/Settings/Profiles";
 import { QualityDefinitionsPage } from "@/pages/Settings/QualityDefinitions";
-import { SettingsHome } from "@/pages/Settings/SettingsHome";
 import { SettingsLayout } from "@/pages/Settings/SettingsLayout";
 import { SettingsPlaceholder } from "@/pages/Settings/SettingsPlaceholder";
 import { TagsPage } from "@/pages/Settings/Tags";
@@ -89,7 +89,10 @@ const router = createBrowserRouter([
             path: "/settings",
             element: <SettingsLayout />,
             children: [
-              { index: true, element: <SettingsHome /> },
+              {
+                index: true,
+                element: <Navigate to="/settings/general" replace />,
+              },
               { path: "tags", element: <TagsPage /> },
               { path: "ui", element: <SettingsUiPage /> },
               { path: "indexers", element: <IndexersPage /> },

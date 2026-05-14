@@ -188,7 +188,8 @@ export function DatSourcesPage(): ReactElement {
         )}
 
         {summary.isSuccess && summary.data.length > 0 && (
-          <table className="w-full overflow-hidden rounded-lg border border-zinc-800 text-sm">
+          <div className="overflow-x-auto rounded-lg border border-zinc-800">
+          <table className="w-full min-w-[32rem] text-sm">
             <thead className="bg-zinc-900/60 text-left text-[0.65rem] uppercase tracking-wide text-zinc-500">
               <tr>
                 <th className="px-4 py-2.5">{t("datSources.cols.source")}</th>
@@ -227,6 +228,7 @@ export function DatSourcesPage(): ReactElement {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
 
@@ -276,7 +278,8 @@ export function DatSourcesPage(): ReactElement {
         )}
 
         {rows.isSuccess && rows.data.length > 0 && (
-          <table className="w-full overflow-hidden rounded-lg border border-zinc-800 text-sm">
+          <div className="overflow-x-auto rounded-lg border border-zinc-800">
+          <table className="w-full min-w-[44rem] text-sm">
             <thead className="bg-zinc-900/60 text-left text-[0.65rem] uppercase tracking-wide text-zinc-500">
               <tr>
                 <th className="px-3 py-2.5">{t("datSources.cols.platform")}</th>
@@ -362,6 +365,7 @@ export function DatSourcesPage(): ReactElement {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
 

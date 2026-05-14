@@ -14,6 +14,7 @@
 
 import {
   Activity,
+  Home,
   Library as LibraryIcon,
   Search,
   Settings,
@@ -30,7 +31,7 @@ import { useSearchStore } from "@/lib/store/search";
 type RouteEntry = {
   kind: "route";
   to: string;
-  i18nKey: "library" | "wanted" | "activity" | "settings";
+  i18nKey: "home" | "library" | "wanted" | "activity" | "settings";
   Icon: LucideIcon;
 };
 
@@ -43,6 +44,7 @@ type ActionEntry = {
 type NavEntry = RouteEntry | ActionEntry;
 
 const ENTRIES: readonly NavEntry[] = [
+  { kind: "route", to: "/", i18nKey: "home", Icon: Home },
   { kind: "route", to: "/library", i18nKey: "library", Icon: LibraryIcon },
   { kind: "route", to: "/wanted", i18nKey: "wanted", Icon: Star },
   { kind: "route", to: "/activity", i18nKey: "activity", Icon: Activity },
@@ -112,7 +114,7 @@ function NavEntryNode(props: {
     <NavLink
       key={`${entry.to}-${props.index}`}
       to={entry.to}
-      end={entry.to === "/library"}
+      end={entry.to === "/" || entry.to === "/library"}
       aria-label={label}
       title={label}
       className={({ isActive }) => `relative ${entryClass(isActive)}`}

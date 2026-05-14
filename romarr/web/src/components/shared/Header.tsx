@@ -15,15 +15,54 @@
  * their own slices.
  */
 
-import { Monitor, Moon, Search, Sun, type LucideIcon } from "lucide-react";
+import {
+  Activity,
+  Home,
+  Library as LibraryIcon,
+  Monitor,
+  Moon,
+  Search,
+  Settings as SettingsIcon,
+  Star,
+  Sun,
+  type LucideIcon,
+} from "lucide-react";
 import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
+import { NavLink } from "react-router-dom";
 
 import { useSearchStore } from "@/lib/store/search";
 import { useThemeStore, type Theme } from "@/lib/store/theme";
 
 import { ConnectionIndicator } from "./ConnectionIndicator";
 import { LanguageToggle } from "./LanguageToggle";
+
+// Primary desktop navigation. On mobile the BottomNav covers
+// these; on md+ the BottomNav is hidden, so the Header carries
+// the only way to move between top-level pages.
+const DESKTOP_NAV: ReadonlyArray<{
+  to: string;
+  i18nKey: "home" | "library" | "wanted" | "activity" | "settings";
+  Icon: LucideIcon;
+  end?: boolean;
+}> = [
+  { to: "/", i18nKey: "home", Icon: Home, end: true },
+  { to: "/library", i18nKey: "library", Icon: LibraryIcon },
+  { to: "/wanted", i18nKey: "wanted", Icon: Star },
+  { to: "/activity", i18nKey: "activity", Icon: Activity },
+  { to: "/settings", i18nKey: "settings", Icon: SettingsIcon },
+];
+
+function navLinkClass(isActive: boolean): string {
+  return [
+    "inline-flex h-9 items-center gap-1.5 rounded-md px-2.5 text-sm",
+    "transition-colors",
+    isActive
+      ? "bg-zinc-800 text-zinc-100"
+      : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+  ].join(" ");
+}
 
 const THEME_ICON: Record<Theme, LucideIcon> = {
   dark: Moon,
@@ -61,14 +100,35 @@ export function Header(): ReactElement {
         "px-4 py-3 sm:px-6",
       ].join(" ")}
     >
-      <div className="flex items-center gap-2">
-        <span
-          aria-hidden="true"
-          className="inline-block h-2.5 w-2.5 rounded-sm bg-brand"
-        />
-        <span className="font-mono text-sm font-semibold tracking-tight text-zinc-100">
-          {t("app.title")}
-        </span>
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <span
+            aria-hidden="true"
+            className="inline-block h-2.5 w-2.5 rounded-sm bg-brand"
+          />
+          <span className="font-mono text-sm font-semibold tracking-tight text-zinc-100">
+            {t("app.title")}
+          </span>
+        </div>
+
+        {/* Desktop primary nav — hidden on mobile where the
+            BottomNav handles top-level routing. */}
+        <nav
+          aria-label={t("common:nav.primary")}
+          className="hidden items-center gap-0.5 md:flex"
+        >
+          {DESKTOP_NAV.map((entry) => (
+            <NavLink
+              key={entry.to}
+              to={entry.to}
+              end={entry.end ?? false}
+              className={({ isActive }) => navLinkClass(isActive)}
+            >
+              <entry.Icon size={15} strokeWidth={2} aria-hidden="true" />
+              <span>{t(`common:nav.${entry.i18nKey}`)}</span>
+            </NavLink>
+          ))}
+        </nav>
       </div>
 
       <div className="flex items-center gap-1">

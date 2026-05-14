@@ -4,6 +4,7 @@
   },
   "nav": {
     "primary": "Navigation principale",
+    "home": "Accueil",
     "library": "Ludothèque",
     "wanted": "Souhaits",
     "activity": "Activité",
