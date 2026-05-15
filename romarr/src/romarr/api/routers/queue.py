@@ -306,7 +306,26 @@ async def delete_queue_entry(
             },
         )
 
-    if remove_from_client:
+    # Slice 468 — a Romarr-internal pack download has no
+    # ``download_client`` to remove from; the Remove button in
+    # Activity → Queue must instead cancel the in-flight ingest
+    # task. Detect the synthetic ``rom_pack:{id}`` native id,
+    # request cancellation, then fall through to the normal
+    # row delete + WS fanout below.
+    is_pack_row = (
+        entry.download_client_id is None
+        and entry.download_client_native_id.startswith("rom_pack:")
+    )
+    if is_pack_row:
+        from romarr.rom_packs.ingest import request_cancel_rom_pack
+
+        try:
+            pack_id = int(entry.download_client_native_id.split(":", 1)[1])
+        except (IndexError, ValueError):
+            pack_id = None
+        if pack_id is not None:
+            request_cancel_rom_pack(pack_id)
+    elif remove_from_client:
         # Build the spec 005 DownloadClient via the same factory
         # the manual-grab endpoint uses so the auth / TLS /
         # category-ensure plumbing is shared.

@@ -19,7 +19,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from romarr.api.models import QueueEntry
 from romarr.domain.models import DatEntry, Game, Platform
 from romarr.rom_packs.ingest import (
+    _CANCELED_PACKS,
+    RomPackIngestCanceledError,
     RomPackIngestError,
+    _check_canceled,
     _find_or_create_game,
     _precheck_free_space,
     _resolve_dat_match,
@@ -27,6 +30,7 @@ from romarr.rom_packs.ingest import (
     _stream_download,
     _update_queue_progress,
     _upsert_queue_entry,
+    request_cancel_rom_pack,
 )
 
 # --------------------------------------------------------------------------
@@ -293,3 +297,34 @@ async def test_queue_entry_settle_failure_keeps_row(
         ).scalar_one()
         assert row.state == "failed"
         assert row.error_msg == "upstream 404"
+
+
+# --------------------------------------------------------------------------
+# Cooperative cancellation (slice 468)
+# --------------------------------------------------------------------------
+
+
+def test_check_canceled_raises_when_requested() -> None:
+    """``request_cancel_rom_pack`` flips the in-memory flag; the
+    next ``_check_canceled`` for that id raises so the orchestrator
+    can stop at its next safe point."""
+    _CANCELED_PACKS.discard(4242)
+    _check_canceled(4242)  # not requested → silent
+    request_cancel_rom_pack(4242)
+    try:
+        with pytest.raises(RomPackIngestCanceledError):
+            _check_canceled(4242)
+    finally:
+        _CANCELED_PACKS.discard(4242)
+
+
+def test_check_canceled_is_per_pack() -> None:
+    """Cancellation is scoped — flagging one pack must not stop
+    another in flight on the same process."""
+    request_cancel_rom_pack(1)
+    try:
+        _check_canceled(2)  # different id, silent
+        with pytest.raises(RomPackIngestCanceledError):
+            _check_canceled(1)
+    finally:
+        _CANCELED_PACKS.discard(1)

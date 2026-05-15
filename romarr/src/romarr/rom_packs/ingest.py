@@ -108,6 +108,36 @@ class RomPackIngestError(Exception):
     """
 
 
+class RomPackIngestCanceledError(RomPackIngestError):
+    """Raised at a cancellation checkpoint when the operator hit
+    Remove on the pack's Activity row. Bubbles to the orchestrator's
+    failure handler which settles the pack as ``failed`` with a
+    ``canceled by operator`` last_error."""
+
+
+# Pack ids the operator has asked to cancel. The orchestrator
+# checks this set at safe points (between phases, between files,
+# between download chunks) and raises :class:`RomPackIngestCanceledError`
+# when it finds itself in the set. Mutated synchronously from the
+# DELETE /queue/{id} route via :func:`request_cancel_rom_pack`.
+_CANCELED_PACKS: set[int] = set()
+
+
+def request_cancel_rom_pack(rom_pack_id: int) -> None:
+    """Ask any in-flight ingest for ``rom_pack_id`` to stop at
+    its next checkpoint. The actual stop is cooperative — the
+    ingest task notices on the next chunk / file / phase
+    boundary and exits via :class:`RomPackIngestCanceledError`."""
+    _CANCELED_PACKS.add(rom_pack_id)
+
+
+def _check_canceled(rom_pack_id: int) -> None:
+    """Cancellation checkpoint — raise if the operator requested
+    a stop for this pack."""
+    if rom_pack_id in _CANCELED_PACKS:
+        raise RomPackIngestCanceledError("canceled by operator")
+
+
 # ---------------------------------------------------------------------------
 # Download
 # ---------------------------------------------------------------------------
@@ -833,6 +863,11 @@ async def ingest_rom_pack(
             archive_path = root / f"rom_pack_{rom_pack_id}{suffix}"
 
             async def _on_progress(written: int, total: int | None) -> None:
+                # Every chunk callback is a cancellation checkpoint
+                # — a Remove from Activity drops out of the stream
+                # within ~8 MiB instead of waiting for the whole
+                # archive.
+                _check_canceled(rom_pack_id)
                 await _update_queue_progress(
                     sessionmaker,
                     rom_pack_id=rom_pack_id,
@@ -875,10 +910,12 @@ async def ingest_rom_pack(
             state="extracting",
         )
 
+        _check_canceled(rom_pack_id)
         extract_dir = Path(
             tempfile.mkdtemp(prefix=f"rom_pack_{rom_pack_id}_", dir=str(root))
         )
         rom_files = await _collect_rom_files(archive_path, extract_dir)
+        _check_canceled(rom_pack_id)
 
         # ── Import each ROM ─────────────────────────────────
         async with sessionmaker() as session:
@@ -895,6 +932,7 @@ async def ingest_rom_pack(
         skipped = 0
         total_to_process = len(rom_files)
         for processed, rom_path in enumerate(rom_files, start=1):
+            _check_canceled(rom_pack_id)
             item, summary = await _import_one_rom(
                 sessionmaker=sessionmaker,
                 rom_pack_id=rom_pack_id,
@@ -971,6 +1009,24 @@ async def ingest_rom_pack(
             failed,
             skipped,
         )
+    except RomPackIngestCanceledError:
+        logger.info("rom_pack.ingest canceled id=%s", rom_pack_id)
+        async with sessionmaker() as session:
+            pack = (
+                await session.execute(
+                    select(RomPack).where(RomPack.id == rom_pack_id)
+                )
+            ).scalar_one_or_none()
+            if pack is not None:
+                pack.status = "failed"
+                pack.last_error = "canceled by operator"
+                await session.commit()
+        await _settle_queue_entry(
+            sessionmaker,
+            rom_pack_id=rom_pack_id,
+            success=False,
+            error="canceled by operator",
+        )
     except Exception as exc:
         logger.exception("rom_pack.ingest failed id=%s", rom_pack_id)
         async with sessionmaker() as session:
@@ -991,6 +1047,10 @@ async def ingest_rom_pack(
             error=f"{type(exc).__name__}: {exc}",
         )
     finally:
+        # Clear the cancellation flag now that the task has
+        # actually unwound — leaving it set would block a future
+        # re-ingest on the same pack id.
+        _CANCELED_PACKS.discard(rom_pack_id)
         # Purge the downloaded archive — only when *we* fetched
         # it (url-sourced). grab-sourced archives belong to the
         # download client's lifecycle.
@@ -1002,4 +1062,10 @@ async def ingest_rom_pack(
             archive_path.unlink(missing_ok=True)
 
 
-__all__ = ["DEFAULT_MAX_PACK_BYTES", "RomPackIngestError", "ingest_rom_pack"]
+__all__ = [
+    "DEFAULT_MAX_PACK_BYTES",
+    "RomPackIngestCanceledError",
+    "RomPackIngestError",
+    "ingest_rom_pack",
+    "request_cancel_rom_pack",
+]
