@@ -32,6 +32,7 @@ import logging
 import shutil
 import tempfile
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -599,6 +600,18 @@ async def _find_or_create_game_from_lookup(
     return game
 
 
+@dataclass(slots=True, frozen=True)
+class _ImportSummary:
+    """Per-ROM display info the queue mirror surfaces in
+    Activity → Queue. Not persisted — derived once per file
+    from the resolved game + match path."""
+
+    game_title: str | None
+    # Short tag explaining how the game was resolved:
+    # ``dat`` / ``auto`` / ``unmatched`` / ``parked`` / ``failed``.
+    source: str
+
+
 async def _import_one_rom(
     *,
     sessionmaker: Callable[[], AsyncSession],
@@ -607,14 +620,15 @@ async def _import_one_rom(
     pack_platform_id: int | None,
     pack_platform_slug: str | None,
     import_mode: str,
-) -> RomPackItem | None:
+) -> tuple[RomPackItem | None, _ImportSummary]:
     """Hash + DAT-match + import one extracted ROM.
 
-    Returns a :class:`RomPackItem` (caller persists it) or
-    ``None`` when the file was *skipped* — only possible in
-    ``import_mode='dat_verified'`` for a non-DAT-matched file.
-    Never raises — per-file failures land as ``status='failed'``
-    on the returned item."""
+    Returns ``(item, summary)``. ``item`` is ``None`` when the
+    file was *skipped* — only possible in
+    ``import_mode='dat_verified'`` for a non-DAT-matched file;
+    the summary still describes the outcome so the caller can
+    surface it in Activity. Never raises — per-file failures
+    land as ``status='failed'`` on the returned item."""
     item = RomPackItem(
         rom_pack_id=rom_pack_id,
         original_filename=rom_path.name,
@@ -629,7 +643,10 @@ async def _import_one_rom(
     except OSError as exc:
         item.status = "failed"
         item.error_msg = f"hash: {exc}"[:500]
-        return item
+        return item, _ImportSummary(game_title=None, source="failed")
+
+    match_source: str
+    game_title: str | None
 
     # DAT lookup + (find-or-create) Game resolution need their
     # own session; the actual import opens yet another (run_import
@@ -642,13 +659,17 @@ async def _import_one_rom(
             item.dat_entry_id = dat_entry.id
             game = await _find_or_create_game(session, dat_entry=dat_entry)
             game_id = game.id
+            game_title = game.title
+            match_source = "dat"
             await session.commit()
         else:
             # No DAT match — mode steers the fallback.
             if import_mode == "dat_verified":
                 # Operator asked for DAT-verified only: skip the
                 # file outright (no rom_pack_item row).
-                return None
+                return None, _ImportSummary(
+                    game_title=None, source="skipped"
+                )
             # Mode 'all': try a metadata-provider lookup by
             # filename + platform; on a confident hit, create
             # the Game from the search result and import.
@@ -662,14 +683,20 @@ async def _import_one_rom(
                 # the extracted file in place for the triage
                 # modal.
                 item.status = "unmatched"
-                return item
+                return item, _ImportSummary(
+                    game_title=None, source="unmatched"
+                )
             game = await _find_or_create_game_from_lookup(
                 session, result=result, platform_id=pack_platform_id
             )
             if game is None:
                 item.status = "unmatched"
-                return item
+                return item, _ImportSummary(
+                    game_title=None, source="unmatched"
+                )
             game_id = game.id
+            game_title = game.title
+            match_source = "auto"
             await session.commit()
 
     # Run the standard importer with the resolved game pinned —
@@ -690,19 +717,23 @@ async def _import_one_rom(
             await session.rollback()
             item.status = "failed"
             item.error_msg = f"import: {type(exc).__name__}: {exc}"[:500]
-            return item
+            return item, _ImportSummary(
+                game_title=game_title, source="failed"
+            )
 
     if outcome.success:
         item.status = "imported"
         item.game_id = game_id
         item.dump_id = getattr(outcome, "dump_id", None)
-    else:
-        # The importer parked it (extract failure, profile gate,
-        # destination collision …). Surface it as ``parked`` so
-        # the operator finds it in unidentified_dump.
-        item.status = "parked"
-        item.error_msg = (outcome.error_msg or "import did not succeed")[:500]
-    return item
+        return item, _ImportSummary(
+            game_title=game_title, source=match_source
+        )
+    # The importer parked it (extract failure, profile gate,
+    # destination collision …). Surface it as ``parked`` so
+    # the operator finds it in unidentified_dump.
+    item.status = "parked"
+    item.error_msg = (outcome.error_msg or "import did not succeed")[:500]
+    return item, _ImportSummary(game_title=game_title, source="parked")
 
 
 # ---------------------------------------------------------------------------
@@ -864,25 +895,32 @@ async def ingest_rom_pack(
         skipped = 0
         total_to_process = len(rom_files)
         for processed, rom_path in enumerate(rom_files, start=1):
-            # Refresh the Activity-→-Queue mirror so the operator
-            # watches the import advance file-by-file.
-            await _set_queue_phase(
-                sessionmaker,
-                rom_pack_id=rom_pack_id,
-                pack_name=pack_name,
-                phase_label=f"importing {processed}/{total_to_process}",
-                progress=processed / total_to_process
-                if total_to_process > 0
-                else 1.0,
-                state="importing",
-            )
-            item = await _import_one_rom(
+            item, summary = await _import_one_rom(
                 sessionmaker=sessionmaker,
                 rom_pack_id=rom_pack_id,
                 rom_path=rom_path,
                 pack_platform_id=platform_id,
                 pack_platform_slug=platform_slug,
                 import_mode=import_mode,
+            )
+            # Refresh the Activity-→-Queue mirror so the operator
+            # sees what was just imported: "Game name [DAT]" for a
+            # DAT hit, "Game name [auto]" for a metadata-provider
+            # auto-association, or "filename [unmatched]" / etc.
+            # for the failure paths.
+            display = summary.game_title or rom_path.name
+            await _set_queue_phase(
+                sessionmaker,
+                rom_pack_id=rom_pack_id,
+                pack_name=pack_name,
+                phase_label=(
+                    f"importing {processed}/{total_to_process} · "
+                    f"{display} [{summary.source}]"
+                ),
+                progress=processed / total_to_process
+                if total_to_process > 0
+                else 1.0,
+                state="importing",
             )
             if item is None:
                 # ``dat_verified`` mode skipped this file — no
