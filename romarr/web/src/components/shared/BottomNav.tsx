@@ -27,6 +27,7 @@ import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
 
 import { useQueue } from "@/lib/api/queries/queue";
+import { useActiveTasks } from "@/lib/api/queries/system-extras";
 import { useSearchStore } from "@/lib/store/search";
 
 type RouteEntry = {
@@ -150,7 +151,16 @@ export function BottomNav(): ReactElement {
     sortDirection: "desc",
     state: "failed",
   });
-  const totalActive = queue.data?.totalRecords ?? 0;
+  // Slice 477 — scheduler jobs in flight (scan / metadata refresh
+  // / …) also count as "Activity in progress". Without this the
+  // badge stayed at 0 during a scan even though the operator
+  // could see the task row in the Activity page.
+  const activeTasks = useActiveTasks();
+  const runningTaskCount = (activeTasks.data ?? []).filter(
+    (j) => j.current_run_id != null,
+  ).length;
+  const totalActive =
+    (queue.data?.totalRecords ?? 0) + runningTaskCount;
   const totalFailed = failedCount.data?.totalRecords ?? 0;
   return (
     <nav
