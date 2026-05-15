@@ -347,7 +347,8 @@
       "running": "En cours…",
       "edit": "Modifier",
       "delete": "Supprimer",
-      "triage": "Triage ({{count}})"
+      "triage": "Triage ({{count}})",
+      "reset": "Réinitialiser"
     },
     "modal": {
       "titleAdd": "Ajouter un pack de ROMs",
@@ -421,7 +422,10 @@
         "title": "Rien d'ingéré pour l'instant",
         "body": "Ce pack n'a pas encore été ingéré — lancez-le depuis la liste pour voir le détail par fichier ici."
       }
-    }
+    },
+    "resetConfirm": "Forcer l'arrêt de l'ingestion bloquée du pack “{{name}}” ? Le pack passe en échec ; relance l'ingestion ensuite.",
+    "resetDoneToast": "Pack réinitialisé — tu peux agir dessus à nouveau.",
+    "resetErrorToast": "Impossible de réinitialiser le pack"
   },
   "romPackSettings": {
     "title": "Réglages des packs de ROMs",

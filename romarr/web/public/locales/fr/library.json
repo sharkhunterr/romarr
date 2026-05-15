@@ -124,7 +124,9 @@
       "confirm_other": "Supprimer {{count}} jeux",
       "successTitle": "Jeux supprimés",
       "successBody": "{{deleted}} jeux supprimés · {{missing}} introuvables",
-      "errorTitle": "Impossible de supprimer la sélection"
+      "errorTitle": "Impossible de supprimer la sélection",
+      "diskCascadeOff": "Conserve les fichiers ROM sur le disque — seules les lignes du catalogue sont supprimées. La politique de cycle de vie de la bibliothèque gère le nettoyage disque.",
+      "diskCascadeOn": "SUPPRIMERA les fichiers ROM sur le disque pour chaque release en cascade. Irréversible — vérifie tes sauvegardes."
     },
     "tag": {
       "label": "Étiqueter",

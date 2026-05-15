@@ -429,6 +429,9 @@ export type BulkDeleteResponse =
 
 export interface BulkDeleteVariables {
   gameIds: number[];
+  /** When true the backend also unlinks every cascaded ROM file
+   * on disk (best-effort). Default false keeps files. */
+  deleteFiles?: boolean;
 }
 
 export type BulkTagResponse =
@@ -477,10 +480,10 @@ export function useBulkDeleteGames(): UseMutationResult<
 > {
   const qc = useQueryClient();
   return useMutation<BulkDeleteResponse, ApiError, BulkDeleteVariables>({
-    mutationFn: ({ gameIds }) =>
+    mutationFn: ({ gameIds, deleteFiles }) =>
       apiFetch<BulkDeleteResponse>("/api/v3/game/bulk-delete", {
         method: "POST",
-        json: { gameIds },
+        json: { gameIds, deleteFiles: deleteFiles ?? false },
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["games"] });

@@ -124,7 +124,9 @@
       "confirm_other": "Delete {{count}} games",
       "successTitle": "Games deleted",
       "successBody": "{{deleted}} games removed · {{missing}} missing",
-      "errorTitle": "Couldn't delete the selection"
+      "errorTitle": "Couldn't delete the selection",
+      "diskCascadeOff": "Keep ROM files on disk — only the catalogue rows go. The per-library lifecycle policy is in charge of disk cleanup.",
+      "diskCascadeOn": "WILL DELETE the ROM files on disk for every cascaded release. Irreversible — make sure your backups are current."
     },
     "tag": {
       "label": "Tag",

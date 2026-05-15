@@ -51,7 +51,10 @@ from romarr.importer._park import park_in_unidentified
 from romarr.importer.orchestrator import run_import
 from romarr.importer.types import ImportContext
 from romarr.rom_packs.config import get_or_create_rom_pack_config
-from romarr.rom_packs.ingest import ingest_rom_pack
+from romarr.rom_packs.ingest import (
+    ingest_rom_pack,
+    request_cancel_rom_pack,
+)
 
 _log = logging.getLogger(__name__)
 
@@ -360,6 +363,45 @@ async def create_pack(
     await db.commit()
     await db.refresh(row)
     return _to_read(row, platform)
+
+
+@router.post(
+    "/{pack_id}/reset",
+    response_model=RomPackRead,
+    summary=(
+        "Force-stop a stuck pack ingest (admin only). Cancels any "
+        "in-flight task, drops the Activity mirror, and flips the "
+        "pack to ``failed`` so the operator can re-ingest, edit or "
+        "delete it."
+    ),
+)
+async def reset_pack(
+    pack_id: int,
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> RomPackRead:
+    """Recovery path for a pack stranded mid-ingest (process
+    restart killed the task, exception escaped the orchestrator,
+    …). A no-op when the pack is already in an actionable state
+    so the operator can hit Reset safely."""
+    row = await _load_pack(db, pack_id)
+    if row.status in _INGESTABLE:
+        return _to_read(row, await _platform_for(db, row.platform_id))
+
+    request_cancel_rom_pack(pack_id)
+    row.status = "failed"
+    row.last_error = "manually reset"
+    # Drop the Activity mirror if it lingered.
+    from romarr.api.models import QueueEntry
+
+    await db.execute(
+        delete(QueueEntry).where(
+            QueueEntry.download_client_native_id == f"rom_pack:{pack_id}"
+        )
+    )
+    await db.commit()
+    await db.refresh(row)
+    return _to_read(row, await _platform_for(db, row.platform_id))
 
 
 @router.post(

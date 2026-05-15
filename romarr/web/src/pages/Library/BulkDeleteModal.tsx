@@ -38,6 +38,10 @@ export function BulkDeleteModal(
   const pushToast = useToastStore((s) => s.push);
   const remove = useBulkDeleteGames();
   const [armed, setArmed] = useState(false);
+  // Slice 469 — opt-in cascade to the on-disk ROM files.
+  // Default off so the destructive surface stays conservative;
+  // the operator explicitly ticks the box.
+  const [deleteFiles, setDeleteFiles] = useState(false);
 
   // Spec: 1-second delay before the Delete button accepts a
   // click. The clock starts on mount, not on focus, so the
@@ -51,7 +55,7 @@ export function BulkDeleteModal(
     if (!armed) return;
     const ids = props.games.map((g) => g.id);
     remove.mutate(
-      { gameIds: ids },
+      { gameIds: ids, deleteFiles },
       {
         onSuccess: (resp) => {
           pushToast({
@@ -118,9 +122,32 @@ export function BulkDeleteModal(
               )}
             </ul>
           )}
-          <p className="rounded-md border border-amber-700/40 bg-amber-950/20 px-3 py-2 text-[0.65rem] text-amber-300">
-            {t("bulk.delete.diskHint")}
-          </p>
+          <label
+            className={[
+              "flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2",
+              deleteFiles
+                ? "border-red-600/60 bg-red-950/30"
+                : "border-amber-700/40 bg-amber-950/20",
+            ].join(" ")}
+          >
+            <input
+              type="checkbox"
+              checked={deleteFiles}
+              onChange={(e) => setDeleteFiles(e.target.checked)}
+              disabled={remove.isPending}
+              className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-zinc-700 bg-zinc-950 text-red-500 focus:ring-red-500"
+            />
+            <span
+              className={[
+                "text-[0.7rem]",
+                deleteFiles ? "text-red-200" : "text-amber-300",
+              ].join(" ")}
+            >
+              {deleteFiles
+                ? t("bulk.delete.diskCascadeOn")
+                : t("bulk.delete.diskCascadeOff")}
+            </span>
+          </label>
         </div>
 
         <footer className="flex items-center justify-end gap-2 border-t border-zinc-800 px-4 py-3">

@@ -24,6 +24,7 @@ import {
   ROM_PACK_BUSY_STATUSES,
   useDeleteRomPack,
   useIngestRomPack,
+  useResetRomPack,
   useRomPacks,
   type RomPackRead,
   type RomPackStatus,
@@ -112,6 +113,7 @@ export function RomPacksPage(): ReactElement {
   const packs = useRomPacks();
   const del = useDeleteRomPack();
   const ingest = useIngestRomPack();
+  const reset = useResetRomPack();
   const pushToast = useToastStore((s) => s.push);
 
   const [showAdd, setShowAdd] = useState(false);
@@ -153,6 +155,22 @@ export function RomPacksPage(): ReactElement {
           description: err.message,
         });
       },
+    });
+  }
+
+  function onReset(row: RomPackRead): void {
+    if (!window.confirm(t("romPacks.resetConfirm", { name: row.name }))) {
+      return;
+    }
+    reset.mutate(row.id, {
+      onSuccess: () =>
+        pushToast({ kind: "success", title: t("romPacks.resetDoneToast") }),
+      onError: (err) =>
+        pushToast({
+          kind: "error",
+          title: t("romPacks.resetErrorToast"),
+          description: err.message,
+        }),
     });
   }
 
@@ -311,6 +329,16 @@ export function RomPacksPage(): ReactElement {
                               })}
                             </button>
                           )}
+                          {busy && (
+                            <button
+                              type="button"
+                              onClick={() => onReset(row)}
+                              disabled={reset.isPending}
+                              className="rounded border border-amber-600/60 bg-amber-700/20 px-2 py-1 text-[0.65rem] font-medium text-amber-200 hover:bg-amber-700/30 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {t("romPacks.action.reset")}
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => onIngest(row)}
@@ -334,7 +362,7 @@ export function RomPacksPage(): ReactElement {
                           <button
                             type="button"
                             onClick={() => onDelete(row)}
-                            disabled={busy || del.isPending}
+                            disabled={del.isPending}
                             className="rounded border border-rose-700/50 px-2 py-1 text-[0.65rem] font-medium text-rose-200 hover:bg-rose-900/30 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {t("romPacks.action.delete")}

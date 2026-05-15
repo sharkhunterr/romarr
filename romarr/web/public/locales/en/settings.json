@@ -351,7 +351,8 @@
       "running": "Running…",
       "edit": "Edit",
       "delete": "Delete",
-      "triage": "Triage ({{count}})"
+      "triage": "Triage ({{count}})",
+      "reset": "Reset"
     },
     "modal": {
       "titleAdd": "Add content pack",
@@ -425,7 +426,10 @@
         "title": "Nothing ingested yet",
         "body": "This pack hasn't been ingested — start it from the list to see per-file outcomes here."
       }
-    }
+    },
+    "resetConfirm": "Force-stop the stuck ingest for pack “{{name}}”? The pack flips to failed; re-ingest from there.",
+    "resetDoneToast": "Pack reset — you can act on it again.",
+    "resetErrorToast": "Couldn't reset the pack"
   },
   "romPackSettings": {
     "title": "ROM Pack Defaults",

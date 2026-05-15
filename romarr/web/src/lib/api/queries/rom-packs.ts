@@ -247,6 +247,22 @@ export function useIngestRomPack(): UseMutationResult<
   });
 }
 
+/** Force-stop a stuck pack ingest (recovery path). */
+export function useResetRomPack(): UseMutationResult<
+  RomPackRead,
+  ApiError,
+  number
+> {
+  const qc = useQueryClient();
+  return useMutation<RomPackRead, ApiError, number>({
+    mutationFn: (id) =>
+      apiFetch<RomPackRead>(`/api/v3/rom-pack/${id}/reset`, {
+        method: "POST",
+      }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: LIST_KEY }),
+  });
+}
+
 // ---- triage — per-item resolution of unmatched ROMs (slice 462) -------
 
 /** Invalidate both the pack list (counters / status change) and
