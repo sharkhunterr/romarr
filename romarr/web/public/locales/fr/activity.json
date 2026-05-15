@@ -122,6 +122,14 @@
     "cancel": "Arrêter",
     "cancelToast": "Signal d'arrêt envoyé à “{{name}}”",
     "cancelErrorToast": "Impossible d'annuler la tâche",
-    "itemsProcessed": "{{count}} éléments"
+    "itemsProcessed": "{{count}} éléments",
+    "chips": {
+      "processed": "{{processed}} / {{total}}",
+      "matched": "matché : {{count}}",
+      "unmatched": "non matché : {{count}}",
+      "skipped": "ignoré : {{count}}",
+      "remaining": "restant : {{count}}"
+    },
+    "taskKindHint": "Tâche du planificateur"
   }
 }

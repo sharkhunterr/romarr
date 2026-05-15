@@ -28,6 +28,9 @@ import {
   type QueueEntry,
   type QueueState,
 } from "@/lib/api/queries/queue";
+import { useActiveTasks } from "@/lib/api/queries/system-extras";
+
+import { TaskQueueRow } from "./TaskQueueRow";
 
 type StateFilter = "all" | QueueState;
 
@@ -304,6 +307,14 @@ export function QueueList(): ReactElement {
   const [searchParams, setSearchParams] = useSearchParams();
   const filter = parseFilterParam(searchParams.get("queueState"));
   const clientsById = useDownloadClientsById();
+  // Scheduler jobs in flight (scan / metadata refresh / …)
+  // render as queue rows at the top of the list. The hook
+  // self-paces — polls 3 s while anything is running, off
+  // otherwise (slice 475).
+  const activeTasks = useActiveTasks();
+  const running = (activeTasks.data ?? []).filter(
+    (j) => j.current_run_id != null,
+  );
 
   const setFilter = (next: StateFilter): void => {
     setSearchParams(
@@ -336,7 +347,13 @@ export function QueueList(): ReactElement {
       />
     );
   }
-  if (data.records.length === 0 && filter === "all") {
+  // Hide the empty-state when a scheduler task is in flight —
+  // the operator IS looking at "something in progress".
+  if (
+    data.records.length === 0 &&
+    filter === "all" &&
+    running.length === 0
+  ) {
     return (
       <EmptyState
         title={t("queue.empty.title")}
@@ -378,12 +395,23 @@ export function QueueList(): ReactElement {
       )}
 
       <ul className="space-y-2">
+        {/* Scheduler tasks first — visually consistent with the
+            queue rows below so the operator scans the whole
+            list as "stuff in progress". Slice 475. */}
+        {running.map((job) => (
+          <TaskQueueRow
+            key={`task:${job.id}`}
+            job={job as unknown as Parameters<typeof TaskQueueRow>[0]["job"]}
+          />
+        ))}
         {data.records.map((entry) => (
           <QueueRow
             key={entry.id}
             entry={entry}
             clientName={
-              clientsById.get(entry.downloadClientId)?.name ?? null
+              entry.downloadClientId == null
+                ? null
+                : clientsById.get(entry.downloadClientId)?.name ?? null
             }
           />
         ))}

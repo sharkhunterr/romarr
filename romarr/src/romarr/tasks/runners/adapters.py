@@ -497,13 +497,15 @@ class LibraryScanAdapter(_AdapterBase):
         super().__init__(job_id="LibraryScan")
 
     async def _run(self, context: JobContext) -> JobResult:
+        import asyncio
         from pathlib import Path
 
         from sqlalchemy import select
 
         from romarr.domain.models import PlatformFormat
         from romarr.libraries.models import Library, LibraryPlatform
-        from romarr.libraries.scanner.full import full_scan
+        from romarr.libraries.scanner.full import full_scan, walk_library
+        from romarr.tasks.execution.lifecycle import report_progress
 
         sessionmaker = getattr(context, "sessionmaker", None)
         if sessionmaker is None:
@@ -516,6 +518,12 @@ class LibraryScanAdapter(_AdapterBase):
         per_library: list[dict[str, Any]] = []
         scanned = 0
         skipped = 0
+        # Slice 475 — running tallies surfaced live on the Activity
+        # active-task card via mid-run progress writes.
+        total_files_overall = 0
+        processed_files_overall = 0
+        matched_overall = 0
+        unmatched_overall = 0
 
         async with sessionmaker() as session:
             stmt = select(Library)
@@ -585,12 +593,69 @@ class LibraryScanAdapter(_AdapterBase):
                     )
                     continue
 
+                # Pre-count the files we're about to walk so the
+                # Activity card shows ``processed/total`` right
+                # from the first refresh tick.
+                library_total = sum(
+                    1
+                    for _ in walk_library(
+                        library_path, accepted_extensions=accepted
+                    )
+                )
+                total_files_overall += library_total
+                await report_progress(
+                    sessionmaker,
+                    job_run_id=context.job_run_id,
+                    items_processed=processed_files_overall,
+                    summary_patch={
+                        "total_items": total_files_overall,
+                        "matched": matched_overall,
+                        "unmatched": unmatched_overall,
+                    },
+                )
+
+                # Default-args capture the current loop iteration's
+                # values so a re-entrant closure in the next library
+                # doesn't trample state — full_scan runs to
+                # completion before the loop advances, so the
+                # closure only fires for one library's scan, but
+                # the defaults are also what keeps ruff B023 quiet.
+                def _sink(
+                    ev: Any,
+                    _base: int = processed_files_overall,
+                    _total: int = total_files_overall,
+                    _matched: int = matched_overall,
+                    _unmatched: int = unmatched_overall,
+                ) -> None:
+                    # Sync callback inside async full_scan — fire
+                    # a background task so the row update never
+                    # blocks the scanner loop.
+                    task = asyncio.create_task(
+                        report_progress(
+                            sessionmaker,
+                            job_run_id=context.job_run_id,
+                            items_processed=_base + ev.files_seen,
+                            summary_patch={
+                                "total_items": _total,
+                                "matched": _matched + ev.files_linked,
+                                "unmatched": _unmatched
+                                + ev.files_unmatched,
+                            },
+                        )
+                    )
+                    # Suppress RUF006 — fire-and-forget by design.
+                    task.add_done_callback(lambda _: None)
+
                 result = await full_scan(
                     session=session,
                     library_id=library.id,
                     library_path=library_path,
                     accepted_extensions=accepted,
+                    progress_sink=_sink,
                 )
+                processed_files_overall += result.files_seen
+                matched_overall += result.files_linked
+                unmatched_overall += result.files_unmatched
                 scanned += 1
                 per_library.append(
                     {

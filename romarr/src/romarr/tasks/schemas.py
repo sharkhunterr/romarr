@@ -122,6 +122,11 @@ class JobRead(BaseModel):
     # isn't currently running. Drives the Activity banner's
     # "X items processed" indicator (slice 474).
     current_run_items_processed: int | None = None
+    # Mirror of ``job_run.output_summary`` while the run is
+    # in flight — carries ``total_items``, ``matched``,
+    # ``unmatched`` etc. that the runner stashes via
+    # ``report_progress`` (slice 475).
+    current_run_summary: dict[str, Any] | None = None
 
 
 class JobUpdate(BaseModel):

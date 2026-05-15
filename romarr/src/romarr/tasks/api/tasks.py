@@ -56,10 +56,11 @@ def _to_read(
     *,
     current_run_id: int | None = None,
     current_run_items_processed: int | None = None,
+    current_run_summary: dict | None = None,
 ) -> JobRead:
     """Build a :class:`JobRead` from the ORM row + the API-layer
     computed fields (``is_paused_by_health``, ``current_run_id``,
-    ``current_run_items_processed``)."""
+    ``current_run_items_processed``, ``current_run_summary``)."""
     payload = {
         "id": row.id,
         "name": row.name,
@@ -82,6 +83,7 @@ def _to_read(
         "is_paused_by_health": False,
         "current_run_id": current_run_id,
         "current_run_items_processed": current_run_items_processed,
+        "current_run_summary": current_run_summary,
     }
     return JobRead.model_validate(payload)
 
@@ -128,22 +130,33 @@ async def list_tasks(
     # surfaces a live counter without a second round trip per
     # running job.
     items_by_run: dict[int, int] = {}
+    summary_by_run: dict[int, dict] = {}
     if running_by_job:
         ids = list(running_by_job.values())
         items_rows = (
             await session.execute(
-                select(JobRun.id, JobRun.items_processed).where(
-                    JobRun.id.in_(ids)
-                )
+                select(
+                    JobRun.id,
+                    JobRun.items_processed,
+                    JobRun.output_summary,
+                ).where(JobRun.id.in_(ids))
             )
         ).all()
-        items_by_run = dict(items_rows)
+        for run_id, processed, summary in items_rows:
+            items_by_run[run_id] = processed
+            if isinstance(summary, dict):
+                summary_by_run[run_id] = summary
     return [
         _to_read(
             row,
             current_run_id=running_by_job.get(row.id),
             current_run_items_processed=(
                 items_by_run.get(running_by_job[row.id])
+                if row.id in running_by_job
+                else None
+            ),
+            current_run_summary=(
+                summary_by_run.get(running_by_job[row.id])
                 if row.id in running_by_job
                 else None
             ),

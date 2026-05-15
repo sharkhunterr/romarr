@@ -122,6 +122,14 @@
     "cancel": "Stop",
     "cancelToast": "Stop signal sent to “{{name}}”",
     "cancelErrorToast": "Couldn't cancel the task",
-    "itemsProcessed": "{{count}} items"
+    "itemsProcessed": "{{count}} items",
+    "chips": {
+      "processed": "{{processed}} / {{total}}",
+      "matched": "matched: {{count}}",
+      "unmatched": "unmatched: {{count}}",
+      "skipped": "skipped: {{count}}",
+      "remaining": "remaining: {{count}}"
+    },
+    "taskKindHint": "Scheduler task"
   }
 }
