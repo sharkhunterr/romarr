@@ -354,6 +354,44 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                 )
                 health_engine = None
 
+        # Slice 474 — finalise stale ``running`` job_run rows
+        # left by a previous process that didn't shut down
+        # cleanly (kill -9, container restart mid-run). Without
+        # this they sit "running" forever and pollute the
+        # Activity active-tasks banner.
+        try:
+            from datetime import UTC as _UTC, datetime as _dt
+
+            from sqlalchemy import update as _update
+
+            from romarr.tasks.models import JobRun as _JobRun
+            from romarr.tasks.types import JobStatus as _JobStatus
+
+            async with app.state.db_sessionmaker() as session:
+                stale_now = _dt.now(_UTC)
+                result = await session.execute(
+                    _update(_JobRun)
+                    .where(_JobRun.status == _JobStatus.RUNNING.value)
+                    .values(
+                        status=_JobStatus.FAILED.value,
+                        finished_at=stale_now,
+                        error_message=(
+                            "process restarted mid-run "
+                            "(reaped at startup)"
+                        ),
+                    )
+                )
+                if result.rowcount:
+                    await session.commit()
+                    bootstrap_log.info(
+                        "lifespan.stale_job_runs_reaped",
+                        extra={"count": result.rowcount},
+                    )
+        except Exception:
+            bootstrap_log.warning(
+                "lifespan.stale_job_runs_reap_failed", exc_info=True
+            )
+
         cancellation_registry = CancellationRegistry()
         scheduler = SchedulerService(
             session_factory=app.state.db_sessionmaker,

@@ -25,7 +25,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from romarr.api.dependencies import get_db, require_admin, require_readonly
@@ -36,14 +36,14 @@ from romarr.tasks.errors import (
     ScheduleParseError,
     UnknownJob,
 )
-from romarr.tasks.models import Job
+from romarr.tasks.models import Job, JobRun
 from romarr.tasks.schemas import (
     JobRead,
     JobUpdate,
     TriggerRequest,
     TriggerResponse,
 )
-from romarr.tasks.types import TriggerKind
+from romarr.tasks.types import JobStatus, TriggerKind
 
 if TYPE_CHECKING:
     from romarr.tasks.scheduler import SchedulerService
@@ -99,7 +99,23 @@ async def list_tasks(
     rows = (
         await session.execute(select(Job).order_by(Job.id))
     ).scalars().all()
-    return [_to_read(row) for row in rows]
+    # Slice 474 — populate the ``current_run_id`` computed field
+    # so the Activity active-tasks banner can detect jobs in
+    # flight. One running run per job is the contract
+    # (max_concurrent_instances defaults to 1); we pick the
+    # newest just in case.
+    running_runs = (
+        await session.execute(
+            select(JobRun.job_id, func.max(JobRun.id))
+            .where(JobRun.status == JobStatus.RUNNING.value)
+            .group_by(JobRun.job_id)
+        )
+    ).all()
+    running_by_job = dict(running_runs)
+    return [
+        _to_read(row, current_run_id=running_by_job.get(row.id))
+        for row in rows
+    ]
 
 
 @router.get("/{job_id}", response_model=JobRead)
