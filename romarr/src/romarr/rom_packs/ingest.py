@@ -852,6 +852,13 @@ async def ingest_rom_pack(
     ``download_root`` overrides the global ``rom_pack_config``
     default — handy in tests. Production callers leave it None
     so the operator-tuned Settings value applies."""
+    # Clear any leftover cancel flag from a previous run (slice
+    # 479). Reset / Cancel-from-Activity stamp ``_CANCELED_PACKS``
+    # but the cleanup is in the ingest's own ``finally`` — if no
+    # ingest was running, the flag stays in memory and the NEXT
+    # re-ingest stops at its first checkpoint with "canceled by
+    # operator". Always start fresh.
+    _CANCELED_PACKS.discard(rom_pack_id)
     # ── Load + mark downloading ──────────────────────────────
     async with sessionmaker() as session:
         pack = (

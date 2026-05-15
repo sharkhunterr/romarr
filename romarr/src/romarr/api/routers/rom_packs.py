@@ -528,11 +528,16 @@ async def grab_pack(
             db=db,
         )
     except GrabarrPreResolveError as exc:
+        # The upstream (Grabarr → CDRomance / Minerva / …) is the
+        # one that failed — surface a distinct error code so the
+        # operator-facing toast can phrase it as "source server
+        # unavailable, retry later" rather than "Romarr is
+        # broken".
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail={
-                "errorMessage": "rom_pack_grab_failed",
-                "errorCode": "grab_failed",
+                "errorMessage": "rom_pack_grab_upstream_failed",
+                "errorCode": "grab_upstream_failed",
                 "details": str(exc),
             },
         ) from exc
