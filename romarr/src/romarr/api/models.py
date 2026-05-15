@@ -63,7 +63,11 @@ _TAG_ENTITY_TYPE_CHECK = (
 _QUEUE_STATE_CHECK = (
     "state IN ("
     "'queued', 'downloading', 'paused', 'completed', "
-    "'stuck', 'failed', 'pending_retry'"
+    "'stuck', 'failed', 'pending_retry', "
+    # Slice 478 — ROM-pack ingest phases mirrored into the queue
+    # so the operator watches the post-download work the same way
+    # they watch a download.
+    "'extracting', 'importing'"
     ")"
 )
 

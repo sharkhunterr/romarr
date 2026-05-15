@@ -354,6 +354,47 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                 )
                 health_engine = None
 
+        # Slice 478 — reap stale ROM-pack ingests too. A process
+        # killed between ``status='downloading'`` and the outer
+        # try/except (e.g. a CHECK constraint crash on the queue
+        # mirror) leaves the pack stuck forever; the operator
+        # can't even hit "Reset" because the page polls a busy
+        # status. Flip everything in a non-terminal state to
+        # ``failed`` with a clear message at startup.
+        try:
+            from datetime import UTC as _UTC2, datetime as _dt2
+
+            from sqlalchemy import update as _upd2
+
+            from romarr.domain.models import RomPack as _RomPack
+
+            busy_states = (
+                "pending",
+                "downloading",
+                "extracting",
+                "importing",
+            )
+            async with app.state.db_sessionmaker() as session:
+                result = await session.execute(
+                    _upd2(_RomPack)
+                    .where(_RomPack.status.in_(busy_states))
+                    .values(
+                        status="failed",
+                        last_error="process restarted mid-ingest",
+                        last_ingest_at=_dt2.now(_UTC2),
+                    )
+                )
+                if result.rowcount:
+                    await session.commit()
+                    bootstrap_log.info(
+                        "lifespan.stale_rom_packs_reaped",
+                        extra={"count": result.rowcount},
+                    )
+        except Exception:
+            bootstrap_log.warning(
+                "lifespan.stale_rom_packs_reap_failed", exc_info=True
+            )
+
         # Slice 474 — finalise stale ``running`` job_run rows
         # left by a previous process that didn't shut down
         # cleanly (kill -9, container restart mid-run). Without
