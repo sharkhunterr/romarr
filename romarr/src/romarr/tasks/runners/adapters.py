@@ -629,7 +629,10 @@ class LibraryScanAdapter(_AdapterBase):
                 ) -> None:
                     # Sync callback inside async full_scan — fire
                     # a background task so the row update never
-                    # blocks the scanner loop.
+                    # blocks the scanner loop. ``files_processed``
+                    # is the cumulative "got past hash" count;
+                    # ``files_unmatched`` rises in lockstep with
+                    # files that hit no DAT entry.
                     task = asyncio.create_task(
                         report_progress(
                             sessionmaker,
@@ -637,7 +640,7 @@ class LibraryScanAdapter(_AdapterBase):
                             items_processed=_base + ev.files_seen,
                             summary_patch={
                                 "total_items": _total,
-                                "matched": _matched + ev.files_linked,
+                                "matched": _matched + ev.files_processed,
                                 "unmatched": _unmatched
                                 + ev.files_unmatched,
                             },
