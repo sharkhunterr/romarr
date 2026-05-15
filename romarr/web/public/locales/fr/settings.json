@@ -389,6 +389,17 @@
       "importModeHint": {
         "all": "Toutes les ROMs sont importées. Les fichiers DAT-matchés gardent leur nom canonique ; les autres passent par une recherche metadata (nom de fichier + plateforme) puis tombent en triage manuel si rien de fiable n'est trouvé.",
         "dat_verified": "Seules les ROMs DAT-matchées sont importées. Les autres sont ignorées — le mode le plus strict."
+      },
+      "unknownActionLabel": "ROMs non identifiées",
+      "unknownAction": {
+        "triage": "Triage manuel",
+        "park": "Mettre en non identifiées",
+        "delete": "Exclure"
+      },
+      "unknownActionHint": {
+        "triage": "Garde les ROMs non identifiées dans le modal de détail du pack pour résolution fichier par fichier (associer manuellement / mettre de côté / supprimer).",
+        "park": "Met automatiquement dans Settings → Non identifiés. L'opérateur peut y revenir plus tard mais le pack ne les surface plus.",
+        "delete": "Supprime les fichiers extraits sans laisser de trace. Aucune ligne, aucun audit — l'opérateur abandonne ces ROMs."
       }
     },
     "triage": {

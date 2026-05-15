@@ -691,6 +691,14 @@ class RomPack(Base, TimestampMixin):
     import_mode: Mapped[str] = mapped_column(
         String(16), nullable=False, default="all"
     )
+    # Slice 472 — fallback policy when a ROM has no DAT match AND
+    # the metadata-provider lookup also fails (mode 'all' only):
+    #   ``triage`` — leave it ``unmatched`` for manual resolution.
+    #   ``park``   — auto-park into ``unidentified_dump``.
+    #   ``delete`` — drop the extracted file outright.
+    unknown_action: Mapped[str] = mapped_column(
+        String(12), nullable=False, default="triage"
+    )
 
     # Lifecycle: pending → downloading → extracting → importing →
     # awaiting_triage (if any unmatched) → done | failed.
@@ -752,6 +760,10 @@ class RomPack(Base, TimestampMixin):
         CheckConstraint(
             "import_mode IN ('all', 'dat_verified')",
             name="ck_rom_pack_import_mode",
+        ),
+        CheckConstraint(
+            "unknown_action IN ('triage', 'park', 'delete')",
+            name="ck_rom_pack_unknown_action",
         ),
     )
 

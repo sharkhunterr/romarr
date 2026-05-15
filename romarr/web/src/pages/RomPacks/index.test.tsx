@@ -103,6 +103,7 @@ describe("RomPacksPage", () => {
           platform_name: null,
           max_size_bytes: null,
           import_mode: "all",
+          unknown_action: "triage",
           status: "done",
           downloaded_path: null,
           size_bytes: 1024 ** 3,

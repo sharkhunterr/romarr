@@ -70,6 +70,7 @@ _PackStatus = Literal[
 ]
 _ItemStatus = Literal["imported", "unmatched", "parked", "deleted", "failed"]
 _ImportMode = Literal["all", "dat_verified"]
+_UnknownAction = Literal["triage", "park", "delete"]
 
 # Statuses from which a (re-)ingest is allowed. Refusing mid-run
 # starts keeps two ingest tasks off the same pack.
@@ -110,6 +111,7 @@ class RomPackRead(_Base):
     platform_name: str | None = None
     max_size_bytes: int | None
     import_mode: _ImportMode
+    unknown_action: _UnknownAction
     status: _PackStatus
     downloaded_path: str | None
     size_bytes: int | None
@@ -133,6 +135,7 @@ class RomPackCreate(_Base):
     platform_id: int | None = None
     max_size_bytes: Annotated[int | None, Field(default=None, gt=0)] = None
     import_mode: _ImportMode = "all"
+    unknown_action: _UnknownAction = "triage"
 
 
 class RomPackUpdate(_Base):
@@ -143,6 +146,7 @@ class RomPackUpdate(_Base):
     platform_id: int | None = None
     max_size_bytes: Annotated[int | None, Field(default=None, gt=0)] = None
     import_mode: _ImportMode | None = None
+    unknown_action: _UnknownAction | None = None
 
 
 class RomPackGrabRequest(_Base):
@@ -159,6 +163,7 @@ class RomPackGrabRequest(_Base):
     platform_id: int | None = None
     max_size_bytes: Annotated[int | None, Field(default=None, gt=0)] = None
     import_mode: _ImportMode = "all"
+    unknown_action: _UnknownAction = "triage"
     indexer_id: int
     indexer_guid: Annotated[str, Field(min_length=1, max_length=255)]
     download_url: Annotated[str, Field(min_length=1)]
@@ -357,6 +362,7 @@ async def create_pack(
         platform_id=payload.platform_id,
         max_size_bytes=payload.max_size_bytes,
         import_mode=payload.import_mode,
+        unknown_action=payload.unknown_action,
         status="pending",
     )
     db.add(row)
@@ -569,6 +575,7 @@ async def grab_pack(
         platform_id=payload.platform_id,
         max_size_bytes=payload.max_size_bytes,
         import_mode=payload.import_mode,
+        unknown_action=payload.unknown_action,
         status="pending",
     )
     db.add(row)
@@ -623,6 +630,8 @@ async def update_pack(
         row.max_size_bytes = fields["max_size_bytes"]
     if "import_mode" in fields and fields["import_mode"] is not None:
         row.import_mode = fields["import_mode"]
+    if "unknown_action" in fields and fields["unknown_action"] is not None:
+        row.unknown_action = fields["unknown_action"]
     await db.commit()
     await db.refresh(row)
     return _to_read(row, await _platform_for(db, row.platform_id))

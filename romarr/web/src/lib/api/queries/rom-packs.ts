@@ -22,6 +22,7 @@ import { ApiError, apiFetch } from "@/lib/api/client";
 
 export type RomPackSourceKind = "url" | "grab";
 export type RomPackImportMode = "all" | "dat_verified";
+export type RomPackUnknownAction = "triage" | "park" | "delete";
 
 export type RomPackStatus =
   | "pending"
@@ -60,6 +61,7 @@ export interface RomPackRead {
   platform_name: string | null;
   max_size_bytes: number | null;
   import_mode: RomPackImportMode;
+  unknown_action: RomPackUnknownAction;
   status: RomPackStatus;
   downloaded_path: string | null;
   size_bytes: number | null;
@@ -98,6 +100,7 @@ export interface RomPackCreate {
   platform_id?: number | null;
   max_size_bytes?: number | null;
   import_mode?: RomPackImportMode;
+  unknown_action?: RomPackUnknownAction;
 }
 
 export interface RomPackUpdate {
@@ -106,6 +109,7 @@ export interface RomPackUpdate {
   platform_id?: number | null;
   max_size_bytes?: number | null;
   import_mode?: RomPackImportMode;
+  unknown_action?: RomPackUnknownAction;
 }
 
 const LIST_KEY = ["settings", "rom-packs"] as const;
@@ -171,6 +175,7 @@ export interface RomPackGrabRequest {
   platform_id?: number | null;
   max_size_bytes?: number | null;
   import_mode?: RomPackImportMode;
+  unknown_action?: RomPackUnknownAction;
   indexer_id: number;
   indexer_guid: string;
   download_url: string;

@@ -642,6 +642,58 @@ class _ImportSummary:
     source: str
 
 
+async def _apply_unknown_action(
+    item: RomPackItem,
+    *,
+    rom_path: Path,
+    hashes_sha1: str | None,
+    hashes_md5: str | None,
+    hashes_crc32: str | None,
+    size_bytes: int | None,
+    pack_platform_id: int | None,
+    unknown_action: str,
+    sessionmaker: Callable[[], AsyncSession],
+) -> tuple[RomPackItem | None, _ImportSummary]:
+    """Resolve a DAT-miss + metadata-miss ROM per the pack's
+    operator-chosen fallback policy (slice 472).
+
+    - ``triage`` — leave the file in place, item ``unmatched``.
+    - ``park``  — park into ``unidentified_dump``, item ``parked``.
+    - ``delete`` — unlink the extracted file, item ``deleted``.
+    """
+    if unknown_action == "park":
+        from romarr.importer._park import park_in_unidentified
+
+        async with sessionmaker() as session:
+            await park_in_unidentified(
+                session=session,
+                source_path=rom_path,
+                size_bytes=size_bytes or 0,
+                rejection_reason="rom_pack:unknown_auto_parked",
+                crc32=hashes_crc32,
+                md5=hashes_md5,
+                sha1=hashes_sha1,
+                suggested_platform_id=pack_platform_id,
+            )
+            await session.commit()
+        item.status = "parked"
+        return item, _ImportSummary(game_title=None, source="parked")
+    if unknown_action == "delete":
+        # "Exclude" — drop the file outright and don't even keep
+        # a rom_pack_item row. Like the dat_verified skip path,
+        # the operator opted out of any audit trail for these.
+        try:
+            rom_path.unlink(missing_ok=True)
+        except OSError as exc:
+            logger.warning(
+                "rom_pack.unknown_delete_failed path=%s: %s", rom_path, exc
+            )
+        return None, _ImportSummary(game_title=None, source="deleted")
+    # Default — manual triage.
+    item.status = "unmatched"
+    return item, _ImportSummary(game_title=None, source="unmatched")
+
+
 async def _import_one_rom(
     *,
     sessionmaker: Callable[[], AsyncSession],
@@ -650,6 +702,7 @@ async def _import_one_rom(
     pack_platform_id: int | None,
     pack_platform_slug: str | None,
     import_mode: str,
+    unknown_action: str,
 ) -> tuple[RomPackItem | None, _ImportSummary]:
     """Hash + DAT-match + import one extracted ROM.
 
@@ -709,20 +762,34 @@ async def _import_one_rom(
                 platform_slug=pack_platform_slug,
             )
             if result is None or pack_platform_id is None:
-                # Nothing confident from the providers — leave
-                # the extracted file in place for the triage
-                # modal.
-                item.status = "unmatched"
-                return item, _ImportSummary(
-                    game_title=None, source="unmatched"
+                # Nothing confident from the providers — apply
+                # the pack-level fallback policy (triage / park /
+                # delete) the operator chose at creation.
+                return await _apply_unknown_action(
+                    item,
+                    rom_path=rom_path,
+                    hashes_sha1=hashes.sha1,
+                    hashes_md5=hashes.md5,
+                    hashes_crc32=hashes.crc32,
+                    size_bytes=hashes.size_bytes,
+                    pack_platform_id=pack_platform_id,
+                    unknown_action=unknown_action,
+                    sessionmaker=sessionmaker,
                 )
             game = await _find_or_create_game_from_lookup(
                 session, result=result, platform_id=pack_platform_id
             )
             if game is None:
-                item.status = "unmatched"
-                return item, _ImportSummary(
-                    game_title=None, source="unmatched"
+                return await _apply_unknown_action(
+                    item,
+                    rom_path=rom_path,
+                    hashes_sha1=hashes.sha1,
+                    hashes_md5=hashes.md5,
+                    hashes_crc32=hashes.crc32,
+                    size_bytes=hashes.size_bytes,
+                    pack_platform_id=pack_platform_id,
+                    unknown_action=unknown_action,
+                    sessionmaker=sessionmaker,
                 )
             game_id = game.id
             game_title = game.title
@@ -804,6 +871,7 @@ async def ingest_rom_pack(
         source_kind = pack.source_kind
         platform_id = pack.platform_id
         import_mode = pack.import_mode
+        unknown_action = pack.unknown_action
         # Resolve the pack's platform slug for the metadata-provider
         # lookup fallback (mode 'all'); NULL when the pack pins
         # no platform.
@@ -940,6 +1008,7 @@ async def ingest_rom_pack(
                 pack_platform_id=platform_id,
                 pack_platform_slug=platform_slug,
                 import_mode=import_mode,
+                unknown_action=unknown_action,
             )
             # Refresh the Activity-→-Queue mirror so the operator
             # sees what was just imported: "Game name [DAT]" for a

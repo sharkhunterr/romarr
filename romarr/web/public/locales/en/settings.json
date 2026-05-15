@@ -393,6 +393,17 @@
       "importModeHint": {
         "all": "Every ROM is imported. DAT-matched files use their canonical name; non-DAT files get a metadata-provider lookup (filename + platform) and fall to manual triage if nothing confident is found.",
         "dat_verified": "Only DAT-matched ROMs are imported. Non-DAT files are skipped — strictest setting."
+      },
+      "unknownActionLabel": "Unknown ROMs",
+      "unknownAction": {
+        "triage": "Manual triage",
+        "park": "Park as unknown",
+        "delete": "Exclude"
+      },
+      "unknownActionHint": {
+        "triage": "Leave unmatched ROMs in the pack's detail modal for per-file resolution (manual associate / park / delete).",
+        "park": "Auto-park into Settings → Unidentified. The operator can revisit them later but the pack stops surfacing them.",
+        "delete": "Drop the extracted files outright. No row, no audit trail — the operator opted out of these ROMs."
       }
     },
     "triage": {
