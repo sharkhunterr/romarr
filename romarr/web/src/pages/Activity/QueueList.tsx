@@ -13,7 +13,7 @@
  * are contract values, not operator copy.
  */
 
-import { useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import { type TFunction } from "i18next";
 import { useDrag } from "@use-gesture/react";
 import { useTranslation } from "react-i18next";
@@ -54,6 +54,9 @@ function parseFilterParam(raw: string | null): StateFilter {
 const STATE_BADGE: Record<string, string> = {
   queued: "bg-zinc-700/40 text-zinc-200 ring-zinc-500/40",
   downloading: "bg-sky-700/30 text-sky-200 ring-sky-500/40",
+  // Slice 467 — ROM-pack post-download phases.
+  extracting: "bg-violet-700/30 text-violet-200 ring-violet-500/40",
+  importing: "bg-emerald-700/30 text-emerald-200 ring-emerald-500/40",
   paused: "bg-amber-700/30 text-amber-200 ring-amber-500/40",
   completed: "bg-emerald-700/30 text-emerald-200 ring-emerald-500/40",
   stuck: "bg-red-700/30 text-red-200 ring-red-500/40",
@@ -93,6 +96,43 @@ function formatEta(seconds: number | null | undefined, t: TFunction): string {
 // the remove. Below the threshold the row springs back.
 const SWIPE_THRESHOLD_PX = 100;
 
+/** Two-sample velocity estimator — derives a live ETA from how
+ * fast ``progress`` is climbing between successive poll ticks.
+ * Falls back to the backend-supplied ``etaSeconds`` when the
+ * download client already gave us one (qBit / SAB). */
+function useProgressEta(
+  progress: number,
+  lastUpdatedAt: unknown,
+): number | null {
+  const sampleRef = useRef<{ progress: number; ts: number } | null>(null);
+  const [eta, setEta] = useState<number | null>(null);
+  useEffect(() => {
+    const tsRaw =
+      typeof lastUpdatedAt === "string" || typeof lastUpdatedAt === "number"
+        ? new Date(lastUpdatedAt).getTime()
+        : Number.NaN;
+    const ts = Number.isFinite(tsRaw) ? tsRaw : Date.now();
+    const prev = sampleRef.current;
+    sampleRef.current = { progress, ts };
+    if (
+      prev !== null &&
+      progress > prev.progress &&
+      ts > prev.ts &&
+      progress < 1
+    ) {
+      const dt = (ts - prev.ts) / 1000;
+      const rate = (progress - prev.progress) / dt;
+      if (rate > 0) {
+        setEta(Math.round((1 - progress) / rate));
+      }
+    } else if (progress >= 1) {
+      setEta(null);
+    }
+  }, [progress, lastUpdatedAt]);
+  return eta;
+}
+
+
 function QueueRow(props: {
   entry: QueueEntry;
   clientName: string | null;
@@ -104,6 +144,15 @@ function QueueRow(props: {
     STATE_BADGE[entry.state] ??
     "bg-zinc-800 text-zinc-300 ring-zinc-700";
   const progressPct = Math.round(Math.min(1, entry.progress) * 100);
+  // Backend-supplied ETA wins (qBit / SAB give us a real one);
+  // for romarr-internal pack rows we derive one from progress
+  // velocity so the operator sees a live, moving estimate.
+  const estimatedEta = useProgressEta(entry.progress, entry.lastUpdatedAt);
+  const displayedEta = entry.etaSeconds ?? estimatedEta;
+  // Hide the "client #N" line for romarr-internal rows (URL
+  // pack streams — slice 465) where there is no download client.
+  const showClientLine =
+    clientName !== null || entry.downloadClientId !== null;
 
   // Swipe-to-remove (T092 / spec 014 P-ACT). Touch-only — mouse
   // users hit the explicit Remove button instead. Drag the row
@@ -172,11 +221,14 @@ function QueueRow(props: {
               {entry.gameTitle}
             </p>
           )}
-          <p className="text-[0.7rem] text-zinc-500">
-            {clientName ?? `client #${entry.downloadClientId}`}
-            {entry.attemptCount > 0 &&
-              t("queue.attempt", { count: entry.attemptCount })}
-          </p>
+          {(showClientLine || entry.attemptCount > 0) && (
+            <p className="text-[0.7rem] text-zinc-500">
+              {showClientLine &&
+                (clientName ?? `client #${entry.downloadClientId}`)}
+              {entry.attemptCount > 0 &&
+                t("queue.attempt", { count: entry.attemptCount })}
+            </p>
+          )}
         </div>
         <span
           className={[
@@ -210,7 +262,7 @@ function QueueRow(props: {
 
       <div className="mt-2 flex justify-between font-mono text-[0.65rem] text-zinc-500">
         <span>{t("queue.size", { value: formatBytes(entry.sizeBytes, t) })}</span>
-        <span>{t("queue.eta", { value: formatEta(entry.etaSeconds, t) })}</span>
+        <span>{t("queue.eta", { value: formatEta(displayedEta, t) })}</span>
       </div>
 
       {entry.errorMsg && (

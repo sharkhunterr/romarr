@@ -246,15 +246,15 @@ async def _set_queue_phase(
     pack_name: str,
     phase_label: str,
     progress: float,
+    state: str = "downloading",
 ) -> None:
     """Refresh the pack's ``queue_entry`` mirror as the ingest
     advances through download → extract → import.
 
-    ``state`` stays ``"downloading"`` (Activity → Queue treats it
-    as in-progress); the **title** carries the human phase label
-    (``"No-Intro GBA — extracting"``) so the operator sees which
-    stage they're at without us teaching the queue list a whole
-    new state taxonomy."""
+    ``state`` lets the caller swap the row's queue-list badge as
+    the phase moves (``downloading`` → ``extracting`` →
+    ``importing``); ``title`` carries the operator-friendly phase
+    label (``"No-Intro GBA — importing 12/50"``)."""
     from romarr.api.models import QueueEntry
 
     native_id = _queue_native_id(rom_pack_id)
@@ -268,6 +268,7 @@ async def _set_queue_phase(
         ).scalar_one_or_none()
         if row is None:
             return
+        row.state = state
         row.title = f"{pack_name} — {phase_label}"
         row.progress = max(0.0, min(1.0, progress))
         row.last_updated_at = datetime.now(UTC)
@@ -779,6 +780,7 @@ async def ingest_rom_pack(
             pack_name=pack_name,
             phase_label="extracting",
             progress=0.05,
+            state="extracting",
         )
 
     archive_path: Path | None = None
@@ -839,6 +841,7 @@ async def ingest_rom_pack(
             pack_name=pack_name,
             phase_label="extracting",
             progress=0.3,
+            state="extracting",
         )
 
         extract_dir = Path(
@@ -871,6 +874,7 @@ async def ingest_rom_pack(
                 progress=processed / total_to_process
                 if total_to_process > 0
                 else 1.0,
+                state="importing",
             )
             item = await _import_one_rom(
                 sessionmaker=sessionmaker,
