@@ -113,5 +113,14 @@
       "7d": "7 derniers j",
       "30d": "30 derniers j"
     }
+  },
+  "activeTasks": {
+    "ariaLabel": "Tâches du planificateur en cours",
+    "heading": "{{count}} tâche en cours",
+    "heading_plural": "{{count}} tâches en cours",
+    "running": "en cours",
+    "cancel": "Arrêter",
+    "cancelToast": "Signal d'arrêt envoyé à “{{name}}”",
+    "cancelErrorToast": "Impossible d'annuler la tâche"
   }
 }

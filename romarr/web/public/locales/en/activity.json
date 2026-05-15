@@ -113,5 +113,14 @@
       "7d": "Last 7d",
       "30d": "Last 30d"
     }
+  },
+  "activeTasks": {
+    "ariaLabel": "Scheduler tasks in progress",
+    "heading": "{{count}} task in progress",
+    "heading_plural": "{{count}} tasks in progress",
+    "running": "running",
+    "cancel": "Stop",
+    "cancelToast": "Stop signal sent to “{{name}}”",
+    "cancelErrorToast": "Couldn't cancel the task"
   }
 }

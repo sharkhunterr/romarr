@@ -16,6 +16,7 @@ import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 
+import { ActiveTasksBanner } from "./ActiveTasksBanner";
 import { HistoryList } from "./HistoryList";
 import { QueueList } from "./QueueList";
 
@@ -79,6 +80,8 @@ export function ActivityPage(): ReactElement {
         </h1>
         <p className="mt-1 text-sm text-zinc-400">{t(`tabHint.${tab}`)}</p>
       </header>
+
+      <ActiveTasksBanner />
 
       <div
         role="tablist"
