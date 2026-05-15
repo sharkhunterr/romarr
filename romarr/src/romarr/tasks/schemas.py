@@ -118,6 +118,10 @@ class JobRead(BaseModel):
     # Computed at the API layer
     is_paused_by_health: bool = False
     current_run_id: int | None = None
+    # Live counter for the in-flight run — None when the job
+    # isn't currently running. Drives the Activity banner's
+    # "X items processed" indicator (slice 474).
+    current_run_items_processed: int | None = None
 
 
 class JobUpdate(BaseModel):

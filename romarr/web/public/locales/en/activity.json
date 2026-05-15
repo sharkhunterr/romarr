@@ -121,6 +121,7 @@
     "running": "running",
     "cancel": "Stop",
     "cancelToast": "Stop signal sent to “{{name}}”",
-    "cancelErrorToast": "Couldn't cancel the task"
+    "cancelErrorToast": "Couldn't cancel the task",
+    "itemsProcessed": "{{count}} items"
   }
 }

@@ -121,6 +121,7 @@
     "running": "en cours",
     "cancel": "Arrêter",
     "cancelToast": "Signal d'arrêt envoyé à “{{name}}”",
-    "cancelErrorToast": "Impossible d'annuler la tâche"
+    "cancelErrorToast": "Impossible d'annuler la tâche",
+    "itemsProcessed": "{{count}} éléments"
   }
 }

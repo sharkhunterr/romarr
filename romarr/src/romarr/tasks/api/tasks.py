@@ -51,9 +51,15 @@ if TYPE_CHECKING:
 router = APIRouter(prefix="/api/v3/system/tasks", tags=["Tasks"])
 
 
-def _to_read(row: Job, *, current_run_id: int | None = None) -> JobRead:
+def _to_read(
+    row: Job,
+    *,
+    current_run_id: int | None = None,
+    current_run_items_processed: int | None = None,
+) -> JobRead:
     """Build a :class:`JobRead` from the ORM row + the API-layer
-    computed fields (``is_paused_by_health``, ``current_run_id``)."""
+    computed fields (``is_paused_by_health``, ``current_run_id``,
+    ``current_run_items_processed``)."""
     payload = {
         "id": row.id,
         "name": row.name,
@@ -75,6 +81,7 @@ def _to_read(row: Job, *, current_run_id: int | None = None) -> JobRead:
         # when the lifespan wiring threads HealthEngine through.
         "is_paused_by_health": False,
         "current_run_id": current_run_id,
+        "current_run_items_processed": current_run_items_processed,
     }
     return JobRead.model_validate(payload)
 
@@ -106,14 +113,41 @@ async def list_tasks(
     # newest just in case.
     running_runs = (
         await session.execute(
-            select(JobRun.job_id, func.max(JobRun.id))
+            select(
+                JobRun.job_id,
+                func.max(JobRun.id).label("run_id"),
+            )
             .where(JobRun.status == JobStatus.RUNNING.value)
             .group_by(JobRun.job_id)
         )
     ).all()
-    running_by_job = dict(running_runs)
+    running_by_job: dict[str, int] = {
+        row.job_id: row.run_id for row in running_runs
+    }
+    # Pull items_processed for those runs so the Activity banner
+    # surfaces a live counter without a second round trip per
+    # running job.
+    items_by_run: dict[int, int] = {}
+    if running_by_job:
+        ids = list(running_by_job.values())
+        items_rows = (
+            await session.execute(
+                select(JobRun.id, JobRun.items_processed).where(
+                    JobRun.id.in_(ids)
+                )
+            )
+        ).all()
+        items_by_run = dict(items_rows)
     return [
-        _to_read(row, current_run_id=running_by_job.get(row.id))
+        _to_read(
+            row,
+            current_run_id=running_by_job.get(row.id),
+            current_run_items_processed=(
+                items_by_run.get(running_by_job[row.id])
+                if row.id in running_by_job
+                else None
+            ),
+        )
         for row in rows
     ]
 

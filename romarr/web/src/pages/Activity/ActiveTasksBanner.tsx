@@ -77,6 +77,23 @@ export function ActiveTasksBanner(): ReactElement | null {
               <span className="shrink-0 text-[0.6rem] uppercase tracking-wide text-zinc-500">
                 {t("activeTasks.running")}
               </span>
+              {(() => {
+                // ``current_run_items_processed`` is a new
+                // computed field (slice 474) — schema.ts will
+                // pick it up on the next codegen pass; cast to
+                // keep the build green in the meantime.
+                const processed = (
+                  job as unknown as {
+                    current_run_items_processed?: number | null;
+                  }
+                ).current_run_items_processed;
+                if (processed == null || processed <= 0) return null;
+                return (
+                  <span className="shrink-0 font-mono text-[0.6rem] text-zinc-400">
+                    {t("activeTasks.itemsProcessed", { count: processed })}
+                  </span>
+                );
+              })()}
             </div>
             {job.current_run_id != null && (
               <button
