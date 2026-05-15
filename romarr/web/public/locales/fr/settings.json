@@ -379,7 +379,16 @@
       "seeders": "seeders",
       "grabHint": "Choisissez un résultat pour l'envoyer à un client de téléchargement. Le watcher route le téléchargement terminé vers l'ingestion du pack.",
       "nameRequiredForGrab": "Donnez un nom au pack avant de récupérer un résultat.",
-      "toastGrabbed": "Pack “{{name}}” récupéré — l'ingestion démarre à la fin du téléchargement"
+      "toastGrabbed": "Pack “{{name}}” récupéré — l'ingestion démarre à la fin du téléchargement",
+      "importModeLabel": "Périmètre d'import",
+      "importMode": {
+        "all": "Importer tous",
+        "dat_verified": "DAT-vérifiés uniquement"
+      },
+      "importModeHint": {
+        "all": "Toutes les ROMs sont importées. Les fichiers DAT-matchés gardent leur nom canonique ; les autres passent par une recherche metadata (nom de fichier + plateforme) puis tombent en triage manuel si rien de fiable n'est trouvé.",
+        "dat_verified": "Seules les ROMs DAT-matchées sont importées. Les autres sont ignorées — le mode le plus strict."
+      }
     },
     "triage": {
       "title": "Triage — {{name}}",

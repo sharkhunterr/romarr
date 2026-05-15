@@ -29,6 +29,7 @@ import {
   useGrabRomPack,
   useIngestRomPack,
   useUpdateRomPack,
+  type RomPackImportMode,
   type RomPackRead,
 } from "@/lib/api/queries/rom-packs";
 import { useManualSearch, type Candidate } from "@/lib/api/queries/search";
@@ -94,6 +95,9 @@ export function CreateRomPackModal(
       : "",
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const [importMode, setImportMode] = useState<RomPackImportMode>(
+    editing?.import_mode ?? "all",
+  );
   const [error, setError] = useState<ErrorDisplay | null>(null);
 
   const submitting =
@@ -120,7 +124,13 @@ export function CreateRomPackModal(
       update.mutate(
         {
           id: editing.id,
-          payload: { name: name.trim(), url: url.trim(), platform_id, max_size_bytes },
+          payload: {
+            name: name.trim(),
+            url: url.trim(),
+            platform_id,
+            max_size_bytes,
+            import_mode: importMode,
+          },
         },
         {
           onSuccess: () => {
@@ -135,7 +145,13 @@ export function CreateRomPackModal(
       );
     } else {
       create.mutate(
-        { name: name.trim(), url: url.trim(), platform_id, max_size_bytes },
+        {
+          name: name.trim(),
+          url: url.trim(),
+          platform_id,
+          max_size_bytes,
+          import_mode: importMode,
+        },
         {
           onSuccess: (created) => {
             // Kick the download off straight away — it streams
@@ -181,6 +197,7 @@ export function CreateRomPackModal(
           name: name.trim(),
           platform_id: _platformId(),
           max_size_bytes: _maxBytes(),
+          import_mode: importMode,
           indexer_id: c.indexer_id,
           indexer_guid: c.indexer_guid,
           download_url: c.download_url,
@@ -305,6 +322,32 @@ export function CreateRomPackModal(
               {t("romPacks.modal.platformHint")}
             </p>
           </label>
+
+          <fieldset className="block">
+            <legend className="mb-1 block text-[0.65rem] uppercase tracking-widest text-zinc-500">
+              {t("romPacks.modal.importModeLabel")}
+            </legend>
+            <div className="flex gap-1 rounded-md bg-zinc-950 p-0.5 ring-1 ring-inset ring-zinc-800">
+              {(["all", "dat_verified"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setImportMode(m)}
+                  disabled={submitting}
+                  className={`flex-1 rounded px-2 py-1 text-[0.7rem] font-medium transition-colors disabled:cursor-not-allowed ${
+                    importMode === m
+                      ? "bg-zinc-800 text-zinc-100"
+                      : "text-zinc-400 hover:text-zinc-200"
+                  }`}
+                >
+                  {t(`romPacks.modal.importMode.${m}`)}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1 text-[0.65rem] text-zinc-500">
+              {t(`romPacks.modal.importModeHint.${importMode}`)}
+            </p>
+          </fieldset>
 
           <label className="block">
             <span className="mb-1 block text-[0.65rem] uppercase tracking-widest text-zinc-500">

@@ -40,7 +40,13 @@ from uuid import uuid4
 import httpx
 from sqlalchemy import select
 
-from romarr.domain.models import DatEntry, Game, RomPack, RomPackItem
+from romarr.domain.models import (
+    DatEntry,
+    Game,
+    Platform,
+    RomPack,
+    RomPackItem,
+)
 from romarr.identification.dat.manager import _resolve_authority
 from romarr.identification.hasher import Hasher
 from romarr.importer.orchestrator import run_import
@@ -233,6 +239,41 @@ async def _update_queue_progress(
         await session.commit()
 
 
+async def _set_queue_phase(
+    sessionmaker: Callable[[], AsyncSession],
+    *,
+    rom_pack_id: int,
+    pack_name: str,
+    phase_label: str,
+    progress: float,
+) -> None:
+    """Refresh the pack's ``queue_entry`` mirror as the ingest
+    advances through download → extract → import.
+
+    ``state`` stays ``"downloading"`` (Activity → Queue treats it
+    as in-progress); the **title** carries the human phase label
+    (``"No-Intro GBA — extracting"``) so the operator sees which
+    stage they're at without us teaching the queue list a whole
+    new state taxonomy."""
+    from romarr.api.models import QueueEntry
+
+    native_id = _queue_native_id(rom_pack_id)
+    async with sessionmaker() as session:
+        row = (
+            await session.execute(
+                select(QueueEntry).where(
+                    QueueEntry.download_client_native_id == native_id
+                )
+            )
+        ).scalar_one_or_none()
+        if row is None:
+            return
+        row.title = f"{pack_name} — {phase_label}"
+        row.progress = max(0.0, min(1.0, progress))
+        row.last_updated_at = datetime.now(UTC)
+        await session.commit()
+
+
 async def _settle_queue_entry(
     sessionmaker: Callable[[], AsyncSession],
     *,
@@ -240,10 +281,10 @@ async def _settle_queue_entry(
     success: bool,
     error: str | None = None,
 ) -> None:
-    """Close out a URL pack's ``queue_entry`` mirror once the
-    *download* finishes: delete it on success (the transfer is
-    done — the pack page carries the extract/import story), or
-    flip it to ``failed`` with the error so Activity surfaces it."""
+    """Close out the pack's ``queue_entry`` mirror at the end of
+    the ingest: delete it on success (the pack page carries the
+    triage story from here), or flip it to ``failed`` with the
+    error so Activity surfaces it."""
     from romarr.api.models import QueueEntry
 
     native_id = _queue_native_id(rom_pack_id)
@@ -413,16 +454,166 @@ async def _find_or_create_game(
     return game
 
 
+# Score floor an auto-association must clear before we
+# create a Game from it — below this the metadata-provider
+# answer is too speculative and the ROM falls to manual triage.
+_AUTO_ASSOC_MIN_CONFIDENCE = 0.6
+
+
+def _filename_search_seed(filename: str) -> str:
+    """Turn a ROM filename into a provider-search query.
+
+    Drops the extension, the ``(Region)`` / ``[tag]`` groups and
+    the separators, mirroring the JS-side helper that seeds the
+    triage modal's "close suggestion" picker.
+    """
+    import re
+
+    s = re.sub(r"\.[a-z0-9]{1,5}$", "", filename, flags=re.IGNORECASE)
+    s = re.sub(r"[([{][^)\]}]*[)\]}]", " ", s)
+    s = re.sub(r"[._]+", " ", s)
+    s = re.sub(r"\s+", " ", s)
+    return s.strip()
+
+
+async def _resolve_via_metadata(
+    session: AsyncSession,
+    *,
+    filename: str,
+    platform_slug: str | None,
+) -> object | None:
+    """Mode-``all`` fallback for non-DAT ROMs: ask every enabled
+    metadata provider to search for the filename + platform and
+    return the best hit above
+    :data:`_AUTO_ASSOC_MIN_CONFIDENCE`.
+
+    Returns a ``GameSearchResult`` (only its ``provider_name`` /
+    ``provider_game_id`` / ``title`` / ``platform_slug`` are
+    consumed). ``None`` means "no confident match — fall back to
+    manual triage"."""
+    # Lazy import — same pattern as ``_find_or_create_game``.
+    from romarr.metadata.registry import load_enabled_providers
+
+    query = _filename_search_seed(filename)
+    if not query or platform_slug is None:
+        # Without a platform the provider scoping is unreliable
+        # — we'd cross-platform on title alone. Fall to triage.
+        return None
+
+    providers = await load_enabled_providers(session, scan=False)
+    merged: list = []
+    for provider in providers:
+        try:
+            results = await provider.search_games(
+                query, platform_slug=platform_slug
+            )
+        except Exception:
+            # One provider failure doesn't sink the resolution —
+            # the others can still answer. Same pattern as the
+            # /lookup endpoint.
+            continue
+        merged.extend(
+            r
+            for r in results
+            if r.platform_slug == platform_slug
+        )
+    if not merged:
+        return None
+    merged.sort(key=lambda r: r.confidence, reverse=True)
+    best = merged[0]
+    if best.confidence < _AUTO_ASSOC_MIN_CONFIDENCE:
+        return None
+    return best
+
+
+async def _find_or_create_game_from_lookup(
+    session: AsyncSession,
+    *,
+    result: object,
+    platform_id: int,
+) -> Game | None:
+    """Create (or reuse, by ``(platform_id, slug)``) a Game from a
+    :class:`GameSearchResult`. Mirrors
+    :func:`romarr.metadata.api.lookup.add_game_from_lookup`'s
+    persistence half — minus the inline aggregator refresh,
+    which the scheduler picks up via
+    ``needs_metadata_refresh=True``.
+
+    Returns ``None`` when the result's provider isn't one of the
+    primary-key providers (the FK column map below); the caller
+    falls back to manual triage in that case."""
+    from romarr.metadata.api.lookup import (
+        _PROVIDER_TO_FK_COLUMN,
+        _allocate_unique_slug,
+        slugify_title,
+    )
+
+    provider_name = getattr(result, "provider_name", "")
+    title = getattr(result, "title", "")
+    provider_game_id = getattr(result, "provider_game_id", "")
+    if not provider_name or not title or not provider_game_id:
+        return None
+
+    column = _PROVIDER_TO_FK_COLUMN.get(provider_name.lower())
+    if column is None:
+        # Secondary providers (e.g. SteamGridDB) don't carry a
+        # primary FK — can't pin the Game to one of them yet.
+        return None
+    try:
+        provider_pk = int(provider_game_id)
+    except ValueError:
+        return None
+
+    base_slug = slugify_title(title)
+    existing = (
+        await session.execute(
+            select(Game).where(
+                Game.platform_id == platform_id,
+                Game.slug == base_slug,
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return existing
+    slug = await _allocate_unique_slug(
+        session, platform_id=platform_id, base=base_slug
+    )
+    game = Game(
+        platform_id=platform_id,
+        slug=slug,
+        title=title.strip(),
+        monitored=True,
+        needs_metadata_refresh=True,
+    )
+    setattr(game, column, provider_pk)
+    session.add(game)
+    await session.flush()
+    logger.info(
+        "rom_pack.auto_associated id=%s title=%r via=%s confidence=%.2f",
+        game.id,
+        game.title,
+        provider_name,
+        getattr(result, "confidence", 0.0),
+    )
+    return game
+
+
 async def _import_one_rom(
     *,
     sessionmaker: Callable[[], AsyncSession],
     rom_pack_id: int,
     rom_path: Path,
     pack_platform_id: int | None,
-) -> RomPackItem:
-    """Hash + DAT-match + import one extracted ROM. Always
-    returns a :class:`RomPackItem` (never raises) — caller adds
-    it to the session and rolls the pack counters."""
+    pack_platform_slug: str | None,
+    import_mode: str,
+) -> RomPackItem | None:
+    """Hash + DAT-match + import one extracted ROM.
+
+    Returns a :class:`RomPackItem` (caller persists it) or
+    ``None`` when the file was *skipped* — only possible in
+    ``import_mode='dat_verified'`` for a non-DAT-matched file.
+    Never raises — per-file failures land as ``status='failed'``
+    on the returned item."""
     item = RomPackItem(
         rom_pack_id=rom_pack_id,
         original_filename=rom_path.name,
@@ -446,15 +637,39 @@ async def _import_one_rom(
         dat_entry = await _resolve_dat_match(
             session, sha1=hashes.sha1, platform_id=pack_platform_id
         )
-        if dat_entry is None:
-            # No DAT match — leave the extracted file in place and
-            # hand it to the triage modal (slice 462).
-            item.status = "unmatched"
-            return item
-        item.dat_entry_id = dat_entry.id
-        game = await _find_or_create_game(session, dat_entry=dat_entry)
-        game_id = game.id
-        await session.commit()
+        if dat_entry is not None:
+            item.dat_entry_id = dat_entry.id
+            game = await _find_or_create_game(session, dat_entry=dat_entry)
+            game_id = game.id
+            await session.commit()
+        else:
+            # No DAT match — mode steers the fallback.
+            if import_mode == "dat_verified":
+                # Operator asked for DAT-verified only: skip the
+                # file outright (no rom_pack_item row).
+                return None
+            # Mode 'all': try a metadata-provider lookup by
+            # filename + platform; on a confident hit, create
+            # the Game from the search result and import.
+            result = await _resolve_via_metadata(
+                session,
+                filename=rom_path.name,
+                platform_slug=pack_platform_slug,
+            )
+            if result is None or pack_platform_id is None:
+                # Nothing confident from the providers — leave
+                # the extracted file in place for the triage
+                # modal.
+                item.status = "unmatched"
+                return item
+            game = await _find_or_create_game_from_lookup(
+                session, result=result, platform_id=pack_platform_id
+            )
+            if game is None:
+                item.status = "unmatched"
+                return item
+            game_id = game.id
+            await session.commit()
 
     # Run the standard importer with the resolved game pinned —
     # it creates the Release, re-verifies the DAT at import time
@@ -526,6 +741,17 @@ async def ingest_rom_pack(
         pack_name = pack.name
         source_kind = pack.source_kind
         platform_id = pack.platform_id
+        import_mode = pack.import_mode
+        # Resolve the pack's platform slug for the metadata-provider
+        # lookup fallback (mode 'all'); NULL when the pack pins
+        # no platform.
+        platform_slug: str | None = None
+        if platform_id is not None:
+            platform_slug = (
+                await session.execute(
+                    select(Platform.slug).where(Platform.id == platform_id)
+                )
+            ).scalar_one_or_none()
         max_bytes = (
             pack.max_size_bytes
             or config.default_max_size_bytes
@@ -537,6 +763,23 @@ async def ingest_rom_pack(
 
     root = Path(download_root) if download_root is not None else Path(config_dir)
     root.mkdir(parents=True, exist_ok=True)
+
+    # Mirror the WHOLE ingest into Activity → Queue — not just
+    # the download. The phase label updates as we move through
+    # download → extract → import so the operator watches the
+    # pipeline progress live; grab packs (their qBit transfer is
+    # already done) open straight on "extracting".
+    await _upsert_queue_entry(
+        sessionmaker, rom_pack_id=rom_pack_id, title=pack_name
+    )
+    if source_kind == "grab":
+        await _set_queue_phase(
+            sessionmaker,
+            rom_pack_id=rom_pack_id,
+            pack_name=pack_name,
+            phase_label="extracting",
+            progress=0.05,
+        )
 
     archive_path: Path | None = None
     try:
@@ -556,12 +799,6 @@ async def ingest_rom_pack(
             suffix = Path(url.split("?")[0]).suffix or ".zip"
             archive_path = root / f"rom_pack_{rom_pack_id}{suffix}"
 
-            # Mirror the transfer into queue_entry so the operator
-            # watches it in Activity → Queue, just like a grab.
-            await _upsert_queue_entry(
-                sessionmaker, rom_pack_id=rom_pack_id, title=pack_name
-            )
-
             async def _on_progress(written: int, total: int | None) -> None:
                 await _update_queue_progress(
                     sessionmaker,
@@ -570,25 +807,11 @@ async def ingest_rom_pack(
                     total=total,
                 )
 
-            try:
-                written = await _stream_download(
-                    url=url,
-                    dest=archive_path,
-                    max_bytes=max_bytes,
-                    on_progress=_on_progress,
-                )
-            except Exception as exc:
-                await _settle_queue_entry(
-                    sessionmaker,
-                    rom_pack_id=rom_pack_id,
-                    success=False,
-                    error=f"{type(exc).__name__}: {exc}",
-                )
-                raise
-            # Download done — close the Activity row; the pack
-            # page carries the extract / import / triage story.
-            await _settle_queue_entry(
-                sessionmaker, rom_pack_id=rom_pack_id, success=True
+            written = await _stream_download(
+                url=url,
+                dest=archive_path,
+                max_bytes=max_bytes,
+                on_progress=_on_progress,
             )
 
             async with sessionmaker() as session:
@@ -610,6 +833,13 @@ async def ingest_rom_pack(
             ).scalar_one()
             pack.status = "extracting"
             await session.commit()
+        await _set_queue_phase(
+            sessionmaker,
+            rom_pack_id=rom_pack_id,
+            pack_name=pack_name,
+            phase_label="extracting",
+            progress=0.3,
+        )
 
         extract_dir = Path(
             tempfile.mkdtemp(prefix=f"rom_pack_{rom_pack_id}_", dir=str(root))
@@ -628,13 +858,33 @@ async def ingest_rom_pack(
             await session.commit()
 
         imported = unmatched = parked = failed = 0
-        for rom_path in rom_files:
+        skipped = 0
+        total_to_process = len(rom_files)
+        for processed, rom_path in enumerate(rom_files, start=1):
+            # Refresh the Activity-→-Queue mirror so the operator
+            # watches the import advance file-by-file.
+            await _set_queue_phase(
+                sessionmaker,
+                rom_pack_id=rom_pack_id,
+                pack_name=pack_name,
+                phase_label=f"importing {processed}/{total_to_process}",
+                progress=processed / total_to_process
+                if total_to_process > 0
+                else 1.0,
+            )
             item = await _import_one_rom(
                 sessionmaker=sessionmaker,
                 rom_pack_id=rom_pack_id,
                 rom_path=rom_path,
                 pack_platform_id=platform_id,
+                pack_platform_slug=platform_slug,
+                import_mode=import_mode,
             )
+            if item is None:
+                # ``dat_verified`` mode skipped this file — no
+                # row, no counter bump.
+                skipped += 1
+                continue
             if item.status == "imported":
                 imported += 1
             elif item.status == "unmatched":
@@ -654,21 +904,30 @@ async def ingest_rom_pack(
                     select(RomPack).where(RomPack.id == rom_pack_id)
                 )
             ).scalar_one()
+            # ``total_files`` reflects what we attempted — skipped
+            # files (``dat_verified`` mode) don't count.
+            pack.total_files = total_to_process - skipped
             pack.imported_count = imported
             pack.unmatched_count = unmatched
             pack.parked_count = parked
             pack.failed_count = failed
             pack.status = "awaiting_triage" if unmatched > 0 else "done"
             await session.commit()
+        # Pipeline done — drop the Activity row; the pack page
+        # owns the post-ingest triage story from here.
+        await _settle_queue_entry(
+            sessionmaker, rom_pack_id=rom_pack_id, success=True
+        )
 
         logger.info(
             "rom_pack.ingest done id=%s imported=%d unmatched=%d "
-            "parked=%d failed=%d",
+            "parked=%d failed=%d skipped=%d",
             rom_pack_id,
             imported,
             unmatched,
             parked,
             failed,
+            skipped,
         )
     except Exception as exc:
         logger.exception("rom_pack.ingest failed id=%s", rom_pack_id)
@@ -682,6 +941,13 @@ async def ingest_rom_pack(
                 pack.status = "failed"
                 pack.last_error = f"{type(exc).__name__}: {exc}"[:500]
                 await session.commit()
+        # Surface the failure in Activity → Queue too.
+        await _settle_queue_entry(
+            sessionmaker,
+            rom_pack_id=rom_pack_id,
+            success=False,
+            error=f"{type(exc).__name__}: {exc}",
+        )
     finally:
         # Purge the downloaded archive — only when *we* fetched
         # it (url-sourced). grab-sourced archives belong to the

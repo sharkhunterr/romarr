@@ -682,6 +682,15 @@ class RomPack(Base, TimestampMixin):
     max_size_bytes: Mapped[int | None] = mapped_column(
         BigInteger, nullable=True
     )
+    # Slice 466 — scope of the import:
+    #   ``all`` — every ROM is imported (DAT match drives the Game
+    #     name; non-DAT fall back to a metadata-provider lookup
+    #     by filename + platform, then to manual triage).
+    #   ``dat_verified`` — only DAT-matched ROMs are imported;
+    #     non-DAT files are skipped (no rom_pack_item row).
+    import_mode: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="all"
+    )
 
     # Lifecycle: pending → downloading → extracting → importing →
     # awaiting_triage (if any unmatched) → done | failed.
@@ -739,6 +748,10 @@ class RomPack(Base, TimestampMixin):
             "(source_kind = 'url' AND url IS NOT NULL) "
             "OR (source_kind = 'grab' AND download_client_native_id IS NOT NULL)",
             name="ck_rom_pack_source_fields",
+        ),
+        CheckConstraint(
+            "import_mode IN ('all', 'dat_verified')",
+            name="ck_rom_pack_import_mode",
         ),
     )
 
