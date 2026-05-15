@@ -311,6 +311,12 @@ class RefreshGameMetadataAdapter(_AdapterBase):
             )
 
         # All-games path — slice 178 wires the real runner.
+        import asyncio
+
+        from sqlalchemy import func, select
+
+        from romarr.domain.models import Game
+        from romarr.tasks.execution.lifecycle import report_progress
         from romarr.tasks.runners.refresh_all_metadata import (
             refresh_all_metadata,
         )
@@ -331,11 +337,53 @@ class RefreshGameMetadataAdapter(_AdapterBase):
 
         platform_id = context.parameters.get("platformId")
         force = bool(context.parameters.get("force", False))
+        # Pre-count the games we're about to walk so the Activity
+        # card surfaces ``processed/total`` from the first tick
+        # (slice 476).
+        async with sessionmaker() as session:
+            total_stmt = select(func.count(Game.id))
+            if platform_id is not None:
+                total_stmt = total_stmt.where(
+                    Game.platform_id == platform_id
+                )
+            total_games = int(
+                (await session.execute(total_stmt)).scalar() or 0
+            )
+        await report_progress(
+            sessionmaker,
+            job_run_id=context.job_run_id,
+            items_processed=0,
+            summary_patch={
+                "total_items": total_games,
+                "matched": 0,
+                "failed": 0,
+            },
+        )
+
+        def _progress(total: int, refreshed: int, failed: int) -> None:
+            # Same fire-and-forget pattern as the LibraryScan
+            # adapter — sync callback inside async sweep, drop
+            # an asyncio task to write the row.
+            task = asyncio.create_task(
+                report_progress(
+                    sessionmaker,
+                    job_run_id=context.job_run_id,
+                    items_processed=total,
+                    summary_patch={
+                        "total_items": total_games,
+                        "matched": refreshed,
+                        "failed": failed,
+                    },
+                )
+            )
+            task.add_done_callback(lambda _: None)
+
         async with sessionmaker() as session:
             result = await refresh_all_metadata(
                 session,
                 platform_id=platform_id,
                 force=force,
+                progress_callback=_progress,
             )
         return JobResult(
             status=JobStatus.SUCCESS,

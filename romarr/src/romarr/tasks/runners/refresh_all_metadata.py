@@ -25,17 +25,19 @@ Design notes
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from romarr.domain.models import Game
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
+
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 _logger = logging.getLogger(__name__)
 
@@ -64,7 +66,8 @@ async def refresh_all_metadata(
     platform_id: int | None = None,
     force: bool = False,
     page_size: int = _PAGE_SIZE,
-    refresh_fn: "Callable[..., Awaitable[Any]] | None" = None,
+    refresh_fn: Callable[..., Awaitable[Any]] | None = None,
+    progress_callback: Callable[[int, int, int], None] | None = None,
 ) -> RefreshAllMetadataResult:
     """Sweep every Game (optionally scoped to one Platform) and
     refresh its metadata. Returns aggregate counts.
@@ -73,6 +76,12 @@ async def refresh_all_metadata(
     deterministic stub for the real
     :func:`romarr.metadata.refresh.refresh_game_metadata`. The
     default is the production function.
+
+    ``progress_callback`` — when given — is invoked after every
+    game with ``(total_so_far, refreshed_so_far, failed_so_far)``.
+    The Activity → Queue active-task card uses it to surface
+    live counters; the callback is sync + best-effort so a
+    misbehaving callback never sinks the sweep.
     """
     if refresh_fn is None:
         from romarr.metadata.refresh import refresh_game_metadata
@@ -112,6 +121,10 @@ async def refresh_all_metadata(
                     exc_info=True,
                 )
                 failed += 1
+            if progress_callback is not None:
+                # Best-effort — never sink the sweep.
+                with contextlib.suppress(Exception):
+                    progress_callback(total, refreshed, failed)
         cursor = page[-1]
         if len(page) < page_size:
             break
