@@ -200,6 +200,7 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         from romarr.auth.setup import maybe_bootstrap_setup_token
         from romarr.platform_packs.builtin import apply_builtin_pack
         from romarr.profiles.seeders.runner import seed_defaults
+        from romarr.tasks.seeder import seed_defaults as seed_default_jobs
 
         sm = app.state.db_sessionmaker
         # Default profiles first (T055): the platform pack uses
@@ -220,6 +221,21 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                 "lifespan.seed_defaults_failed",
                 exc_info=True,
                 extra={"error": str(exc)},
+            )
+        # Slice 471 — default ``job`` rows. Without these the
+        # scheduler has no LibraryScan / RefreshGameMetadata /
+        # … rows to dispatch, and the command bus 404s on
+        # ``RescanLibrary``. Idempotent on subsequent boots.
+        try:
+            async with sm() as session:
+                inserted = await seed_default_jobs(session)
+            bootstrap_log.info(
+                "lifespan.seed_default_jobs",
+                extra={"inserted": inserted},
+            )
+        except Exception:
+            bootstrap_log.warning(
+                "lifespan.seed_default_jobs_failed", exc_info=True
             )
         # Built-in Platform Pack (T038).
         try:
