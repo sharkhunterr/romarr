@@ -347,7 +347,7 @@ async def list_games(
         SortDirection,
         Query(description="Sort direction (asc default)."),
     ] = "asc",
-    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+    limit: Annotated[int, Query(ge=1, le=5000)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[GameRead]:
     column = _SORT_KEYS[sort]

@@ -150,5 +150,13 @@
       "successBody": "{{updated}} jeux mis à jour · {{missing}} introuvables",
       "errorTitle": "Impossible de mettre à jour les étiquettes"
     }
+  },
+  "scan": {
+    "label": "Scanner",
+    "running": "Scan en cours…",
+    "title": "Parcourt toutes les bibliothèques activées pour détecter de nouvelles ROMs, les identifie via DAT, et rafraîchit les métadonnées de tous les jeux (admin uniquement).",
+    "startedToast": "Scan lancé — les nouvelles ROMs apparaissent au fur et à mesure.",
+    "errorToast": "Impossible de lancer le scan",
+    "refreshErrorToast": "Scan lancé, mais le rafraîchissement des métadonnées n'a pas démarré"
   }
 }

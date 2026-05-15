@@ -150,5 +150,13 @@
       "successBody": "{{updated}} games updated · {{missing}} missing",
       "errorTitle": "Couldn't update tags"
     }
+  },
+  "scan": {
+    "label": "Scan",
+    "running": "Scanning…",
+    "title": "Walk every enabled library for new ROM files, identify them via DAT, and refresh metadata for all games (admin only).",
+    "startedToast": "Scan dispatched — new ROMs land in the library as the scan progresses.",
+    "errorToast": "Couldn't trigger the scan",
+    "refreshErrorToast": "Scan ran, but the metadata refresh couldn't start"
   }
 }
