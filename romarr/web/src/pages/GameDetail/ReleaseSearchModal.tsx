@@ -198,6 +198,11 @@ function CandidateRow(props: {
    * platform). When the candidate's detected ``platform_id``
    * disagrees with this, the platform chip turns red. */
   expectedPlatformId: number;
+  /** Convention values the active profile's custom-format set
+   * rewards (snapshot from ``profile_expected_conventions`` on the
+   * search response). Drives the naming-convention chip's
+   * green/red/grey coloring — see :func:`_conventionTone`. */
+  expectedConventions: readonly string[];
   onGrabSuccess: () => void;
 }): ReactElement {
   const { t } = useTranslation("game");
@@ -210,6 +215,7 @@ function CandidateRow(props: {
     indexerName,
     platformShortName,
     expectedPlatformId,
+    expectedConventions,
     onGrabSuccess,
   } = props;
   const grab = useManualGrab();
@@ -449,13 +455,36 @@ function CandidateRow(props: {
                     ? (_DUMP_TONE[candidate.dump_status] ?? "neutral")
                     : "neutral",
                 );
-          const conventionTone: FacetTone = datValidated
-            ? "good"
-            : datFlagged
-              ? "bad"
-              : candidate.naming_convention === "scene"
-                ? "warn"
-                : "neutral";
+          // Convention tone follows three rules in order:
+          //   1. DAT cascade verified the hash → green (authoritative).
+          //   2. DAT flagged the entry (hack / bad dump) → red.
+          //   3. Profile-driven:
+          //      a. expectedConventions empty → grey (profile is
+          //         indifferent to the naming authority).
+          //      b. candidate's convention is in expectedConventions →
+          //         green (release satisfies a CF the profile rewards).
+          //      c. candidate's convention is unknown OR not in
+          //         expectedConventions → red (profile cares but this
+          //         release doesn't match any expected authority).
+          //   4. ``scene`` retains its legacy amber tint when the
+          //      profile is indifferent — scene releases are a known
+          //      special case the operator wants flagged regardless.
+          const candidateConv = candidate.naming_convention ?? null;
+          let conventionTone: FacetTone;
+          if (datValidated) {
+            conventionTone = "good";
+          } else if (datFlagged) {
+            conventionTone = "bad";
+          } else if (expectedConventions.length > 0) {
+            conventionTone =
+              candidateConv && expectedConventions.includes(candidateConv)
+                ? "good"
+                : "bad";
+          } else if (candidateConv === "scene") {
+            conventionTone = "warn";
+          } else {
+            conventionTone = "neutral";
+          }
           return (
             <>
               <FacetChip
@@ -1013,6 +1042,10 @@ export function ReleaseSearchModal(
                             platform?.short_name ?? platform?.name ?? null
                           }
                           expectedPlatformId={props.platformId}
+                          expectedConventions={
+                            (search.data as { profile_expected_conventions?: string[] })
+                              .profile_expected_conventions ?? []
+                          }
                           onGrabSuccess={props.onClose}
                         />
                       );

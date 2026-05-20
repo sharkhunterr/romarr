@@ -438,12 +438,18 @@ async def add_game_from_lookup(
 
     # Slice 385 — validate the library_id when supplied; the
     # AddGame modal sends one but a scripted client may omit it.
-    if body.library_id is not None:
-        from romarr.libraries.models import Library
+    # When omitted (or when the modal raced the libraries query
+    # and submitted before a value was set), fall back to the
+    # first library by id so the auto-grab paths can resolve the
+    # game's quality profile cascade instead of landing on the
+    # global default (which the operator usually didn't tune).
+    from romarr.libraries.models import Library
 
+    resolved_library_id: int | None = body.library_id
+    if resolved_library_id is not None:
         lib_exists = (
             await db.execute(
-                select(Library.id).where(Library.id == body.library_id)
+                select(Library.id).where(Library.id == resolved_library_id)
             )
         ).scalar_one_or_none()
         if lib_exists is None:
@@ -454,6 +460,16 @@ async def add_game_from_lookup(
                     "errorCode": "library_not_found",
                 },
             )
+    else:
+        # Default to the first library — matches what the modal's
+        # ``useEffect`` would have picked, but guarantees it even
+        # for scripted callers / racy submits.
+        fallback = (
+            await db.execute(
+                select(Library.id).order_by(Library.id.asc()).limit(1)
+            )
+        ).scalar_one_or_none()
+        resolved_library_id = fallback
 
     base_slug = slugify_title(body.title)
     slug = await _allocate_unique_slug(
@@ -465,7 +481,7 @@ async def add_game_from_lookup(
         slug=slug,
         title=body.title.strip(),
         monitored=body.monitored,
-        library_id=body.library_id,
+        library_id=resolved_library_id,
         # The aggregator runs on the next refresh cycle and pulls
         # everything else (summary, cover, release date, …) from
         # the configured provider priority list.

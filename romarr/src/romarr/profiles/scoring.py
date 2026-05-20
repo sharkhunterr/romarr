@@ -199,4 +199,55 @@ _OPERATORS = {
 }
 
 
-__all__ = ["compute_custom_format_score"]
+def expected_naming_conventions(
+    formats: Iterable[_CustomFormatShape],
+) -> list[str]:
+    """Return every ``naming_convention`` value the active CF set rewards.
+
+    Walks each custom format's top-level + OR'd conditions, picks the
+    ones targeting ``field=naming_convention`` with an ``equals`` /
+    ``in`` operator, and collects the matched values. Order is
+    deterministic (insertion-order, dedup). The UI uses this list to
+    color the convention chip green (release matches an expected
+    convention) / red (profile cares but release doesn't satisfy any) /
+    grey (profile is indifferent).
+
+    Custom formats with a negative score are ignored — a "Hack"-style
+    rejector that filters BY convention should not pull a convention
+    into the "expected" set; the operator's intent there is malus,
+    not bonus.
+
+    ``matches_regex`` conditions are intentionally skipped — we can't
+    safely enumerate a regex's accepted vocabulary without exploding
+    edge cases, and the convention chip is a coarse UI hint, not a
+    rule engine.
+    """
+    seen: dict[str, None] = {}  # dict for insertion-ordered dedup
+    for fmt in formats:
+        if getattr(fmt, "score", 0) <= 0:
+            continue
+        for cond in _iter_conditions(fmt.conditions):
+            for entry in _walk_condition(cond):
+                if entry.get("field") != "naming_convention":
+                    continue
+                op = entry.get("operator")
+                values = entry.get("values")
+                if op == "equals" and isinstance(values, str) and values:
+                    seen.setdefault(values, None)
+                elif op == "in" and isinstance(values, list | tuple):
+                    for v in values:
+                        if isinstance(v, str) and v:
+                            seen.setdefault(v, None)
+    return list(seen)
+
+
+def _walk_condition(condition: Mapping[str, Any]) -> Iterable[Mapping[str, Any]]:
+    """Yield the top condition + each entry in its ``or`` branch."""
+    yield condition
+    or_branch = condition.get("or") or []
+    for branch in or_branch:
+        if isinstance(branch, Mapping):
+            yield branch
+
+
+__all__ = ["compute_custom_format_score", "expected_naming_conventions"]

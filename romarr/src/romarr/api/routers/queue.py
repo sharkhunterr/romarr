@@ -325,6 +325,16 @@ async def delete_queue_entry(
             pack_id = None
         if pack_id is not None:
             request_cancel_rom_pack(pack_id)
+            # When the operator acknowledges a failed / canceled
+            # pack with ``removeFromClient=true``, also purge what
+            # the ingest left on disk: the downloaded archive AND
+            # every per-pack tempdir (``rom_pack_<id>_*``) the
+            # extract step created under the configured download
+            # dir. Without this, the bytes leaked silently — one
+            # of our installs accumulated 29 GB of orphan
+            # ``rom_pack_*`` tempdirs across canceled retries.
+            if remove_from_client:
+                await _purge_pack_artifacts(db, pack_id=pack_id)
     elif remove_from_client:
         # Build the spec 005 DownloadClient via the same factory
         # the manual-grab endpoint uses so the auth / TLS /
@@ -392,6 +402,63 @@ async def delete_queue_entry(
         )
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+async def _purge_pack_artifacts(db: AsyncSession, *, pack_id: int) -> None:
+    """Best-effort cleanup of a rom_pack's on-disk artifacts.
+
+    Removes:
+      * ``RomPack.downloaded_path`` (the original .7z / .zip download)
+      * Every ``rom_pack_<id>_*`` tempdir the extract step created
+        under the pack's configured download root.
+
+    Silent on any I/O error — the caller still wants the queue
+    row gone even if we can't reach the filesystem. The
+    :class:`RomPack` DB row is left in place so the operator
+    can inspect the failure / retry later; nuking the row only
+    happens on an explicit pack-side delete (settings page).
+    """
+    import shutil as _shutil
+    from pathlib import Path as _Path
+
+    from romarr.domain.models import RomPack
+    from romarr.rom_packs.config import get_or_create_rom_pack_config
+
+    pack = (
+        await db.execute(select(RomPack).where(RomPack.id == pack_id))
+    ).scalar_one_or_none()
+    if pack is None:
+        return
+
+    # 1. The downloaded archive (url-sourced packs only — grab
+    #    packs share their archive with the qBit torrent, whose
+    #    own lifecycle owns the cleanup).
+    if (
+        pack.source_kind == "url"
+        and pack.downloaded_path
+    ):
+        try:
+            p = _Path(pack.downloaded_path)
+            if p.exists() and p.is_file():
+                p.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    # 2. Every tempdir tagged for this pack id. ingest.py spawns
+    #    them via ``tempfile.mkdtemp(prefix=f"rom_pack_{id}_")``
+    #    under the operator-configured download dir.
+    try:
+        config = await get_or_create_rom_pack_config(db)
+        root = _Path(config.download_dir)
+    except Exception:
+        return
+    prefix = f"rom_pack_{pack_id}_"
+    try:
+        for child in root.iterdir():
+            if child.is_dir() and child.name.startswith(prefix):
+                _shutil.rmtree(child, ignore_errors=True)
+    except OSError:
+        return
 
 
 @router.post(

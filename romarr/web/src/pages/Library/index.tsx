@@ -356,6 +356,13 @@ export function LibraryPage(): ReactElement {
   // genres land in the same operator gesture.
   const scan = useTriggerCommand();
   const refreshMetadata = useTriggerCommand();
+  // On-demand jobs that live next to Scan in the Library header.
+  // RSS = passive (poll indexer's recent feed); MissingSearch =
+  // active (per-wanted-release query). useTriggerCommand
+  // invalidates HISTORY_KEY on success so the Activity page picks
+  // up the new run without a manual refresh.
+  const syncRss = useTriggerCommand();
+  const searchMissing = useTriggerCommand();
 
   function onScan(): void {
     scan.mutate(
@@ -381,6 +388,41 @@ export function LibraryPage(): ReactElement {
           pushToast({
             kind: "error",
             title: t("scan.errorToast"),
+            description: err.message,
+          }),
+      },
+    );
+  }
+
+  function onSyncRss(): void {
+    syncRss.mutate(
+      { name: "RssSync" },
+      {
+        onSuccess: () =>
+          pushToast({ kind: "success", title: t("rssSync.startedToast") }),
+        onError: (err) =>
+          pushToast({
+            kind: "error",
+            title: t("rssSync.errorToast"),
+            description: err.message,
+          }),
+      },
+    );
+  }
+
+  function onSearchMissing(): void {
+    searchMissing.mutate(
+      { name: "MissingSearch" },
+      {
+        onSuccess: () =>
+          pushToast({
+            kind: "success",
+            title: t("searchMissing.startedToast"),
+          }),
+        onError: (err) =>
+          pushToast({
+            kind: "error",
+            title: t("searchMissing.errorToast"),
             description: err.message,
           }),
       },
@@ -460,22 +502,54 @@ export function LibraryPage(): ReactElement {
             </h1>
             <p className="mt-1 text-sm text-zinc-400">{t("subtitle")}</p>
           </div>
-          <button
-            type="button"
-            onClick={onScan}
-            disabled={scan.isPending || refreshMetadata.isPending}
-            title={t("scan.title")}
-            className={[
-              "shrink-0 rounded-md bg-brand px-3 py-1.5 text-xs font-medium",
-              "text-zinc-900 hover:bg-brand-300",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-              "disabled:cursor-not-allowed disabled:opacity-60",
-            ].join(" ")}
-          >
-            {scan.isPending || refreshMetadata.isPending
-              ? t("scan.running")
-              : t("scan.label")}
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={onSearchMissing}
+              disabled={searchMissing.isPending}
+              title={t("searchMissing.title")}
+              className={[
+                "rounded-md border border-brand/40 bg-brand/10 px-3 py-1.5 text-xs font-medium",
+                "text-brand hover:bg-brand/20",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                "disabled:cursor-not-allowed disabled:opacity-60",
+              ].join(" ")}
+            >
+              {searchMissing.isPending
+                ? t("searchMissing.pending")
+                : t("searchMissing.label")}
+            </button>
+            <button
+              type="button"
+              onClick={onSyncRss}
+              disabled={syncRss.isPending}
+              title={t("rssSync.title")}
+              className={[
+                "rounded-md border border-zinc-700 bg-zinc-900/40 px-3 py-1.5 text-xs font-medium",
+                "text-zinc-300 hover:bg-zinc-800",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                "disabled:cursor-not-allowed disabled:opacity-60",
+              ].join(" ")}
+            >
+              {syncRss.isPending ? t("rssSync.pending") : t("rssSync.label")}
+            </button>
+            <button
+              type="button"
+              onClick={onScan}
+              disabled={scan.isPending || refreshMetadata.isPending}
+              title={t("scan.title")}
+              className={[
+                "rounded-md bg-brand px-3 py-1.5 text-xs font-medium",
+                "text-zinc-900 hover:bg-brand-300",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                "disabled:cursor-not-allowed disabled:opacity-60",
+              ].join(" ")}
+            >
+              {scan.isPending || refreshMetadata.isPending
+                ? t("scan.running")
+                : t("scan.label")}
+            </button>
+          </div>
         </div>
 
         {/* Always-visible row: search box + "Filtres" toggle +

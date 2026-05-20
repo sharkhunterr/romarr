@@ -153,18 +153,39 @@ async def run_cutoff_search(
             continue
 
         candidates = list(getattr(report, "candidates", []) or [])
-        grabs = list(getattr(report, "grabs", []) or [])
+        from romarr.search.rounds._shared import (
+            dispatch_best_for_game,
+            load_min_score_for_game,
+        )
+
+        per_game_min_score = await load_min_score_for_game(
+            session, game.id
+        )
+        dispatch_outcome = await dispatch_best_for_game(
+            session,
+            game_id=game.id,
+            candidates=candidates,
+            min_score=per_game_min_score,
+        )
+        skip_reason = (
+            dispatch_outcome.get("no_grab_reason")
+            if not dispatch_outcome.get("dispatched")
+            else None
+        )
         result.outcomes.append(
             CutoffSearchOutcome(
                 release_id=release.id,
                 game_id=game.id,
                 title=game.title,
                 candidates=len(candidates),
-                grabs=len(grabs),
+                grabs=1 if dispatch_outcome.get("dispatched") else 0,
+                skipped=False,
+                skip_reason=skip_reason,
             )
         )
         result.succeeded += 1
-        result.grabbed += len(grabs)
+        if dispatch_outcome.get("dispatched"):
+            result.grabbed += 1
 
     _logger.info(
         "search.cutoff.complete",

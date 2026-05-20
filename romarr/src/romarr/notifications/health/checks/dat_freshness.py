@@ -39,7 +39,17 @@ class DatFreshnessHealthCheck:
 
     async def run(self) -> HealthCheckResult:
         now = self.now_factory.now(UTC)
-        age = now - self.last_updated_at
+        # SQLite drops the tzinfo on DateTime(timezone=True) columns
+        # at read time; the DAT row's ``updated_at`` comes back naive
+        # even though we wrote it in UTC. Coerce here so the
+        # subtraction below never crashes with the documented
+        # ``can't subtract offset-naive and offset-aware datetimes``
+        # error (which left every dat:* check stuck in ``error`` and
+        # painted the Dashboard's health panel red).
+        last_updated_at = self.last_updated_at
+        if last_updated_at.tzinfo is None:
+            last_updated_at = last_updated_at.replace(tzinfo=UTC)
+        age = now - last_updated_at
         if age >= _ERROR_AFTER:
             return HealthCheckResult(
                 component=self.component_id,

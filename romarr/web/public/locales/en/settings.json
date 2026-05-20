@@ -750,7 +750,9 @@
         "flagsLabel": "Flags",
         "flags": {
           "requireDat": "Require DAT-verified dumps",
-          "allowArchive": "Allow archive double-compression"
+          "allowArchive": "Allow archive double-compression",
+          "autoGrabMinScore": "Auto-grab minimum score",
+          "autoGrabMinScoreHint": "Only the RSS sync and on-add auto-grab paths honour this floor — manual grabs ignore it. 0 = grab anything with a positive pipeline score."
         },
         "errors": {
           "name": "Pick a profile name first.",

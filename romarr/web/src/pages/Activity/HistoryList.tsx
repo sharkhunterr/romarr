@@ -23,8 +23,12 @@ import {
   useHistory,
   type HistoryEventType,
 } from "@/lib/api/queries/system";
+import type { components } from "@/types/api/schema";
 
+import { HistoryDetailSheet } from "./HistoryDetailSheet";
 import { HistoryRow } from "./HistoryRow";
+
+type HistoryEvent = components["schemas"]["HistoryEvent"];
 
 const PAGE_SIZE = 50;
 
@@ -86,6 +90,7 @@ export function HistoryList(): ReactElement {
   const failuresOnly = searchParams.get("failuresOnly") === "true";
   const range = parseRangeParam(searchParams.get("range"));
   const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<HistoryEvent | null>(null);
 
   const setFilter = (next: HistoryFilter): void => {
     setSearchParams(
@@ -252,9 +257,17 @@ export function HistoryList(): ReactElement {
             event={event}
             i18nNs="activity"
             locale={i18n.language}
+            onSelect={setSelected}
           />
         ))}
       </ul>
+
+      <HistoryDetailSheet
+        event={selected}
+        onClose={() => setSelected(null)}
+        locale={i18n.language}
+      />
+
 
       {totalPages > 1 && (
         <nav

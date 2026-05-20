@@ -76,7 +76,13 @@ const router = createBrowserRouter([
               </PageErrorBoundary>
             ),
             children: [
-          { path: "/", element: <DashboardPage /> },
+          // ``/`` redirects to the Library — the Dashboard page
+          // is intentionally not surfaced in the primary nav
+          // anymore (slice: remove dashboard from menus). It
+          // stays reachable by typing /dashboard so we don't
+          // lose the work, just the prime real-estate.
+          { path: "/", element: <Navigate to="/library" replace /> },
+          { path: "/dashboard", element: <DashboardPage /> },
           { path: "/library", element: <LibraryPage /> },
           { path: "/add", element: <AddNewPage /> },
           { path: "/game/:gameId", element: <GameDetailPage /> },

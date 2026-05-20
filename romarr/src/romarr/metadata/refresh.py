@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -70,6 +71,96 @@ _PROVIDER_FK_COLUMN: dict[str, str] = {
     "launchbox": "launchbox_id",
     "retroachievements": "retroachievements_id",
 }
+
+
+# DAT-style trailing tags we strip from the search title before
+# probing a metadata provider. ``Game.title`` comes straight from
+# the No-Intro / Redump / TOSEC filename ("Advance Wars (USA).gba"
+# → "Advance Wars (USA)") and IGDB / ScreenScraper / MobyGames /
+# LaunchBox all index by the canonical title without those region
+# / language / version tags. A literal "(USA)" substring kills the
+# IGDB ``name ~ *"…"*`` wildcard and we get zero hits — exactly the
+# Advance Wars complaint.
+_DAT_TAG_RX = re.compile(r"\s*\([^)]*\)|\s*\[[^\]]*\]")
+# Subtitle separators No-Intro uses but most providers don't. We
+# keep the prefix and try the prefix-only form when the full title
+# returns no hits ("Advance Wars 2 - Black Hole Rising" → IGDB
+# stores "Advance Wars 2: Black Hole Rising"; the colon form makes
+# the wildcard miss).
+_SUBTITLE_SEPARATORS = (" - ", " — ", " – ")
+
+
+def _search_title_variants(title: str) -> list[str]:
+    """Return progressively-broader search titles to try in order.
+
+    1. ``title`` minus every ``(...)`` / ``[...]`` tag — the typical
+       fix; "Advance Wars (USA)" → "Advance Wars".
+    2. Same as #1 but with the subtitle suffix dropped — last-resort
+       fallback for "Advance Wars 2 - Black Hole Rising" when the
+       provider indexes the title with a colon ("Advance Wars 2:
+       Black Hole Rising") and the dash-form wildcard misses.
+    3. The raw title (only added if it differs from #1) — keeps
+       behaviour stable when the operator passed a clean title in
+       (manual add-game lookup path).
+
+    Whitespace is collapsed and the same string is never returned
+    twice; ordering above is preserved.
+    """
+    stripped = _DAT_TAG_RX.sub("", title).strip()
+    stripped = re.sub(r"\s+", " ", stripped)
+    variants: list[str] = []
+    seen: set[str] = set()
+
+    def _push(candidate: str) -> None:
+        cleaned = candidate.strip()
+        if cleaned and cleaned.lower() not in seen:
+            seen.add(cleaned.lower())
+            variants.append(cleaned)
+
+    if stripped:
+        _push(stripped)
+        for sep in _SUBTITLE_SEPARATORS:
+            if sep in stripped:
+                prefix = stripped.split(sep, 1)[0]
+                _push(prefix)
+                break
+    _push(title)
+    return variants
+
+
+def _pick_best_candidate(
+    candidates: list[Any],
+    *,
+    platform_slug: str | None,
+) -> Any:
+    """Return the candidate the operator would have picked themselves.
+
+    The old code took ``candidates[0]`` blindly, which the IGDB API
+    sorts by something *other* than relevance: searching for "Advance
+    Wars" returns "Advance Wars Returns" first, not the original. Once
+    we widened the query (stripped the ``(USA)`` tag) the wrong pick
+    bit hard — every Game ended up with the wrong IGDB entry, and the
+    aggregator overwrote ``Game.title`` with that entry's title.
+
+    Picks the highest-``confidence`` candidate, with two tie-breakers:
+      1. Prefer one whose ``platform_slug`` matches the search's
+         ``platform_slug`` (when supplied) — a GBA hit beats a Wii U
+         hit when the operator was searching the GBA library.
+      2. Stable on the provider's emission order for the final tie
+         (Python's sort is stable).
+    """
+    def _score(c: Any) -> tuple[float, int]:
+        # Wrap into a 2-tuple so ``sort`` cares about both keys; the
+        # platform bonus is binary (1 if it agrees, 0 if not / unknown).
+        platform_bonus = (
+            1
+            if platform_slug
+            and getattr(c, "platform_slug", None) == platform_slug
+            else 0
+        )
+        return (float(getattr(c, "confidence", 0.0)), platform_bonus)
+
+    return max(candidates, key=_score)
 
 
 def _pinned_provider_id(game: Game, provider_name: str) -> str | None:
@@ -214,16 +305,34 @@ async def _ensure_provider_payload(
         if pinned_id is not None:
             meta = await provider.get_game(pinned_id)
         else:
-            candidates = await provider.search_games(
-                game.title, platform_slug=platform_slug
-            )
+            # Try progressively-broader title variants until a
+            # provider returns at least one candidate. The Game's
+            # title is the No-Intro filename verbatim — "Advance
+            # Wars (USA)" — and every external provider indexes by
+            # the canonical name. Without this fallback IGDB / SS /
+            # MobyGames / LaunchBox return zero hits and the game
+            # ends up with only the RA cache (the one provider that
+            # binds via hash, not title). See
+            # :func:`_search_title_variants` for the variant order.
+            candidates: list[Any] = []
+            tried: list[str] = []
+            for variant in _search_title_variants(game.title):
+                tried.append(variant)
+                candidates = await provider.search_games(
+                    variant, platform_slug=platform_slug
+                )
+                if candidates:
+                    break
             if not candidates:
                 logger.info(
-                    "metadata.refresh.no_match", extra={"provider": provider.name}
+                    "metadata.refresh.no_match",
+                    extra={"provider": provider.name, "tried": tried},
                 )
                 return None
-            provider_game_id = candidates[0].provider_game_id
-            meta = await provider.get_game(provider_game_id)
+            best = _pick_best_candidate(
+                candidates, platform_slug=platform_slug
+            )
+            meta = await provider.get_game(best.provider_game_id)
     except NotFoundError:
         return None
     except NotImplementedError:

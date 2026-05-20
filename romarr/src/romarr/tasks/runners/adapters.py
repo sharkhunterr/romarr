@@ -146,12 +146,14 @@ class RssSyncAdapter(_AdapterBase):
 
         from romarr.downloaders.models import DownloadClient
         from romarr.downloaders.routing import RoutingCandidate
+        from romarr.indexers.models import Indexer
         from romarr.search._clients import (
             make_download_client_factory,
             make_indexer_client_factory,
         )
         from romarr.search.dispatch import DispatchStatus, dispatch_winner
         from romarr.search.rounds import run_rss_sync
+        from romarr.tasks.execution.lifecycle import report_progress
 
         sessionmaker = getattr(context, "sessionmaker", None)
         if sessionmaker is None:
@@ -159,6 +161,32 @@ class RssSyncAdapter(_AdapterBase):
                 status=JobStatus.SUCCESS,
                 summary={"stub": True, "reason": "no sessionmaker"},
             )
+
+        # Pre-count the RSS-enabled indexers so the Activity card
+        # surfaces ``processed/total`` from the first tick — same
+        # pattern RefreshAllMetadata uses (slice 476).
+        async with sessionmaker() as session:
+            total_indexers = int(
+                (
+                    await session.execute(
+                        select(Indexer)
+                        .where(Indexer.enable_rss.is_(True))
+                        .where(Indexer.enabled.is_(True))
+                    )
+                ).scalars().all().__len__()
+            )
+        await report_progress(
+            sessionmaker,
+            job_run_id=context.job_run_id,
+            items_processed=0,
+            summary_patch={
+                "total_items": total_indexers,
+                "indexers_succeeded": 0,
+                "candidates": 0,
+                "grabs_dispatched": 0,
+                "grabs_failed": 0,
+            },
+        )
 
         async with sessionmaker() as session:
             indexer_factory = make_indexer_client_factory(session)
@@ -184,6 +212,26 @@ class RssSyncAdapter(_AdapterBase):
                 session=session, client_factory=indexer_factory
             )
 
+            indexers_succeeded_count = sum(
+                1 for v in report.indexer_outcomes.values() if v == "ok"
+            )
+            # Mid-run snapshot once the pipeline returns but BEFORE
+            # we start dispatching — operator sees "pipeline done,
+            # now grabbing N candidates" instead of a stale 0/0.
+            await report_progress(
+                sessionmaker,
+                job_run_id=context.job_run_id,
+                items_processed=indexers_succeeded_count,
+                summary_patch={
+                    "total_items": total_indexers,
+                    "indexers_succeeded": indexers_succeeded_count,
+                    "candidates": len(report.candidates),
+                    "grabs_to_dispatch": len(report.grabs),
+                    "grabs_dispatched": 0,
+                    "grabs_failed": 0,
+                },
+            )
+
             # T060: dispatch every grab the RSS round produced.
             # `report.grabs` is already filtered to indexers with
             # `rss_auto_grab=True` and pipeline-clean candidates
@@ -200,15 +248,30 @@ class RssSyncAdapter(_AdapterBase):
                     grabs_dispatched += 1
                 else:
                     grabs_failed += 1
+                # Per-grab tick so the card moves as dispatches
+                # land — cheap, the table is tiny.
+                await report_progress(
+                    sessionmaker,
+                    job_run_id=context.job_run_id,
+                    summary_patch={
+                        "grabs_dispatched": grabs_dispatched,
+                        "grabs_failed": grabs_failed,
+                    },
+                )
 
         indexers_succeeded = sum(
             1 for v in report.indexer_outcomes.values() if v == "ok"
         )
+        # Final summary written by finish_run via JobResult.summary
+        # below — same keys + the legacy ``items_total`` so existing
+        # operator dashboards keep working.
         return JobResult(
             status=JobStatus.SUCCESS,
             summary={
+                "indexers_total": total_indexers,
                 "indexers_succeeded": indexers_succeeded,
                 "items_total": len(report.candidates),
+                "candidates": len(report.candidates),
                 "grabs_dispatched": grabs_dispatched,
                 "grabs_failed": grabs_failed,
             },
@@ -735,13 +798,19 @@ class AutoCheckAddedAdapter(_AdapterBase):
     The API layer calls ``trigger("AutoCheckAdded", ...)``
     when a new game is added (spec 008's importer).
 
-    Slice 181 / spec 012 T052: when the JobContext supplies a
-    sessionmaker we delegate to :func:`run_search_on_add`,
-    which loads the Game, runs one manual search round, and
-    reports candidate / grab counts. Without a sessionmaker
-    we keep the legacy stub behaviour so the scheduler dispatch
-    path stays exercised end-to-end.
-    """
+    Runs one manual-search round scoped to the game's title +
+    platform, then — unlike the manual modal which leaves the
+    grab decision to the operator — picks the highest-scoring
+    eligible candidate for THIS game and dispatches it through
+    the same :func:`dispatch_winner` path RSS uses. Eligibility:
+      * matched by the pipeline to the game we just added
+      * ``rejection`` is None (passed every soft gate)
+      * ``score_breakdown.total >= QualityProfile.auto_grab_min_score``
+        (the operator's profile floor) AND ``> 0`` (cleared the
+        pipeline at all)
+
+    Without a sessionmaker we keep the legacy stub behaviour so
+    the scheduler dispatch path stays exercised end-to-end."""
 
     def __init__(self) -> None:
         super().__init__(job_id="AutoCheckAdded")
@@ -763,24 +832,74 @@ class AutoCheckAddedAdapter(_AdapterBase):
                 },
             )
 
-        from romarr.tasks.runners.auto_check_added import (
-            run_search_on_add,
+        from sqlalchemy import select
+
+        from romarr.search._clients import make_indexer_client_factory
+        from romarr.search.rounds._shared import (
+            dispatch_best_for_game,
+            load_min_score_for_game,
         )
+        from romarr.search.rounds.manual import run_manual_search
+        from romarr.domain.models import Game
 
         async with sessionmaker() as session:
-            result = await run_search_on_add(
-                session, game_id=int(game_id)
+            game = (
+                await session.execute(
+                    select(Game).where(Game.id == int(game_id))
+                )
+            ).scalar_one_or_none()
+            if game is None:
+                return JobResult(
+                    status=JobStatus.SUCCESS,
+                    summary={
+                        "gameId": int(game_id),
+                        "skipped": True,
+                        "skipReason": "game_not_found",
+                    },
+                )
+
+            indexer_factory = make_indexer_client_factory(session)
+            try:
+                report = await run_manual_search(
+                    session=session,
+                    query=game.title,
+                    client_factory=indexer_factory,
+                    platform_id=game.platform_id,
+                )
+            except Exception as exc:
+                return JobResult(
+                    status=JobStatus.SUCCESS,
+                    summary={
+                        "gameId": game.id,
+                        "title": game.title,
+                        "platformId": game.platform_id,
+                        "skipped": True,
+                        "skipReason": (
+                            f"search_failed: {type(exc).__name__}"
+                        ),
+                    },
+                )
+
+            min_score = await load_min_score_for_game(session, game.id)
+            dispatch_outcome = await dispatch_best_for_game(
+                session,
+                game_id=game.id,
+                candidates=report.candidates,
+                min_score=min_score,
             )
+
         return JobResult(
             status=JobStatus.SUCCESS,
             summary={
-                "gameId": result.game_id,
-                "title": result.title,
-                "platformId": result.platform_id,
-                "candidates": result.candidates,
-                "grabs": result.grabs,
-                "skipped": result.skipped,
-                "skipReason": result.skip_reason,
+                "gameId": game.id,
+                "title": game.title,
+                "platformId": game.platform_id,
+                "candidates": len(report.candidates),
+                "grabs": 1 if dispatch_outcome.get("dispatched") else 0,
+                "best_score": dispatch_outcome.get("best_score"),
+                "min_score": min_score,
+                "no_grab_reason": dispatch_outcome.get("no_grab_reason"),
+                "dispatch_status": dispatch_outcome.get("status"),
             },
         )
 

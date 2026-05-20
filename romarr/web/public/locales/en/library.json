@@ -158,5 +158,23 @@
     "startedToast": "Scan dispatched — new ROMs land in the library as the scan progresses.",
     "errorToast": "Couldn't trigger the scan",
     "refreshErrorToast": "Scan ran, but the metadata refresh couldn't start"
+  },
+  "add": {
+    "label": "Add Game",
+    "title": "Search every metadata provider, pick a title, and add it to your library. Library / profile / monitored pre-filled in the next modal."
+  },
+  "rssSync": {
+    "label": "Sync RSS",
+    "pending": "Syncing…",
+    "title": "Passive poll: fetches every enabled indexer's recent RSS feed (~last 100 items). Matches any feed item back to your wanted releases and auto-grabs the best per game. Won't find a wanted game the indexer didn't post recently — use Search Missing for that.",
+    "startedToast": "RSS sync queued",
+    "errorToast": "RSS sync trigger failed"
+  },
+  "searchMissing": {
+    "label": "Search Missing",
+    "pending": "Searching…",
+    "title": "Active per-release query: iterates every monitored release whose status is wanted, runs one indexer search per release, and auto-grabs the best eligible candidate. Use this to chase a specific wanted game the RSS feed won't surface.",
+    "startedToast": "Missing search queued",
+    "errorToast": "Missing search trigger failed"
   }
 }

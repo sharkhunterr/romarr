@@ -67,6 +67,7 @@ class QualityProfileRead(_Base):
     require_dat_verified: bool
     allow_archive_double_compression: bool
     upgrade_until_format: str
+    auto_grab_min_score: int
     is_factory_default: bool
     is_user_modified: bool
     seed_key: str | None
@@ -81,6 +82,7 @@ class QualityProfileCreate(_Base):
     require_dat_verified: bool = False
     allow_archive_double_compression: bool = False
     upgrade_until_format: Annotated[str, Field(min_length=1, max_length=32)]
+    auto_grab_min_score: Annotated[int, Field(ge=0, le=100_000)] = 0
 
     @model_validator(mode="after")
     def _check(self) -> Self:
@@ -102,6 +104,7 @@ class QualityProfileUpdate(_Base):
     require_dat_verified: bool | None = None
     allow_archive_double_compression: bool | None = None
     upgrade_until_format: Annotated[str | None, Field(default=None, max_length=32)] = None
+    auto_grab_min_score: Annotated[int | None, Field(default=None, ge=0, le=100_000)] = None
 
 
 # ---------------------------------------------------------------------------

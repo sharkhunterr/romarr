@@ -35,6 +35,28 @@
     "hashes": {
       "title": "File hashes",
       "subtitle": "SHA-1 / MD5 / CRC32 of every imported Dump under this game. Useful for cross-checking against external DAT files."
+    },
+    "relink": {
+      "button": "Relink",
+      "clear": "Unlink",
+      "clearing": "Clearing…",
+      "modal": {
+        "title": "Relink {{provider}} to this game",
+        "subtitle": "Pick the right entry on {{provider}} for \"{{title}}\".",
+        "queryPlaceholder": "Refine the search (canonical title, no (USA)/(Europe)/[!])…",
+        "queriesTried": "Tried: {{list}}",
+        "loading": "Searching…",
+        "empty": "No matches — try a different query above.",
+        "current": "current",
+        "close": "Close"
+      },
+      "toast": {
+        "successTitle": "Provider linked",
+        "successBody": "\"{{title}}\" is now linked to {{provider}}.",
+        "clearedTitle": "Provider unlinked",
+        "clearedBody": "{{provider}} no longer contributes metadata for this game.",
+        "failedTitle": "Operation failed"
+      }
     }
   },
   "delete": {

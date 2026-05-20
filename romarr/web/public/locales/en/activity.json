@@ -63,6 +63,15 @@
       "missing_scheduled": "Missing search",
       "cutoff_scheduled": "Cutoff search"
     },
+    "noGrabReason": {
+      "unidentified": "Title couldn't be matched to a library game",
+      "score_too_low": "Top candidate scored ≤ 0",
+      "auto_grab_disabled": "RSS auto-grab disabled on this indexer",
+      "no_eligible_candidates": "No candidate cleared the pipeline",
+      "empty_feed": "Indexer returned an empty feed",
+      "indexer_failed": "Indexer fetch failed",
+      "rejected": "Rejected by pipeline"
+    },
     "detail": {
       "query": "Query",
       "score": "Score",
@@ -71,7 +80,34 @@
       "source": "Source",
       "client": "Client",
       "via": "Via",
-      "reason": "Reason"
+      "reason": "Reason",
+      "title": "Event detail",
+      "dateLabel": "Started",
+      "finishedLabel": "Finished",
+      "durationLabel": "Duration",
+      "gameLabel": "Game",
+      "releaseLabel": "Release",
+      "breakdown": "Score breakdown",
+      "contributionSource": "Source",
+      "contributionName": "Rule",
+      "contributionValue": "+/-",
+      "correlationLabel": "Round",
+      "summary": "Summary"
+    },
+    "outputSummary": {
+      "total_items": "Total",
+      "items_total": "Total",
+      "matched": "Matched",
+      "unmatched": "Unmatched",
+      "failed": "Failed",
+      "skipped": "Skipped",
+      "indexers_total": "Indexers",
+      "indexers_succeeded": "Indexers OK",
+      "candidates": "Candidates",
+      "grabs_to_dispatch": "Grabs pending",
+      "grabs_dispatched": "Grabs dispatched",
+      "grabs_failed": "Grabs failed",
+      "refreshed": "Refreshed"
     },
     "importedVia": {
       "webhook": "webhook",

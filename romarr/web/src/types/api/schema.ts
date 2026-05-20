@@ -4018,6 +4018,8 @@ export interface components {
         HistoryEvent: {
             /** Chosenindexerguid */
             chosenIndexerGuid?: string | null;
+            /** Correlationid */
+            correlationId?: string | null;
             /**
              * Date
              * Format: date-time
@@ -4043,6 +4045,10 @@ export interface components {
             id: number;
             /** Importedvia */
             importedVia?: string | null;
+            /** Outputsummary */
+            outputSummary?: {
+                [key: string]: unknown;
+            } | null;
             /** Query */
             query?: string | null;
             /** Reason */
@@ -4051,6 +4057,10 @@ export interface components {
             releaseId?: number | null;
             /** Score */
             score?: number | null;
+            /** Scorebreakdown */
+            scoreBreakdown?: {
+                [key: string]: unknown;
+            }[] | null;
             /** Successful */
             successful: boolean;
             /** Summary */
@@ -5517,6 +5527,8 @@ export interface components {
             allow_archive_double_compression: boolean;
             /** Allowed Formats */
             allowed_formats: string[];
+            /** Auto Grab Min Score */
+            auto_grab_min_score: number;
             /**
              * Created At
              * Format: date-time

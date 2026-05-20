@@ -15,17 +15,14 @@
 import { Gamepad2, Plus } from "lucide-react";
 import { useEffect, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import {
-  useAddGameFromLookup,
   useGameLookup,
   type GameLookupRow,
 } from "@/lib/api/queries/lookup";
-import { usePlatforms } from "@/lib/api/queries/platforms";
-import { useToastStore } from "@/lib/store/toast";
 
 import { AddGameModal } from "./AddGameModal";
 import { RecentAdditions } from "./RecentAdditions";
@@ -340,8 +337,6 @@ function FilterBar(props: FilterBarProps): ReactElement {
 
 export function AddNewPage(): ReactElement {
   const { t } = useTranslation("addNew");
-  const navigate = useNavigate();
-  const pushToast = useToastStore((s) => s.push);
   const [searchParams, setSearchParams] = useSearchParams();
   const urlQuery = searchParams.get("q") ?? "";
   const [query, setQuery] = useState(urlQuery);
@@ -359,49 +354,16 @@ export function AddNewPage(): ReactElement {
   const [filterProvider, setFilterProvider] = useState<string>("");
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const platforms = usePlatforms();
-  const directAdd = useAddGameFromLookup();
-
-  // Click flow:
-  //   * Candidate has a platformSlug Romarr recognises → fire add
-  //     directly (one-click), navigate to detail on success.
-  //   * Otherwise (gray pill: IGDB-only platform) → open the modal
-  //     so the operator picks the closest local platform.
+  // Click flow: ALWAYS open the AddGameModal so the operator can
+  // confirm the library / profile cascade / monitored flag before
+  // the row is committed. The pre-slice "one-click direct add for
+  // known platforms" path bypassed the modal and made the auto-
+  // grab pipeline land on the wrong (or no) library, so the
+  // quality-profile cascade fell back to a global default the
+  // operator hadn't tuned. The modal pre-fills every field — one
+  // click on the modal's primary button still ships as quickly.
   function handleAdd(row: GameLookupRow): void {
-    const list = platforms.data ?? [];
-    const matched = row.platformSlug
-      ? list.find((p) => p.slug === row.platformSlug)
-      : undefined;
-    if (matched === undefined) {
-      setPendingAdd(row);
-      return;
-    }
-    directAdd.mutate(
-      {
-        providerName: row.providerName,
-        providerGameId: row.providerGameId,
-        title: row.title,
-        platformId: matched.id,
-        monitored: true,
-      },
-      {
-        onSuccess: (game) => {
-          pushToast({
-            kind: "success",
-            title: t("add.successTitle"),
-            description: t("add.successBody", { title: game.title }),
-          });
-          navigate(`/game/${game.id}`);
-        },
-        onError: (err) => {
-          pushToast({
-            kind: "error",
-            title: t("add.errorTitle"),
-            description: err.message,
-          });
-        },
-      },
-    );
+    setPendingAdd(row);
   }
 
   // Debounce URL writes so keystrokes don't pollute history,
@@ -523,7 +485,7 @@ export function AddNewPage(): ReactElement {
                 row={row}
                 onAdd={handleAdd}
                 onOpenDetail={setDetailRow}
-                isAdding={directAdd.isPending}
+                isAdding={false}
               />
             ))}
           </ul>
@@ -560,7 +522,7 @@ export function AddNewPage(): ReactElement {
             setDetailRow(null);
             setPendingAdd(row);
           }}
-          isAdding={directAdd.isPending}
+          isAdding={false}
         />
       )}
     </div>

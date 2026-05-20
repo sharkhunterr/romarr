@@ -114,5 +114,37 @@
     "conditions": [
       {"field": "naming_convention", "operator": "equals", "values": "no-intro"}
     ]
+  },
+  {
+    "seed_key": "redump-convention",
+    "name": "Redump Convention",
+    "score": 10,
+    "conditions": [
+      {"field": "naming_convention", "operator": "equals", "values": "redump"}
+    ]
+  },
+  {
+    "seed_key": "tosec-convention",
+    "name": "TOSEC Convention",
+    "score": 5,
+    "conditions": [
+      {"field": "naming_convention", "operator": "equals", "values": "tosec"}
+    ]
+  },
+  {
+    "seed_key": "goodtools-convention",
+    "name": "GoodTools Convention",
+    "score": 5,
+    "conditions": [
+      {"field": "naming_convention", "operator": "equals", "values": "goodtools"}
+    ]
+  },
+  {
+    "seed_key": "mame-convention",
+    "name": "MAME Convention",
+    "score": 10,
+    "conditions": [
+      {"field": "naming_convention", "operator": "equals", "values": "mame"}
+    ]
   }
 ]

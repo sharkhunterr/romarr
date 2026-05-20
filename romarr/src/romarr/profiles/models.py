@@ -77,6 +77,16 @@ class QualityProfile(Base, _ProfileMixin):
         Boolean, nullable=False, default=False
     )
     upgrade_until_format: Mapped[str] = mapped_column(String(32), nullable=False)
+    # Minimum ``score_breakdown.total`` a candidate must reach for
+    # the RSS / on-add auto-grab paths to dispatch it. Default 0
+    # keeps the legacy "grab anything that cleared the pipeline"
+    # behaviour; the operator can raise it (e.g. 50) so a low-score
+    # candidate the manual modal would still display gets held back
+    # from auto-dispatch. Manual grabs ignore this floor — the
+    # operator explicitly chose the candidate.
+    auto_grab_min_score: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
 
     __table_args__ = (UniqueConstraint("name", name="uq_quality_profile_name"),)
 

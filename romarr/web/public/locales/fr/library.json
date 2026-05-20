@@ -158,5 +158,23 @@
     "startedToast": "Scan lancé — les nouvelles ROMs apparaissent au fur et à mesure.",
     "errorToast": "Impossible de lancer le scan",
     "refreshErrorToast": "Scan lancé, mais le rafraîchissement des métadonnées n'a pas démarré"
+  },
+  "add": {
+    "label": "Ajouter",
+    "title": "Cherche un titre via tous les providers de métadonnées et ajoute-le à la bibliothèque. La library / profil / monitored sont préremplis dans le modal qui suit."
+  },
+  "rssSync": {
+    "label": "Sync RSS",
+    "pending": "En cours…",
+    "title": "Poll passif : récupère le flux RSS récent (~100 derniers items) de chaque indexeur, identifie ceux qui matchent une release voulue, et auto-grab le meilleur par jeu. Ne trouve pas un jeu que l'indexeur n'a pas posté récemment — utilise « Search Missing » pour ça.",
+    "startedToast": "Sync RSS lancée",
+    "errorToast": "Échec du déclenchement Sync RSS"
+  },
+  "searchMissing": {
+    "label": "Search Missing",
+    "pending": "Recherche…",
+    "title": "Recherche active par release : pour chaque release monitorée à l'état « wanted », lance une requête indexeur et auto-grab le meilleur candidat éligible. Utilise ce bouton pour aller chercher un jeu précis que le flux RSS ne fait pas remonter.",
+    "startedToast": "Search Missing lancée",
+    "errorToast": "Échec du déclenchement Search Missing"
   }
 }

@@ -63,14 +63,21 @@ class GameToggleRequest(BaseModel):
     """PATCH /api/v3/game/{id} — operator-toggle subset.
 
     Only fields that are NOT owned by the metadata aggregator
-    are mutable here. Today: just ``monitored``. Adding more
-    operator-toggleable bits is straightforward — they go in
-    this schema.
+    are mutable here. Today: ``monitored`` (always required) +
+    ``library_id`` (optional — present when the operator picks
+    a different library / profile cascade for the game).
+    Adding more operator-toggleable bits is straightforward —
+    they go in this schema.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     monitored: bool
+    # Game ↔ Library binding. Setting this to ``None`` clears the
+    # binding (the importer falls back to platform routing); an
+    # integer rebinds the game so the auto-grab paths read the
+    # new library's quality profile floor on the next round.
+    library_id: int | None = None
 
 
 class FieldLockRequest(BaseModel):
@@ -1089,6 +1096,13 @@ async def patch_game(
             },
         )
     row.monitored = body.monitored
+    # ``library_id`` is optional in the PATCH payload; preserve the
+    # existing binding when the client doesn't send it (the field
+    # defaults to None on the schema, so we distinguish "not sent"
+    # from "explicit unbind" by looking at the original payload
+    # dict via model_fields_set).
+    if "library_id" in body.model_fields_set:
+        row.library_id = body.library_id
     await db.commit()
     await db.refresh(row)
     return GameRead.model_validate(row, from_attributes=True)

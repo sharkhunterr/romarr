@@ -746,7 +746,9 @@
         "flagsLabel": "Drapeaux",
         "flags": {
           "requireDat": "Exiger des dumps DAT-vérifiés",
-          "allowArchive": "Autoriser la double compression d'archive"
+          "allowArchive": "Autoriser la double compression d'archive",
+          "autoGrabMinScore": "Score mini pour auto-grab",
+          "autoGrabMinScoreHint": "Ne s'applique qu'aux auto-grabs (Sync RSS + à l'ajout d'un jeu) — les grabs manuels l'ignorent. 0 = on grab tout candidat avec un score positif."
         },
         "errors": {
           "name": "Choisissez d'abord un nom de profil.",

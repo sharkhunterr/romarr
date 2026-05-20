@@ -920,6 +920,11 @@ async def ingest_rom_pack(
         )
 
     archive_path: Path | None = None
+    # Declared up here so the ``finally`` cleanup can see it even
+    # when the extract step never ran (download failure / cancel
+    # before extract). The ``rom_pack_*`` tempdir would otherwise
+    # leak forever — 29 GB of orphans on one of our test installs.
+    extract_dir: Path | None = None
     try:
         # ── Download (url-sourced) ──────────────────────────
         if source_kind == "grab":
@@ -986,6 +991,8 @@ async def ingest_rom_pack(
         )
 
         _check_canceled(rom_pack_id)
+        # Reuse the pre-declared slot so the ``finally`` block can
+        # rmtree it even when an exception fires mid-extract.
         extract_dir = Path(
             tempfile.mkdtemp(prefix=f"rom_pack_{rom_pack_id}_", dir=str(root))
         )
@@ -1136,6 +1143,15 @@ async def ingest_rom_pack(
             and archive_path.exists()
         ):
             archive_path.unlink(missing_ok=True)
+        # Purge the per-pack extract tempdir whether the ingest
+        # succeeded, failed, or was canceled. Each ``rom_pack_<id>_<rand>``
+        # dir holds the full extracted payload (often 1-10 GB per pack)
+        # and the importer has already hardlinked / copied every ROM
+        # into the library — keeping the extract is pure waste. Was
+        # silently leaked before this fix; one of our installs
+        # accumulated 29 GB of orphans across 11 stale tempdirs.
+        if extract_dir is not None and extract_dir.exists():
+            shutil.rmtree(extract_dir, ignore_errors=True)
 
 
 __all__ = [

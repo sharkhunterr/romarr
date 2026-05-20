@@ -64,6 +64,13 @@ export function CreateQualityProfileModal(
   const [allowArchive, setAllowArchive] = useState(
     editing?.allow_archive_double_compression ?? false,
   );
+  // Operator-tunable floor for auto-grab (RSS sync + on-add).
+  // 0 = grab anything with a positive pipeline score, anything
+  // higher holds weak candidates back from auto-dispatch (they
+  // still show in manual search).
+  const [autoGrabMinScore, setAutoGrabMinScore] = useState<number>(
+    editing?.auto_grab_min_score ?? 0,
+  );
 
   const allowedFormats = useMemo(
     () => _parseList(allowedFormatsRaw),
@@ -93,6 +100,7 @@ export function CreateQualityProfileModal(
       upgrade_until_format: upgradeUntilFormat,
       require_dat_verified: requireDatVerified,
       allow_archive_double_compression: allowArchive,
+      auto_grab_min_score: Math.max(0, Math.floor(autoGrabMinScore || 0)),
     };
     const onError = (err: { message: string }) => {
       pushToast({
@@ -271,6 +279,31 @@ export function CreateQualityProfileModal(
                 disabled={submitting}
                 className="h-4 w-4 cursor-pointer rounded border-zinc-700 bg-zinc-900 text-brand focus:ring-brand"
               />
+            </label>
+            <label className="flex flex-col gap-1 rounded-md border border-zinc-800 bg-zinc-950/40 px-3 py-2">
+              <span className="flex items-center justify-between gap-2">
+                <span className="text-xs text-zinc-300">
+                  {t("profiles.quality.create.flags.autoGrabMinScore")}
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={autoGrabMinScore}
+                  onChange={(e) =>
+                    setAutoGrabMinScore(
+                      Number.isFinite(e.target.valueAsNumber)
+                        ? e.target.valueAsNumber
+                        : 0,
+                    )
+                  }
+                  disabled={submitting}
+                  className="w-24 rounded-md bg-zinc-900 px-2 py-1 text-right text-xs text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                />
+              </span>
+              <span className="text-[0.65rem] text-zinc-500">
+                {t("profiles.quality.create.flags.autoGrabMinScoreHint")}
+              </span>
             </label>
           </fieldset>
 

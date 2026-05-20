@@ -71,3 +71,44 @@ def test_torznab_extended_attrs_set_provenance(
     assert item.languages_provenance == FieldProvenance.TORZNAB
     assert item.seeders == 42
     assert item.hash_sha1 == "abcdef1234567890abcdef1234567890abcdef12"
+
+
+def test_grabarr_collection_attr_sets_naming_convention(
+    torznab_response: Callable[[str], bytes],
+) -> None:
+    """The Minerva ``<torznab:attr name="collection">`` carries the dump
+    authority (No-Intro / Redump / TOSEC-ISO / …) — Romarr maps it onto
+    :class:`NamingConvention` so the profile scorer's
+    ``no-intro-convention`` / ``redump-convention`` custom formats fire.
+    Non-authority collections (RetroAchievements / IA / MAME) leave the
+    convention as ``UNKNOWN`` so the filename parser keeps a shot.
+    An explicit ``naming_convention`` attr always wins over a derived
+    one to preserve forward-compat with future indexers that emit both.
+    """
+    from romarr.domain.enums import NamingConvention
+
+    results = parse_search(
+        torznab_response("torznab_search/grabarr_collection_no_intro.xml"),
+        indexer_id=7,
+    )
+    by_guid = {r.guid: r for r in results}
+
+    # 1. No-Intro → NO_INTRO, provenance recorded.
+    ni = by_guid["guid-collection-no-intro"]
+    assert ni.naming_convention == NamingConvention.NO_INTRO
+    assert ni.naming_convention_provenance == FieldProvenance.TORZNAB
+
+    # 2. TOSEC-ISO and TOSEC-PIX both collapse to canonical TOSEC.
+    tosec = by_guid["guid-collection-tosec-iso"]
+    assert tosec.naming_convention == NamingConvention.TOSEC
+
+    # 3. RetroAchievements is not a naming authority — convention stays
+    #    unset (None) so a downstream filename parser keeps a vote.
+    ra = by_guid["guid-collection-ra"]
+    assert ra.naming_convention is None
+    assert ra.naming_convention_provenance is None
+
+    # 4. Explicit naming_convention attr beats a derived one (collection
+    #    is opportunistic; an explicit field is intentional).
+    explicit = by_guid["guid-precedence-wins"]
+    assert explicit.naming_convention == NamingConvention.REDUMP

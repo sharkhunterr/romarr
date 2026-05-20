@@ -212,6 +212,113 @@ export function useRefreshGameMetadata(): UseMutationResult<
   });
 }
 
+// ---------------------------------------------------------------------------
+// Per-provider relink (Metadata tab → "Pick the right IGDB / SS / … entry").
+// ---------------------------------------------------------------------------
+
+export interface ProviderCandidate {
+  providerName: string;
+  providerGameId: string;
+  title: string;
+  confidence: number;
+  platformSlug: string | null;
+  platformName: string | null;
+  releaseYear: number | null;
+  coverUrl: string | null;
+}
+
+export interface ProviderCandidatesResponse {
+  providerName: string;
+  queriesTried: string[];
+  candidates: ProviderCandidate[];
+}
+
+/** GET /api/v3/game/{id}/provider/{name}/candidates — driven by the
+ * Relink modal in the Metadata tab. ``query`` overrides the
+ * server-side default (the game's title stripped of DAT tags). */
+export function useProviderCandidates(
+  gameId: number | null,
+  providerName: string | null,
+  query: string | null,
+): UseQueryResult<ProviderCandidatesResponse, ApiError> {
+  const trimmed = query?.trim() ?? "";
+  return useQuery<ProviderCandidatesResponse, ApiError>({
+    queryKey: ["games", "providerCandidates", gameId, providerName, trimmed],
+    queryFn: () => {
+      const url = trimmed
+        ? `/api/v3/game/${gameId}/provider/${providerName}/candidates?q=${encodeURIComponent(trimmed)}`
+        : `/api/v3/game/${gameId}/provider/${providerName}/candidates`;
+      return apiFetch<ProviderCandidatesResponse>(url);
+    },
+    enabled: gameId !== null && providerName !== null,
+    staleTime: 30_000,
+  });
+}
+
+export interface RelinkProviderVariables {
+  gameId: number;
+  providerName: string;
+  providerGameId: string;
+}
+
+/** POST /api/v3/game/{id}/provider/{name}/relink — pin a new
+ * provider id, drop the stale cache, force a refresh. The detail
+ * + metadata + list caches are invalidated so the new payload
+ * lands on the next render. */
+export function useRelinkProvider(): UseMutationResult<
+  RefreshMetadataResponse,
+  ApiError,
+  RelinkProviderVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<
+    RefreshMetadataResponse,
+    ApiError,
+    RelinkProviderVariables
+  >({
+    mutationFn: ({ gameId, providerName, providerGameId }) =>
+      apiFetch<RefreshMetadataResponse>(
+        `/api/v3/game/${gameId}/provider/${providerName}/relink`,
+        { method: "POST", json: { providerGameId } },
+      ),
+    onSuccess: (result) => {
+      void qc.invalidateQueries({ queryKey: ["games", "detail", result.game_id] });
+      void qc.invalidateQueries({ queryKey: ["games", "metadata", result.game_id] });
+      void qc.invalidateQueries({ queryKey: ["games", "list"] });
+    },
+  });
+}
+
+export interface ClearProviderVariables {
+  gameId: number;
+  providerName: string;
+}
+
+/** POST /api/v3/game/{id}/provider/{name}/clear — drop the FK +
+ * cache row; the next refresh re-aggregates from the surviving
+ * providers. Used when the operator wants the auto-match logic to
+ * try again on a clean slate. */
+export function useClearProvider(): UseMutationResult<
+  RefreshMetadataResponse,
+  ApiError,
+  ClearProviderVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<RefreshMetadataResponse, ApiError, ClearProviderVariables>({
+    mutationFn: ({ gameId, providerName }) =>
+      apiFetch<RefreshMetadataResponse>(
+        `/api/v3/game/${gameId}/provider/${providerName}/clear`,
+        { method: "POST" },
+      ),
+    onSuccess: (result) => {
+      void qc.invalidateQueries({ queryKey: ["games", "detail", result.game_id] });
+      void qc.invalidateQueries({ queryKey: ["games", "metadata", result.game_id] });
+      void qc.invalidateQueries({ queryKey: ["games", "list"] });
+    },
+  });
+}
+
+
 export interface ToggleReleaseMonitorVariables {
   releaseId: number;
   /** The owning game — used to invalidate just that game's release cache. */

@@ -40,6 +40,8 @@ export interface QualityProfileCreate {
   upgrade_until_format: string;
   require_dat_verified?: boolean;
   allow_archive_double_compression?: boolean;
+  /** Floor for RSS + on-add auto-grab. Manual grabs ignore it. */
+  auto_grab_min_score?: number;
 }
 
 const QUALITY_PROFILES_KEY = ["settings", "quality-profiles"] as const;
