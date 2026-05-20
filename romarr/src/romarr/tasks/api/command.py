@@ -165,6 +165,11 @@ async def post_command(
             triggered_by=TriggerKind.COMMAND,
             triggered_by_user_id=getattr(admin, "user_id", None),
             parameters=parameters,
+            # The operator clicked a button — honour the request
+            # even when the job's scheduled cadence is disabled.
+            # The ``enabled`` flag gates the cron/interval ticks;
+            # explicit commands bypass it (slice 471).
+            force=True,
         )
     except UnknownJob as exc:
         raise HTTPException(

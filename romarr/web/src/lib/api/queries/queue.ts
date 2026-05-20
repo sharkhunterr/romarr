@@ -28,6 +28,8 @@ export type QueueEntry = components["schemas"]["QueueEntryRead"];
 export type QueueState =
   | "queued"
   | "downloading"
+  | "extracting"
+  | "importing"
   | "paused"
   | "completed"
   | "stuck"

@@ -186,6 +186,7 @@ async def run_release_search(
             indexer_results=history_entries,
         )
 
+    from romarr.profiles.scoring import expected_naming_conventions
     return SearchRoundReport(
         correlation_id=UUID(correlation),
         search_type="manual",
@@ -196,6 +197,7 @@ async def run_release_search(
         grabs=[],
         indexer_outcomes=indexer_outcomes,
         overcap_indexers=overcap_indexers,
+        profile_expected_conventions=expected_naming_conventions(custom_formats),
     )
 
 

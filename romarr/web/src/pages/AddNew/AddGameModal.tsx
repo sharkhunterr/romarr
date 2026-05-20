@@ -18,6 +18,7 @@ import {
   type GameLookupRow,
 } from "@/lib/api/queries/lookup";
 import { usePlatforms } from "@/lib/api/queries/platforms";
+import { useQualityProfiles } from "@/lib/api/queries/quality-profiles";
 import { useToastStore } from "@/lib/store/toast";
 
 interface AddGameModalProps {
@@ -31,11 +32,25 @@ export function AddGameModal(props: AddGameModalProps): ReactElement {
   const pushToast = useToastStore((s) => s.push);
   const platforms = usePlatforms();
   const libraries = useLibraries();
+  const qualityProfiles = useQualityProfiles();
   const add = useAddGameFromLookup();
 
   const [platformId, setPlatformId] = useState<number | null>(null);
   const [libraryId, setLibraryId] = useState<number | null>(null);
   const [monitored, setMonitored] = useState(true);
+
+  // The quality / region / dump / language / naming profiles are
+  // a property of the LIBRARY, not the game — picking a library
+  // IS picking the profile cascade. Resolve the selected
+  // library's quality profile so the operator sees which one
+  // will gate this game's auto-grabs (incl. the min-score floor)
+  // without leaving the modal.
+  const selectedLibrary = (libraries.data ?? []).find(
+    (lib) => lib.id === libraryId,
+  );
+  const selectedQualityProfile = (qualityProfiles.data ?? []).find(
+    (q) => q.id === selectedLibrary?.quality_profile_id,
+  );
 
   // Pre-fill the platform from the lookup candidate when IGDB
   // (or another platform-aware provider) returned a slug. Falls
@@ -176,6 +191,36 @@ export function AddGameModal(props: AddGameModalProps): ReactElement {
               </select>
             )}
           </label>
+
+          {/* Profile cascade — read-only. It follows the library
+              binding above; to change it the operator edits the
+              library (Settings → Libraries) or its quality
+              profile (Settings → Profiles). Shown here so the
+              "which rules will gate this game" question is
+              answered before the operator hits Add. */}
+          <div className="block">
+            <span className="mb-1 block text-[0.65rem] uppercase tracking-widest text-zinc-500">
+              {t("add.profileLabel")}
+            </span>
+            <div className="rounded-md border border-zinc-800 bg-zinc-950/60 px-3 py-2 text-sm">
+              {selectedQualityProfile ? (
+                <>
+                  <span className="text-zinc-100">
+                    {selectedQualityProfile.name}
+                  </span>
+                  <span className="ml-2 text-[0.7rem] text-zinc-500">
+                    {t("add.profileMinScore", {
+                      score: selectedQualityProfile.auto_grab_min_score,
+                    })}
+                  </span>
+                </>
+              ) : (
+                <span className="text-xs text-zinc-500">
+                  {t("add.profileFromLibrary")}
+                </span>
+              )}
+            </div>
+          </div>
 
           <label className="flex items-center gap-2">
             <input

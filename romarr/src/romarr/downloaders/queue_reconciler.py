@@ -113,9 +113,14 @@ async def reconcile_once(
         # still need the recovery pass below, so we fall through
         # instead of returning early.
         # Group rows by client so we instantiate each client once
-        # per tick instead of one per row.
+        # per tick instead of one per row. Rows with a NULL client
+        # id are Romarr-internal downloads (URL-sourced ROM packs
+        # streamed by the ingest pipeline — slice 465); they have
+        # no client to poll, so the reconciler leaves them alone.
         by_client: dict[int, list[QueueEntry]] = {}
         for row in rows:
+            if row.download_client_id is None:
+                continue
             by_client.setdefault(row.download_client_id, []).append(row)
 
         now = datetime.now(UTC)
@@ -297,6 +302,11 @@ async def _recover_orphaned_completions(
         now = _dt.now(UTC)
         dispatchable: list[QueueEntry] = []
         for row in orphans:
+            # Romarr-internal downloads (NULL client — slice 465)
+            # never go through the watcher dispatcher; their
+            # ingest pipeline owns the post-download steps.
+            if row.download_client_id is None:
+                continue
             path = row.content_path or ""
             if not path or not os.path.exists(path):
                 # File genuinely gone (disk-full cleanup, manual

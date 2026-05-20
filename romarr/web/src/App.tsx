@@ -34,6 +34,7 @@ import { GameDetailPage } from "@/pages/GameDetail";
 import { LibraryPage } from "@/pages/Library";
 import { LoginPage } from "@/pages/Login";
 import { NotFoundPage } from "@/pages/placeholders";
+import { RomPacksPage } from "@/pages/RomPacks";
 import { SetupPage } from "@/pages/Setup";
 import { ConnectPage } from "@/pages/Settings/Connect";
 import { DatSourcesPage } from "@/pages/Settings/DatSources";
@@ -46,6 +47,7 @@ import { MetadataSourcesPage } from "@/pages/Settings/MetadataSources";
 import { PlatformsPage } from "@/pages/Settings/Platforms";
 import { ProfilesPage } from "@/pages/Settings/Profiles";
 import { QualityDefinitionsPage } from "@/pages/Settings/QualityDefinitions";
+import { RomPackSettingsPage } from "@/pages/Settings/RomPackSettings";
 import { SettingsLayout } from "@/pages/Settings/SettingsLayout";
 import { SettingsPlaceholder } from "@/pages/Settings/SettingsPlaceholder";
 import { TagsPage } from "@/pages/Settings/Tags";
@@ -74,12 +76,19 @@ const router = createBrowserRouter([
               </PageErrorBoundary>
             ),
             children: [
-          { path: "/", element: <DashboardPage /> },
+          // ``/`` redirects to the Library — the Dashboard page
+          // is intentionally not surfaced in the primary nav
+          // anymore (slice: remove dashboard from menus). It
+          // stays reachable by typing /dashboard so we don't
+          // lose the work, just the prime real-estate.
+          { path: "/", element: <Navigate to="/library" replace /> },
+          { path: "/dashboard", element: <DashboardPage /> },
           { path: "/library", element: <LibraryPage /> },
           { path: "/add", element: <AddNewPage /> },
           { path: "/game/:gameId", element: <GameDetailPage /> },
           { path: "/wanted", element: <WantedPage /> },
           { path: "/activity", element: <ActivityPage /> },
+          { path: "/rom-packs", element: <RomPacksPage /> },
           { path: "/calendar", element: <CalendarPage /> },
           // Settings is a layout with sidebar nav (slice 53).
           // The Tags sub-page is shipped (slice 51); the rest
@@ -111,6 +120,7 @@ const router = createBrowserRouter([
                 element: <QualityDefinitionsPage />,
               },
               { path: "dat-sources", element: <DatSourcesPage /> },
+              { path: "rom-packs", element: <RomPackSettingsPage /> },
               {
                 path: "media-management",
                 element: <MediaManagementPage />,

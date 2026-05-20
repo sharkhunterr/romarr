@@ -38,6 +38,28 @@ from romarr.indexers.types import (
 logger = logging.getLogger(__name__)
 
 
+# Map Grabarr's ``collection`` attr (root directory of the dump tree
+# — see ``grabarr/grabarr/adapters/minerva.py``) onto the
+# :class:`NamingConvention` enum. Variants of TOSEC (``TOSEC-ISO`` /
+# ``TOSEC-PIX``) collapse to the canonical ``tosec`` because the
+# convention is the same — only the dump kind differs (cart-rip vs ISO
+# vs photo). Anything not listed here (MAME, RetroAchievements,
+# Internet Archive, custom collections) leaves the convention
+# unset so the filename parser retains a chance to classify it.
+_COLLECTION_TO_CONVENTION: dict[str, NamingConvention] = {
+    "no-intro": NamingConvention.NO_INTRO,
+    "nointro": NamingConvention.NO_INTRO,
+    "redump": NamingConvention.REDUMP,
+    "tosec": NamingConvention.TOSEC,
+    "tosec-iso": NamingConvention.TOSEC,
+    "tosec-pix": NamingConvention.TOSEC,
+    "goodtools": NamingConvention.GOODTOOLS,
+    "goodset": NamingConvention.GOODTOOLS,
+    "mame": NamingConvention.MAME,
+    "fbneo": NamingConvention.MAME,
+}
+
+
 def _parse_publish_date(raw: str) -> datetime | None:
     """RSS 2.0 dates are RFC 822; Torznab also emits ISO sometimes."""
     if not raw:
@@ -139,6 +161,26 @@ def _project_attr(
             logger.warning(
                 "indexers.parser.unknown_convention", extra={"value": value}
             )
+    elif n == "collection":
+        # Grabarr emits the dump-authority root directory as
+        # ``<torznab:attr name="collection" value="No-Intro"/>``
+        # (also "Redump", "TOSEC-ISO", "TOSEC-PIX", "GoodTools",
+        # "MAME", "RetroAchievements", "Internet Archive", …). Map
+        # the authority strings onto the NamingConvention enum so
+        # the profile scorer's ``naming_convention`` custom formats
+        # (the seeded ``no-intro-convention`` etc.) fire without
+        # waiting for the filename parser to second-guess the path.
+        # The directory IS the authority — more reliable than any
+        # filename heuristic.
+        #
+        # Non-authority collections (RetroAchievements, IA, MAME)
+        # fall through silently; the filename parser still gets to
+        # speak. We don't override an already-set convention.
+        if "naming_convention" not in fields:
+            mapped = _COLLECTION_TO_CONVENTION.get(value.strip().lower())
+            if mapped is not None:
+                fields["naming_convention"] = mapped
+                fields["naming_convention_provenance"] = provenance
     elif n in ("dat_source", "dat"):
         try:
             fields["dat_source"] = DatSource(value.lower())

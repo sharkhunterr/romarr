@@ -110,6 +110,41 @@ async def finish_run(
     return run
 
 
+async def report_progress(
+    sessionmaker: Any,
+    *,
+    job_run_id: int,
+    items_processed: int | None = None,
+    summary_patch: dict[str, Any] | None = None,
+) -> None:
+    """Mid-run progress write — bumps ``items_processed`` and/or
+    merges ``summary_patch`` into ``output_summary`` on the live
+    JobRun row. The Activity → Queue active-task card reads
+    these to render the X/Y progress bar + matched/unmatched
+    chips as a scan / refresh advances (slice 475).
+
+    Best-effort: a row vanishing mid-call (the operator deleted
+    the job_run somehow) or a momentary DB error is swallowed so
+    a progress write never sinks the run.
+    """
+    try:
+        async with sessionmaker() as session:
+            run = await session.get(JobRun, job_run_id)
+            if run is None:
+                return
+            if items_processed is not None:
+                run.items_processed = items_processed
+            if summary_patch is not None:
+                merged = dict(run.output_summary or {})
+                merged.update(summary_patch)
+                run.output_summary = merged
+            await session.commit()
+    except Exception:
+        # Progress write must not raise — log nothing on purpose,
+        # the next progress event will retry the column update.
+        pass
+
+
 async def fail_run(
     session: AsyncSession,
     *,

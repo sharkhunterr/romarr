@@ -73,3 +73,24 @@ async def test_dat_at_exact_30_day_boundary_is_warning() -> None:
     )
     result = await check.run()
     assert result.status is HealthStatus.WARNING
+
+
+@pytest.mark.asyncio
+async def test_naive_last_updated_is_coerced_to_utc() -> None:
+    """SQLite drops the tzinfo on DateTime(timezone=True) reads, so
+    ``last_updated_at`` arrives offset-naive. The check must coerce
+    to UTC before subtracting from ``datetime.now(UTC)``; if it
+    doesn't, every DAT check explodes with the documented ``can't
+    subtract offset-naive and offset-aware datetimes`` and the
+    Dashboard's health panel goes red on a real cluster of healthy
+    DAT files."""
+    naive_last_updated = (_NOW - timedelta(days=5)).replace(tzinfo=None)
+    assert naive_last_updated.tzinfo is None
+    check = DatFreshnessHealthCheck(
+        component_id="dat:no-intro:megadrive",
+        last_updated_at=naive_last_updated,
+        now_factory=_FixedClock,
+    )
+    result = await check.run()
+    assert result.status is HealthStatus.OK
+    assert "5d" in (result.message or "")

@@ -38,6 +38,7 @@ from romarr.api.routers.history import router as history_router
 from romarr.api.routers.language import router as language_router
 from romarr.api.routers.log import router as log_router
 from romarr.api.routers.dat_sources import router as dat_sources_router
+from romarr.api.routers.rom_packs import router as rom_packs_router
 from romarr.api.routers.rootfolder import router as rootfolder_router
 from romarr.api.routers.quality_definitions import (
     router as quality_definitions_router,
@@ -199,6 +200,7 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         from romarr.auth.setup import maybe_bootstrap_setup_token
         from romarr.platform_packs.builtin import apply_builtin_pack
         from romarr.profiles.seeders.runner import seed_defaults
+        from romarr.tasks.seeder import seed_defaults as seed_default_jobs
 
         sm = app.state.db_sessionmaker
         # Default profiles first (T055): the platform pack uses
@@ -219,6 +221,21 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                 "lifespan.seed_defaults_failed",
                 exc_info=True,
                 extra={"error": str(exc)},
+            )
+        # Slice 471 — default ``job`` rows. Without these the
+        # scheduler has no LibraryScan / RefreshGameMetadata /
+        # … rows to dispatch, and the command bus 404s on
+        # ``RescanLibrary``. Idempotent on subsequent boots.
+        try:
+            async with sm() as session:
+                inserted = await seed_default_jobs(session)
+            bootstrap_log.info(
+                "lifespan.seed_default_jobs",
+                extra={"inserted": inserted},
+            )
+        except Exception:
+            bootstrap_log.warning(
+                "lifespan.seed_default_jobs_failed", exc_info=True
             )
         # Built-in Platform Pack (T038).
         try:
@@ -336,6 +353,85 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                     extra={"error": str(exc)},
                 )
                 health_engine = None
+
+        # Slice 478 — reap stale ROM-pack ingests too. A process
+        # killed between ``status='downloading'`` and the outer
+        # try/except (e.g. a CHECK constraint crash on the queue
+        # mirror) leaves the pack stuck forever; the operator
+        # can't even hit "Reset" because the page polls a busy
+        # status. Flip everything in a non-terminal state to
+        # ``failed`` with a clear message at startup.
+        try:
+            from datetime import UTC as _UTC2, datetime as _dt2
+
+            from sqlalchemy import update as _upd2
+
+            from romarr.domain.models import RomPack as _RomPack
+
+            busy_states = (
+                "pending",
+                "downloading",
+                "extracting",
+                "importing",
+            )
+            async with app.state.db_sessionmaker() as session:
+                result = await session.execute(
+                    _upd2(_RomPack)
+                    .where(_RomPack.status.in_(busy_states))
+                    .values(
+                        status="failed",
+                        last_error="process restarted mid-ingest",
+                        last_ingest_at=_dt2.now(_UTC2),
+                    )
+                )
+                if result.rowcount:
+                    await session.commit()
+                    bootstrap_log.info(
+                        "lifespan.stale_rom_packs_reaped",
+                        extra={"count": result.rowcount},
+                    )
+        except Exception:
+            bootstrap_log.warning(
+                "lifespan.stale_rom_packs_reap_failed", exc_info=True
+            )
+
+        # Slice 474 — finalise stale ``running`` job_run rows
+        # left by a previous process that didn't shut down
+        # cleanly (kill -9, container restart mid-run). Without
+        # this they sit "running" forever and pollute the
+        # Activity active-tasks banner.
+        try:
+            from datetime import UTC as _UTC, datetime as _dt
+
+            from sqlalchemy import update as _update
+
+            from romarr.tasks.models import JobRun as _JobRun
+            from romarr.tasks.types import JobStatus as _JobStatus
+
+            async with app.state.db_sessionmaker() as session:
+                stale_now = _dt.now(_UTC)
+                result = await session.execute(
+                    _update(_JobRun)
+                    .where(_JobRun.status == _JobStatus.RUNNING.value)
+                    .values(
+                        status=_JobStatus.FAILED.value,
+                        finished_at=stale_now,
+                        error_message=(
+                            "process restarted mid-run "
+                            "(reaped at startup)"
+                        ),
+                    )
+                )
+                if result.rowcount:
+                    await session.commit()
+                    bootstrap_log.info(
+                        "lifespan.stale_job_runs_reaped",
+                        extra={"count": result.rowcount},
+                    )
+        except Exception:
+            bootstrap_log.warning(
+                "lifespan.stale_job_runs_reap_failed", exc_info=True
+            )
 
         cancellation_registry = CancellationRegistry()
         scheduler = SchedulerService(
@@ -635,6 +731,7 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     app.include_router(refresh_router)
     app.include_router(packs_router)
     app.include_router(platform_pack_platforms_router)
+    app.include_router(rom_packs_router)
     app.include_router(applications_router)
     # Grabarr wizard must mount BEFORE indexers_router so its
     # ``/api/v3/indexer/grabarr`` POST handler wins over indexers_router's

@@ -71,7 +71,43 @@
       "source": "Source",
       "client": "Client",
       "via": "Via",
-      "reason": "Motif"
+      "reason": "Motif",
+      "title": "Détail de l'événement",
+      "dateLabel": "Démarré",
+      "finishedLabel": "Terminé",
+      "durationLabel": "Durée",
+      "gameLabel": "Jeu",
+      "releaseLabel": "Release",
+      "breakdown": "Détail du score",
+      "contributionSource": "Source",
+      "contributionName": "Règle",
+      "contributionValue": "+/-",
+      "correlationLabel": "Cycle",
+      "summary": "Résumé"
+    },
+    "outputSummary": {
+      "total_items": "Total",
+      "items_total": "Total",
+      "matched": "Identifiés",
+      "unmatched": "Non identifiés",
+      "failed": "Échecs",
+      "skipped": "Ignorés",
+      "indexers_total": "Indexeurs",
+      "indexers_succeeded": "Indexeurs OK",
+      "candidates": "Candidats",
+      "grabs_to_dispatch": "Grabs à dispatcher",
+      "grabs_dispatched": "Grabs dispatchés",
+      "grabs_failed": "Grabs en échec",
+      "refreshed": "Rafraîchis"
+    },
+    "noGrabReason": {
+      "unidentified": "Titre non rattaché à un jeu de la bibliothèque",
+      "score_too_low": "Meilleur candidat sous le seuil (score ≤ 0)",
+      "auto_grab_disabled": "Auto-grab RSS désactivé sur cet indexeur",
+      "no_eligible_candidates": "Aucun candidat n'a passé le pipeline",
+      "empty_feed": "Flux indexeur vide",
+      "indexer_failed": "Échec de récupération de l'indexeur",
+      "rejected": "Rejeté par le pipeline"
     },
     "importedVia": {
       "webhook": "webhook",
@@ -113,5 +149,23 @@
       "7d": "7 derniers j",
       "30d": "30 derniers j"
     }
+  },
+  "activeTasks": {
+    "ariaLabel": "Tâches du planificateur en cours",
+    "heading": "{{count}} tâche en cours",
+    "heading_plural": "{{count}} tâches en cours",
+    "running": "en cours",
+    "cancel": "Arrêter",
+    "cancelToast": "Signal d'arrêt envoyé à “{{name}}”",
+    "cancelErrorToast": "Impossible d'annuler la tâche",
+    "itemsProcessed": "{{count}} éléments",
+    "chips": {
+      "processed": "{{processed}} / {{total}}",
+      "matched": "matché : {{count}}",
+      "unmatched": "non matché : {{count}}",
+      "skipped": "ignoré : {{count}}",
+      "remaining": "restant : {{count}}"
+    },
+    "taskKindHint": "Tâche du planificateur"
   }
 }

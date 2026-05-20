@@ -17,10 +17,10 @@
 
 import {
   Activity,
-  Home,
   Library as LibraryIcon,
   Monitor,
   Moon,
+  Package,
   Search,
   Settings as SettingsIcon,
   Star,
@@ -31,25 +31,65 @@ import { type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
 
+import { useQueue } from "@/lib/api/queries/queue";
+import { useActiveTasks } from "@/lib/api/queries/system-extras";
 import { useSearchStore } from "@/lib/store/search";
 import { useThemeStore, type Theme } from "@/lib/store/theme";
 
 import { ConnectionIndicator } from "./ConnectionIndicator";
 import { LanguageToggle } from "./LanguageToggle";
 
+/** Activity badge data shared with the mobile BottomNav.
+ *
+ * ``count`` aggregates queue rows in any state other than completed
+ * (the queue endpoint already prunes completed entries on import)
+ * AND scheduler jobs in flight (scan / metadata refresh). ``tone``
+ * goes ``warn`` (red) as soon as any queue row is in ``failed`` —
+ * the operator needs to look at those.
+ *
+ * Returns ``count=0`` while either query is loading so the badge
+ * doesn't flash on initial mount. */
+function useActivityBadge(): { count: number; tone: "info" | "warn" } {
+  const queue = useQueue({
+    pageSize: 1,
+    sortKey: "last_updated_at",
+    sortDirection: "desc",
+  });
+  const failed = useQueue({
+    pageSize: 1,
+    sortKey: "last_updated_at",
+    sortDirection: "desc",
+    state: "failed",
+  });
+  const activeTasks = useActiveTasks();
+  const runningTaskCount = (activeTasks.data ?? []).filter(
+    (j) => j.current_run_id != null,
+  ).length;
+  const count = (queue.data?.totalRecords ?? 0) + runningTaskCount;
+  const tone: "info" | "warn" =
+    (failed.data?.totalRecords ?? 0) > 0 ? "warn" : "info";
+  return { count, tone };
+}
+
 // Primary desktop navigation. On mobile the BottomNav covers
 // these; on md+ the BottomNav is hidden, so the Header carries
 // the only way to move between top-level pages.
 const DESKTOP_NAV: ReadonlyArray<{
   to: string;
-  i18nKey: "home" | "library" | "wanted" | "activity" | "settings";
+  i18nKey: "library" | "wanted" | "activity" | "romPacks" | "settings";
   Icon: LucideIcon;
   end?: boolean;
 }> = [
-  { to: "/", i18nKey: "home", Icon: Home, end: true },
+  // Dashboard intentionally omitted — the page itself is still
+  // reachable by typing /dashboard but it's not surfaced in the
+  // primary nav (the operator's workflow lives in Library /
+  // Wanted / Activity). The route also redirects ``/`` to
+  // ``/library`` (see App.tsx) so a bare logo click lands on the
+  // useful page.
   { to: "/library", i18nKey: "library", Icon: LibraryIcon },
   { to: "/wanted", i18nKey: "wanted", Icon: Star },
   { to: "/activity", i18nKey: "activity", Icon: Activity },
+  { to: "/rom-packs", i18nKey: "romPacks", Icon: Package },
   { to: "/settings", i18nKey: "settings", Icon: SettingsIcon },
 ];
 
@@ -85,6 +125,7 @@ export function Header(): ReactElement {
   const theme = useThemeStore((s) => s.theme);
   const setTheme = useThemeStore((s) => s.setTheme);
   const openSearch = useSearchStore((s) => s.openModal);
+  const activityBadge = useActivityBadge();
   const themeTitle = t("common:theme.title", {
     mode: t(`common:theme.modes.${theme}`),
   });
@@ -117,17 +158,44 @@ export function Header(): ReactElement {
           aria-label={t("common:nav.primary")}
           className="hidden items-center gap-0.5 md:flex"
         >
-          {DESKTOP_NAV.map((entry) => (
-            <NavLink
-              key={entry.to}
-              to={entry.to}
-              end={entry.end ?? false}
-              className={({ isActive }) => navLinkClass(isActive)}
-            >
-              <entry.Icon size={15} strokeWidth={2} aria-hidden="true" />
-              <span>{t(`common:nav.${entry.i18nKey}`)}</span>
-            </NavLink>
-          ))}
+          {DESKTOP_NAV.map((entry) => {
+            const isActivity = entry.i18nKey === "activity";
+            const badgeCount = isActivity ? activityBadge.count : 0;
+            return (
+              <NavLink
+                key={entry.to}
+                to={entry.to}
+                end={entry.end ?? false}
+                className={({ isActive }) =>
+                  `relative ${navLinkClass(isActive)}`
+                }
+              >
+                <entry.Icon size={15} strokeWidth={2} aria-hidden="true" />
+                <span>{t(`common:nav.${entry.i18nKey}`)}</span>
+                {/* Activity badge: same trigger as the BottomNav
+                    so the desktop chrome reflects "something is
+                    happening or stuck" the moment a queue row or
+                    a scheduler job kicks off. Goes red on any
+                    failed queue entry. */}
+                {badgeCount > 0 && (
+                  <span
+                    aria-hidden="true"
+                    className={[
+                      "ml-1 inline-flex h-4 min-w-[1rem]",
+                      "items-center justify-center rounded-full px-1",
+                      "text-[0.55rem] font-bold leading-none",
+                      "ring-1 ring-inset",
+                      activityBadge.tone === "warn"
+                        ? "bg-red-500/90 text-zinc-50 ring-red-400/40"
+                        : "bg-brand text-zinc-950 ring-brand/40",
+                    ].join(" ")}
+                  >
+                    {badgeCount > 99 ? "99+" : badgeCount}
+                  </span>
+                )}
+              </NavLink>
+            );
+          })}
         </nav>
       </div>
 

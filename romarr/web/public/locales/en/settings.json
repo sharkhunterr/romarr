@@ -17,7 +17,8 @@
     "unidentified": "Unidentified",
     "ui": "UI",
     "general": "General",
-    "logs": "Logs"
+    "logs": "Logs",
+    "rom-packs": "ROM Pack Defaults"
   },
   "logs": {
     "title": "System Logs",
@@ -302,6 +303,156 @@
       "toastCreated": "Source “{{name}}” added",
       "toastUpdated": "Source “{{name}}” updated"
     }
+  },
+  "romPacks": {
+    "title": "Content Packs",
+    "subtitle": "Downloadable archives holding many ROMs — a No-Intro full set, an archive.org romset, a curated bundle. Romarr streams, extracts and DAT-matches every ROM into your library in one pass.",
+    "loadError": "Couldn't load content packs",
+    "empty": {
+      "title": "No content packs yet",
+      "body": "Add a pack with the button above, then hit Ingest to download and import its ROMs."
+    },
+    "rowsTitle": "Registered packs",
+    "rowsHint": "Each pack is downloaded once, extracted, then every ROM is hashed and matched against the DAT cache.",
+    "addButton": "Add pack",
+    "platformAny": "Any platform",
+    "deleteConfirm": "Delete content pack “{{name}}”? Imported games stay in the library.",
+    "deletedToast": "Pack deleted",
+    "deleteErrorToast": "Couldn't delete pack",
+    "ingestStartedToast": "Ingest started for “{{name}}”",
+    "ingestErrorToast": "Couldn't start ingest",
+    "cols": {
+      "name": "Name",
+      "platform": "Platform",
+      "status": "Status",
+      "results": "Results",
+      "size": "Size",
+      "lastIngest": "Last ingest",
+      "actions": "Actions"
+    },
+    "status": {
+      "pending": "Pending",
+      "downloading": "Downloading",
+      "extracting": "Extracting",
+      "importing": "Importing",
+      "awaiting_triage": "Awaiting triage",
+      "done": "Done",
+      "failed": "Failed"
+    },
+    "results": {
+      "imported": "{{count}} imported",
+      "unmatched": "{{count}} unmatched",
+      "parked": "{{count}} parked",
+      "failed": "{{count}} failed"
+    },
+    "action": {
+      "ingest": "Ingest",
+      "reIngest": "Re-ingest",
+      "running": "Running…",
+      "edit": "Edit",
+      "delete": "Delete",
+      "triage": "Triage ({{count}})",
+      "reset": "Reset"
+    },
+    "modal": {
+      "titleAdd": "Add content pack",
+      "titleEdit": "Edit content pack",
+      "subhead": "A direct URL to a ROM archive (.zip / .7z / .rar). Romarr downloads it once, then extracts and imports every ROM inside.",
+      "nameLabel": "Name",
+      "urlLabel": "Archive URL",
+      "urlHint": "Must resolve directly to the archive file, not a download page.",
+      "platformLabel": "Platform",
+      "platformAny": "— Any (scatter by per-ROM hash) —",
+      "platformHint": "Pin a platform to scope DAT matching, or leave it open for a multi-platform archive.",
+      "maxSizeLabel": "Size cap (GiB)",
+      "maxSizeHint": "Optional. Aborts the download if the archive exceeds this. Defaults to 50 GiB.",
+      "errorTitle": "Operation failed",
+      "cancel": "Cancel",
+      "submitting": "Saving…",
+      "submitAdd": "Add",
+      "submitEdit": "Save",
+      "toastCreated": "Pack “{{name}}” added",
+      "toastUpdated": "Pack “{{name}}” updated",
+      "mode": {
+        "url": "From URL",
+        "indexer": "From indexer"
+      },
+      "searchPlaceholder": "Search indexers for a pack…",
+      "searchButton": "Search",
+      "searching": "Searching…",
+      "noResults": "No results — try a broader query.",
+      "seeders": "seeders",
+      "grabHint": "Pick a result to dispatch it to a download client. The watcher routes the finished download to pack ingest.",
+      "nameRequiredForGrab": "Give the pack a name before grabbing a result.",
+      "toastGrabbed": "Pack “{{name}}” grabbed — ingest starts when the download finishes",
+      "importModeLabel": "Import scope",
+      "importMode": {
+        "all": "Import all",
+        "dat_verified": "DAT-verified only"
+      },
+      "importModeHint": {
+        "all": "Every ROM is imported. DAT-matched files use their canonical name; non-DAT files get a metadata-provider lookup (filename + platform) and fall to manual triage if nothing confident is found.",
+        "dat_verified": "Only DAT-matched ROMs are imported. Non-DAT files are skipped — strictest setting."
+      },
+      "unknownActionLabel": "Unknown ROMs",
+      "unknownAction": {
+        "triage": "Manual triage",
+        "park": "Park as unknown",
+        "delete": "Exclude"
+      },
+      "unknownActionHint": {
+        "triage": "Leave unmatched ROMs in the pack's detail modal for per-file resolution (manual associate / park / delete).",
+        "park": "Auto-park into Settings → Unidentified. The operator can revisit them later but the pack stops surfacing them.",
+        "delete": "Drop the extracted files outright. No row, no audit trail — the operator opted out of these ROMs."
+      }
+    },
+    "triage": {
+      "title": "Triage — {{name}}",
+      "subhead": "These ROMs hit no DAT entry. Associate each with a game, park it for later, or delete the file.",
+      "loadError": "Couldn't load unmatched ROMs",
+      "allDone": {
+        "title": "Everything triaged",
+        "body": "No unmatched ROMs left in this pack — it's now marked done."
+      },
+      "remaining": "{{count}} remaining",
+      "close": "Close",
+      "searchPlaceholder": "Search games…",
+      "searching": "Searching…",
+      "noGames": "No matching games.",
+      "action": {
+        "associate": "Associate",
+        "park": "Park",
+        "delete": "Delete"
+      },
+      "deleteConfirm": "Delete the extracted file “{{file}}”?",
+      "associatedToast": "“{{file}}” imported into {{game}}",
+      "parkedToast": "“{{file}}” parked in Unidentified",
+      "deletedToast": "“{{file}}” deleted",
+      "actionErrorToast": "Triage action failed",
+      "toTriageTitle": "To triage ({{count}})",
+      "importedTitle": "Imported ({{count}})",
+      "otherTitle": "Other",
+      "viewGame": "View game",
+      "noItems": {
+        "title": "Nothing ingested yet",
+        "body": "This pack hasn't been ingested — start it from the list to see per-file outcomes here."
+      }
+    },
+    "resetConfirm": "Force-stop the stuck ingest for pack “{{name}}”? The pack flips to failed; re-ingest from there.",
+    "resetDoneToast": "Pack reset — you can act on it again.",
+    "resetErrorToast": "Couldn't reset the pack"
+  },
+  "romPackSettings": {
+    "title": "ROM Pack Defaults",
+    "subtitle": "Global defaults for the ROM-pack subsystem. The pack list, ingest and triage live on the top-level Packs page.",
+    "downloadDirLabel": "Download directory",
+    "downloadDirHint": "Where URL-sourced pack archives stream to disk and extract. Must be writable by Romarr; grab-sourced packs use the download client's path instead.",
+    "maxSizeLabel": "Default size cap (GiB)",
+    "maxSizeHint": "Inherited by new packs that don't set their own cap. Leave empty for the built-in 50 GiB fallback.",
+    "save": "Save",
+    "saving": "Saving…",
+    "savedToast": "ROM-pack defaults saved",
+    "saveErrorToast": "Couldn't save defaults"
   },
   "qualityDefinitions": {
     "title": "Quality Definitions",
@@ -599,7 +750,9 @@
         "flagsLabel": "Flags",
         "flags": {
           "requireDat": "Require DAT-verified dumps",
-          "allowArchive": "Allow archive double-compression"
+          "allowArchive": "Allow archive double-compression",
+          "autoGrabMinScore": "Auto-grab minimum score",
+          "autoGrabMinScoreHint": "Only the RSS sync and on-add auto-grab paths honour this floor — manual grabs ignore it. 0 = grab anything with a positive pipeline score."
         },
         "errors": {
           "name": "Pick a profile name first.",

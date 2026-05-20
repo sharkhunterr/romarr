@@ -789,6 +789,27 @@ async def run_import(
                         )
                     except Exception:
                         pass
+                # LIFECYCLE: delete_after_import. The library schema
+                # ships the flag (slice 009), the API accepts it,
+                # but no code ever consulted it — the source on
+                # disk was leaking forever even after a clean
+                # import (one of our installs accumulated 9.5 GB
+                # of orphan Minerva downloads). Wire it here so
+                # the operator's "copy to library, then nuke the
+                # source" intent actually fires. Covers both:
+                #   * The original download (context.source_path)
+                #   * The companion ``<file>.extracted/`` dir that
+                #     the importer drops next to an archive while
+                #     unpacking — same parent, ``.extracted``
+                #     suffix on the stem.
+                try:
+                    await _maybe_delete_source_post_import(
+                        session=session,
+                        release_id=release_id,
+                        original_source=context.source_path,
+                    )
+                except Exception:
+                    pass
                 return outcome
 
     # Step 2b — park. The rejection reason picks the best signal
@@ -1402,6 +1423,77 @@ async def _maybe_delete_archive(
             archive_path.unlink()
         except OSError:
             return
+
+
+async def _maybe_delete_source_post_import(
+    *,
+    session: AsyncSession,
+    release_id: int,
+    original_source: "Path",
+) -> None:
+    """Honour the Library's ``delete_after_import`` flag.
+
+    When the flag is True, remove the originating download from
+    disk after a successful import — the bytes already live in the
+    library destination (hardlink / copy), so the source is pure
+    waste. Also nukes the side-by-side ``<file>.extracted/`` tempdir
+    when an archive was unpacked in-place (the importer drops that
+    next to the archive while unpacking).
+
+    Skipped silently when:
+      * The Release isn't bound to a Library.
+      * ``delete_after_import`` is False (today's default → preserves
+        spec 005's hardlink_and_seed contract).
+      * The source path lives inside the library destination itself
+        (would otherwise delete the imported file).
+
+    Best-effort — caller wraps in try/except; an OSError must not
+    invalidate the committed import.
+    """
+    import shutil as _shutil
+    from pathlib import Path
+
+    from romarr.libraries.models import Library
+
+    release = await session.get(Release, release_id)
+    if release is None or release.library_id is None:
+        return
+    library = await session.get(Library, release.library_id)
+    if library is None or not library.delete_after_import:
+        return
+
+    # Refuse to delete anything sitting inside the library — that
+    # would mean we'd just hardlinked / moved the file there and the
+    # source IS the library copy. Common after a ``move_and_remove``
+    # cycle where the source is already gone.
+    try:
+        lib_path = Path(library.path).resolve()
+        src_path = original_source.resolve()
+        if src_path == lib_path or lib_path in src_path.parents:
+            return
+    except OSError:
+        return
+
+    if original_source.exists():
+        try:
+            if original_source.is_dir():
+                _shutil.rmtree(original_source, ignore_errors=True)
+            else:
+                original_source.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    # Companion ``<file>.extracted/`` dir — Grabarr / the importer
+    # drops a sibling directory next to a downloaded archive while
+    # unpacking. Same parent, same stem, ``.extracted`` suffix.
+    extracted_sibling = original_source.parent / (
+        original_source.name + ".extracted"
+    )
+    if extracted_sibling.exists() and extracted_sibling.is_dir():
+        try:
+            _shutil.rmtree(extracted_sibling, ignore_errors=True)
+        except OSError:
+            pass
 
 
 async def _tag_downloaded_imported(

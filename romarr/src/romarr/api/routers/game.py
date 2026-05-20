@@ -30,7 +30,9 @@ spec 010.
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
+from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
@@ -61,14 +63,21 @@ class GameToggleRequest(BaseModel):
     """PATCH /api/v3/game/{id} — operator-toggle subset.
 
     Only fields that are NOT owned by the metadata aggregator
-    are mutable here. Today: just ``monitored``. Adding more
-    operator-toggleable bits is straightforward — they go in
-    this schema.
+    are mutable here. Today: ``monitored`` (always required) +
+    ``library_id`` (optional — present when the operator picks
+    a different library / profile cascade for the game).
+    Adding more operator-toggleable bits is straightforward —
+    they go in this schema.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     monitored: bool
+    # Game ↔ Library binding. Setting this to ``None`` clears the
+    # binding (the importer falls back to platform routing); an
+    # integer rebinds the game so the auto-grab paths read the
+    # new library's quality profile floor on the next round.
+    library_id: int | None = None
 
 
 class FieldLockRequest(BaseModel):
@@ -138,10 +147,14 @@ class BulkMonitorResponse(BaseModel):
 class BulkDeleteRequest(BaseModel):
     """POST /api/v3/game/bulk-delete — destroy a batch of Games.
 
-    Per the constitution Romarr never auto-deletes ROM files on
-    disk; this surface only removes the database row (and its
-    Releases / Dumps via cascade). Operators choose whether on-
-    disk cleanup happens via the per-library lifecycle policy.
+    By default this surface only removes the database rows (and
+    their Releases / Dumps via cascade); ROM files on disk stay
+    put per the per-library lifecycle policy.
+
+    When ``deleteFiles`` is true the cascade is extended to the
+    on-disk ROMs — each Dump's ``path`` is unlinked best-effort
+    before the row is dropped. The operator opts into this from
+    the destructive-action modal.
 
     Capped at 500 ids per call so an accidental "select all"
     can't run away. The UI shards larger selections client-side
@@ -155,6 +168,7 @@ class BulkDeleteRequest(BaseModel):
         list[int],
         Field(alias="gameIds", min_length=1, max_length=500),
     ]
+    delete_files: Annotated[bool, Field(alias="deleteFiles")] = False
 
 
 class BulkDeleteResponse(BaseModel):
@@ -238,6 +252,8 @@ class FieldEditRequest(BaseModel):
 
 
 router = APIRouter(prefix="/api/v3/game", tags=["Game"])
+
+_log = logging.getLogger(__name__)
 
 
 @router.get(
@@ -338,7 +354,7 @@ async def list_games(
         SortDirection,
         Query(description="Sort direction (asc default)."),
     ] = "asc",
-    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+    limit: Annotated[int, Query(ge=1, le=5000)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[GameRead]:
     column = _SORT_KEYS[sort]
@@ -556,7 +572,10 @@ async def bulk_monitor(
 
 
 async def _delete_games_and_sweep(
-    db: AsyncSession, *, game_rows: list[Game]
+    db: AsyncSession,
+    *,
+    game_rows: list[Game],
+    delete_files: bool = False,
 ) -> None:
     """Delete the given Games + sweep ``tag_assignment`` for
     them and their cascaded Releases.
@@ -565,6 +584,11 @@ async def _delete_games_and_sweep(
     single-item endpoint so both stay in lockstep with the
     polymorphic-table cleanup discipline (slice 165). The
     caller must commit the session.
+
+    When ``delete_files`` is true, each cascaded :class:`Dump`'s
+    ``path`` is unlinked from disk before the rows are dropped —
+    a best-effort sweep that swallows missing-file / permission
+    errors so a half-cleaned disk doesn't poison the DB delete.
     """
     if not game_rows:
         return
@@ -574,6 +598,25 @@ async def _delete_games_and_sweep(
             select(Release.id).where(Release.game_id.in_(found))
         )
     ).scalars().all()
+    if delete_files and cascaded_release_ids:
+        # Walk Dump → Release and unlink each ROM file before the
+        # CASCADE drops the rows. Best-effort: a single missing
+        # or locked file is logged and skipped so the rest of the
+        # batch still cleans up.
+        dump_paths = (
+            await db.execute(
+                select(Dump.path).where(
+                    Dump.release_id.in_(cascaded_release_ids)
+                )
+            )
+        ).scalars().all()
+        for raw in dump_paths:
+            if not raw:
+                continue
+            try:
+                Path(raw).unlink(missing_ok=True)
+            except OSError:
+                _log.warning("bulk_delete.unlink_failed path=%s", raw)
     await db.execute(
         delete(TagAssignment).where(
             and_(
@@ -625,7 +668,9 @@ async def bulk_delete(
     )
     found = {row.id for row in rows}
     missing = sorted(set(body.game_ids) - found)
-    await _delete_games_and_sweep(db, game_rows=list(rows))
+    await _delete_games_and_sweep(
+        db, game_rows=list(rows), delete_files=body.delete_files
+    )
     await db.commit()
     return BulkDeleteResponse(deleted=len(rows), missing=missing)
 
@@ -1051,6 +1096,13 @@ async def patch_game(
             },
         )
     row.monitored = body.monitored
+    # ``library_id`` is optional in the PATCH payload; preserve the
+    # existing binding when the client doesn't send it (the field
+    # defaults to None on the schema, so we distinguish "not sent"
+    # from "explicit unbind" by looking at the original payload
+    # dict via model_fields_set).
+    if "library_id" in body.model_fields_set:
+        row.library_id = body.library_id
     await db.commit()
     await db.refresh(row)
     return GameRead.model_validate(row, from_attributes=True)

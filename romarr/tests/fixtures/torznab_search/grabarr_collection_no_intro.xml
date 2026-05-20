@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:torznab="http://torznab.com/schemas/2015/feed">
+  <channel>
+    <title>Test Search — Grabarr collection attr</title>
+    <item>
+      <title>[MiNERVA Archive] [No-Intro] [Nintendo - Game Boy Advance] [Europe] [EN] Batman - Vengeance [ZIP]</title>
+      <guid isPermaLink="false">guid-collection-no-intro</guid>
+      <link>https://grabarr.test/download/abc.torrent</link>
+      <pubDate>Sun, 01 Jun 2025 12:00:00 +0000</pubDate>
+      <category>1070</category>
+      <enclosure url="https://grabarr.test/download/abc.torrent" length="4194304" type="application/x-bittorrent"/>
+      <torznab:attr name="platform" value="Nintendo - Game Boy Advance"/>
+      <torznab:attr name="region" value="Europe"/>
+      <torznab:attr name="collection" value="No-Intro"/>
+      <torznab:attr name="source" value="MiNERVA Archive"/>
+    </item>
+    <item>
+      <title>[MiNERVA Archive] [TOSEC-ISO] [Nintendo] [GameCube] [Games] Batman - Vengeance [ZIP]</title>
+      <guid isPermaLink="false">guid-collection-tosec-iso</guid>
+      <link>https://grabarr.test/download/def.torrent</link>
+      <pubDate>Sun, 01 Jun 2025 12:00:00 +0000</pubDate>
+      <category>1070</category>
+      <enclosure url="https://grabarr.test/download/def.torrent" length="734003200" type="application/x-bittorrent"/>
+      <torznab:attr name="platform" value="GameCube"/>
+      <torznab:attr name="collection" value="TOSEC-ISO"/>
+      <torznab:attr name="source" value="MiNERVA Archive"/>
+    </item>
+    <item>
+      <title>[MiNERVA Archive] [RetroAchievements] [RA - Sony Playstation 2] Batman - Vengeance [CHD]</title>
+      <guid isPermaLink="false">guid-collection-ra</guid>
+      <link>https://grabarr.test/download/ghi.torrent</link>
+      <pubDate>Sun, 01 Jun 2025 12:00:00 +0000</pubDate>
+      <category>1070</category>
+      <enclosure url="https://grabarr.test/download/ghi.torrent" length="734003200" type="application/x-bittorrent"/>
+      <torznab:attr name="platform" value="RA - Sony Playstation 2"/>
+      <torznab:attr name="collection" value="RetroAchievements"/>
+      <torznab:attr name="source" value="MiNERVA Archive"/>
+    </item>
+    <item>
+      <title>Sonic Pre-Tagged Naming Convention</title>
+      <guid isPermaLink="false">guid-precedence-wins</guid>
+      <link>https://grabarr.test/download/jkl.torrent</link>
+      <pubDate>Sun, 01 Jun 2025 12:00:00 +0000</pubDate>
+      <category>1070</category>
+      <enclosure url="https://grabarr.test/download/jkl.torrent" length="1024" type="application/x-bittorrent"/>
+      <torznab:attr name="naming_convention" value="redump"/>
+      <torznab:attr name="collection" value="No-Intro"/>
+    </item>
+  </channel>
+</rss>

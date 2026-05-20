@@ -197,6 +197,18 @@ class SearchRoundReport(_Base):
     history view can show the full picture, plus the subset that
     won and were dispatched. ``overcap_indexers`` lists indexers
     whose responses exceeded FR-029's hard cap and were truncated.
+
+    ``profile_expected_conventions`` snapshots every
+    ``naming_convention`` value the active library's custom-format
+    set explicitly rewards (the ``no-intro-convention`` /
+    ``redump-convention`` / … CFs). The UI uses it to color the
+    convention chip:
+      - candidate's convention IS in the list → green
+      - the list is non-empty and candidate's convention is NOT in
+        it (or unknown) → red (the profile cares but this release
+        doesn't satisfy any of the expected authorities)
+      - the list is empty → grey (profile is indifferent to the
+        naming convention)
     """
 
     correlation_id: UUID
@@ -208,6 +220,7 @@ class SearchRoundReport(_Base):
     grabs: list[Candidate] = Field(default_factory=list)
     indexer_outcomes: dict[int, _IndexerOutcome] = Field(default_factory=dict)
     overcap_indexers: list[int] = Field(default_factory=list)
+    profile_expected_conventions: list[str] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------

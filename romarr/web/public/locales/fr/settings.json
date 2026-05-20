@@ -17,7 +17,8 @@
     "unidentified": "Non identifiés",
     "ui": "Interface",
     "general": "Général",
-    "logs": "Logs"
+    "logs": "Logs",
+    "rom-packs": "Réglages des packs"
   },
   "logs": {
     "title": "Logs système",
@@ -298,6 +299,156 @@
       "toastCreated": "Source « {{name}} » ajoutée",
       "toastUpdated": "Source « {{name}} » mise à jour"
     }
+  },
+  "romPacks": {
+    "title": "Packs de ROMs",
+    "subtitle": "Archives téléchargeables contenant de nombreuses ROMs — un set complet No-Intro, un romset archive.org, un lot organisé. Romarr télécharge, extrait et identifie chaque ROM via les DAT en une seule passe.",
+    "loadError": "Impossible de charger les packs",
+    "empty": {
+      "title": "Aucun pack pour l'instant",
+      "body": "Ajoutez un pack avec le bouton ci-dessus, puis lancez l'ingestion pour télécharger et importer ses ROMs."
+    },
+    "rowsTitle": "Packs enregistrés",
+    "rowsHint": "Chaque pack est téléchargé une fois, extrait, puis chaque ROM est hachée et comparée au cache DAT.",
+    "addButton": "Ajouter un pack",
+    "platformAny": "Toutes plateformes",
+    "deleteConfirm": "Supprimer le pack “{{name}}” ? Les jeux importés restent dans la bibliothèque.",
+    "deletedToast": "Pack supprimé",
+    "deleteErrorToast": "Impossible de supprimer le pack",
+    "ingestStartedToast": "Ingestion lancée pour “{{name}}”",
+    "ingestErrorToast": "Impossible de lancer l'ingestion",
+    "cols": {
+      "name": "Nom",
+      "platform": "Plateforme",
+      "status": "Statut",
+      "results": "Résultats",
+      "size": "Taille",
+      "lastIngest": "Dernière ingestion",
+      "actions": "Actions"
+    },
+    "status": {
+      "pending": "En attente",
+      "downloading": "Téléchargement",
+      "extracting": "Extraction",
+      "importing": "Import",
+      "awaiting_triage": "Triage requis",
+      "done": "Terminé",
+      "failed": "Échec"
+    },
+    "results": {
+      "imported": "{{count}} importées",
+      "unmatched": "{{count}} non identifiées",
+      "parked": "{{count}} en attente",
+      "failed": "{{count}} en échec"
+    },
+    "action": {
+      "ingest": "Ingérer",
+      "reIngest": "Ré-ingérer",
+      "running": "En cours…",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "triage": "Triage ({{count}})",
+      "reset": "Réinitialiser"
+    },
+    "modal": {
+      "titleAdd": "Ajouter un pack de ROMs",
+      "titleEdit": "Modifier le pack de ROMs",
+      "subhead": "Une URL directe vers une archive de ROMs (.zip / .7z / .rar). Romarr la télécharge une fois, puis extrait et importe chaque ROM.",
+      "nameLabel": "Nom",
+      "urlLabel": "URL de l'archive",
+      "urlHint": "Doit pointer directement vers le fichier archive, pas vers une page de téléchargement.",
+      "platformLabel": "Plateforme",
+      "platformAny": "— Toutes (réparties par hash de ROM) —",
+      "platformHint": "Fixez une plateforme pour cadrer l'identification DAT, ou laissez ouvert pour une archive multi-plateformes.",
+      "maxSizeLabel": "Limite de taille (Gio)",
+      "maxSizeHint": "Optionnel. Annule le téléchargement si l'archive dépasse cette taille. Par défaut 50 Gio.",
+      "errorTitle": "Échec de l'opération",
+      "cancel": "Annuler",
+      "submitting": "Enregistrement…",
+      "submitAdd": "Ajouter",
+      "submitEdit": "Enregistrer",
+      "toastCreated": "Pack “{{name}}” ajouté",
+      "toastUpdated": "Pack “{{name}}” mis à jour",
+      "mode": {
+        "url": "Depuis une URL",
+        "indexer": "Depuis un indexeur"
+      },
+      "searchPlaceholder": "Chercher un pack sur les indexeurs…",
+      "searchButton": "Chercher",
+      "searching": "Recherche…",
+      "noResults": "Aucun résultat — élargissez la requête.",
+      "seeders": "seeders",
+      "grabHint": "Choisissez un résultat pour l'envoyer à un client de téléchargement. Le watcher route le téléchargement terminé vers l'ingestion du pack.",
+      "nameRequiredForGrab": "Donnez un nom au pack avant de récupérer un résultat.",
+      "toastGrabbed": "Pack “{{name}}” récupéré — l'ingestion démarre à la fin du téléchargement",
+      "importModeLabel": "Périmètre d'import",
+      "importMode": {
+        "all": "Importer tous",
+        "dat_verified": "DAT-vérifiés uniquement"
+      },
+      "importModeHint": {
+        "all": "Toutes les ROMs sont importées. Les fichiers DAT-matchés gardent leur nom canonique ; les autres passent par une recherche metadata (nom de fichier + plateforme) puis tombent en triage manuel si rien de fiable n'est trouvé.",
+        "dat_verified": "Seules les ROMs DAT-matchées sont importées. Les autres sont ignorées — le mode le plus strict."
+      },
+      "unknownActionLabel": "ROMs non identifiées",
+      "unknownAction": {
+        "triage": "Triage manuel",
+        "park": "Mettre en non identifiées",
+        "delete": "Exclure"
+      },
+      "unknownActionHint": {
+        "triage": "Garde les ROMs non identifiées dans le modal de détail du pack pour résolution fichier par fichier (associer manuellement / mettre de côté / supprimer).",
+        "park": "Met automatiquement dans Settings → Non identifiés. L'opérateur peut y revenir plus tard mais le pack ne les surface plus.",
+        "delete": "Supprime les fichiers extraits sans laisser de trace. Aucune ligne, aucun audit — l'opérateur abandonne ces ROMs."
+      }
+    },
+    "triage": {
+      "title": "Triage — {{name}}",
+      "subhead": "Ces ROMs n'ont correspondu à aucune entrée DAT. Associez chacune à un jeu, mettez-la de côté, ou supprimez le fichier.",
+      "loadError": "Impossible de charger les ROMs non identifiées",
+      "allDone": {
+        "title": "Tout est trié",
+        "body": "Plus aucune ROM non identifiée dans ce pack — il est maintenant marqué terminé."
+      },
+      "remaining": "{{count}} restantes",
+      "close": "Fermer",
+      "searchPlaceholder": "Rechercher un jeu…",
+      "searching": "Recherche…",
+      "noGames": "Aucun jeu correspondant.",
+      "action": {
+        "associate": "Associer",
+        "park": "Mettre de côté",
+        "delete": "Supprimer"
+      },
+      "deleteConfirm": "Supprimer le fichier extrait “{{file}}” ?",
+      "associatedToast": "“{{file}}” importée dans {{game}}",
+      "parkedToast": "“{{file}}” mise de côté dans Non identifiés",
+      "deletedToast": "“{{file}}” supprimée",
+      "actionErrorToast": "Échec de l'action de triage",
+      "toTriageTitle": "À trier ({{count}})",
+      "importedTitle": "Importées ({{count}})",
+      "otherTitle": "Autres",
+      "viewGame": "Voir le jeu",
+      "noItems": {
+        "title": "Rien d'ingéré pour l'instant",
+        "body": "Ce pack n'a pas encore été ingéré — lancez-le depuis la liste pour voir le détail par fichier ici."
+      }
+    },
+    "resetConfirm": "Forcer l'arrêt de l'ingestion bloquée du pack “{{name}}” ? Le pack passe en échec ; relance l'ingestion ensuite.",
+    "resetDoneToast": "Pack réinitialisé — tu peux agir dessus à nouveau.",
+    "resetErrorToast": "Impossible de réinitialiser le pack"
+  },
+  "romPackSettings": {
+    "title": "Réglages des packs de ROMs",
+    "subtitle": "Réglages globaux du sous-système de packs de ROMs. La liste des packs, l'ingestion et le triage sont sur la page Packs du menu principal.",
+    "downloadDirLabel": "Dossier de téléchargement",
+    "downloadDirHint": "Où les archives de packs depuis URL sont téléchargées et extraites. Doit être accessible en écriture par Romarr ; les packs via grab utilisent le chemin du client de téléchargement.",
+    "maxSizeLabel": "Limite de taille par défaut (Gio)",
+    "maxSizeHint": "Héritée par les nouveaux packs qui ne définissent pas leur propre limite. Laisser vide pour le repli intégré de 50 Gio.",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "savedToast": "Réglages des packs enregistrés",
+    "saveErrorToast": "Impossible d'enregistrer les réglages"
   },
   "qualityDefinitions": {
     "title": "Définitions de qualité",
@@ -595,7 +746,9 @@
         "flagsLabel": "Drapeaux",
         "flags": {
           "requireDat": "Exiger des dumps DAT-vérifiés",
-          "allowArchive": "Autoriser la double compression d'archive"
+          "allowArchive": "Autoriser la double compression d'archive",
+          "autoGrabMinScore": "Score mini pour auto-grab",
+          "autoGrabMinScoreHint": "Ne s'applique qu'aux auto-grabs (Sync RSS + à l'ajout d'un jeu) — les grabs manuels l'ignorent. 0 = on grab tout candidat avec un score positif."
         },
         "errors": {
           "name": "Choisissez d'abord un nom de profil.",

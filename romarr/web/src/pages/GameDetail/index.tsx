@@ -154,7 +154,9 @@ export function GameDetailPage(): ReactElement {
           )}
           {tab === "history" && <HistoryTab gameId={gameId} />}
           {tab === "files" && <FilesTab gameId={gameId} />}
-          {tab === "metadata" && <MetadataTab gameId={gameId} />}
+          {tab === "metadata" && (
+            <MetadataTab gameId={gameId} gameTitle={game.data.title} />
+          )}
           {tab === "notes" && <NotesTab game={game.data} />}
 
           {deleteOpen && (

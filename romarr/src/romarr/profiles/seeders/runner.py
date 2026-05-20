@@ -78,6 +78,7 @@ def _quality_payload(create: QualityProfileCreate) -> dict[str, Any]:
         "require_dat_verified": create.require_dat_verified,
         "allow_archive_double_compression": create.allow_archive_double_compression,
         "upgrade_until_format": create.upgrade_until_format,
+        "auto_grab_min_score": create.auto_grab_min_score,
     }
 
 

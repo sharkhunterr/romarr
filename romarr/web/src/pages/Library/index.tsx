@@ -35,6 +35,7 @@ import {
 } from "@/lib/api/queries/games";
 import { useLibraries } from "@/lib/api/queries/libraries";
 import { usePlatforms } from "@/lib/api/queries/platforms";
+import { useTriggerCommand } from "@/lib/api/queries/system";
 import { useTags } from "@/lib/api/queries/tags";
 import { useToastStore } from "@/lib/store/toast";
 
@@ -259,7 +260,10 @@ export function LibraryPage(): ReactElement {
 
   const params: ListGamesParams = useMemo(() => {
     const out: ListGamesParams = {
-      limit: 200,
+      // Bumped from 200 (slice 470). VirtualGrid virtualises
+      // above 1500 so a multi-thousand catalogue still scrolls
+      // smoothly; the previous cap silently dropped rows.
+      limit: 5000,
       sort: sortKey,
       direction: sortDirection,
     };
@@ -343,6 +347,88 @@ export function LibraryPage(): ReactElement {
   // -- Bulk select state (slices 151, 153) ----------------------------------
   const pushToast = useToastStore((s) => s.push);
   const bulkMonitor = useBulkMonitorGames();
+  // Slice 470 — Library-wide scan + metadata refresh button.
+  // ``RescanLibrary`` (sonarr-aliased) walks every enabled
+  // library, hashes new files, DAT-matches them and creates
+  // the corresponding Games via the importer; the chained
+  // ``RefreshGameMetadata`` then pushes a metadata-aggregator
+  // pass over every game so cover / summary / release date /
+  // genres land in the same operator gesture.
+  const scan = useTriggerCommand();
+  const refreshMetadata = useTriggerCommand();
+  // On-demand jobs that live next to Scan in the Library header.
+  // RSS = passive (poll indexer's recent feed); MissingSearch =
+  // active (per-wanted-release query). useTriggerCommand
+  // invalidates HISTORY_KEY on success so the Activity page picks
+  // up the new run without a manual refresh.
+  const syncRss = useTriggerCommand();
+  const searchMissing = useTriggerCommand();
+
+  function onScan(): void {
+    scan.mutate(
+      { name: "RescanLibrary" },
+      {
+        onSuccess: () => {
+          pushToast({ kind: "success", title: t("scan.startedToast") });
+          // Fire the metadata sweep right after — they run in
+          // sequence on the scheduler so the order is honoured.
+          refreshMetadata.mutate(
+            { name: "RefreshGameMetadata" },
+            {
+              onError: (err) =>
+                pushToast({
+                  kind: "error",
+                  title: t("scan.refreshErrorToast"),
+                  description: err.message,
+                }),
+            },
+          );
+        },
+        onError: (err) =>
+          pushToast({
+            kind: "error",
+            title: t("scan.errorToast"),
+            description: err.message,
+          }),
+      },
+    );
+  }
+
+  function onSyncRss(): void {
+    syncRss.mutate(
+      { name: "RssSync" },
+      {
+        onSuccess: () =>
+          pushToast({ kind: "success", title: t("rssSync.startedToast") }),
+        onError: (err) =>
+          pushToast({
+            kind: "error",
+            title: t("rssSync.errorToast"),
+            description: err.message,
+          }),
+      },
+    );
+  }
+
+  function onSearchMissing(): void {
+    searchMissing.mutate(
+      { name: "MissingSearch" },
+      {
+        onSuccess: () =>
+          pushToast({
+            kind: "success",
+            title: t("searchMissing.startedToast"),
+          }),
+        onError: (err) =>
+          pushToast({
+            kind: "error",
+            title: t("searchMissing.errorToast"),
+            description: err.message,
+          }),
+      },
+    );
+  }
+
   const [selectionActive, setSelectionActive] = useState(false);
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<number>>(
     () => new Set<number>(),
@@ -409,11 +495,61 @@ export function LibraryPage(): ReactElement {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-8">
       <header className="mb-6 space-y-3">
-        <div>
-          <h1 className="font-mono text-xl font-semibold text-brand">
-            {t("title")}
-          </h1>
-          <p className="mt-1 text-sm text-zinc-400">{t("subtitle")}</p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="font-mono text-xl font-semibold text-brand">
+              {t("title")}
+            </h1>
+            <p className="mt-1 text-sm text-zinc-400">{t("subtitle")}</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={onSearchMissing}
+              disabled={searchMissing.isPending}
+              title={t("searchMissing.title")}
+              className={[
+                "rounded-md border border-brand/40 bg-brand/10 px-3 py-1.5 text-xs font-medium",
+                "text-brand hover:bg-brand/20",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                "disabled:cursor-not-allowed disabled:opacity-60",
+              ].join(" ")}
+            >
+              {searchMissing.isPending
+                ? t("searchMissing.pending")
+                : t("searchMissing.label")}
+            </button>
+            <button
+              type="button"
+              onClick={onSyncRss}
+              disabled={syncRss.isPending}
+              title={t("rssSync.title")}
+              className={[
+                "rounded-md border border-zinc-700 bg-zinc-900/40 px-3 py-1.5 text-xs font-medium",
+                "text-zinc-300 hover:bg-zinc-800",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                "disabled:cursor-not-allowed disabled:opacity-60",
+              ].join(" ")}
+            >
+              {syncRss.isPending ? t("rssSync.pending") : t("rssSync.label")}
+            </button>
+            <button
+              type="button"
+              onClick={onScan}
+              disabled={scan.isPending || refreshMetadata.isPending}
+              title={t("scan.title")}
+              className={[
+                "rounded-md bg-brand px-3 py-1.5 text-xs font-medium",
+                "text-zinc-900 hover:bg-brand-300",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                "disabled:cursor-not-allowed disabled:opacity-60",
+              ].join(" ")}
+            >
+              {scan.isPending || refreshMetadata.isPending
+                ? t("scan.running")
+                : t("scan.label")}
+            </button>
+          </div>
         </div>
 
         {/* Always-visible row: search box + "Filtres" toggle +

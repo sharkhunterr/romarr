@@ -1232,6 +1232,65 @@ async def test_bulk_delete_removes_games_and_cascades(
 
 
 @pytest.mark.asyncio
+async def test_bulk_delete_with_files_unlinks_dump_paths(
+    authed_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+    tmp_path,
+) -> None:
+    """Slice 480 regression — ``deleteFiles=true`` MUST actually
+    unlink every cascaded Dump's on-disk file, not just drop the
+    DB rows. Operator complained that "supprimer aussi les ROMs"
+    left 478 files on disk; this test pins the contract."""
+    _, game_id, releases = await _seed_chain(
+        api_engine, title="Cascade Delete Test", release_count=2
+    )
+    file_a = tmp_path / "rom-a.zip"
+    file_a.write_bytes(b"x" * 100)
+    file_b = tmp_path / "rom-b.zip"
+    file_b.write_bytes(b"y" * 100)
+    await _seed_dump_for_release(
+        api_engine, release_id=releases[0], path=str(file_a), sha1="a" * 40
+    )
+    await _seed_dump_for_release(
+        api_engine, release_id=releases[1], path=str(file_b), sha1="b" * 40
+    )
+    assert file_a.exists() and file_b.exists()
+
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-delete",
+        json={"gameIds": [game_id], "deleteFiles": True},
+    )
+    assert resp.status_code == 200, resp.text
+    assert not file_a.exists(), "Dump.path must be unlinked"
+    assert not file_b.exists(), "every cascaded Dump.path must be unlinked"
+
+
+@pytest.mark.asyncio
+async def test_bulk_delete_without_files_keeps_dump_paths(
+    authed_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+    tmp_path,
+) -> None:
+    """And the default path — ``deleteFiles=false`` (or omitted)
+    leaves the files on disk."""
+    _, game_id, releases = await _seed_chain(
+        api_engine, title="Keep Files", release_count=1
+    )
+    file_path = tmp_path / "keep.zip"
+    file_path.write_bytes(b"keep me")
+    await _seed_dump_for_release(
+        api_engine, release_id=releases[0], path=str(file_path), sha1="c" * 40
+    )
+
+    resp = await authed_client.post(
+        "/api/v3/game/bulk-delete",
+        json={"gameIds": [game_id]},
+    )
+    assert resp.status_code == 200
+    assert file_path.exists()
+
+
+@pytest.mark.asyncio
 async def test_bulk_delete_reports_missing_ids(
     authed_client: httpx.AsyncClient, api_engine: AsyncEngine
 ) -> None:

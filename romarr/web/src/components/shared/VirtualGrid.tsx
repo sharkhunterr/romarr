@@ -57,7 +57,13 @@ export function VirtualGrid<T>(props: VirtualGridProps<T>): ReactElement {
     renderItem,
     itemKey,
     estimatedRowHeight = 240,
-    virtualizeThreshold = 200,
+    // Threshold bumped from 200 to 1500 (slice 469). The
+    // virtualised path uses a fixed-height inner-scroll
+    // container — "looks buggy" relative to the page-scroll
+    // flow of the unvirtualised grid for medium libraries. The
+    // 10k-card performance target (SC-002) still kicks in for
+    // operators with massive libraries.
+    virtualizeThreshold = 1500,
     ariaLabel,
   } = props;
 

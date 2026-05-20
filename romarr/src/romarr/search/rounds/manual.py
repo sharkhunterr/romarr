@@ -16,13 +16,12 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
-from sqlalchemy import or_, select
+from sqlalchemy import select
 
-from romarr.domain.enums import DumpStatus
-from romarr.domain.models import DatEntry, Dump, Platform, Release
+from romarr.domain.models import Platform
 from romarr.indexers.errors import (
     IndexerAuthError,
     IndexerProtocolError,
@@ -36,6 +35,12 @@ from romarr.search.preload import (
     preload_default_profiles,
     preload_indexers,
     preload_library_state,
+)
+from romarr.search.rounds._shared import (
+    build_db_dat_lookup as _build_db_dat_lookup,
+    build_owned_lookup as _build_owned_lookup,
+    none_dat as _none_dat,
+    none_owned as _none_owned,
 )
 from romarr.search.types import (
     Candidate,
@@ -54,165 +59,95 @@ _RESULT_HARD_CAP = 200
 """FR-029 hard cap per (indexer, query)."""
 
 
-from romarr.search.state import DatMatchInfo, _NONE_DAT_INFO
+def _manual_history_entries(
+    *,
+    indexer_id: int,
+    indexer_candidates: list[Candidate],
+    outcome: str,
+) -> list[dict[str, object]]:
+    """Bin one indexer's manual-search candidates into per-game
+    ``search_history`` rows.
 
-
-def _none_dat(_a: str | None, _b: str | None) -> DatMatchInfo:
-    """Fallback DAT lookup — used when no platform scope is given
-    (so we can't safely query ``dat_entry`` without risking
-    cross-platform hash collisions) or when no candidate ships a
-    usable hash. Returns the singleton "no match" info.
+    Mirrors the RSS round's ``_build_history_entries`` but without
+    the auto-grab vocabulary (manual search never dispatches —
+    the operator picks). Each identified game gets one row with
+    the best candidate's score / breakdown / release id so the
+    GameDetail → History tab can show every search that ran for
+    that game. Candidates the pipeline couldn't bind to a library
+    game collapse into a single ``game_id=None`` row.
     """
-    return _NONE_DAT_INFO
+    if outcome != "ok":
+        return [
+            {
+                "indexer_id": indexer_id,
+                "results_count": 0,
+                "no_grab_reason": "indexer_failed",
+            }
+        ]
+    if not indexer_candidates:
+        return [
+            {
+                "indexer_id": indexer_id,
+                "results_count": 0,
+                "no_grab_reason": "no_results",
+            }
+        ]
 
+    by_game: dict[int | None, list[Candidate]] = {}
+    for c in indexer_candidates:
+        by_game.setdefault(c.matched_game_id, []).append(c)
 
-def _none_owned(
-    _game: int | None, _sha1: str | None, _md5: str | None, _crc: str | None
-) -> bool:
-    return False
-
-
-def _status_to_outcome(status: str) -> Literal["verified", "hack", "none"]:
-    if status == DumpStatus.VERIFIED.value:
-        return "verified"
-    if status in (
-        DumpStatus.HACK.value,
-        DumpStatus.BADDUMP.value,
-    ):
-        return "hack"
-    return "none"
-
-
-async def _build_db_dat_lookup(
-    session: AsyncSession,
-    platform_id: int,
-    hashes_sha1: set[str],
-    hashes_crc32: set[str],
-) -> Callable[[str | None, str | None], DatMatchInfo]:
-    """Pre-fetch ``dat_entry`` rows whose hashes appear in the
-    candidate set for this platform, then expose a sync closure
-    that satisfies :class:`DatLookup`.
-
-    Pulling matches up-front lets the pure pipeline stay sync —
-    the closure is called inline per result and just dict-looks
-    the outcome and joined entry metadata.
-    """
-    if not hashes_sha1 and not hashes_crc32:
-        return _none_dat
-
-    rows = (
-        await session.execute(
-            select(
-                DatEntry.sha1,
-                DatEntry.crc32,
-                DatEntry.status,
-                DatEntry.source,
-                DatEntry.name,
-            )
-            .where(
-                DatEntry.platform_id == platform_id,
-                or_(
-                    DatEntry.sha1.in_(hashes_sha1) if hashes_sha1 else False,
-                    DatEntry.crc32.in_(hashes_crc32) if hashes_crc32 else False,
-                ),
-            )
-        )
-    ).all()
-    by_sha1: dict[str, DatMatchInfo] = {}
-    by_crc32: dict[str, DatMatchInfo] = {}
-    # CL001 authority order is enforced by best_match — for the
-    # pre-grab cascade a single "is this hash known?" answer is
-    # enough, so keep the strongest outcome (verified > hack >
-    # none) when the same hash spans multiple sources.
-    rank = {"verified": 2, "hack": 1, "none": 0}
-    for sha1, crc32, status, src, name in rows:
-        outcome = _status_to_outcome(status)
-        info = DatMatchInfo(
-            outcome=outcome, entry_name=name, entry_source=src
-        )
-        if sha1 and rank[outcome] > rank.get(
-            by_sha1.get(sha1, _NONE_DAT_INFO).outcome, 0
-        ):
-            by_sha1[sha1] = info
-        if crc32 and rank[outcome] > rank.get(
-            by_crc32.get(crc32, _NONE_DAT_INFO).outcome, 0
-        ):
-            by_crc32[crc32] = info
-
-    def _lookup(sha1: str | None, crc32: str | None) -> DatMatchInfo:
-        if sha1 and sha1.lower() in by_sha1:
-            return by_sha1[sha1.lower()]
-        if crc32 and crc32.lower() in by_crc32:
-            return by_crc32[crc32.lower()]
-        return _NONE_DAT_INFO
-
-    return _lookup
-
-
-async def _build_owned_lookup(
-    session: AsyncSession,
-    game_ids: set[int],
-    hashes_sha1: set[str],
-    hashes_md5: set[str],
-    hashes_crc32: set[str],
-) -> Callable[[int | None, str | None, str | None, str | None], bool]:
-    """Pre-fetch every ``Dump.{sha1, md5, crc32}`` bound to the
-    candidate set's matched games, then expose a sync closure
-    that answers "does this game already have a Dump with one of
-    these hashes?".
-
-    Used to flag duplicates in the manual-search modal so the
-    operator doesn't re-grab the same file twice. Returns False
-    on any input when no game_id is supplied or the hash set is
-    empty.
-    """
-    if not game_ids or not (hashes_sha1 or hashes_md5 or hashes_crc32):
-        return _none_owned
-
-    rows = (
-        await session.execute(
-            select(
-                Release.game_id, Dump.sha1, Dump.md5, Dump.crc32
-            )
-            .join(Release, Release.id == Dump.release_id)
-            .where(
-                Release.game_id.in_(game_ids),
-                or_(
-                    Dump.sha1.in_(hashes_sha1) if hashes_sha1 else False,
-                    Dump.md5.in_(hashes_md5) if hashes_md5 else False,
-                    Dump.crc32.in_(hashes_crc32) if hashes_crc32 else False,
-                ),
-            )
-        )
-    ).all()
-    owned_sha1: set[tuple[int, str]] = set()
-    owned_md5: set[tuple[int, str]] = set()
-    owned_crc32: set[tuple[int, str]] = set()
-    for game_id, sha1, md5, crc32 in rows:
-        if sha1:
-            owned_sha1.add((int(game_id), sha1.lower()))
-        if md5:
-            owned_md5.add((int(game_id), md5.lower()))
-        if crc32:
-            owned_crc32.add((int(game_id), crc32.lower()))
-
-    def _lookup(
-        game_id: int | None,
-        sha1: str | None,
-        md5: str | None,
-        crc32: str | None,
-    ) -> bool:
+    entries: list[dict[str, object]] = []
+    for game_id, group in by_game.items():
         if game_id is None:
-            return False
-        if sha1 and (game_id, sha1.lower()) in owned_sha1:
-            return True
-        if md5 and (game_id, md5.lower()) in owned_md5:
-            return True
-        if crc32 and (game_id, crc32.lower()) in owned_crc32:
-            return True
-        return False
-
-    return _lookup
+            entries.append(
+                {
+                    "indexer_id": indexer_id,
+                    "game_id": None,
+                    "results_count": len(group),
+                    "no_grab_reason": "unidentified",
+                }
+            )
+            continue
+        scored = [
+            c
+            for c in group
+            if c.rejection is None and c.score_breakdown is not None
+        ]
+        scored.sort(
+            key=lambda c: (
+                c.score_breakdown.total if c.score_breakdown else 0
+            ),
+            reverse=True,
+        )
+        best = scored[0] if scored else group[0]
+        best_total = (
+            best.score_breakdown.total
+            if best.score_breakdown is not None
+            else None
+        )
+        entries.append(
+            {
+                "indexer_id": indexer_id,
+                "game_id": game_id,
+                "release_id": best.matched_release_id,
+                "results_count": len(group),
+                "score": best_total,
+                "score_breakdown": (
+                    [
+                        c.model_dump()
+                        for c in best.score_breakdown.contributions
+                    ]
+                    if best.score_breakdown is not None
+                    else None
+                ),
+                # Manual search never auto-grabs; ``no_grab_reason``
+                # stays None so the row reads as a clean "search ran"
+                # event rather than a failure.
+                "no_grab_reason": None,
+            }
+        )
+    return entries
 
 
 _ClientFactory = Callable[[int], Awaitable["NewznabClient"]]
@@ -433,14 +368,18 @@ async def run_manual_search(
             if strict and candidate.rejection is not None:
                 continue
             candidates.append(candidate)
-        history_entries.append(
-            {
-                "indexer_id": indexer_id,
-                "results_count": len(per_indexer_candidates),
-                "no_grab_reason": (
-                    None if outcome == "ok" else "all_indexers_failed"
-                ),
-            }
+        # Write one search_history row per (indexer, game) so the
+        # per-game History tab can surface "a search ran for this
+        # game, found N candidates, top score X". The old shape —
+        # one aggregate row per indexer with game_id=None — meant
+        # the GameDetail history tab only ever showed import rows
+        # and never the searches that led to them.
+        history_entries.extend(
+            _manual_history_entries(
+                indexer_id=indexer_id,
+                indexer_candidates=per_indexer_candidates,
+                outcome=outcome,
+            )
         )
 
     finished_at = datetime.now(UTC)
@@ -457,6 +396,7 @@ async def run_manual_search(
 
     from uuid import UUID
 
+    from romarr.profiles.scoring import expected_naming_conventions
     return SearchRoundReport(
         correlation_id=UUID(correlation),
         search_type="manual",
@@ -467,6 +407,7 @@ async def run_manual_search(
         grabs=[],  # manual search never auto-dispatches; operator picks
         indexer_outcomes=indexer_outcomes,
         overcap_indexers=overcap_indexers,
+        profile_expected_conventions=expected_naming_conventions(custom_formats),
     )
 
 

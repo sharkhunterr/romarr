@@ -25,7 +25,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from romarr.api.dependencies import get_db, require_admin, require_readonly
@@ -36,14 +36,14 @@ from romarr.tasks.errors import (
     ScheduleParseError,
     UnknownJob,
 )
-from romarr.tasks.models import Job
+from romarr.tasks.models import Job, JobRun
 from romarr.tasks.schemas import (
     JobRead,
     JobUpdate,
     TriggerRequest,
     TriggerResponse,
 )
-from romarr.tasks.types import TriggerKind
+from romarr.tasks.types import JobStatus, TriggerKind
 
 if TYPE_CHECKING:
     from romarr.tasks.scheduler import SchedulerService
@@ -51,9 +51,16 @@ if TYPE_CHECKING:
 router = APIRouter(prefix="/api/v3/system/tasks", tags=["Tasks"])
 
 
-def _to_read(row: Job, *, current_run_id: int | None = None) -> JobRead:
+def _to_read(
+    row: Job,
+    *,
+    current_run_id: int | None = None,
+    current_run_items_processed: int | None = None,
+    current_run_summary: dict | None = None,
+) -> JobRead:
     """Build a :class:`JobRead` from the ORM row + the API-layer
-    computed fields (``is_paused_by_health``, ``current_run_id``)."""
+    computed fields (``is_paused_by_health``, ``current_run_id``,
+    ``current_run_items_processed``, ``current_run_summary``)."""
     payload = {
         "id": row.id,
         "name": row.name,
@@ -75,6 +82,8 @@ def _to_read(row: Job, *, current_run_id: int | None = None) -> JobRead:
         # when the lifespan wiring threads HealthEngine through.
         "is_paused_by_health": False,
         "current_run_id": current_run_id,
+        "current_run_items_processed": current_run_items_processed,
+        "current_run_summary": current_run_summary,
     }
     return JobRead.model_validate(payload)
 
@@ -99,7 +108,61 @@ async def list_tasks(
     rows = (
         await session.execute(select(Job).order_by(Job.id))
     ).scalars().all()
-    return [_to_read(row) for row in rows]
+    # Slice 474 — populate the ``current_run_id`` computed field
+    # so the Activity active-tasks banner can detect jobs in
+    # flight. One running run per job is the contract
+    # (max_concurrent_instances defaults to 1); we pick the
+    # newest just in case.
+    running_runs = (
+        await session.execute(
+            select(
+                JobRun.job_id,
+                func.max(JobRun.id).label("run_id"),
+            )
+            .where(JobRun.status == JobStatus.RUNNING.value)
+            .group_by(JobRun.job_id)
+        )
+    ).all()
+    running_by_job: dict[str, int] = {
+        row.job_id: row.run_id for row in running_runs
+    }
+    # Pull items_processed for those runs so the Activity banner
+    # surfaces a live counter without a second round trip per
+    # running job.
+    items_by_run: dict[int, int] = {}
+    summary_by_run: dict[int, dict] = {}
+    if running_by_job:
+        ids = list(running_by_job.values())
+        items_rows = (
+            await session.execute(
+                select(
+                    JobRun.id,
+                    JobRun.items_processed,
+                    JobRun.output_summary,
+                ).where(JobRun.id.in_(ids))
+            )
+        ).all()
+        for run_id, processed, summary in items_rows:
+            items_by_run[run_id] = processed
+            if isinstance(summary, dict):
+                summary_by_run[run_id] = summary
+    return [
+        _to_read(
+            row,
+            current_run_id=running_by_job.get(row.id),
+            current_run_items_processed=(
+                items_by_run.get(running_by_job[row.id])
+                if row.id in running_by_job
+                else None
+            ),
+            current_run_summary=(
+                summary_by_run.get(running_by_job[row.id])
+                if row.id in running_by_job
+                else None
+            ),
+        )
+        for row in rows
+    ]
 
 
 @router.get("/{job_id}", response_model=JobRead)
