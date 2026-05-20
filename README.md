@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/banner.png" alt="Romarr — self-hosted ROM acquisition manager for the *arr ecosystem" width="820"/>
+<img src="assets/banner.png" alt="Romarr — self-hosted ROM acquisition manager for the *arr ecosystem" width="800"/>
 
 # Romarr
 
@@ -20,8 +20,7 @@
 **[Quick Start](#-quick-start)** •
 **[Features](#-features)** •
 **[Docker Hub](https://hub.docker.com/r/sharkhunterr/romarr)** •
-**[Architecture](#%EF%B8%8F-architecture)** •
-**[Release workflow](#-release-workflow)**
+**[Architecture](#%EF%B8%8F-architecture)**
 
 </div>
 
@@ -29,14 +28,14 @@
 
 ## 🚀 What is Romarr?
 
-Romarr is a self-hosted **ROM acquisition manager** for the *arr ecosystem. It does for retro video-game ROMs what Sonarr does for TV and Radarr for film: **search, score, grab, identify, import, organise** — with a DAT-verified library and the operational discipline of the *arr family.
+Romarr is a self-hosted **ROM acquisition manager** for the *arr ecosystem. It does for retro video-game ROMs what Sonarr does for TV and Radarr for film: **search, score, grab, identify, import, organise** — driven by a DAT-verified library and the operational discipline of the *arr family.
 
-It searches across **Grabarr** + **Prowlarr** Torznab indexers, scores every candidate through a five-axis profile system (quality / region / dump / language / naming + custom formats), auto-grabs the best release per game, and imports the file into a DAT-matched, cleanly-named library — all from one bundled React UI.
+It searches **Torznab indexers** (Grabarr, Prowlarr), scores every candidate through a five-axis profile system, auto-grabs the best release per game, hands the download to your torrent / usenet client, then extracts, DAT-matches and renames the file into a clean library — all from one bundled React UI.
 
 **Perfect for:**
 - 🎮 Retrogamers who want a hands-off, *arr-style ROM library
-- 🗂️ Collectors who care about No-Intro / Redump / TOSEC verification
-- 🔌 Homelab operators already running Prowlarr who want one more indexer slot to cover ROM sources
+- 🗂️ Collectors who care about No-Intro / Redump / TOSEC / MAME verification
+- 🔌 Homelab operators already running Prowlarr who want ROM sources in the same stack
 - 🤖 Anyone who wants RSS / on-add / missing / cutoff auto-grab with a tunable score floor
 
 > [!WARNING]
@@ -51,10 +50,10 @@ It searches across **Grabarr** + **Prowlarr** Torznab indexers, scores every can
 <td width="33%" valign="top">
 
 ### 🗂️ DAT-Verified Library
-**Games, releases, dumps**
+**Games · releases · dumps**
 - No-Intro / Redump / TOSEC / MAME
 - Per-game History tab
-- Metadata aggregation (IGDB, ScreenScraper, MobyGames…)
+- Metadata aggregation (IGDB, ScreenScraper, MobyGames, LaunchBox, RetroAchievements)
 - Cover art + bulk monitoring
 
 </td>
@@ -72,65 +71,69 @@ It searches across **Grabarr** + **Prowlarr** Torznab indexers, scores every can
 
 ### 🔍 Search & Auto-Grab
 **One pipeline, every round**
-- Manual / RSS / missing / cutoff / on-add
+- Manual · RSS · missing · cutoff · on-add
 - Best eligible candidate per game
 - queue-entry binding for clean imports
 - Per-(indexer, game) history rows
 
 </td>
 </tr>
-<tr>
-<td width="33%" valign="top">
+</table>
 
-### 📊 Activity
-**Live queue + audit trail**
-- Download + scheduler-task progress
-- Unified History feed
-- Click-through detail sheet with score breakdown
+### 🧠 Smart Search Orchestration
+- 🎯 13-step decision pipeline shared by **every** round — manual search and auto-grab can never diverge
+- 🏷️ DAT pre-grab cascade (SHA-1 / CRC32) tags candidates `verified` / `hack` / `none`
+- 🎮 Console / region / language / dump-status / naming-convention extraction per candidate
+- 🚫 Platform-mismatch hard reject + already-imported guard so RSS never re-grabs a game
+- 🔁 Round-robin de-dup across indexers, best-score-per-game selection
 
-</td>
-<td width="33%" valign="top">
-
-### 📦 Import Pipeline
-**Webhook → extract → match → move**
-- Archive extraction
-- Hash + DAT identification
-- Convention-aware renaming
-- Library exporters (RomM, ES-DE…)
-
-</td>
-<td width="33%" valign="top">
+### 🛡️ Operator-Grade Reliability
+- 🔍 Per-indexer outcome tracking with structured non-grab reasons
+- 🪦 Stale-run sweeper at boot flips stuck scheduler jobs
+- 📦 queue reconciler binds completed downloads back to their game for import
+- 🔐 Provider credentials encrypted at rest with a Fernet master key
+- ❤️ Health engine + Apprise notifications (Sonarr/Radarr-shaped webhook payloads)
 
 ### 🎨 Modern Web UI
-**React 18 · PWA · mobile-first**
-- FR + EN day one
-- Bundled in the Docker image
-- SignalR-compat WebSocket
-
-</td>
-</tr>
-</table>
+- 🌓 Dark theme, mobile-first PWA (React 18 + Tailwind + shadcn/ui)
+- 🌍 FR + EN day one
+- 📊 Activity page — live download + scheduler-task queue, unified History feed with score-breakdown detail sheet
+- 🔧 Profile editors, library bindings, indexer setup — no config files
 
 ---
 
 ## 🏃 Quick Start
 
-### Docker (recommended)
+### Docker Compose (Recommended)
 
-```bash
-docker run -d \
-  --name romarr \
-  -p 8585:8585 \
-  -v /srv/romarr/data:/data \
-  -e ROMARR_AUTH_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')" \
-  sharkhunterr/romarr:latest
-
-docker logs romarr | grep setup_token
+```yaml
+services:
+  romarr:
+    image: sharkhunterr/romarr:latest
+    container_name: romarr
+    ports:
+      - "8585:8585"
+    volumes:
+      - ./data:/data
+    environment:
+      - ROMARR_AUTH_SECRET_KEY=change-me-to-a-32+-char-random-string
+      - TZ=Europe/Paris
+      - PUID=1000
+      - PGID=1000
+    restart: unless-stopped
 ```
 
-Capture the `token` from the WARNING line, open `http://localhost:8585/setup`, paste it, and create the admin account. The session cookie auto-logs you in.
+```bash
+docker compose up -d
+docker compose logs romarr | grep setup_token
+```
 
-A fresh container defaults to `ROMARR_BOOTSTRAP_ENABLED=true`, `ROMARR_AUTO_MIGRATE=true`, `ROMARR_SCHEDULER_ENABLED=true` and `ROMARR_SPA_ENABLED=true` — it produces a working install with no extra wiring.
+**Access**: http://localhost:8585 — open `/setup`, paste the `token` from the
+log line, and create the admin account. The session cookie auto-logs you in.
+
+A fresh container defaults to `ROMARR_BOOTSTRAP_ENABLED=true`,
+`ROMARR_AUTO_MIGRATE=true`, `ROMARR_SCHEDULER_ENABLED=true` and
+`ROMARR_SPA_ENABLED=true` — it produces a working install with no extra wiring.
 
 ### Local development
 
@@ -154,17 +157,50 @@ The Vite dev server proxies `/api/v3/*` to the backend on port 8585.
 
 ## 🔧 Configuration
 
-Boot-time environment variables (full list in `romarr.config.settings`):
+### Environment variables (boot-time only)
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `ROMARR_AUTH_SECRET_KEY` | — (**required**) | Fernet master key, 32+ chars |
-| `ROMARR_DATA_DIR` | `/data` | Data root inside the image |
-| `ROMARR_BOOTSTRAP_ENABLED` | `true` | Seed defaults + Platform Pack + setup token |
-| `ROMARR_AUTO_MIGRATE` | `true` | Run `alembic upgrade head` pre-boot |
-| `ROMARR_SCHEDULER_ENABLED` | `true` | Run the APScheduler job loop |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ROMARR_AUTH_SECRET_KEY` | — (**required**) | Fernet master key, 32+ chars — encrypts stored credentials |
+| `ROMARR_DATA_DIR` | `/data` | Database + covers + downloads + library root |
+| `ROMARR_BOOTSTRAP_ENABLED` | `true` | Seed default profiles + Platform Pack + setup token |
+| `ROMARR_AUTO_MIGRATE` | `true` | Run `alembic upgrade head` before boot |
+| `ROMARR_SCHEDULER_ENABLED` | `true` | Run the APScheduler job loop (RSS sync, missing/cutoff search…) |
 | `ROMARR_SPA_ENABLED` | `true` | Serve the bundled React SPA at `/` |
-| `PUID` / `PGID` | `1000` | Host-mapped uid/gid (LinuxServer convention) |
+| `ROMARR_IMPORTER_WATCHER_ENABLED` | `true` | Watch the download client for completed grabs |
+| `ROMARR_DATABASE_URL` | SQLite under `DATA_DIR` | Point at PostgreSQL 15+ for a shared DB |
+| `PUID` / `PGID` | `1000` | Host-mapped uid/gid (LinuxServer.io convention) |
+
+Everything else — indexers, download clients, profiles, libraries, metadata
+providers — is configured **in the UI** and stored in the database.
+
+### First launch
+
+1. **Open** http://localhost:8585 → `/setup` → paste the setup token → create the admin
+2. **Add a download client** — Settings → Download Clients (qBittorrent, SABnzbd…)
+3. **Add an indexer** — Settings → Indexers → point at Grabarr / Prowlarr (Torznab)
+4. **Create a library** — Settings → Libraries → pick its quality / region / dump / language / naming profiles
+5. **Add games** — the Library "Add" button searches every metadata provider; pick a title, library and monitored state
+6. **Let it run** — on-add search auto-grabs the best release; RSS sync + missing/cutoff search keep the library complete
+
+---
+
+## 🎯 Indexers & DAT Authorities
+
+Romarr does not scrape sites itself — it consumes **Torznab indexers** and
+verifies what they return against **DAT authorities**.
+
+| Layer | Role |
+|-------|------|
+| **Grabarr** | Torznab bridge exposing ROM repositories (Vimm's Lair, Edge Emulation, MiNERVA/Myrient, RomsFun, CDRomance…) |
+| **Prowlarr** | Aggregates any other Torznab / Newznab indexer you already run |
+| **No-Intro** | Cartridge-based console DAT authority |
+| **Redump** | Disc-based console DAT authority |
+| **TOSEC / MAME** | Vintage-computer + arcade DAT authorities |
+
+Each candidate is hashed and cross-checked against the imported DAT entries so
+the library knows whether a file is a verified dump, a hack, or unknown — and
+the scoring pipeline weights it accordingly.
 
 ---
 
@@ -172,80 +208,158 @@ Boot-time environment variables (full list in `romarr.config.settings`):
 
 One multi-stage Docker image bundles the React SPA and the FastAPI backend.
 
-```
-┌──────────────┐   Torznab    ┌───────────┐   pick best   ┌──────────────┐
-│  Grabarr /   │ ───────────▶ │  Search   │ ────────────▶ │  Dispatch +  │
-│  Prowlarr    │   indexers   │  rounds   │  per-game     │  queue_entry │
-└──────────────┘              └─────┬─────┘  score floor  └──────┬───────┘
-                                    │                            │
-                              profile cascade              download client
-                         quality·region·dump·lang·naming         │
-                                    │                            ▼
-                              ┌─────▼─────┐              ┌──────────────┐
-                              │  Library  │ ◀─────────── │   Importer   │
-                              │ DAT-match │   extract +  │ hash · match │
-                              └───────────┘   rename     └──────────────┘
+```mermaid
+flowchart TB
+    subgraph Indexers["🔍 Indexers"]
+        GR[Grabarr]
+        PW[Prowlarr]
+    end
+
+    subgraph Romarr["⚙️ Romarr :8585"]
+        SR[Search rounds<br/>manual·rss·missing·cutoff·on-add]
+        PIPE[13-step pipeline<br/>+ DAT cascade]
+        PROF[Profiles<br/>quality·region·dump·lang·naming]
+        DISP[Dispatch<br/>+ queue_entry]
+        IMP[Importer<br/>extract·match·rename]
+        LIB[(Library<br/>DAT-verified)]
+        API[REST /api/v3 + WebSocket]
+    end
+
+    subgraph Client["📥 Download client"]
+        DC[qBittorrent / SABnzbd]
+    end
+
+    GR & PW -->|Torznab| SR
+    SR --> PIPE
+    PROF --> PIPE
+    PIPE -->|best per game| DISP
+    DISP --> DC
+    DC -->|completed| IMP
+    IMP --> LIB
+    LIB --> API
 ```
 
-Search rounds — **manual**, **RSS sync**, **missing**, **cutoff**, **on-add** — all run the same DAT-aware scoring pipeline through one shared dispatch helper, so an auto-grab picks exactly the release the manual modal would rank top.
+### Search → grab → import flow
+
+```mermaid
+sequenceDiagram
+    participant UI as Web UI / Scheduler
+    participant Round as Search round
+    participant Pipe as Pipeline + DAT
+    participant Disp as Dispatch
+    participant DC as Download client
+    participant Imp as Importer
+
+    UI->>Round: manual / rss / missing / cutoff / on-add
+    Round->>Pipe: candidates from every indexer
+    Pipe->>Pipe: identify · score · DAT cascade · platform check
+    Pipe-->>Round: best eligible candidate per game
+    Round->>Disp: dispatch (score ≥ auto_grab_min_score)
+    Disp->>DC: add torrent / nzb
+    Disp->>Disp: write queue_entry (game ↔ download)
+    DC-->>Imp: download completed
+    Imp->>Imp: extract · hash · DAT match · rename
+    Imp-->>UI: imported release in the library
+```
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Layer | Tech |
-|---|---|
-| Backend | Python 3.12+, FastAPI, SQLAlchemy 2.0 (async), Pydantic v2, Alembic |
-| Storage | SQLite (default) · PostgreSQL 15+ (optional) · Redis 7+ cache (optional) |
-| Frontend | React 18 + TypeScript strict + Vite + Tailwind + shadcn/ui (PWA) |
-| API | REST `/api/v3/*` (Sonarr v3-shaped) + SignalR-compat WebSocket |
-| Auth | Forms login · OIDC SSO · per-user API keys · trusted-proxy · RBAC |
-| Packaging | `uv` workspace · multi-stage Docker (Node 20 SPA → Python 3.12 runtime) |
+| Layer | Technologies |
+|-------|--------------|
+| **Backend** | Python 3.12 • FastAPI (async) • SQLAlchemy 2.0 • Pydantic v2 • Alembic • `uv` |
+| **Frontend** | React 18 • TypeScript (strict) • Vite • Tailwind • shadcn/ui • PWA |
+| **Storage** | SQLite (default) • PostgreSQL 15+ (optional) • Redis 7+ cache (optional, in-memory fallback) |
+| **API** | REST `/api/v3/*` (Sonarr v3-shaped) • SignalR-compat WebSocket |
+| **Auth** | Forms login • OIDC SSO • per-user API keys • trusted-proxy headers • RBAC |
+| **Scheduler** | APScheduler • per-job runners (RSS sync, missing/cutoff search, metadata refresh, DAT update, backup) |
+| **DevOps** | Docker (multi-arch) • GitLab CI (tag-only pipeline) • standard-version |
 
 ---
 
 ## 📦 Data & Backup
 
-Everything lives under one volume — `/data` (`ROMARR_DATA_DIR`): the SQLite
-database, covers, downloads and the library tree. Back it up by snapshotting
-that directory; restore by mounting it into a fresh container.
+Everything lives under one volume — `/data` (`ROMARR_DATA_DIR`).
+
+| Path | Content |
+|------|---------|
+| `/data/romarr.db` | SQLite — games, releases, dumps, profiles, settings, API keys |
+| `/data/covers/` | Cached cover art |
+| `/data/downloads/` | Staging area for in-flight grabs |
+| `/data/library/` | The imported, DAT-matched, renamed ROM library |
+
+Back it up by snapshotting `/data`; restore by mounting it into a fresh
+container. SQLite migrations run automatically on first boot via Alembic, so
+upgrades preserve every game, release, profile and credential.
 
 ---
 
-## 🚢 Release workflow
+## 📚 Documentation
 
-Romarr ships through a **tag-only GitLab → Docker Hub → GitHub** pipeline,
-the same template used across the sharkhunterr *arr projects. The release
-tooling lives at the **git root** (`package.json`, `scripts/`,
-`.gitlab-ci.yml`); the romarr project itself is nested in `romarr/`.
+| Document | Purpose |
+|----------|---------|
+| [romarr/docs/](romarr/docs/) | API reference + protocol notes |
+| [romarr/specs/](romarr/specs/) | Full spec catalogue (clarify → plan → tasks) |
+| [CHANGELOG.md](CHANGELOG.md) | Versioned release notes |
+| [scripts/README.md](scripts/README.md) | Release + deploy command reference |
 
-```bash
-npm install                  # one-time: standard-version
+---
 
-npm run release              # patch bump, push tag to GitLab
-npm run release:minor        # minor bump
-npm run release:full         # bump + GitHub mirror + Docker Hub deploy
-npm run release:dry          # preview, change nothing
-```
+## 🤝 Contributing
 
-`npm run release:full` bumps the version across `package.json`,
-`romarr/pyproject.toml` and `romarr/src/romarr/__init__.py`, regenerates
-`CHANGELOG.md` from conventional commits, tags `vX.Y.Z`, and pushes with
-`-o ci.variable=DEPLOY=true`. The GitLab pipeline then **tests → builds the
-Docker image → publishes to Docker Hub → mirrors to GitHub → creates the
-GitLab + GitHub releases → verifies** the artifacts landed.
+Contributions welcome! Please:
 
-See [`scripts/README.md`](scripts/README.md) for the full command set and the
-CI variables to configure.
+1. Fork the repository
+2. Create a feature branch
+3. Run `uv run ruff check` and `uv run pytest`
+4. Submit a pull request
 
-### Graphic identity
+---
 
-The brand assets (Game Boy LCD-green ROM cartridge) are SVG sources under
-[`assets/`](assets/); `npm run assets` renders the PNG icon / favicon / banner
-set and installs the web-facing ones into `romarr/web/public/`.
+## 🚫 Non-goals
+
+Romarr is **not** an emulator, **not** a metadata-only catalogue, **not** a
+generic download manager, and does **not** host or redistribute ROMs. It
+manages *your* library by talking to indexers and download clients you
+already operate.
+
+---
+
+## 🙏 Acknowledgments
+
+**The Need**: the *arr ecosystem is brilliant for media you can torrent, but
+retro ROMs live across a patchwork of repositories with no shared catalogue,
+no quality scoring, and no DAT verification. Keeping a clean collection meant
+hours of manual hashing and renaming.
+
+**The Solution**: Romarr brings the *arr workflow to ROMs — connect an
+indexer once, define your profiles, and let search → grab → import keep a
+DAT-verified library complete and correctly named.
+
+**The Approach**: As a young parent with limited time and no fullstack
+development experience, traditional coding wasn't an option. Built entirely
+through [Claude Code](https://claude.ai/code) using "vibe coding" — pure
+conversation, no manual coding required.
+
+Built in the spirit of [RomM](https://github.com/rommapp/romm) and the
+[*arr](https://wiki.servarr.com/) family.
 
 ---
 
 ## 📄 License
 
 [GPL-3.0-or-later](LICENSE).
+
+---
+
+<div align="center">
+
+**Built with Claude Code 🤖 for the homelab community 🏠**
+
+[![GitHub](https://img.shields.io/badge/GitHub-sharkhunterr/romarr-181717?logo=github)](https://github.com/sharkhunterr/romarr)
+[![Docker Hub](https://img.shields.io/badge/Docker-sharkhunterr/romarr-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/r/sharkhunterr/romarr)
+
+[⭐ Star on GitHub](https://github.com/sharkhunterr/romarr) • [🐛 Report Bug](https://github.com/sharkhunterr/romarr/issues) • [💡 Request Feature](https://github.com/sharkhunterr/romarr/issues)
+
+</div>
