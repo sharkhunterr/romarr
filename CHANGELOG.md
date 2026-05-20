@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.4](https://github.com/sharkhunterr/romarr/-/compare/v0.14.3...v0.14.4) (2026-05-20)
+
 ### [0.14.3](https://github.com/sharkhunterr/romarr/-/compare/v0.14.2...v0.14.3) (2026-05-20)
 
 ### [0.14.2](https://github.com/sharkhunterr/romarr/-/compare/v0.14.1...v0.14.2) (2026-05-20)
