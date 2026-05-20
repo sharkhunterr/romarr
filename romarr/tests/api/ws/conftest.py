@@ -11,6 +11,7 @@ Both the auth tests and the message-coverage tests need:
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from pathlib import Path
 
 import pytest_asyncio
 from fastapi.testclient import TestClient
@@ -19,6 +20,36 @@ from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 from romarr.api import create_app
 from romarr.auth import ROLE_ADMIN, User, hash_api_key, hash_password
 from romarr.auth.models import ApiKey
+from romarr.db.session import create_engine
+from romarr.domain import Base
+
+
+@pytest_asyncio.fixture
+async def api_engine(tmp_path: Path) -> AsyncIterator[AsyncEngine]:
+    """File-backed SQLite engine for the WS tests — overrides the
+    shared in-memory ``api_engine`` from ``tests/conftest.py``.
+
+    The WS tests drive the app through Starlette's *sync* TestClient,
+    which runs the ASGI app on its own event loop in a worker thread.
+    The shared ``sqlite+aiosqlite:///:memory:?cache=shared`` engine's
+    database only exists while at least one connection is open — the
+    instant every connection drops (which happens routinely across
+    that loop/thread boundary) the in-memory DB and all its tables
+    are destroyed. Under the random-order full suite that surfaced as
+    flaky ``no such table: api_key`` / ``no active connection``
+    failures in tests/api/ws/.
+
+    A temp file persists regardless of connection lifetime and is
+    safely shared across loops + threads — every connection just
+    re-opens the same file. Function-scoped, so each WS test still
+    gets a pristine database.
+    """
+    db_path = tmp_path / "ws-test.db"
+    engine = create_engine(f"sqlite+aiosqlite:///{db_path}", echo=False)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield engine
+    await engine.dispose()
 
 
 async def _seed_admin_with_api_key(
