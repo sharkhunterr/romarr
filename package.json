@@ -1,0 +1,50 @@
+{
+  "name": "romarr",
+  "version": "0.14.0",
+  "description": "Self-hosted ROM acquisition manager for the *arr ecosystem — DAT-verified library, quality/region/dump/language profiles, Torznab search across Grabarr + Prowlarr, and a bundled React UI.",
+  "private": true,
+  "scripts": {
+    "release": "node scripts/release.js",
+    "release:patch": "node scripts/release.js patch",
+    "release:minor": "node scripts/release.js minor",
+    "release:major": "node scripts/release.js major",
+    "release:github": "node scripts/release.js --github",
+    "release:deploy": "node scripts/release.js --deploy",
+    "release:full": "node scripts/release.js --github --deploy",
+    "release:dry": "node scripts/release.js --dry-run",
+    "push": "node scripts/push.js",
+    "push:github": "node scripts/push.js --github",
+    "push:all": "node scripts/push.js --all",
+    "push:tags": "node scripts/push.js --tags-only",
+    "docker:build": "node scripts/docker-deploy.js",
+    "docker:deploy": "node scripts/docker-deploy.js --push",
+    "docker:deploy:multi": "node scripts/docker-deploy.js --push --multi-platform",
+    "assets": "node scripts/render-assets.js"
+  },
+  "devDependencies": {
+    "standard-version": "^9.5.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "python": ">=3.12.0"
+  },
+  "config": {
+    "dockerImage": "sharkhunterr/romarr",
+    "dockerRegistry": "docker.io"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sharkhunterr/romarr"
+  },
+  "keywords": [
+    "rom",
+    "romarr",
+    "arr",
+    "prowlarr",
+    "torznab",
+    "emulation",
+    "self-hosted",
+    "homelab"
+  ],
+  "license": "GPL-3.0-or-later"
+}

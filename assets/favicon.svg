@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Romarr favicon — the cartridge silhouette, simplified so it still
+  reads at 16px. Game Boy LCD-green on a dark rounded square.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#0f1409"/>
+  <!-- Cartridge body, chamfered top-right -->
+  <path d="M 17 9 L 41 9 L 55 23 L 55 50 Q 55 55 50 55 L 17 55
+           Q 12 55 12 50 L 12 14 Q 12 9 17 9 Z" fill="#9BBC0F"/>
+  <!-- Label slot -->
+  <rect x="18" y="17" width="31" height="17" rx="3" fill="#10180d"/>
+  <!-- Grip ridges -->
+  <g fill="#3E4D06">
+    <rect x="19" y="40" width="6" height="11" rx="2"/>
+    <rect x="29" y="40" width="6" height="11" rx="2"/>
+    <rect x="39" y="40" width="6" height="11" rx="2"/>
+  </g>
+</svg>
