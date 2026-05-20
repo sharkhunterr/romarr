@@ -106,6 +106,14 @@ validate:lint:
 test:backend:
   stage: test
   <<: *python_template
+  variables:
+    # Romarr's encryption layer raises at import time when no auth
+    # secret is set (some test modules call ``encrypt()`` in
+    # module-level default args). Locally the key comes from a
+    # gitignored ``.env``; CI gets a throwaway test-only key here.
+    # NOT a real secret — it only has to be a 32+ char string so
+    # the Fernet key derivation succeeds.
+    ROMARR_AUTH_SECRET_KEY: "ci-test-only-not-a-real-secret-do-not-use-in-prod"
   script:
     - uv run pytest -q --junitxml=junit.xml
   artifacts:
