@@ -33,7 +33,7 @@ async def test_first_boot_inserts_all_defaults(
         "dump.json": 3,
         "language.json": 3,
         "naming.json": 3,
-        "custom_formats.json": 11,
+        "custom_formats.json": 15,
     }
 
     quality_count = (
@@ -64,7 +64,7 @@ async def test_first_boot_inserts_all_defaults(
     custom_format_count = (
         await async_session.execute(select(CustomFormat))
     ).scalars().all()
-    assert len(custom_format_count) == 11
+    assert len(custom_format_count) == 15
 
 
 async def test_seeded_rows_are_factory_default_and_carry_seed_key(
@@ -118,7 +118,8 @@ async def test_idempotent_rerun_does_not_change_rows(
 ) -> None:
     """Second invocation must report 0 changes per table."""
     first = await seed_defaults(async_session)
-    assert sum(first.values()) == 26
+    # 3+3+3+3+3 profiles + 15 custom formats
+    assert sum(first.values()) == 30
 
     second = await seed_defaults(async_session)
     assert all(count == 0 for count in second.values())

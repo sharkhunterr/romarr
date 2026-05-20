@@ -7,7 +7,8 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
-from romarr.indexers import verify_token
+from romarr.auth.hashing import verify_api_key
+from romarr.auth.models import ApiKey
 from romarr.indexers.models import Application
 from tests.indexers.api.conftest import seed_admin_and_login
 
@@ -45,8 +46,12 @@ async def test_register_returns_token_once(
     plaintext_token = body["app_token"]
     app_id = body["id"]
 
-    # The persisted row stores only the bcrypt hash; the plaintext is
-    # NEVER persisted.
+    # Post-rework, the application's ``app_token`` IS a real Romarr
+    # API key (the custom token design didn't survive contact with
+    # Prowlarr's Sonarr-compat client). ``Application.app_token_hash``
+    # stores a pointer ``apikey:{id}`` to the minted api_key row, not
+    # a hash; the BLAKE2b digest lives on that api_key row, and the
+    # plaintext is NEVER persisted.
     sm = async_sessionmaker(api_engine, expire_on_commit=False)
     async with sm() as session:
         row = (
@@ -54,9 +59,18 @@ async def test_register_returns_token_once(
                 select(Application).where(Application.id == app_id)
             )
         ).scalar_one()
-    assert verify_token(plaintext_token, row.app_token_hash) is True
+        assert row.app_token_hash.startswith("apikey:")
+        api_key_id = int(row.app_token_hash.removeprefix("apikey:"))
+        api_key_row = (
+            await session.execute(
+                select(ApiKey).where(ApiKey.id == api_key_id)
+            )
+        ).scalar_one()
+
+    assert verify_api_key(plaintext_token, api_key_row.key_hash) is True
     # No bytewise leak of the plaintext.
     assert plaintext_token not in row.app_token_hash
+    assert plaintext_token != api_key_row.key_hash
 
     # GET on the same id returns ApplicationRead (no app_token field).
     read_response = await api_client.get(f"/api/v3/applications/{app_id}")

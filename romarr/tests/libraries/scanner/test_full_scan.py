@@ -547,8 +547,10 @@ async def test_new_file_creates_release(
     assert result.last_status == "success"
 
     # The orchestrator's auto-import created a Release for the
-    # matched Game and bound a Dump to the existing on-disk path
-    # (the MOVE step's in-place fast-path skips the rename).
+    # matched Game and applied the library's naming profile — the
+    # file is organised into a per-game subfolder
+    # (``<platform>/<game title>/<file>``), the standard ROM
+    # library layout.
     releases = (
         await async_session.execute(
             select(Release).where(Release.game_id == game.id)
@@ -564,4 +566,7 @@ async def test_new_file_creates_release(
         )
     ).scalars().all()
     assert len(dumps) == 1
-    assert dumps[0].path == str(rom_path)
+    expected_dump_path = rom_dir / "Sonic the Hedgehog" / "Sonic the Hedgehog (USA).md"
+    assert dumps[0].path == str(expected_dump_path)
+    # The file physically lives at the naming-profile target path.
+    assert expected_dump_path.is_file()

@@ -121,6 +121,16 @@ test:backend:
     reports:
       junit: romarr/junit.xml
     expire_in: 1 week
+  # One occasional WS test (test_broadcast_reaches_every_subscriber)
+  # is low-frequency flaky under the full random-order suite — the
+  # in-memory aiosqlite ``cache=shared`` engine can serve a
+  # connection bound to an event loop a sibling test already tore
+  # down ("no active connection"). It passes on a clean re-run.
+  # A single auto-retry self-heals the flake; a genuine failure
+  # still fails on the retry too.
+  retry:
+    max: 1
+    when: script_failure
   rules:
     - if: '$ENABLE_BACKEND_TESTS == "true"'
 
