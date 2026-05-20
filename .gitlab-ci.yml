@@ -215,11 +215,11 @@ deploy:
         docker push ${DOCKER_HUB_IMAGE}:${CI_COMMIT_TAG}
         docker push ${DOCKER_HUB_IMAGE}:latest
 
-        # Optional: refresh the Docker Hub README from romarr/docker/DOCKERHUB.md.
-        if [ -f "romarr/docker/DOCKERHUB.md" ]; then
+        # Refresh the Docker Hub README from romarr/DOCKERHUB.md.
+        if [ -f "romarr/DOCKERHUB.md" ]; then
           wget -q https://github.com/christian-korneck/docker-pushrm/releases/download/v1.9.0/docker-pushrm_linux_amd64 -O /usr/local/bin/docker-pushrm
           chmod +x /usr/local/bin/docker-pushrm
-          docker-pushrm --file romarr/docker/DOCKERHUB.md --short "$CI_PROJECT_TITLE" "${DOCKER_HUB_IMAGE}" || echo "⚠️ docker-pushrm failed"
+          docker-pushrm --file romarr/DOCKERHUB.md --short "$CI_PROJECT_TITLE" "${DOCKER_HUB_IMAGE}" || echo "⚠️ docker-pushrm failed"
         fi
       fi
     # GitHub mirror
