@@ -247,7 +247,7 @@ release:gitlab:
       NOTES=""
       # Prefer GITHUB_RELEASES.md (curated by hand); fall back to CHANGELOG.
       if [ -f GITHUB_RELEASES.md ]; then
-        NOTES=$(awk "/^# v[0-9]/{if(found==0){found=1; p=1}} /^# v[0-9]/{if(found==1 && p==1 && NR>1){exit}} p{print}" GITHUB_RELEASES.md | sed 's/^---$//' | sed '/^$/N;/^\n$/D')
+        NOTES=$(awk '/^# v[0-9]/{c++; if(c>1) exit; next} c==1{print}' GITHUB_RELEASES.md | sed 's/^---$//' | sed '/^$/N;/^\n$/D')
       fi
       if [ -z "$NOTES" ] && [ -f CHANGELOG.md ]; then
         NOTES=$(awk "/^## \\[${VERSION}\\]/{flag=1; next} /^## \\[/{flag=0} flag" CHANGELOG.md)
@@ -270,7 +270,7 @@ release:github:
       VERSION="${CI_COMMIT_TAG#v}"
       NOTES=""
       if [ -f GITHUB_RELEASES.md ]; then
-        NOTES=$(awk "/^# v[0-9]/{if(found==0){found=1; p=1}} /^# v[0-9]/{if(found==1 && p==1 && NR>1){exit}} p{print}" GITHUB_RELEASES.md | sed 's/^---$//' | sed '/^$/N;/^\n$/D')
+        NOTES=$(awk '/^# v[0-9]/{c++; if(c>1) exit; next} c==1{print}' GITHUB_RELEASES.md | sed 's/^---$//' | sed '/^$/N;/^\n$/D')
       fi
       if [ -z "$NOTES" ] && [ -f CHANGELOG.md ]; then
         NOTES=$(awk "/^## \\[${VERSION}\\]/{flag=1; next} /^## \\[/{flag=0} flag" CHANGELOG.md)
