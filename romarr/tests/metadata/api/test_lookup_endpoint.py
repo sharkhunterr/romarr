@@ -705,3 +705,20 @@ async def test_integration_status_reports_presence(
     assert after.status_code == 200
     assert after.json()["present"] is True
     assert len(after.json()["games"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_integration_platforms_lists_supported(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """GET /integrations/platforms lists every platform carrying an
+    igdb_id — the request manager uses it to decide which platforms
+    may show a request button."""
+    await _seed_admin_and_login(api_engine, api_client)
+    await _seed_platform_with_igdb(api_engine, slug="gba", igdb_id=24)
+    await _seed_platform_with_igdb(api_engine, slug="snes", igdb_id=19)
+
+    resp = await api_client.get("/api/v3/game/integrations/platforms")
+    assert resp.status_code == 200, resp.json()
+    ids = {p["igdb_id"] for p in resp.json()["platforms"]}
+    assert {24, 19} <= ids

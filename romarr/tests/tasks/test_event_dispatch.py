@@ -10,6 +10,8 @@ The scheduler is replaced with a stand-in that records every
 
 from __future__ import annotations
 
+import logging
+
 import pytest
 
 from romarr.notifications.channel import EventChannel
@@ -19,6 +21,7 @@ from romarr.notifications.types import (
     OnHealthIssuePayload,
     HealthStatus,
 )
+from romarr.tasks.errors import JobAlreadyRunning
 from romarr.tasks.event_dispatch import attach_event_dispatch
 
 
@@ -112,3 +115,30 @@ async def test_trigger_failure_does_not_propagate() -> None:
 
     # Publishing must NOT raise even though trigger fails.
     await channel.publish(OnGameAddedPayload(game=_game_ref()))
+
+
+@pytest.mark.asyncio
+async def test_job_already_running_is_not_logged_as_error(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """``AutoCheckAdded`` is single-instance: when games are added
+    back-to-back (e.g. a request manager dispatching a batch of
+    approvals) a later ``OnGameAdded`` trigger raises
+    ``JobAlreadyRunning``. That is benign and must be swallowed as a
+    debug note — never surfaced as an ERROR.
+    """
+
+    class _BusyScheduler:
+        async def trigger(self, *_args, **_kwargs):  # type: ignore[no-untyped-def]
+            raise JobAlreadyRunning("AutoCheckAdded already at max")
+
+    channel = EventChannel()
+    attach_event_dispatch(channel, _BusyScheduler())  # type: ignore[arg-type]
+
+    with caplog.at_level(logging.DEBUG, logger="romarr.tasks.event_dispatch"):
+        await channel.publish(OnGameAddedPayload(game=_game_ref()))
+
+    # No ERROR-level record from the dispatcher …
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+    # … and the skip is recorded at debug.
+    assert any("already running" in r.getMessage() for r in caplog.records)

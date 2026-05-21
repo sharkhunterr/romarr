@@ -683,4 +683,56 @@ async def integration_game_status(
     )
 
 
+class IntegrationPlatform(BaseModel):
+    """One IGDB platform Romarr can acquire games for."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    igdb_id: Annotated[int, Field(alias="igdbId")]
+    name: str
+
+
+class IntegrationPlatformsResult(BaseModel):
+    """Response for the integration platforms listing."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    platforms: list[IntegrationPlatform]
+
+
+@router.get(
+    "/integrations/platforms",
+    response_model=IntegrationPlatformsResult,
+    response_model_by_alias=False,
+    summary=(
+        "List the IGDB platforms Romarr can acquire games for "
+        "(external request managers). A manager uses this to only "
+        "offer a request button for platforms Romarr can resolve. "
+        "Admin only."
+    ),
+)
+async def integration_platforms(
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> IntegrationPlatformsResult:
+    rows = (
+        (
+            await db.execute(
+                select(Platform)
+                .where(Platform.igdb_id.is_not(None))
+                .order_by(Platform.name)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return IntegrationPlatformsResult(
+        platforms=[
+            IntegrationPlatform(igdb_id=p.igdb_id, name=p.name)
+            for p in rows
+            if p.igdb_id is not None
+        ]
+    )
+
+
 __all__ = ["router"]
