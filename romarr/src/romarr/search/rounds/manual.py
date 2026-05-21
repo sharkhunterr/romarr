@@ -97,9 +97,19 @@ def _manual_history_entries(
     for c in indexer_candidates:
         by_game.setdefault(c.matched_game_id, []).append(c)
 
+    has_identified = any(game_id is not None for game_id in by_game)
+
     entries: list[dict[str, object]] = []
     for game_id, group in by_game.items():
         if game_id is None:
+            # The unidentified bucket is torznab noise — every query
+            # returns unrelated results. It's only worth recording
+            # when *nothing* matched a monitored game (a genuine
+            # "found results but none usable" signal); when at least
+            # one game matched, this row only surfaces in the History
+            # tab as a bogus failed "manual grab", so drop it.
+            if has_identified:
+                continue
             entries.append(
                 {
                     "indexer_id": indexer_id,

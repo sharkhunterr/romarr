@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import select
@@ -10,7 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from romarr.indexers.errors import IndexerAuthError
 from romarr.search.models import SearchHistory
-from romarr.search.rounds.manual import run_manual_search
+from romarr.search.rounds.manual import (
+    _manual_history_entries,
+    run_manual_search,
+)
 from tests.search.rounds.conftest import (
     _FakeNewznabClient,
     make_search_result,
@@ -230,3 +234,71 @@ async def test_indexer_ids_filter_restricts_fan_out(
     assert set(report.indexer_outcomes) == {indexers[0].id}
     # The unselected indexer's fake client wasn't asked.
     assert fakes[indexers[1].id].search_calls == []
+
+
+# ---------------------------------------------------------------------------
+# Unidentified-bucket history rows — torznab noise must not surface as a
+# bogus failed "manual grab" in the History tab.
+# ---------------------------------------------------------------------------
+
+
+def test_manual_history_drops_unidentified_when_a_game_matched() -> None:
+    """When at least one candidate matched a monitored game, the
+    unidentified bucket (unrelated torznab results) is NOT recorded —
+    it would otherwise render in History as a failed manual grab."""
+    candidates = [
+        SimpleNamespace(
+            matched_game_id=7,
+            rejection=None,
+            score_breakdown=None,
+            matched_release_id=None,
+        ),
+        SimpleNamespace(
+            matched_game_id=None,
+            rejection=None,
+            score_breakdown=None,
+            matched_release_id=None,
+        ),
+        SimpleNamespace(
+            matched_game_id=None,
+            rejection=None,
+            score_breakdown=None,
+            matched_release_id=None,
+        ),
+    ]
+
+    entries = _manual_history_entries(
+        indexer_id=1, indexer_candidates=candidates, outcome="ok"
+    )
+
+    game_ids = [e.get("game_id") for e in entries]
+    assert 7 in game_ids
+    assert None not in game_ids
+
+
+def test_manual_history_keeps_unidentified_when_nothing_matched() -> None:
+    """When NO candidate matched a monitored game, the unidentified
+    row is kept — a genuine "found results but none usable" signal."""
+    candidates = [
+        SimpleNamespace(
+            matched_game_id=None,
+            rejection=None,
+            score_breakdown=None,
+            matched_release_id=None,
+        ),
+        SimpleNamespace(
+            matched_game_id=None,
+            rejection=None,
+            score_breakdown=None,
+            matched_release_id=None,
+        ),
+    ]
+
+    entries = _manual_history_entries(
+        indexer_id=1, indexer_candidates=candidates, outcome="ok"
+    )
+
+    assert len(entries) == 1
+    assert entries[0]["game_id"] is None
+    assert entries[0]["no_grab_reason"] == "unidentified"
+    assert entries[0]["results_count"] == 2
