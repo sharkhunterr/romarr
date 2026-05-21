@@ -5,8 +5,8 @@ Event-driven sibling of the cron-fired runners. Fires when the
 calls the scheduler dispatcher with ``trigger="AutoCheckAdded"``
 and the new game's ``game_id`` in the parameters. The runner
 loads the game, runs one manual-search round scoped to the
-game's title + platform, and reports how many candidates the
-round produced.
+game's title + platform, dispatches the best candidate to the
+download client, and reports the candidate / grab counts.
 
 Why a thin wrapper around :func:`run_manual_search`?
 Sonarr/Radarr fire a search-on-add as a profile-aware action —
@@ -81,23 +81,64 @@ async def _default_search(
     )
 
 
+DispatchFn = Callable[
+    ["AsyncSession", int, list],
+    Awaitable[bool],
+]
+"""Async callable: ``(session, game_id, candidates) -> dispatched``.
+
+Tests inject a fake; the default re-derives the winning candidate
+and dispatches it to the download client.
+"""
+
+
+async def _default_dispatch(
+    session: "AsyncSession",
+    game_id: int,
+    candidates: list,
+) -> bool:
+    """Production grab path — ``run_manual_search`` returns
+    ``grabs=[]`` by contract (the operator picks), so on-add (an
+    auto-grab path, per :func:`dispatch_best_for_game`'s docstring)
+    has to re-derive the winner and dispatch it itself, honouring
+    the game's profile score floor — exactly like the missing /
+    cutoff / rss rounds."""
+    from romarr.search.rounds._shared import (
+        dispatch_best_for_game,
+        load_min_score_for_game,
+    )
+
+    min_score = await load_min_score_for_game(session, game_id)
+    outcome = await dispatch_best_for_game(
+        session,
+        game_id=game_id,
+        candidates=candidates,
+        min_score=min_score,
+    )
+    return bool(outcome.get("dispatched"))
+
+
 async def run_search_on_add(
     session: "AsyncSession",
     *,
     game_id: int,
     search_fn: SearchFn | None = None,
+    dispatch_fn: DispatchFn | None = None,
 ) -> AutoCheckAddedResult:
-    """Search for ``game_id`` and return a structured result.
+    """Search for ``game_id``, grab the best candidate, and return
+    a structured result.
 
     Loads the Game row (so the runner has authoritative title +
     platform_id even if the OnGameAdded payload was stale), runs
-    one manual search round, and reports the candidate / grab
-    counts. A missing or deleted Game returns a structured
-    ``skipped=True`` result rather than raising — the event was
-    fired in good faith and the scheduler audit should reflect
-    that the runner ran but had nothing to do.
+    one manual search round, then dispatches the winning candidate
+    to the download client so a freshly-added game is actually
+    acquired — not merely searched. A missing or deleted Game
+    returns a structured ``skipped=True`` result rather than
+    raising — the event was fired in good faith and the scheduler
+    audit should reflect that the runner ran but had nothing to do.
     """
     fn = search_fn or _default_search
+    dispatch = dispatch_fn or _default_dispatch
 
     game = (
         await session.execute(select(Game).where(Game.id == game_id))
@@ -120,14 +161,15 @@ async def run_search_on_add(
     report = await fn(session, game.title, game.platform_id)
 
     candidates = list(getattr(report, "candidates", []) or [])
-    grabs = list(getattr(report, "grabs", []) or [])
+    grabbed = await dispatch(session, game.id, candidates)
+    grabs = 1 if grabbed else 0
     _logger.info(
         "tasks.auto_check_added.complete",
         extra={
             "game_id": game.id,
             "platform_id": game.platform_id,
             "candidates": len(candidates),
-            "grabs": len(grabs),
+            "grabs": grabs,
         },
     )
     return AutoCheckAddedResult(
@@ -135,12 +177,13 @@ async def run_search_on_add(
         title=game.title,
         platform_id=game.platform_id,
         candidates=len(candidates),
-        grabs=len(grabs),
+        grabs=grabs,
     )
 
 
 __all__ = [
     "AutoCheckAddedResult",
+    "DispatchFn",
     "SearchFn",
     "run_search_on_add",
 ]
