@@ -183,3 +183,74 @@ async def test_run_import_records_correlation_id_and_outcome_shape(
     assert outcome.warning is None
     assert outcome.error_msg == RejectionReason.NO_GAME_MATCH.value
     assert outcome.rejection_reason == RejectionReason.NO_GAME_MATCH
+
+
+@pytest.mark.asyncio
+async def test_run_import_coalesces_when_hash_already_imported(
+    async_session: AsyncSession, tmp_path: Path
+) -> None:
+    """When GAMEMATCH can't tie a file to a game but its SHA-1 is
+    already a known imported Dump — a leftover archive the watcher
+    re-dispatched, a meta-torrent plus a standalone grab of the
+    same ROM — the orchestrator coalesces it as a success instead
+    of parking a bogus match:no_game failure."""
+    from uuid import uuid4
+
+    from romarr.domain.models import Dump, Game, Platform, Release
+    from romarr.identification.hasher import Hasher
+
+    rom = _make_rom(tmp_path)
+    sha1 = Hasher().hash_path(rom).sha1
+
+    platform = Platform(slug="megadrive", name="Mega Drive", manufacturer="Sega")
+    async_session.add(platform)
+    await async_session.flush()
+    # A game whose title does NOT match the ROM filename, so
+    # GAMEMATCH leaves monitored_game_id unset and the run heads
+    # for the match:no_game park path.
+    game = Game(
+        platform_id=platform.id,
+        slug="some-other-game",
+        title="Some Other Game",
+    )
+    async_session.add(game)
+    await async_session.flush()
+    release = Release(
+        game_id=game.id, name="Some Other Game (USA)", status="imported"
+    )
+    async_session.add(release)
+    await async_session.flush()
+    # The decisive seed: a Dump already carrying the ROM's SHA-1.
+    async_session.add(
+        Dump(
+            release_id=release.id,
+            path="/library/roms/md/Some Other Game/Some Other Game (USA).md",
+            original_filename="Some Other Game (USA).md",
+            size_bytes=4096,
+            format="md",
+            crc32="00000000",
+            md5="0" * 32,
+            sha1=sha1,
+        )
+    )
+    await async_session.flush()
+
+    context = ImportContext(
+        source_path=rom,
+        correlation_id=uuid4(),
+        imported_via="manual",
+    )
+    outcome = await run_import(context, session=async_session)
+
+    # Coalesced success — NOT a match:no_game failure.
+    assert outcome.success is True
+    assert outcome.coalesced is True
+    assert outcome.rejection_reason is None
+
+    # No bogus failure history row, and nothing parked.
+    parked = (
+        await async_session.execute(
+            select(UnidentifiedDump).where(UnidentifiedDump.path == str(rom))
+        )
+    ).scalar_one_or_none()
+    assert parked is None

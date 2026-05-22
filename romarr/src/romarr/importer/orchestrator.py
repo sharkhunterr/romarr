@@ -812,6 +812,58 @@ async def run_import(
                     pass
                 return outcome
 
+    # Hash-coalesce before parking. GAMEMATCH couldn't tie this
+    # file to a monitored game — but its content may still be a
+    # duplicate of something already imported: a leftover archive
+    # the watcher re-dispatched, or a meta-torrent plus a standalone
+    # grab of the same ROM. When the source SHA-1 is already a known
+    # imported Dump, this is not a failure — coalesce it as a
+    # success (FR-033) instead of writing a bogus match:no_game row.
+    if (
+        extract_failure is None
+        and sha1 is not None
+        and source_path.exists()
+        and source_path.is_file()
+    ):
+        from romarr.importer._idempotency import find_dump_by_hash
+        from romarr.importer._outcome import make_success_outcome
+
+        existing_dump = await find_dump_by_hash(session=session, sha1=sha1)
+        if existing_dump is not None:
+            coalesce_game_id = (
+                await session.execute(
+                    select(Release.game_id).where(
+                        Release.id == existing_dump.release_id
+                    )
+                )
+            ).scalar_one_or_none()
+            if coalesce_game_id is not None:
+                outcome = await make_success_outcome(
+                    session=session,
+                    context=context,
+                    started_at=started_at,
+                    duration_ms=max(
+                        0,
+                        int(
+                            (
+                                asyncio.get_event_loop().time()
+                                - monotonic_start
+                            )
+                            * 1000
+                        ),
+                    ),
+                    dest_path=existing_dump.path,
+                    game_id=int(coalesce_game_id),
+                    release_id=existing_dump.release_id,
+                    dump_id=existing_dump.id,
+                    source_hash_sha1=sha1,
+                    confidence=1.0,
+                    coalesced=True,
+                    warning=None,
+                )
+                await session.commit()
+                return outcome
+
     # Step 2b — park. The rejection reason picks the best signal
     # we have: an extract failure wins (bomb / bad-archive /
     # depth-exceeded — CL004 + CL009); a path that doesn't exist

@@ -63,4 +63,29 @@ async def find_existing_dump(
     ).scalar_one_or_none()
 
 
-__all__ = ["find_existing_dump"]
+async def find_dump_by_hash(
+    *,
+    session: AsyncSession,
+    sha1: str,
+) -> Dump | None:
+    """Return ANY existing :class:`Dump` with this SHA-1, whatever
+    Release it belongs to — or ``None`` when the content has never
+    been imported.
+
+    Unlike :func:`find_existing_dump` (keyed on release_id + sha1),
+    this is a content-only lookup. The orchestrator uses it as a
+    last guard before parking a ``match:no_game`` failure: when
+    GAMEMATCH can't tie a file to a game but its hash is already a
+    known imported Dump, the file is a duplicate of existing content
+    (a leftover archive the watcher re-dispatched, a meta-torrent
+    plus a standalone grab of the same ROM, …) — a coalesced
+    success, not a failure.
+    """
+    return (
+        await session.execute(
+            select(Dump).where(Dump.sha1 == sha1.lower()).limit(1)
+        )
+    ).scalar_one_or_none()
+
+
+__all__ = ["find_dump_by_hash", "find_existing_dump"]
