@@ -193,3 +193,35 @@ async def test_run_missing_search_respects_limit(
         async_session, limit=2, search_fn=_fake_search
     )
     assert result.total == 2
+
+
+# ---------------------------------------------------------------------------
+# dispatch_best_for_game gates on the canonical match_score
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_dispatch_best_for_game_gates_on_match_score() -> None:
+    """The auto-grab floor is compared against the canonical
+    match_score (the same 0-100 number the search UI shows) — not the
+    raw score_breakdown total. A candidate below the floor is
+    reported below_min_score and never dispatched."""
+    from types import SimpleNamespace
+
+    from romarr.search.rounds._shared import dispatch_best_for_game
+
+    candidates = [
+        SimpleNamespace(matched_game_id=5, rejection=None, match_score=40),
+        SimpleNamespace(matched_game_id=5, rejection=None, match_score=59),
+    ]
+
+    outcome = await dispatch_best_for_game(
+        None,  # type: ignore[arg-type]  # below_min_score returns before DB use
+        game_id=5,
+        candidates=candidates,
+        min_score=80,
+    )
+
+    assert outcome["dispatched"] is False
+    assert outcome["best_score"] == 59
+    assert outcome["no_grab_reason"] == "below_min_score: 59/80"

@@ -8,13 +8,17 @@ from typing import Any, ClassVar
 import pytest
 
 from romarr.profiles.types import Decision
-from romarr.search.pipeline import DAT_VERIFIED_BONUS, run_pipeline
+from romarr.search.pipeline import (
+    DAT_VERIFIED_BONUS,
+    _compute_match_score,
+    run_pipeline,
+)
 from romarr.search.state import (
     BlocklistEntry,
     LibraryState,
     PlatformFormatBounds,
 )
-from romarr.search.types import RejectionCode
+from romarr.search.types import RejectionCode, ScoreBreakdown
 from tests.search.conftest import none_dat, verified_dat
 
 # ---------------------------------------------------------------------------
@@ -48,6 +52,62 @@ def test_happy_path_accepts_with_score(
     assert candidate.score_breakdown.total >= 3
     assert candidate.matched_game_id == 1
     assert candidate.matched_release_id == 10
+
+
+def test_compute_match_score_is_absolute_and_clamped() -> None:
+    """match_score = 50% title identification + 50% quality, the
+    quality half clamped to 0-100 — absolute, never round-relative."""
+    # Perfect title (100) + quality 30 → 0.5*100 + 0.5*30 = 65.
+    assert (
+        _compute_match_score(100, ScoreBreakdown(total=30, contributions=[]))
+        == 65
+    )
+    # Quality clamps high: a 500-point breakdown caps at 100.
+    assert (
+        _compute_match_score(100, ScoreBreakdown(total=500, contributions=[]))
+        == 100
+    )
+    # Negative quality clamps to 0.
+    assert (
+        _compute_match_score(80, ScoreBreakdown(total=-20, contributions=[]))
+        == 40
+    )
+    # Missing title score defaults to 100 (accepted ⇒ game matched).
+    assert (
+        _compute_match_score(None, ScoreBreakdown(total=40, contributions=[]))
+        == 70
+    )
+
+
+def test_accepted_candidate_carries_match_score(
+    make_result: Callable[..., Any],
+    sonic_state: LibraryState,
+    quality_profile: Any,
+    region_profile: Any,
+    dump_profile: Any,
+    language_profile: Any,
+    custom_formats: list[Any],
+) -> None:
+    """An accepted candidate carries the canonical ``match_score``
+    consistent with its title + quality halves."""
+    candidate = run_pipeline(
+        result=make_result(),
+        library_state=sonic_state,
+        dat_lookup=none_dat,
+        quality_profile=quality_profile,
+        region_profile=region_profile,
+        dump_profile=dump_profile,
+        language_profile=language_profile,
+        custom_formats=custom_formats,
+        file_format="7z",
+    )
+    assert candidate.rejection is None
+    assert candidate.score_breakdown is not None
+    assert candidate.match_score is not None
+    assert 0 <= candidate.match_score <= 100
+    assert candidate.match_score == _compute_match_score(
+        candidate.title_match_score, candidate.score_breakdown
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -341,8 +341,9 @@ async def dispatch_best_for_game(
       1. ``matched_game_id == game_id`` (released the manual search
          was scoped to a different game vs the one we want)
       2. ``rejection is None`` (every soft gate passed)
-      3. ``score_breakdown.total > 0`` (cleared the pipeline)
-      4. ``score_breakdown.total >= min_score`` (operator floor)
+      3. ``match_score >= min_score`` — the operator floor is gated
+         on the SAME canonical 0-100 score the search UI shows, so
+         "93 on screen" means "93 for this decision".
 
     Returns a structured dict the caller can stash in its summary:
       * ``dispatched`` (bool) — True iff a candidate landed in the
@@ -379,9 +380,8 @@ async def dispatch_best_for_game(
         c
         for c in matching
         if c.rejection is None
-        and c.score_breakdown is not None
-        and c.score_breakdown.total > 0
-        and c.score_breakdown.total >= min_score
+        and c.match_score is not None
+        and c.match_score >= min_score
     ]
 
     if not eligible:
@@ -395,24 +395,16 @@ async def dispatch_best_for_game(
                 ),
                 "status": None,
             }
-        positive = [
-            c
-            for c in matching
-            if c.score_breakdown is not None
-            and c.score_breakdown.total > 0
-        ]
-        if not positive:
+        scored = [c for c in matching if c.match_score is not None]
+        if not scored:
             return {
                 "dispatched": False,
                 "best_score": None,
                 "no_grab_reason": "score_too_low",
                 "status": None,
             }
-        best_clean = max(
-            positive,
-            key=lambda c: c.score_breakdown.total,
-        )
-        best_score = best_clean.score_breakdown.total
+        best_clean = max(scored, key=lambda c: c.match_score or 0)
+        best_score = best_clean.match_score
         return {
             "dispatched": False,
             "best_score": best_score,
@@ -420,7 +412,7 @@ async def dispatch_best_for_game(
             "status": None,
         }
 
-    best = max(eligible, key=lambda c: c.score_breakdown.total)
+    best = max(eligible, key=lambda c: c.match_score or 0)
 
     from sqlalchemy import select as _select
 

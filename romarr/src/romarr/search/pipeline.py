@@ -147,6 +147,32 @@ def _reject(
     )
 
 
+def _compute_match_score(
+    title_match_score: int | None,
+    breakdown: ScoreBreakdown,
+) -> int:
+    """Canonical 0-100 acquisition score — the single number the UI
+    shows *and* ``auto_grab_min_score`` gates on, so "93 on screen"
+    means "93 for the grab decision".
+
+    Equal-weighted, both halves absolute:
+      * identification — ``title_match_score`` (0-100): is this the
+        right game? Defaults to 100 when unset — an accepted
+        candidate matched its game, so identification cleared.
+      * quality — the profile score (region + custom formats)
+        clamped to 0-100: how good is this release.
+
+    Absolute, NOT round-relative: the same release scores the same
+    regardless of what else the round returned, so the value is
+    stable to threshold against.
+    """
+    identification = (
+        title_match_score if title_match_score is not None else 100
+    )
+    quality = max(0, min(100, breakdown.total))
+    return round(identification * 0.5 + quality * 0.5)
+
+
 def _accept(
     *,
     result: SearchResult,
@@ -200,6 +226,7 @@ def _accept(
         hash_crc32=result.hash_crc32,
         already_owned=already_owned,
         title_match_score=title_match_score,
+        match_score=_compute_match_score(title_match_score, breakdown),
         # Slice 402 — extra torznab/grabarr metadata.
         grabs=result.grabs,
         download_volume_factor=result.download_volume_factor,

@@ -138,7 +138,15 @@ async def test_job_already_running_is_not_logged_as_error(
     with caplog.at_level(logging.DEBUG, logger="romarr.tasks.event_dispatch"):
         await channel.publish(OnGameAddedPayload(game=_game_ref()))
 
+    # Only inspect the dispatcher's own records — a full-suite run
+    # can leak unrelated ERROR logs from other components into
+    # caplog, which has nothing to do with this behaviour.
+    dispatch_records = [
+        r for r in caplog.records if r.name == "romarr.tasks.event_dispatch"
+    ]
     # No ERROR-level record from the dispatcher …
-    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+    assert not [r for r in dispatch_records if r.levelno >= logging.ERROR]
     # … and the skip is recorded at debug.
-    assert any("already running" in r.getMessage() for r in caplog.records)
+    assert any(
+        "already running" in r.getMessage() for r in dispatch_records
+    )

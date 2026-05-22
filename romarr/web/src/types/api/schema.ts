@@ -3087,6 +3087,8 @@ export interface components {
             info_url?: string | null;
             /** Languages */
             languages?: string[];
+            /** Match Score */
+            match_score?: number | null;
             /** Matched Game Id */
             matched_game_id?: number | null;
             /** Matched Release Id */
