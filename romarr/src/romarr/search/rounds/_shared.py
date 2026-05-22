@@ -348,8 +348,9 @@ async def dispatch_best_for_game(
     Returns a structured dict the caller can stash in its summary:
       * ``dispatched`` (bool) — True iff a candidate landed in the
         download client.
-      * ``best_score`` (int|None) — top scorer's total, or None when
-        no candidate matched the game at all.
+      * ``best_score`` (int|None) — the top candidate's canonical
+        ``match_score`` (the same 0-100 number the UI shows), or None
+        when no candidate matched the game at all.
       * ``no_grab_reason`` (str|None) — same vocabulary the RSS
         round emits so the History modal renders identical labels.
       * ``status`` (str|None) — ``DispatchStatus.value`` when we
@@ -437,7 +438,7 @@ async def dispatch_best_for_game(
     if already_imported is not None:
         return {
             "dispatched": False,
-            "best_score": best.score_breakdown.total,
+            "best_score": best.match_score,
             "no_grab_reason": (
                 f"already_imported: release #{already_imported}"
             ),
@@ -485,7 +486,7 @@ async def dispatch_best_for_game(
 
     return {
         "dispatched": dispatched,
-        "best_score": best.score_breakdown.total,
+        "best_score": best.match_score,
         "no_grab_reason": (
             None
             if dispatched
