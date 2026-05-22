@@ -251,18 +251,21 @@ def test_manual_history_drops_unidentified_when_a_game_matched() -> None:
             matched_game_id=7,
             rejection=None,
             score_breakdown=None,
+            match_score=59,
             matched_release_id=None,
         ),
         SimpleNamespace(
             matched_game_id=None,
             rejection=None,
             score_breakdown=None,
+            match_score=None,
             matched_release_id=None,
         ),
         SimpleNamespace(
             matched_game_id=None,
             rejection=None,
             score_breakdown=None,
+            match_score=None,
             matched_release_id=None,
         ),
     ]
@@ -274,6 +277,10 @@ def test_manual_history_drops_unidentified_when_a_game_matched() -> None:
     game_ids = [e.get("game_id") for e in entries]
     assert 7 in game_ids
     assert None not in game_ids
+    # The recorded score is the canonical match_score — the same
+    # number the modal shows and the auto-grab floor gates on.
+    matched = next(e for e in entries if e.get("game_id") == 7)
+    assert matched["score"] == 59
 
 
 def test_manual_history_keeps_unidentified_when_nothing_matched() -> None:
@@ -284,12 +291,14 @@ def test_manual_history_keeps_unidentified_when_nothing_matched() -> None:
             matched_game_id=None,
             rejection=None,
             score_breakdown=None,
+            match_score=None,
             matched_release_id=None,
         ),
         SimpleNamespace(
             matched_game_id=None,
             rejection=None,
             score_breakdown=None,
+            match_score=None,
             matched_release_id=None,
         ),
     ]

@@ -122,27 +122,24 @@ def _manual_history_entries(
         scored = [
             c
             for c in group
-            if c.rejection is None and c.score_breakdown is not None
+            if c.rejection is None and c.match_score is not None
         ]
         scored.sort(
-            key=lambda c: (
-                c.score_breakdown.total if c.score_breakdown else 0
-            ),
+            key=lambda c: c.match_score or 0,
             reverse=True,
         )
         best = scored[0] if scored else group[0]
-        best_total = (
-            best.score_breakdown.total
-            if best.score_breakdown is not None
-            else None
-        )
+        # Record the canonical ``match_score`` (0-100) — the SAME
+        # number the search modal shows and the auto-grab floor
+        # gates on — so the History tab can't disagree with either.
+        best_score = best.match_score
         entries.append(
             {
                 "indexer_id": indexer_id,
                 "game_id": game_id,
                 "release_id": best.matched_release_id,
                 "results_count": len(group),
-                "score": best_total,
+                "score": best_score,
                 "score_breakdown": (
                     [
                         c.model_dump()
