@@ -65,16 +65,29 @@ async def _default_search(
     session: "AsyncSession",
     query: str,
     platform_id: int,
+    game_id: int | None = None,
 ) -> Any:
     from romarr.search._clients import make_indexer_client_factory
     from romarr.search.rounds.manual import run_manual_search
 
     factory = make_indexer_client_factory(session)
+    # ``search_type='cutoff_scheduled'`` flags these rows in
+    # ``search_history`` so the Activity feed can distinguish
+    # operator-initiated manual searches from background cutoff
+    # probes. Without this, cutoff rounds wrote rows labelled
+    # ``manual`` and looked exactly like the operator clicking
+    # "Search" on every game card in succession.
+    #
+    # ``requesting_game_id`` scopes the round to the specific
+    # release's parent game so the per-game History tab gets
+    # ONE row instead of the fan-out pattern.
     return await run_manual_search(
         session=session,
         query=query,
         client_factory=factory,
         platform_id=platform_id,
+        search_type="cutoff_scheduled",
+        requesting_game_id=game_id,
     )
 
 
@@ -129,7 +142,18 @@ async def run_cutoff_search(
             )
             continue
         try:
-            report = await fn(session, game.title, game.platform_id)
+            # Identity check: production default takes a 4th
+            # ``game_id`` arg so the round records ONE
+            # search_history row tied to this game (instead of
+            # the fan-out pattern that polluted every fuzzy-matched
+            # sibling's History tab). Test fakes keep the legacy
+            # 3-arg shape.
+            if fn is _default_search:
+                report = await _default_search(
+                    session, game.title, game.platform_id, game.id
+                )
+            else:
+                report = await fn(session, game.title, game.platform_id)
         except Exception as exc:
             _logger.warning(
                 "search.cutoff.release_failed",

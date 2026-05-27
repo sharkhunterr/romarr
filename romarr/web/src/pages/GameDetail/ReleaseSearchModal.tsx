@@ -823,6 +823,11 @@ export function ReleaseSearchModal(
     search.mutate({
       query: query.trim(),
       platformId: props.platformId,
+      // Scope the round to this game card so the backend records
+      // ONE search_history row for it, instead of fanning out per
+      // fuzzy-matched library game (which would pollute unrelated
+      // games' History tabs with phantom searches).
+      gameId: props.gameId ?? undefined,
     });
   };
 

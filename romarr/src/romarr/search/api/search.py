@@ -47,6 +47,7 @@ async def manual_search(
         indexer_ids=body.indexer_ids,
         platform_id=body.platform_id,
         strict=body.strict,
+        requesting_game_id=body.game_id,
     )
 
 

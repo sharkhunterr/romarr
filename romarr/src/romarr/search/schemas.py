@@ -127,6 +127,15 @@ class ManualSearchRequest(_Base):
     """When true, candidates that would auto-reject are dropped from
     the response. When false (default), they're returned with
     ``would_auto_reject=true`` so the operator can decide."""
+    game_id: int | None = None
+    """When set, the round is scoped to a specific game card —
+    only ONE ``search_history`` row gets persisted (for that game),
+    instead of one per fuzzy-matched library game. Without this,
+    a manual search for "Mario Hoops 3-on-3" from game 19's modal
+    would also write rows for games 17 (M&L) + 18 (M&S) because
+    the Minerva meta-torrent's per-file candidates fan out across
+    every Mario game in the catalogue, polluting their History
+    tabs with phantom searches the operator never ran."""
 
 
 class ReleaseSearchRequest(_Base):

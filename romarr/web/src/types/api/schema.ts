@@ -4063,6 +4063,8 @@ export interface components {
             scoreBreakdown?: {
                 [key: string]: unknown;
             }[] | null;
+            /** Sizebytes */
+            sizeBytes?: number | null;
             /** Successful */
             successful: boolean;
             /** Summary */
@@ -4810,6 +4812,8 @@ export interface components {
          * @description POST /api/v3/rom/search/manual.
          */
         ManualSearchRequest: {
+            /** Game Id */
+            game_id?: number | null;
             /** Indexer Ids */
             indexer_ids?: number[] | null;
             /** Platform Id */

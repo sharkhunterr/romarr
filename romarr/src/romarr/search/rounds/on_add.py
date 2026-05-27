@@ -55,6 +55,7 @@ async def _default_search(
     session: "AsyncSession",
     query: str,
     platform_id: int,
+    game_id: int | None = None,
 ) -> Any:
     from romarr.search._clients import make_indexer_client_factory
     from romarr.search.rounds.manual import run_manual_search
@@ -65,6 +66,11 @@ async def _default_search(
         query=query,
         client_factory=factory,
         platform_id=platform_id,
+        search_type="auto_added",
+        # Scope the round to the added game so the per-game
+        # History tab gets ONE row instead of fanning out per
+        # fuzzy-matched library sibling.
+        requesting_game_id=game_id,
     )
 
 
@@ -100,7 +106,15 @@ async def run_search_on_add(
         )
 
     try:
-        report = await fn(session, game.title, game.platform_id)
+        # Identity-check the production default to flow
+        # ``game_id`` down as ``requesting_game_id``; injected
+        # test fakes keep the 3-arg legacy contract.
+        if fn is _default_search:
+            report = await _default_search(
+                session, game.title, game.platform_id, game.id
+            )
+        else:
+            report = await fn(session, game.title, game.platform_id)
     except Exception as exc:
         _logger.warning(
             "search.on_add.failed",

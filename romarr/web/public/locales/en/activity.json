@@ -57,7 +57,7 @@
       "job_run": "Task"
     },
     "searchType": {
-      "manual": "Manual grab",
+      "manual": "Manual search",
       "rss": "RSS sync",
       "auto_added": "Auto search",
       "missing_scheduled": "Missing search",
@@ -79,6 +79,7 @@
       "dest": "Destination",
       "source": "Source",
       "client": "Client",
+      "size": "Size",
       "via": "Via",
       "reason": "Reason",
       "title": "Event detail",
@@ -114,6 +115,16 @@
       "watcher": "polling",
       "manual": "manual"
     },
+    "jobLabel": {
+      "AutoCheckAdded": "Auto check (newly-added)",
+      "Backup": "Backup",
+      "CutoffSearch": "Cutoff search",
+      "DatUpdate": "DAT update",
+      "HealthCheck": "Health check",
+      "MissingSearch": "Missing search",
+      "RefreshGameMetadata": "Refresh metadata",
+      "RssSync": "RSS sync"
+    },
     "duration": {
       "ms": "{{ms}} ms",
       "s": "{{s}} s",
@@ -122,6 +133,7 @@
     },
     "subjectGame": "game #{{id}}",
     "subjectRelease": "release #{{id}}",
+    "subjectQuery": "\"{{query}}\"",
     "subjectEvent": "event #{{id}}",
     "statusOk": "ok",
     "statusFailed": "failed",

@@ -58,8 +58,13 @@ SearchFn = Callable[
 ]
 """Async callable: ``(session, query, platform_id) -> SearchRoundReport``.
 
-Tests inject a fake; the default builds the indexer client
-factory and calls :func:`run_manual_search` directly.
+Tests inject 3-arg fakes; the production default below is a
+4-arg overload (also takes ``game_id``) and gets selected via
+identity check at the call site — that lets the production path
+flow ``game_id`` down as ``requesting_game_id`` (one
+``search_history`` row tied to the game instead of the fan-out
+pattern that produced phantom rows under every Mario / Sonic
+/ Layton sibling) without breaking the 3-arg test-fake contract.
 """
 
 
@@ -67,6 +72,7 @@ async def _default_search(
     session: "AsyncSession",
     query: str,
     platform_id: int,
+    game_id: int | None = None,
 ) -> Any:
     """Production search path — runs one manual search round."""
     from romarr.search._clients import make_indexer_client_factory
@@ -78,6 +84,15 @@ async def _default_search(
         query=query,
         client_factory=factory,
         platform_id=platform_id,
+        # Scope the round to the requesting game so the
+        # search_history table records ONE row for it instead of
+        # the fan-out pattern that produced phantom rows under
+        # every Mario / Sonic / Layton sibling.
+        requesting_game_id=game_id,
+        # The round is the auto-check-added task firing — label
+        # the row accordingly so the Activity feed distinguishes
+        # it from operator-initiated manual searches.
+        search_type="auto_added",
     )
 
 
@@ -158,7 +173,16 @@ async def run_search_on_add(
             skip_reason="game_not_found",
         )
 
-    report = await fn(session, game.title, game.platform_id)
+    # Identity check: when the production default is in use we
+    # call its 4-arg overload directly (game_id → requesting_game_id
+    # in the round). Injected test fakes keep the legacy 3-arg
+    # contract so existing tests don't need to evolve in lock-step.
+    if fn is _default_search:
+        report = await _default_search(
+            session, game.title, game.platform_id, game.id
+        )
+    else:
+        report = await fn(session, game.title, game.platform_id)
 
     candidates = list(getattr(report, "candidates", []) or [])
     grabbed = await dispatch(session, game.id, candidates)

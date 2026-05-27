@@ -245,15 +245,28 @@ async def run_import(
             else:
                 # No recognised ROM file in the archive. Mark the
                 # import as failed-extract with a structured reason
-                # so the operator sees "non_rom_archive" in the
+                # so the operator sees "extract:bad-archive" in the
                 # queue / history rather than the orchestrator
                 # silently dumping whatever non-archive bytes
                 # happened to be inside.
+                #
+                # The ``rejection_reason`` keyword is required by
+                # :class:`ExtractError`; omitting it raised a
+                # ``TypeError`` mid-pipeline (unhandled — no audit
+                # row got written, the dispatcher's broad ``except``
+                # surfaced the crash as ``"TypeError: ..."`` on the
+                # queue_entry instead). Map to the closest existing
+                # enum value (``extract:bad-archive``) so the
+                # downstream blocklist + parking logic recognises
+                # the reason.
+                from romarr.importer.types import RejectionReason as _RR
+
                 extract_failure = ExtractError(
                     "non_rom_archive: archive contains no file matching "
                     f"{'platform_format' if platform_exts else 'rom-extension'} "
                     f"set (extracted: "
-                    f"{', '.join(sorted({p.suffix.lower() for p in result.extracted_paths}))[:80]})"
+                    f"{', '.join(sorted({p.suffix.lower() for p in result.extracted_paths}))[:80]})",
+                    rejection_reason=_RR.EXTRACT_BAD_ARCHIVE.value,
                 )
         except ExtractError as exc:
             extract_failure = exc
@@ -320,6 +333,61 @@ async def run_import(
             ).scalar_one_or_none()
             if row is not None:
                 suggested_platform_id = int(row)
+
+    # Late ``queue_entry`` reconciliation. The dispatcher reads
+    # ``QueueEntry.game_id`` once at the top of dispatch and threads
+    # it via ``pre_matched_game_id`` — but the search-engine grab
+    # path commits the queue_entry's ``game_id`` in a *separate*
+    # session. When a watcher tick wins the race against that commit
+    # (qBit reports the torrent done before the grab's queue_entry
+    # write has flushed), ``pre_matched_game_id`` arrives ``None``,
+    # GAMEMATCH falls back to filename-fuzzy, and opaque torrent
+    # names (``gwsmb35.zip``, ``mx25u8035e.bin``) park bogusly as
+    # ``match:no_game`` — even though the ``queue_entry`` is by now
+    # bound to a game.
+    #
+    # Re-query the queue_entry here, just before the auto-import
+    # branch, with the orchestrator's own (committed) session view.
+    # When a ``game_id`` is now visible, set a local
+    # ``treat_as_pre_matched`` flag so the create-release fallback
+    # below (currently gated on ``context.imported_via == 'scan'``
+    # or ``context.pre_matched_game_id is not None``) ALSO accepts
+    # this late-bound case.
+    treat_as_pre_matched = context.pre_matched_game_id is not None
+    if (
+        monitored_game_id is None
+        and context.download_client_id is not None
+        and context.download_client_native_id is not None
+    ):
+        try:
+            from romarr.api.models import QueueEntry as _QE
+
+            late_game_id = (
+                await session.execute(
+                    select(_QE.game_id).where(
+                        _QE.download_client_id
+                        == context.download_client_id,
+                        _QE.download_client_native_id
+                        == context.download_client_native_id,
+                    )
+                )
+            ).scalar_one_or_none()
+            if late_game_id is not None:
+                monitored_game_id = int(late_game_id)
+                suggested_game_id = monitored_game_id
+                treat_as_pre_matched = True
+                if suggested_platform_id is None:
+                    plat_row = (
+                        await session.execute(
+                            select(Game.platform_id).where(
+                                Game.id == monitored_game_id
+                            )
+                        )
+                    ).scalar_one_or_none()
+                    if plat_row is not None:
+                        suggested_platform_id = int(plat_row)
+        except Exception:
+            pass
 
     # Step 2b — AUTO-IMPORT: when GAMEMATCH resolved to a
     # monitored Game AND that Game has exactly one wanted
@@ -390,6 +458,7 @@ async def run_import(
         if not candidates and (
             context.imported_via == "scan"
             or context.pre_matched_game_id is not None
+            or treat_as_pre_matched
         ):
             try:
                 parsed_for_create = default_dispatcher().parse(source_path.name)
@@ -536,6 +605,7 @@ async def run_import(
                     exception=destination_collision_failure,
                     duration_ms=duration_ms,
                     source_hash_sha1=sha1,
+                    size_bytes=size_bytes if size_bytes > 0 else None,
                 )
                 # Auto-blocklist on destination collision.
                 try:
@@ -610,6 +680,7 @@ async def run_import(
                     ),
                     duration_ms=duration_ms,
                     source_hash_sha1=sha1,
+                    size_bytes=size_bytes if size_bytes > 0 else None,
                 )
                 await session.commit()
                 return failure_outcome
@@ -717,6 +788,7 @@ async def run_import(
                         confidence=1.0,
                         coalesced=True,
                         warning=None,
+                        size_bytes=size_bytes,
                     )
                     await session.commit()
             except Exception:
@@ -810,6 +882,29 @@ async def run_import(
                     )
                 except Exception:
                     pass
+                # Retroactive sibling-supersede: when qBit fires
+                # two events for one logical torrent under
+                # DIFFERENT native_ids (its .torrent infohash plus
+                # some category/wrapper id), the first event
+                # parks as match:no_game because no queue_entry
+                # matches its native_id; the second event finds
+                # the queue_entry and succeeds. The first event's
+                # row is misinformation now — sweep any failed
+                # row with this exact sha1 from the last 5 min.
+                try:
+                    from romarr.importer._outcome import (
+                        supersede_failed_siblings,
+                    )
+
+                    swept = await supersede_failed_siblings(
+                        session=session,
+                        sha1=hash_result.sha1,
+                        keep_history_id=outcome.history_id,
+                    )
+                    if swept > 0:
+                        await session.commit()
+                except Exception:
+                    pass
                 return outcome
 
     # Hash-coalesce before parking. GAMEMATCH couldn't tie this
@@ -860,6 +955,62 @@ async def run_import(
                     confidence=1.0,
                     coalesced=True,
                     warning=None,
+                    size_bytes=size_bytes if size_bytes > 0 else None,
+                )
+                await session.commit()
+                return outcome
+
+    # Dispatch-race coalesce. qBit fires two events for one logical
+    # torrent — a generic ``/downloads`` directory-scan and the
+    # per-torrent completion. The first wins the race, extracts +
+    # hashes + imports + DELETES the source; the second arrives
+    # moments later, finds the source missing, skips the hash step
+    # above (so ``sha1`` is None), and would otherwise be parked
+    # here as a bogus ``match:no_game``. Match the missing-source
+    # filename against any ``Dump.original_filename`` imported in
+    # the last few minutes — token-stripped equality tolerates qBit
+    # mangling (``(USA)`` → ``_USA_``) and the archive→ROM
+    # extension change.
+    if extract_failure is None:
+        from romarr.importer._idempotency import find_dump_by_filename
+        from romarr.importer._outcome import make_success_outcome
+
+        sibling_dump = await find_dump_by_filename(
+            session=session,
+            source_filename=context.source_path.name,
+        )
+        if sibling_dump is not None:
+            coalesce_game_id = (
+                await session.execute(
+                    select(Release.game_id).where(
+                        Release.id == sibling_dump.release_id
+                    )
+                )
+            ).scalar_one_or_none()
+            if coalesce_game_id is not None:
+                outcome = await make_success_outcome(
+                    session=session,
+                    context=context,
+                    started_at=started_at,
+                    duration_ms=max(
+                        0,
+                        int(
+                            (
+                                asyncio.get_event_loop().time()
+                                - monotonic_start
+                            )
+                            * 1000
+                        ),
+                    ),
+                    dest_path=sibling_dump.path,
+                    game_id=int(coalesce_game_id),
+                    release_id=sibling_dump.release_id,
+                    dump_id=sibling_dump.id,
+                    source_hash_sha1=sibling_dump.sha1,
+                    confidence=1.0,
+                    coalesced=True,
+                    warning=None,
+                    size_bytes=sibling_dump.size_bytes,
                 )
                 await session.commit()
                 return outcome
@@ -872,8 +1023,61 @@ async def run_import(
     # (typical when qBit runs on another host and Romarr can't
     # see ``/downloads`` locally); otherwise fall through to
     # ``match:no_game``.
+    #
+    # Special case: a *meta-torrent re-grab* whose source dir was
+    # already consumed. qBit's ``add_torrent`` de-duplicates on
+    # info-hash — when the operator grabs e.g. the Minerva DS pack
+    # but the same Minerva info-hash was previously grabbed for a
+    # Wii U game and imported, qBit returns the existing torrent
+    # hash, the new queue_entry binds to that hash, the watcher
+    # dispatches, and the source dir is now EMPTY because the
+    # prior import's lifecycle cleanup deleted it. Plain
+    # ``match:no_game`` is misleading — the operator's setup is
+    # fine, but the meta-torrent's content is gone. Surface a
+    # distinct ``source:meta_torrent_consumed`` reason so the
+    # Activity feed can explain what to do (force-recheck the
+    # torrent in qBit so it re-downloads, or remove + re-add).
+    meta_torrent_consumed = False
+    if (
+        extract_failure is None
+        and source_path.exists()
+        and source_path.is_dir()
+        and context.download_client_id is not None
+        and context.download_client_native_id is not None
+    ):
+        try:
+            from romarr.importer.models import ImportHistory as _IH
+
+            prior_success_id = (
+                await session.execute(
+                    select(_IH.id)
+                    .where(
+                        _IH.download_client_id
+                        == context.download_client_id,
+                        _IH.download_client_native_id
+                        == context.download_client_native_id,
+                        _IH.success.is_(True),
+                    )
+                    .limit(1)
+                )
+            ).scalar_one_or_none()
+            if prior_success_id is not None:
+                # Check the dir is actually empty of importable
+                # files (sentinels + dotfiles excluded).
+                eligible = [
+                    p
+                    for p in source_path.rglob("*")
+                    if p.is_file() and not p.name.startswith(".")
+                ]
+                if not eligible:
+                    meta_torrent_consumed = True
+        except Exception:
+            pass
+
     if extract_failure is not None:
         rejection_reason = extract_failure.rejection_reason
+    elif meta_torrent_consumed:
+        rejection_reason = "source:meta_torrent_consumed"
     elif not source_path.exists():
         rejection_reason = "source:not_found"
     else:
@@ -931,13 +1135,23 @@ async def run_import(
         0,
         int((asyncio.get_event_loop().time() - monotonic_start) * 1000),
     )
-    failure_exc: Exception = (
-        extract_failure
-        if extract_failure is not None
-        else GameNotMatched(
+    if extract_failure is not None:
+        failure_exc: Exception = extract_failure
+    elif meta_torrent_consumed:
+        # Use a distinct error string the UI can recognise. The
+        # generic GameNotMatched would surface as ``match:no_game``,
+        # losing the meta-torrent diagnostic.
+        failure_exc = GameNotMatched(
+            "source:meta_torrent_consumed: a prior import for this "
+            "torrent's info-hash already processed the content; the "
+            "source directory is now empty. Force-recheck the torrent "
+            "in your download client to re-download, or remove and "
+            "re-add it."
+        )
+    else:
+        failure_exc = GameNotMatched(
             "no game matched (orchestrator still in audit-only mode)"
         )
-    )
     outcome = await make_failure_outcome(
         session=session,
         context=context,
@@ -945,6 +1159,7 @@ async def run_import(
         exception=failure_exc,
         duration_ms=duration_ms,
         source_hash_sha1=sha1,
+        size_bytes=size_bytes if size_bytes > 0 else None,
     )
     await session.commit()
     return outcome

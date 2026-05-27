@@ -74,6 +74,7 @@ async def _default_search(
     session: "AsyncSession",
     query: str,
     platform_id: int,
+    game_id: int | None = None,
 ) -> Any:
     """Production search path — runs one manual search round."""
     from romarr.search._clients import make_indexer_client_factory
@@ -85,6 +86,11 @@ async def _default_search(
         query=query,
         client_factory=factory,
         platform_id=platform_id,
+        search_type="missing_scheduled",
+        # Scope the round to the iterated release's game so the
+        # per-game History tab gets ONE row instead of fanning
+        # out across every fuzzy-matched library sibling.
+        requesting_game_id=game_id,
     )
 
 
@@ -141,7 +147,16 @@ async def run_missing_search(
             )
             continue
         try:
-            report = await fn(session, game.title, game.platform_id)
+            # Identity check (same pattern as cutoff round):
+            # production default takes a 4th ``game_id`` arg →
+            # round records ONE search_history row tied to this
+            # game. Test fakes keep the legacy 3-arg shape.
+            if fn is _default_search:
+                report = await _default_search(
+                    session, game.title, game.platform_id, game.id
+                )
+            else:
+                report = await fn(session, game.title, game.platform_id)
         except Exception as exc:
             _logger.warning(
                 "search.missing.release_failed",
