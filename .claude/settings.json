@@ -62,7 +62,10 @@
       "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); print\\(f'{len\\(data\\)} torrent\\(s\\):'\\); [print\\(f'  {t[\\\\\"hash\\\\\"][:12]} {t[\\\\\"name\\\\\"]}'\\) for t in data]\")",
       "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); print\\('|'.join\\(t['hash'] for t in data\\)\\)\")",
       "Bash(xargs -I {} curl -s -X POST \"http://localhost:8088/api/v2/torrents/delete\" -d \"hashes={}&deleteFiles=true\" -o /dev/null -w \"delete: %{http_code}\\\\n\")",
-      "Bash(python3 -c \"import json,sys; print\\(f'{len\\(json.load\\(sys.stdin\\)\\)} torrent\\(s\\) remaining'\\)\")"
+      "Bash(python3 -c \"import json,sys; print\\(f'{len\\(json.load\\(sys.stdin\\)\\)} torrent\\(s\\) remaining'\\)\")",
+      "Bash(sudo -n du -sh /var/lib/docker)",
+      "Bash(kill -0 36232)",
+      "Bash(HUSKY=0 git commit -m 'chore: refresh .claude settings + scheduled lock *)"
     ]
   }
 }
