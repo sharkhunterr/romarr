@@ -34,6 +34,12 @@ export interface ManualSearchVariables {
   platformId?: number;
   /** Drop auto-reject candidates from the response. */
   strict?: boolean;
+  /** Scope the round to a specific game card. When set, the
+   * backend writes ONE search_history row for this game instead
+   * of fanning out across every fuzzy-matched library game —
+   * so the game's History tab doesn't fill up with phantom
+   * searches the operator never initiated. */
+  gameId?: number;
 }
 
 export function useManualSearch(): UseMutationResult<
@@ -42,7 +48,7 @@ export function useManualSearch(): UseMutationResult<
   ManualSearchVariables
 > {
   return useMutation<SearchRoundReport, ApiError, ManualSearchVariables>({
-    mutationFn: ({ query, indexerIds, platformId, strict }) =>
+    mutationFn: ({ query, indexerIds, platformId, strict, gameId }) =>
       apiFetch<SearchRoundReport>("/api/v3/rom/search/manual", {
         method: "POST",
         json: {
@@ -50,6 +56,7 @@ export function useManualSearch(): UseMutationResult<
           indexer_ids: indexerIds,
           platform_id: platformId,
           strict: strict ?? false,
+          game_id: gameId,
         },
       }),
   });

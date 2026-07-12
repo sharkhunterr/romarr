@@ -539,4 +539,200 @@ async def add_game_from_lookup(
     return GameRead.model_validate(game, from_attributes=True)
 
 
+# ---------------------------------------------------------------------------
+# Integration endpoints — for external request managers (allseerr, …)
+# ---------------------------------------------------------------------------
+#
+# A request manager (allseerr's *arr-style game service) only knows
+# IGDB ids — it has no notion of Romarr's internal platform ids or
+# libraries. These two endpoints give it an IGDB-native surface:
+#   * POST /integrations/request — "acquire this IGDB game" (Radarr
+#     role); Romarr resolves the platform via ``Platform.igdb_id``
+#     and routes to the first library.
+#   * GET  /integrations/status — "is this IGDB game already in the
+#     Romarr library?" so the manager can show availability.
+
+
+class IntegrationGameRequest(BaseModel):
+    """POST body for ``/api/v3/game/integrations/request``.
+
+    IGDB-native: the caller passes the IGDB game id + the IGDB
+    *platform* id; Romarr maps the platform to its own catalogue via
+    ``Platform.igdb_id`` and binds the game to the first library.
+    """
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    igdb_id: Annotated[int, Field(alias="igdbId", ge=1)]
+    igdb_platform_id: Annotated[int, Field(alias="igdbPlatformId", ge=1)]
+    title: Annotated[str, Field(min_length=1, max_length=255)]
+    monitored: bool = True
+
+
+class IntegrationGameResult(BaseModel):
+    """Response envelope for the integration request endpoint."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    # ``added`` — a new Game row was created.
+    # ``already_present`` — the IGDB game already lives on this
+    # platform; the existing row is returned untouched (idempotent).
+    status: str
+    game: GameRead
+
+
+class IntegrationStatusResult(BaseModel):
+    """Response for the integration status check."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    present: bool
+    games: list[GameRead]
+
+
+@router.post(
+    "/integrations/request",
+    response_model=IntegrationGameResult,
+    response_model_by_alias=False,
+    summary=(
+        "Acquire an IGDB game (external request managers). Resolves "
+        "the IGDB platform to Romarr's catalogue and adds the game "
+        "to the first library. Idempotent on (platform, igdb_id). "
+        "Admin only."
+    ),
+)
+async def integration_request_game(
+    body: Annotated[IntegrationGameRequest, Body()],
+    admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    event_channel: Annotated[EventChannel | None, Depends(get_event_channel)] = None,
+) -> IntegrationGameResult:
+    # 1. Map the IGDB platform id onto Romarr's own platform row.
+    platform = (
+        await db.execute(
+            select(Platform).where(Platform.igdb_id == body.igdb_platform_id)
+        )
+    ).scalar_one_or_none()
+    if platform is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "errorMessage": (
+                    f"no Romarr platform maps to IGDB platform id "
+                    f"{body.igdb_platform_id} — install the matching "
+                    "Platform Pack first"
+                ),
+                "errorCode": "platform_not_supported",
+            },
+        )
+
+    # 2. Idempotency — the IGDB game already on this platform?
+    existing = (
+        await db.execute(
+            select(Game).where(
+                Game.platform_id == platform.id,
+                Game.igdb_id == body.igdb_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return IntegrationGameResult(
+            status="already_present",
+            game=GameRead.model_validate(existing, from_attributes=True),
+        )
+
+    # 3. Delegate to the standard add path — it handles slug
+    #    allocation, the first-library fallback, the inline metadata
+    #    refresh and the OnGameAdded event. ``providerName=igdb`` is
+    #    a primary provider so the FK column is populated.
+    game = await add_game_from_lookup(
+        body=LookupAddRequest(
+            providerName="igdb",
+            providerGameId=str(body.igdb_id),
+            title=body.title,
+            platformId=platform.id,
+            monitored=body.monitored,
+        ),
+        _admin=admin,
+        db=db,
+        event_channel=event_channel,
+    )
+    return IntegrationGameResult(status="added", game=game)
+
+
+@router.get(
+    "/integrations/status",
+    response_model=IntegrationStatusResult,
+    response_model_by_alias=False,
+    summary=(
+        "Check whether an IGDB game is already in the Romarr "
+        "library (external request managers). Admin only."
+    ),
+)
+async def integration_game_status(
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    igdb_id: Annotated[int, Query(alias="igdbId", ge=1)],
+) -> IntegrationStatusResult:
+    rows = (
+        await db.execute(select(Game).where(Game.igdb_id == igdb_id))
+    ).scalars().all()
+    return IntegrationStatusResult(
+        present=len(rows) > 0,
+        games=[GameRead.model_validate(r, from_attributes=True) for r in rows],
+    )
+
+
+class IntegrationPlatform(BaseModel):
+    """One IGDB platform Romarr can acquire games for."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    igdb_id: Annotated[int, Field(alias="igdbId")]
+    name: str
+
+
+class IntegrationPlatformsResult(BaseModel):
+    """Response for the integration platforms listing."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    platforms: list[IntegrationPlatform]
+
+
+@router.get(
+    "/integrations/platforms",
+    response_model=IntegrationPlatformsResult,
+    response_model_by_alias=False,
+    summary=(
+        "List the IGDB platforms Romarr can acquire games for "
+        "(external request managers). A manager uses this to only "
+        "offer a request button for platforms Romarr can resolve. "
+        "Admin only."
+    ),
+)
+async def integration_platforms(
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> IntegrationPlatformsResult:
+    rows = (
+        (
+            await db.execute(
+                select(Platform)
+                .where(Platform.igdb_id.is_not(None))
+                .order_by(Platform.name)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return IntegrationPlatformsResult(
+        platforms=[
+            IntegrationPlatform(igdb_id=p.igdb_id, name=p.name)
+            for p in rows
+            if p.igdb_id is not None
+        ]
+    )
+
+
 __all__ = ["router"]

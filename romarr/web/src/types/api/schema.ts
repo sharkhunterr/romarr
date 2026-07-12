@@ -3087,6 +3087,8 @@ export interface components {
             info_url?: string | null;
             /** Languages */
             languages?: string[];
+            /** Match Score */
+            match_score?: number | null;
             /** Matched Game Id */
             matched_game_id?: number | null;
             /** Matched Release Id */
@@ -4061,6 +4063,8 @@ export interface components {
             scoreBreakdown?: {
                 [key: string]: unknown;
             }[] | null;
+            /** Sizebytes */
+            sizeBytes?: number | null;
             /** Successful */
             successful: boolean;
             /** Summary */
@@ -4808,6 +4812,8 @@ export interface components {
          * @description POST /api/v3/rom/search/manual.
          */
         ManualSearchRequest: {
+            /** Game Id */
+            game_id?: number | null;
             /** Indexer Ids */
             indexer_ids?: number[] | null;
             /** Platform Id */

@@ -14,6 +14,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     JSON,  # re-exported for downstream test fixtures
+    BigInteger,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -75,6 +76,11 @@ class ImportHistory(Base, TimestampMixin):
 
     source_hash_sha1: Mapped[str | None] = mapped_column(String(40), nullable=True)
     confidence: Mapped[float | None] = mapped_column(Numeric(4, 2), nullable=True)
+    # Slice 467 — operator-facing file size for the timeline view.
+    # NULLable: historical rows don't carry it; the orchestrator
+    # populates it for new imports (post-extract for archives,
+    # source-as-is for direct ROMs).
+    size_bytes: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
 
     imported_via: Mapped[str] = mapped_column(String(16), nullable=False)
     success: Mapped[bool] = mapped_column(Boolean, nullable=False)

@@ -580,3 +580,145 @@ async def test_lookup_add_persists_in_database(
         assert row.igdb_id is None
         assert row.monitored is False
         assert row.needs_metadata_refresh is True
+
+
+# ---------------------------------------------------------------------------
+# Integration endpoints — IGDB-native surface for external request
+# managers (allseerr). /integrations/request + /integrations/status.
+# ---------------------------------------------------------------------------
+
+
+async def _seed_platform_with_igdb(
+    api_engine: AsyncEngine, *, slug: str = "gba", igdb_id: int = 24
+) -> int:
+    """Seed a Platform carrying an ``igdb_id`` and return its row id."""
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        platform = Platform(slug=slug, name=slug.upper(), igdb_id=igdb_id)
+        session.add(platform)
+        await session.commit()
+        await session.refresh(platform)
+        return platform.id
+
+
+@pytest.mark.asyncio
+async def test_integration_request_adds_game(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """POST /integrations/request resolves the IGDB platform id to a
+    Romarr platform and adds the game."""
+    await _seed_admin_and_login(api_engine, api_client)
+    platform_id = await _seed_platform_with_igdb(api_engine, igdb_id=24)
+
+    resp = await api_client.post(
+        "/api/v3/game/integrations/request",
+        json={
+            "igdbId": 7346,
+            "igdbPlatformId": 24,
+            "title": "The Legend of Zelda: The Minish Cap",
+        },
+    )
+    assert resp.status_code == 200, resp.json()
+    body = resp.json()
+    assert body["status"] == "added"
+    assert body["game"]["igdb_id"] == 7346
+    assert body["game"]["platform_id"] == platform_id
+    assert body["game"]["monitored"] is True
+
+
+@pytest.mark.asyncio
+async def test_integration_request_is_idempotent(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """A second request for the same IGDB game on the same platform
+    returns the existing row with status=already_present."""
+    await _seed_admin_and_login(api_engine, api_client)
+    await _seed_platform_with_igdb(api_engine, igdb_id=24)
+
+    payload = {
+        "igdbId": 1234,
+        "igdbPlatformId": 24,
+        "title": "Metroid Fusion",
+    }
+    first = await api_client.post(
+        "/api/v3/game/integrations/request", json=payload
+    )
+    assert first.status_code == 200
+    assert first.json()["status"] == "added"
+
+    second = await api_client.post(
+        "/api/v3/game/integrations/request", json=payload
+    )
+    assert second.status_code == 200
+    assert second.json()["status"] == "already_present"
+    assert second.json()["game"]["id"] == first.json()["game"]["id"]
+
+
+@pytest.mark.asyncio
+async def test_integration_request_unknown_platform(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """An IGDB platform id with no Romarr mapping → 404."""
+    await _seed_admin_and_login(api_engine, api_client)
+
+    resp = await api_client.post(
+        "/api/v3/game/integrations/request",
+        json={
+            "igdbId": 99,
+            "igdbPlatformId": 999999,
+            "title": "Unknown Platform Game",
+        },
+    )
+    assert resp.status_code == 404
+    # romarr's error handler flattens HTTPException(detail=dict) to a
+    # top-level {errorMessage, errorCode} envelope.
+    assert resp.json()["errorCode"] == "platform_not_supported"
+
+
+@pytest.mark.asyncio
+async def test_integration_status_reports_presence(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """GET /integrations/status flips to present=true once the game
+    is in the library."""
+    await _seed_admin_and_login(api_engine, api_client)
+    await _seed_platform_with_igdb(api_engine, igdb_id=24)
+
+    before = await api_client.get(
+        "/api/v3/game/integrations/status?igdbId=4242"
+    )
+    assert before.status_code == 200
+    assert before.json()["present"] is False
+
+    await api_client.post(
+        "/api/v3/game/integrations/request",
+        json={
+            "igdbId": 4242,
+            "igdbPlatformId": 24,
+            "title": "Golden Sun",
+        },
+    )
+
+    after = await api_client.get(
+        "/api/v3/game/integrations/status?igdbId=4242"
+    )
+    assert after.status_code == 200
+    assert after.json()["present"] is True
+    assert len(after.json()["games"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_integration_platforms_lists_supported(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """GET /integrations/platforms lists every platform carrying an
+    igdb_id — the request manager uses it to decide which platforms
+    may show a request button."""
+    await _seed_admin_and_login(api_engine, api_client)
+    await _seed_platform_with_igdb(api_engine, slug="gba", igdb_id=24)
+    await _seed_platform_with_igdb(api_engine, slug="snes", igdb_id=19)
+
+    resp = await api_client.get("/api/v3/game/integrations/platforms")
+    assert resp.status_code == 200, resp.json()
+    ids = {p["igdb_id"] for p in resp.json()["platforms"]}
+    assert {24, 19} <= ids

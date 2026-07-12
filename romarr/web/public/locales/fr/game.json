@@ -208,7 +208,7 @@
       "job_run": "Tâche"
     },
     "searchType": {
-      "manual": "Grab manuel",
+      "manual": "Recherche manuelle",
       "rss": "Sync RSS",
       "auto_added": "Recherche auto",
       "missing_scheduled": "Recherche manquants",
@@ -221,6 +221,7 @@
       "dest": "Destination",
       "source": "Source",
       "client": "Client",
+      "size": "Taille",
       "via": "Via",
       "reason": "Motif"
     },
@@ -228,6 +229,16 @@
       "webhook": "webhook",
       "watcher": "polling",
       "manual": "manuel"
+    },
+    "jobLabel": {
+      "AutoCheckAdded": "Vérif. auto (ajouts récents)",
+      "Backup": "Sauvegarde",
+      "CutoffSearch": "Recherche cutoff",
+      "DatUpdate": "Mise à jour DAT",
+      "HealthCheck": "Contrôle santé",
+      "MissingSearch": "Recherche manquants",
+      "RefreshGameMetadata": "Rafraîchir métadonnées",
+      "RssSync": "Sync RSS"
     },
     "duration": {
       "ms": "{{ms}} ms",
@@ -238,6 +249,8 @@
     "subjectGame_legacy": "ce jeu",
     "subjectRelease": "release #{{id}}",
     "subjectGame": "ce jeu",
+    "subjectQuery": "« {{query}} »",
+    "subjectEvent": "événement n°{{id}}",
     "statusOk": "OK",
     "statusFailed": "ÉCHEC",
     "showingMost": "Affichage des {{count}} entrées les plus récentes.",

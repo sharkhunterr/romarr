@@ -81,6 +81,7 @@ async def persist_failure_history(
     exception: BaseException,
     duration_ms: int,
     source_hash_sha1: str | None = None,
+    size_bytes: int | None = None,
 ) -> ImportHistory:
     """Insert a ``success=False`` row, return the persisted ORM
     object so the caller can read its ``id``.
@@ -113,6 +114,7 @@ async def persist_failure_history(
         started_at=started_at,
         finished_at=datetime.now(UTC),
         duration_ms=duration_ms,
+        size_bytes=size_bytes,
     )
     session.add(row)
     await session.flush()  # populates row.id
@@ -154,6 +156,7 @@ async def make_failure_outcome(
     exception: BaseException,
     duration_ms: int,
     source_hash_sha1: str | None = None,
+    size_bytes: int | None = None,
 ) -> ImportOutcome:
     """Convenience: persist + project in one call.
 
@@ -170,6 +173,7 @@ async def make_failure_outcome(
         exception=exception,
         duration_ms=duration_ms,
         source_hash_sha1=source_hash_sha1,
+        size_bytes=size_bytes,
     )
     return outcome_from_failure_history(
         history=history,
@@ -199,6 +203,7 @@ async def persist_success_history(
     confidence: float | None = None,
     coalesced: bool = False,
     warning: str | None = None,
+    size_bytes: int | None = None,
 ) -> ImportHistory:
     """Insert a ``success=True`` row, return the persisted ORM
     object so the caller can read its ``id``.
@@ -232,6 +237,7 @@ async def persist_success_history(
         started_at=started_at,
         finished_at=datetime.now(UTC),
         duration_ms=duration_ms,
+        size_bytes=size_bytes,
     )
     session.add(row)
     await session.flush()  # populates row.id
@@ -285,6 +291,7 @@ async def make_success_outcome(
     confidence: float | None = None,
     coalesced: bool = False,
     warning: str | None = None,
+    size_bytes: int | None = None,
 ) -> ImportOutcome:
     """Convenience: persist + project in one call. Mirrors
     :func:`make_failure_outcome` so the orchestrator's two
@@ -302,12 +309,59 @@ async def make_success_outcome(
         confidence=confidence,
         coalesced=coalesced,
         warning=warning,
+        size_bytes=size_bytes,
     )
     return outcome_from_success_history(
         history=history,
         context=context,
         duration_ms=duration_ms,
     )
+
+
+async def supersede_failed_siblings(
+    *,
+    session: AsyncSession,
+    sha1: str,
+    keep_history_id: int,
+    within_seconds: int = 300,
+) -> int:
+    """Delete recent failed import_history rows whose ``sha1``
+    matches the just-succeeded one.
+
+    Returns the count of deleted rows.
+
+    Why: qBit (and other clients) occasionally fire TWO events
+    for one logical download with DIFFERENT ``native_id`` values
+    (the .torrent's info-hash and a category/wrapper id). The
+    dispatcher routes each event independently — the one whose
+    native_id matches a ``queue_entry.game_id`` succeeds, the
+    other doesn't have a pre-match and parks as
+    ``match:no_game``. The failure row is misinformation: the
+    content WAS imported successfully (the surviving sibling),
+    just under a different dispatch identity. Once a successful
+    sibling lands, the failure row is pure clutter on the
+    Activity feed — sweep it.
+
+    Scope:
+      * ``success = False`` (only the noise)
+      * same ``sha1`` (proves it's the same content)
+      * within ``within_seconds`` of the success
+      * NOT the keeper (``id != keep_history_id``) — defensive
+        against re-running this on the just-written success
+    """
+    from datetime import timedelta
+    from sqlalchemy import delete
+
+    cutoff = datetime.now(UTC) - timedelta(seconds=within_seconds)
+    result = await session.execute(
+        delete(ImportHistory).where(
+            ImportHistory.id != keep_history_id,
+            ImportHistory.success.is_(False),
+            ImportHistory.source_hash_sha1 == sha1.lower(),
+            ImportHistory.started_at >= cutoff,
+        )
+    )
+    return result.rowcount or 0
 
 
 __all__ = [
@@ -318,4 +372,5 @@ __all__ = [
     "outcome_from_success_history",
     "persist_failure_history",
     "persist_success_history",
+    "supersede_failed_siblings",
 ]

@@ -1923,7 +1923,7 @@ wheels = [
 
 [[package]]
 name = "romarr"
-version = "0.14.0a1"
+version = "0.14.6"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },

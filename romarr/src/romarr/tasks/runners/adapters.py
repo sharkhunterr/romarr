@@ -865,6 +865,12 @@ class AutoCheckAddedAdapter(_AdapterBase):
                     query=game.title,
                     client_factory=indexer_factory,
                     platform_id=game.platform_id,
+                    # Scope the round to this game so the
+                    # search_history table records ONE row instead
+                    # of fanning out across every fuzzy-matched
+                    # sibling.
+                    requesting_game_id=game.id,
+                    search_type="auto_added",
                 )
             except Exception as exc:
                 return JobResult(

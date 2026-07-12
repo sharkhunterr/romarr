@@ -136,6 +136,11 @@ class HistoryEvent(BaseModel):
         alias="downloadClientName", default=None
     )
     imported_via: str | None = Field(alias="importedVia", default=None)
+    # Imported file size in bytes. Populated on import rows since
+    # slice 467 / migration 0036; NULL for historical rows + search
+    # / job_run rows. The UI renders it as a human-readable
+    # (5.4 GB / 12 MB / 4.1 KB) cell in the timeline.
+    size_bytes: int | None = Field(alias="sizeBytes", default=None)
 
 
 def _build_union_subquery() -> Any:
@@ -172,6 +177,7 @@ def _build_union_subquery() -> Any:
         ImportHistory.dest_path.label("dest_path"),
         ImportHistory.download_client_id.label("download_client_id"),
         ImportHistory.imported_via.label("imported_via"),
+        ImportHistory.size_bytes.label("size_bytes"),
     )
 
     search_q = select(
@@ -207,6 +213,7 @@ def _build_union_subquery() -> Any:
         literal(None).label("dest_path"),
         literal(None).label("download_client_id"),
         literal(None).label("imported_via"),
+        literal(None).label("size_bytes"),
     )
 
     job_q = select(
@@ -229,6 +236,7 @@ def _build_union_subquery() -> Any:
         literal(None).label("dest_path"),
         literal(None).label("download_client_id"),
         literal(None).label("imported_via"),
+        literal(None).label("size_bytes"),
     )
 
     return import_q.union_all(search_q, job_q).subquery()
@@ -351,6 +359,7 @@ def _adapt(row: Any) -> HistoryEvent:
             "destPath": dest_path,
             "downloadClientId": getattr(row, "download_client_id", None),
             "importedVia": getattr(row, "imported_via", None),
+            "sizeBytes": getattr(row, "size_bytes", None),
         }
     )
 

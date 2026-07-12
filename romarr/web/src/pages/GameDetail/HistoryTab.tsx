@@ -23,7 +23,8 @@ import {
   useHistory,
   type HistoryEventType,
 } from "@/lib/api/queries/system";
-import { HistoryRow } from "@/pages/Activity/HistoryRow";
+
+import { HistoryTimeline } from "./HistoryTimeline";
 
 const PAGE_SIZE = 50;
 
@@ -236,17 +237,12 @@ export function HistoryTab(props: HistoryTabProps): ReactElement {
         </p>
       )}
 
-      <ul className="space-y-2">
-        {history.data.records.map((event) => (
-          <HistoryRow
-            key={`${event.eventType}-${event.id}`}
-            event={event}
-            i18nNs="game"
-            locale={i18n.language}
-            hideGameLink
-          />
-        ))}
-      </ul>
+      <HistoryTimeline
+        events={history.data.records}
+        locale={i18n.language}
+        i18nNs="game"
+      />
+
       {overflow && !filtersActive && (
         <p className="text-[0.7rem] text-zinc-500">
           {t("history.showingMost", { count: history.data.records.length })}

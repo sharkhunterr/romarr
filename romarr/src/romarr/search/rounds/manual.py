@@ -64,6 +64,7 @@ def _manual_history_entries(
     indexer_id: int,
     indexer_candidates: list[Candidate],
     outcome: str,
+    requesting_game_id: int | None = None,
 ) -> list[dict[str, object]]:
     """Bin one indexer's manual-search candidates into per-game
     ``search_history`` rows.
@@ -75,6 +76,17 @@ def _manual_history_entries(
     GameDetail → History tab can show every search that ran for
     that game. Candidates the pipeline couldn't bind to a library
     game collapse into a single ``game_id=None`` row.
+
+    When ``requesting_game_id`` is set (search initiated from a
+    specific game card's modal), the round narrows down to ONE
+    row for that game — candidates that GAMEMATCH fanned out
+    to OTHER monitored games are folded back in as candidates of
+    the requesting game. Without this, searching "Mario Hoops
+    3-on-3" from game 19's modal would also write rows for games
+    17 + 18 because the indexer returned a Minerva meta-torrent
+    whose per-file candidates split across every Mario DS game.
+    The operator only ever ran ONE search; the history should
+    reflect that.
     """
     if outcome != "ok":
         return [
@@ -82,6 +94,11 @@ def _manual_history_entries(
                 "indexer_id": indexer_id,
                 "results_count": 0,
                 "no_grab_reason": "indexer_failed",
+                **(
+                    {"game_id": requesting_game_id}
+                    if requesting_game_id is not None
+                    else {}
+                ),
             }
         ]
     if not indexer_candidates:
@@ -90,6 +107,42 @@ def _manual_history_entries(
                 "indexer_id": indexer_id,
                 "results_count": 0,
                 "no_grab_reason": "no_results",
+                **(
+                    {"game_id": requesting_game_id}
+                    if requesting_game_id is not None
+                    else {}
+                ),
+            }
+        ]
+
+    # Scoped to a single game's modal: emit ONE row for that game,
+    # using the best-scoring candidate across the whole indexer
+    # response (the operator's intent was to find releases for this
+    # game; whatever GAMEMATCH fanned them out to is internal).
+    if requesting_game_id is not None:
+        scored_all = [
+            c
+            for c in indexer_candidates
+            if c.rejection is None and c.match_score is not None
+        ]
+        scored_all.sort(key=lambda c: c.match_score or 0, reverse=True)
+        best = scored_all[0] if scored_all else indexer_candidates[0]
+        return [
+            {
+                "indexer_id": indexer_id,
+                "game_id": requesting_game_id,
+                "release_id": best.matched_release_id,
+                "results_count": len(indexer_candidates),
+                "score": best.match_score,
+                "score_breakdown": (
+                    [
+                        c.model_dump()
+                        for c in best.score_breakdown.contributions
+                    ]
+                    if best.score_breakdown is not None
+                    else None
+                ),
+                "no_grab_reason": None,
             }
         ]
 
@@ -97,9 +150,19 @@ def _manual_history_entries(
     for c in indexer_candidates:
         by_game.setdefault(c.matched_game_id, []).append(c)
 
+    has_identified = any(game_id is not None for game_id in by_game)
+
     entries: list[dict[str, object]] = []
     for game_id, group in by_game.items():
         if game_id is None:
+            # The unidentified bucket is torznab noise — every query
+            # returns unrelated results. It's only worth recording
+            # when *nothing* matched a monitored game (a genuine
+            # "found results but none usable" signal); when at least
+            # one game matched, this row only surfaces in the History
+            # tab as a bogus failed "manual grab", so drop it.
+            if has_identified:
+                continue
             entries.append(
                 {
                     "indexer_id": indexer_id,
@@ -112,27 +175,24 @@ def _manual_history_entries(
         scored = [
             c
             for c in group
-            if c.rejection is None and c.score_breakdown is not None
+            if c.rejection is None and c.match_score is not None
         ]
         scored.sort(
-            key=lambda c: (
-                c.score_breakdown.total if c.score_breakdown else 0
-            ),
+            key=lambda c: c.match_score or 0,
             reverse=True,
         )
         best = scored[0] if scored else group[0]
-        best_total = (
-            best.score_breakdown.total
-            if best.score_breakdown is not None
-            else None
-        )
+        # Record the canonical ``match_score`` (0-100) — the SAME
+        # number the search modal shows and the auto-grab floor
+        # gates on — so the History tab can't disagree with either.
+        best_score = best.match_score
         entries.append(
             {
                 "indexer_id": indexer_id,
                 "game_id": game_id,
                 "release_id": best.matched_release_id,
                 "results_count": len(group),
-                "score": best_total,
+                "score": best_score,
                 "score_breakdown": (
                     [
                         c.model_dump()
@@ -168,8 +228,21 @@ async def run_manual_search(
     platform_id: int | None = None,
     strict: bool = False,
     correlation_id: str | None = None,
+    search_type: str = "manual",
+    requesting_game_id: int | None = None,
 ) -> SearchRoundReport:
-    """Run one manual search round; return the flat report."""
+    """Run one manual search round; return the flat report.
+
+    ``search_type`` defaults to ``"manual"`` (the operator-driven
+    call from the UI). Background rounds that re-use this pipeline
+    (cutoff, on-add, missing) override it so the persisted
+    ``search_history.search_type`` reflects WHO ran the round —
+    a critical filter for the Activity feed and the per-game
+    history view. Before this knob existed, every cutoff probe
+    landed as ``search_type='manual'``, hiding the round behind
+    operator-initiated rows and looking like a flood of phantom
+    manual searches.
+    """
     correlation = correlation_id or str(uuid4())
     started_at = datetime.now(UTC)
 
@@ -219,7 +292,7 @@ async def run_manual_search(
         finished_at = datetime.now(UTC)
         return SearchRoundReport(
             correlation_id=uuid4().__class__(correlation),
-            search_type="manual",
+            search_type=search_type,
             started_at=started_at,
             finished_at=finished_at,
             duration_ms=int((finished_at - started_at).total_seconds() * 1000),
@@ -379,6 +452,7 @@ async def run_manual_search(
                 indexer_id=indexer_id,
                 indexer_candidates=per_indexer_candidates,
                 outcome=outcome,
+                requesting_game_id=requesting_game_id,
             )
         )
 
@@ -389,7 +463,7 @@ async def run_manual_search(
         await record_round(
             session,
             correlation_id=correlation,
-            search_type="manual",
+            search_type=search_type,
             query=query,
             indexer_results=history_entries,
         )
@@ -399,7 +473,7 @@ async def run_manual_search(
     from romarr.profiles.scoring import expected_naming_conventions
     return SearchRoundReport(
         correlation_id=UUID(correlation),
-        search_type="manual",
+        search_type=search_type,
         started_at=started_at,
         finished_at=finished_at,
         duration_ms=duration_ms,

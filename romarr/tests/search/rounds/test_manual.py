@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import select
@@ -10,7 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from romarr.indexers.errors import IndexerAuthError
 from romarr.search.models import SearchHistory
-from romarr.search.rounds.manual import run_manual_search
+from romarr.search.rounds.manual import (
+    _manual_history_entries,
+    run_manual_search,
+)
 from tests.search.rounds.conftest import (
     _FakeNewznabClient,
     make_search_result,
@@ -230,3 +234,151 @@ async def test_indexer_ids_filter_restricts_fan_out(
     assert set(report.indexer_outcomes) == {indexers[0].id}
     # The unselected indexer's fake client wasn't asked.
     assert fakes[indexers[1].id].search_calls == []
+
+
+# ---------------------------------------------------------------------------
+# Unidentified-bucket history rows — torznab noise must not surface as a
+# bogus failed "manual grab" in the History tab.
+# ---------------------------------------------------------------------------
+
+
+def test_manual_history_drops_unidentified_when_a_game_matched() -> None:
+    """When at least one candidate matched a monitored game, the
+    unidentified bucket (unrelated torznab results) is NOT recorded —
+    it would otherwise render in History as a failed manual grab."""
+    candidates = [
+        SimpleNamespace(
+            matched_game_id=7,
+            rejection=None,
+            score_breakdown=None,
+            match_score=59,
+            matched_release_id=None,
+        ),
+        SimpleNamespace(
+            matched_game_id=None,
+            rejection=None,
+            score_breakdown=None,
+            match_score=None,
+            matched_release_id=None,
+        ),
+        SimpleNamespace(
+            matched_game_id=None,
+            rejection=None,
+            score_breakdown=None,
+            match_score=None,
+            matched_release_id=None,
+        ),
+    ]
+
+    entries = _manual_history_entries(
+        indexer_id=1, indexer_candidates=candidates, outcome="ok"
+    )
+
+    game_ids = [e.get("game_id") for e in entries]
+    assert 7 in game_ids
+    assert None not in game_ids
+    # The recorded score is the canonical match_score — the same
+    # number the modal shows and the auto-grab floor gates on.
+    matched = next(e for e in entries if e.get("game_id") == 7)
+    assert matched["score"] == 59
+
+
+def test_manual_history_keeps_unidentified_when_nothing_matched() -> None:
+    """When NO candidate matched a monitored game, the unidentified
+    row is kept — a genuine "found results but none usable" signal."""
+    candidates = [
+        SimpleNamespace(
+            matched_game_id=None,
+            rejection=None,
+            score_breakdown=None,
+            match_score=None,
+            matched_release_id=None,
+        ),
+        SimpleNamespace(
+            matched_game_id=None,
+            rejection=None,
+            score_breakdown=None,
+            match_score=None,
+            matched_release_id=None,
+        ),
+    ]
+
+    entries = _manual_history_entries(
+        indexer_id=1, indexer_candidates=candidates, outcome="ok"
+    )
+
+    assert len(entries) == 1
+    assert entries[0]["game_id"] is None
+    assert entries[0]["no_grab_reason"] == "unidentified"
+    assert entries[0]["results_count"] == 2
+
+
+def test_manual_history_scoped_to_requesting_game_emits_one_row() -> None:
+    """When a manual search is initiated from a specific game's
+    modal (``requesting_game_id`` set), the round emits ONE
+    history row for that game — NOT one per fuzzy-matched
+    library game.
+
+    Without this scoping, the operator's Mario Hoops search from
+    game 19's card would also populate games 17 (Mario & Luigi)
+    and 18 (Mario & Sonic) with phantom "Manual search" rows
+    that those games' History tabs would surface as searches the
+    operator never ran for them."""
+    # Indexer returned three candidates that GAMEMATCH fanned
+    # out across three sibling games. Operator only wanted game 19.
+    candidates = [
+        SimpleNamespace(
+            matched_game_id=19,
+            matched_release_id=None,
+            rejection=None,
+            score_breakdown=None,
+            match_score=56,
+        ),
+        SimpleNamespace(
+            matched_game_id=17,  # sibling Mario game
+            matched_release_id=None,
+            rejection=None,
+            score_breakdown=None,
+            match_score=59,  # actually scores higher for sibling!
+        ),
+        SimpleNamespace(
+            matched_game_id=18,  # sibling Mario game
+            matched_release_id=None,
+            rejection=None,
+            score_breakdown=None,
+            match_score=53,
+        ),
+    ]
+
+    entries = _manual_history_entries(
+        indexer_id=1,
+        indexer_candidates=candidates,
+        outcome="ok",
+        requesting_game_id=19,
+    )
+
+    # Exactly one row, bound to the requesting game.
+    assert len(entries) == 1
+    assert entries[0]["game_id"] == 19
+    # Uses the BEST overall score across all candidates as the
+    # surfaced score — the operator wants to see the best Mario
+    # Hoops-related hit, even if it was bound to a sibling game.
+    assert entries[0]["score"] == 59
+    assert entries[0]["results_count"] == 3
+    assert entries[0]["no_grab_reason"] is None
+
+
+def test_manual_history_scoped_returns_indexer_failure_with_game_id() -> None:
+    """When the scoped search fails at the indexer level, the
+    failure row still carries the ``requesting_game_id`` so the
+    game's History tab surfaces "this game's search failed"
+    rather than orphaning the row at game_id=None."""
+    entries = _manual_history_entries(
+        indexer_id=1,
+        indexer_candidates=[],
+        outcome="failed",
+        requesting_game_id=42,
+    )
+    assert len(entries) == 1
+    assert entries[0]["game_id"] == 42
+    assert entries[0]["no_grab_reason"] == "indexer_failed"

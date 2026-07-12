@@ -208,7 +208,7 @@
       "job_run": "Job"
     },
     "searchType": {
-      "manual": "Manual grab",
+      "manual": "Manual search",
       "rss": "RSS sync",
       "auto_added": "Auto search",
       "missing_scheduled": "Missing search",
@@ -221,6 +221,7 @@
       "dest": "Destination",
       "source": "Source",
       "client": "Client",
+      "size": "Size",
       "via": "Via",
       "reason": "Reason"
     },
@@ -228,6 +229,16 @@
       "webhook": "webhook",
       "watcher": "polling",
       "manual": "manual"
+    },
+    "jobLabel": {
+      "AutoCheckAdded": "Auto check (newly-added)",
+      "Backup": "Backup",
+      "CutoffSearch": "Cutoff search",
+      "DatUpdate": "DAT update",
+      "HealthCheck": "Health check",
+      "MissingSearch": "Missing search",
+      "RefreshGameMetadata": "Refresh metadata",
+      "RssSync": "RSS sync"
     },
     "duration": {
       "ms": "{{ms}} ms",
@@ -238,6 +249,8 @@
     "subjectGame_legacy": "this game",
     "subjectRelease": "release #{{id}}",
     "subjectGame": "this game",
+    "subjectQuery": "\"{{query}}\"",
+    "subjectEvent": "event #{{id}}",
     "statusOk": "OK",
     "statusFailed": "FAIL",
     "showingMost": "Showing the most recent {{count}}.",

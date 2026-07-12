@@ -28,6 +28,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from romarr.notifications.types import EventType
+from romarr.tasks.errors import JobAlreadyRunning
 
 if TYPE_CHECKING:
     from romarr.notifications.channel import EventChannel
@@ -90,6 +91,19 @@ class _EventDispatcher:
                 return
             try:
                 await self._scheduler.trigger(job_id, parameters=params)
+            except JobAlreadyRunning:
+                # ``AutoCheckAdded`` is single-instance. When several
+                # games are added in quick succession — e.g. a request
+                # manager dispatching a batch of approvals — a later
+                # ``OnGameAdded`` lands while the job is still running.
+                # That's benign: the new Game stays monitored and the
+                # scheduled monitored-check sweep picks it up. Log at
+                # debug so a normal batch import doesn't surface ERRORs.
+                _logger.debug(
+                    "event-dispatch %s → %s skipped (already running)",
+                    event_type,
+                    job_id,
+                )
             except Exception:
                 _logger.exception(
                     "event-dispatch %s → %s trigger failed",

@@ -166,10 +166,17 @@ class Candidate(_Base):
     # operators don't re-grab a duplicate.
     already_owned: bool = False
     # Identification confidence (0-100). 100 = exact title hit or
-    # hash match, ≥ FUZZY_THRESHOLD (85) = fuzzy hit. Surfaces in
-    # the manual-search UI as the "title match" half of the
-    # operator-facing % score.
+    # hash match, ≥ FUZZY_THRESHOLD (85) = fuzzy hit. Feeds the
+    # identification half of ``match_score`` below.
     title_match_score: int | None = None
+    # Canonical acquisition score (0-100, absolute). The SINGLE
+    # number the UI shows *and* ``auto_grab_min_score`` gates on, so
+    # "93 on screen" means "93 for the grab decision". Equal-weighted
+    # identification (``title_match_score``) + quality (the profile
+    # score clamped to 0-100). Absolute — not round-relative — so the
+    # same release scores the same regardless of what else the round
+    # returned. ``None`` on rejected candidates (no score_breakdown).
+    match_score: int | None = None
 
     # Slice 402 — extra indexer metadata projected through from
     # ``SearchResult`` so the search modal's expanded-row view +

@@ -85,22 +85,13 @@ function _scoreContributions(
   return breakdown?.contributions ?? [];
 }
 
-function _matchPercent(
-  candidate: Candidate,
-  profileScore: number,
-  maxProfileScore: number,
-): number {
-  // Composite score: 50% identification (title fuzzy match against
-  // the monitored Game; platform already filtered upstream so
-  // every accepted candidate scores 100% on platform) + 50%
-  // profile match (round-relative — the best profile score in
-  // this round = 100% on this half).
-  const titleHalf = candidate.title_match_score ?? 100;
-  const profileHalf =
-    maxProfileScore > 0
-      ? Math.max(0, profileScore) / maxProfileScore * 100
-      : 0;
-  return Math.round(titleHalf * 0.5 + profileHalf * 0.5);
+function _matchPercent(candidate: Candidate): number {
+  // The server computes the canonical 0-100 acquisition score
+  // (`match_score`) — equal-weighted title identification + quality,
+  // absolute (never round-relative). The UI just displays it, so the
+  // number on screen is exactly the number `auto_grab_min_score`
+  // gates the grab on. Rejected candidates carry no match_score.
+  return candidate.match_score ?? 0;
 }
 
 type FacetTone = "good" | "neutral" | "warn" | "bad";
@@ -188,7 +179,6 @@ function MatchPercentBadge(props: {
 
 function CandidateRow(props: {
   candidate: Candidate;
-  maxScore: number;
   gameId: number | null;
   releaseId: number | null;
   force: boolean;
@@ -208,7 +198,6 @@ function CandidateRow(props: {
   const { t } = useTranslation("game");
   const {
     candidate,
-    maxScore,
     gameId,
     releaseId,
     force,
@@ -240,8 +229,7 @@ function CandidateRow(props: {
         // nothing landed in the queue, and only close the modal
         // on an actual successful grab.
         onSuccess: (data) => {
-          const status =
-            (data as { status?: string }).status ?? "unknown";
+          const status = (data as { status?: string }).status ?? "unknown";
           const reason = (data as { reason?: string | null }).reason;
           if (status === "grabbed") {
             pushToast({
@@ -324,7 +312,7 @@ function CandidateRow(props: {
               floats to the top. */}
           {score !== null ? (
             <MatchPercentBadge
-              pct={_matchPercent(candidate, score, maxScore)}
+              pct={_matchPercent(candidate)}
               tooltip={breakdownTooltip || undefined}
             />
           ) : (
@@ -406,8 +394,7 @@ function CandidateRow(props: {
         })()}
         <FacetChip
           label={(() => {
-            if (!candidate.region)
-              return t("search.facet.unknownLabel.region");
+            if (!candidate.region) return t("search.facet.unknownLabel.region");
             const key = regionLabelKey(candidate.region);
             return key === candidate.region
               ? candidate.region
@@ -490,10 +477,9 @@ function CandidateRow(props: {
               <FacetChip
                 label={
                   candidate.dump_status
-                    ? t(
-                        `search.dumpStatus.${candidate.dump_status}` as never,
-                        { defaultValue: candidate.dump_status },
-                      )
+                    ? t(`search.dumpStatus.${candidate.dump_status}` as never, {
+                        defaultValue: candidate.dump_status,
+                      })
                     : t("search.facet.unknownLabel.dumpStatus")
                 }
                 tone={dumpTone}
@@ -624,21 +610,13 @@ function CandidateRow(props: {
             />
           )}
           {candidate.hash_sha1 && (
-            <DetailKv
-              label="SHA-1"
-              value={candidate.hash_sha1}
-              mono
-            />
+            <DetailKv label="SHA-1" value={candidate.hash_sha1} mono />
           )}
           {candidate.hash_md5 && (
             <DetailKv label="MD5" value={candidate.hash_md5} mono />
           )}
           {candidate.hash_crc32 && (
-            <DetailKv
-              label="CRC32"
-              value={candidate.hash_crc32}
-              mono
-            />
+            <DetailKv label="CRC32" value={candidate.hash_crc32} mono />
           )}
           <DetailKv
             label={t("search.detail.fields.indexer")}
@@ -845,6 +823,11 @@ export function ReleaseSearchModal(
     search.mutate({
       query: query.trim(),
       platformId: props.platformId,
+      // Scope the round to this game card so the backend records
+      // ONE search_history row for it, instead of fanning out per
+      // fuzzy-matched library game (which would pollute unrelated
+      // games' History tabs with phantom searches).
+      gameId: props.gameId ?? undefined,
     });
   };
 
@@ -985,74 +968,55 @@ export function ReleaseSearchModal(
           )}
 
           {search.isSuccess && (search.data.candidates ?? []).length > 0 && (
-            (() => {
-              // Normalise the % display against the best score
-              // returned by THIS round so the operator reads
-              // "100% = best match Romarr found", not "100% = some
-              // theoretical max". Recomputed on each render — the
-              // candidate list is small (≤ 200/indexer per FR-029)
-              // so there's no win in memoising.
-              const acceptedScores = (search.data.candidates ?? [])
-                .map((c) => _scoreOf(c))
-                .filter((s): s is number => s !== null);
-              const maxScore = acceptedScores.length
-                ? Math.max(0, ...acceptedScores)
-                : 0;
-              return (
-                <ul className="space-y-2">
-                  {[...(search.data.candidates ?? [])]
-                    .sort((a, b) => {
-                      // Match-quality first: accepted candidates rank
-                      // desc by the same composite the badge shows
-                      // (title + profile, 50/50). Rejected ones
-                      // (score=null) sink to the bottom in their
-                      // original order so the operator can still see
-                      // what was filtered and why.
-                      const sa = _scoreOf(a);
-                      const sb = _scoreOf(b);
-                      if (sa === null && sb === null) return 0;
-                      if (sa === null) return 1;
-                      if (sb === null) return -1;
-                      const pa = _matchPercent(a, sa, maxScore);
-                      const pb = _matchPercent(b, sb, maxScore);
-                      return pb - pa;
-                    })
-                    .map((c) => {
-                      // Detected platform = round-time match against
-                      // the catalogue (slice 354). The chip label
-                      // pulls its short_name from the platforms
-                      // store; the colour comparison happens inside
-                      // CandidateRow against ``expectedPlatformId``.
-                      const platform =
-                        c.platform_id !== null && c.platform_id !== undefined
-                          ? platformsById.get(c.platform_id)
-                          : undefined;
-                      return (
-                        <CandidateRow
-                          key={`${c.indexer_id}-${c.indexer_guid}`}
-                          candidate={c}
-                          maxScore={maxScore}
-                          gameId={props.gameId}
-                          releaseId={props.releaseId}
-                          force={force}
-                          indexerName={
-                            indexersById.get(c.indexer_id)?.name ?? null
+            <ul className="space-y-2">
+              {[...(search.data.candidates ?? [])]
+                .sort((a, b) => {
+                  // Match-quality first: accepted candidates rank
+                  // desc by the canonical match_score the badge
+                  // shows. Rejected ones (score=null) sink to the
+                  // bottom in their original order so the operator
+                  // can still see what was filtered and why.
+                  const sa = _scoreOf(a);
+                  const sb = _scoreOf(b);
+                  if (sa === null && sb === null) return 0;
+                  if (sa === null) return 1;
+                  if (sb === null) return -1;
+                  return _matchPercent(b) - _matchPercent(a);
+                })
+                .map((c) => {
+                  // Detected platform = round-time match against
+                  // the catalogue (slice 354). The chip label
+                  // pulls its short_name from the platforms
+                  // store; the colour comparison happens inside
+                  // CandidateRow against ``expectedPlatformId``.
+                  const platform =
+                    c.platform_id !== null && c.platform_id !== undefined
+                      ? platformsById.get(c.platform_id)
+                      : undefined;
+                  return (
+                    <CandidateRow
+                      key={`${c.indexer_id}-${c.indexer_guid}`}
+                      candidate={c}
+                      gameId={props.gameId}
+                      releaseId={props.releaseId}
+                      force={force}
+                      indexerName={indexersById.get(c.indexer_id)?.name ?? null}
+                      platformShortName={
+                        platform?.short_name ?? platform?.name ?? null
+                      }
+                      expectedPlatformId={props.platformId}
+                      expectedConventions={
+                        (
+                          search.data as {
+                            profile_expected_conventions?: string[];
                           }
-                          platformShortName={
-                            platform?.short_name ?? platform?.name ?? null
-                          }
-                          expectedPlatformId={props.platformId}
-                          expectedConventions={
-                            (search.data as { profile_expected_conventions?: string[] })
-                              .profile_expected_conventions ?? []
-                          }
-                          onGrabSuccess={props.onClose}
-                        />
-                      );
-                    })}
-                </ul>
-              );
-            })()
+                        ).profile_expected_conventions ?? []
+                      }
+                      onGrabSuccess={props.onClose}
+                    />
+                  );
+                })}
+            </ul>
           )}
         </div>
       </div>
