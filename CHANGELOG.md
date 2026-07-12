@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.7](https://github.com/sharkhunterr/romarr/-/compare/v0.14.6...v0.14.7) (2026-07-12)
+
+
+### Features
+
+* **activity:** redesign history + fix search fan-out + dispatch noise ([32c86ff](https://github.com/sharkhunterr/romarr/-/commit/32c86fff3e9eb2560b0d9b2344b279229847053f))
+* **integration:** platforms endpoint + tolerate concurrent game adds ([712f9d4](https://github.com/sharkhunterr/romarr/-/commit/712f9d4b81ba707eed4eab4bf52d8decbccbcfc9))
+* **metadata:** IGDB-native integration endpoints for request managers ([d682996](https://github.com/sharkhunterr/romarr/-/commit/d682996e8970535adc1276541b67d549c2135198))
+* **search:** one canonical match_score for display and grab ([6539957](https://github.com/sharkhunterr/romarr/-/commit/6539957791661f839e33cff10d0571739a20d94a))
+
+
+### Bug Fixes
+
+* **importer:** coalesce duplicates instead of a bogus match:no_game ([1f2e64a](https://github.com/sharkhunterr/romarr/-/commit/1f2e64af6b728b114d28e3b13c007c2cd6367264))
+* **search:** record canonical match_score in search history ([1ed22cc](https://github.com/sharkhunterr/romarr/-/commit/1ed22cc7a593c8020725f808ab9ce7f763c10329))
+* **search:** report best_score as the canonical match_score ([f8d4d34](https://github.com/sharkhunterr/romarr/-/commit/f8d4d34d7f37225a3d3c99e57fabf53a63590c91))
+* **search:** stop logging unidentified torznab noise as a failed grab ([97ffead](https://github.com/sharkhunterr/romarr/-/commit/97ffead32d08396f603cf09d6ce5c3b908619e2e))
+* **tasks:** AutoCheckAdded now grabs, not just searches ([81c22d5](https://github.com/sharkhunterr/romarr/-/commit/81c22d5e13ac39dacfaf1693fce171205ae0cbf4))
+
 ### [0.14.6](https://github.com/sharkhunterr/romarr/-/compare/v0.14.5...v0.14.6) (2026-05-20)
 
 ### [0.14.5](https://github.com/sharkhunterr/romarr/-/compare/v0.14.4...v0.14.5) (2026-05-20)
