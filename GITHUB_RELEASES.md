@@ -14,6 +14,91 @@
 
 ---
 
+# v0.15.0
+
+## 🔗 Native integration surface for request managers + search pipeline convergence
+
+This release lands the **IGDB-native integration endpoints** that let
+external request managers (Allseerr and any other frontend) drive
+Romarr as a first-class *arr, plus a round of search-pipeline polish
+where every code path now feeds off a single canonical `match_score`.
+
+> [!IMPORTANT]
+> No migration required. Pull `sharkhunterr/romarr:latest` and
+> recreate the container. Existing games, releases, profiles,
+> settings and API keys are preserved.
+
+---
+
+### 🔗 IGDB-native integration API
+
+- New endpoint `GET /api/v1/platforms` — returns the list of Romarr-
+  supported platforms with their IGDB IDs, so a request manager can
+  disable its "Request" button for platforms Romarr doesn't handle.
+- IGDB-native metadata endpoints so allseerr can propagate the exact
+  IGDB IDs through the request → grab → import flow instead of doing
+  a fuzzy title match a second time on Romarr's side.
+- **Concurrent-add tolerant** : two request managers can add the same
+  game at the same time without either losing the race — the second
+  add returns the existing record instead of crashing.
+
+### 🎯 Search pipeline — one canonical `match_score`
+
+Every candidate now carries a **single canonical match score** that
+follows it from search → display → grab → history. Before, three
+different scores lived in three different places (RSS eligibility,
+UI ranking, grab decision) and could disagree; now they can't.
+
+- `match_score` is recorded on every history row — including RSS
+  and cutoff auto-grab decisions — so you can audit *why* a
+  specific candidate was chosen.
+- `best_score` on a search summary is the same canonical value,
+  not a UI-only re-derivation.
+- Manual search modal displays the same score used by auto-grab.
+
+### 🕓 Activity / History redesign
+
+- New history row layout with a compact **timeline component** on
+  the game detail page: search → grab → import events on a single
+  vertical rail, per-game.
+- `HistoryTimeline` React component with tests, replacing the
+  previous list-of-cards view.
+- Search fan-out and event dispatch cleaned up: fewer noisy
+  `dispatch` log lines, better correlation between the row you see
+  and the underlying request.
+
+### 🔧 Fixes
+
+- **Importer** now coalesces duplicates instead of emitting the
+  bogus `match:no_game` marker on the second incoming file. If
+  Romarr already has a matching game, subsequent imports attach
+  to it cleanly.
+- **AutoCheckAdded** now actually **grabs** eligible candidates —
+  before it only surfaced them in search results without pulling
+  the trigger.
+- **Torznab noise** (unidentified torrents that don't fit any
+  known scheme) is no longer logged as a *failed grab* — those
+  lines were misleading and drowned real errors.
+
+### 🌐 i18n
+
+- English + French translations refreshed for the activity /
+  history strings and the manual-search modal.
+
+### 🧪 Tests
+
+- Expanded coverage for the importer orchestrator (321 new lines),
+  search rounds (manual + missing), tasks runners (AutoCheckAdded),
+  and event dispatch. `HistoryTimeline` shipped with its own suite.
+
+---
+
+**Migration notes** : none. Bump the image tag, restart. History
+rows written before this release keep their `match_score = null`;
+new rows populate it.
+
+---
+
 # v0.14.6
 
 ## 🎮 Romarr — self-hosted ROM acquisition manager for the *arr ecosystem
