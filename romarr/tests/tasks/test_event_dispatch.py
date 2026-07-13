@@ -118,13 +118,23 @@ async def test_trigger_failure_does_not_propagate() -> None:
 
 
 @pytest.mark.asyncio
-async def test_job_already_running_is_not_logged_as_error() -> None:
+async def test_job_already_running_is_not_logged_as_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """``AutoCheckAdded`` is single-instance: when games are added
     back-to-back (e.g. a request manager dispatching a batch of
     approvals) a later ``OnGameAdded`` trigger raises
     ``JobAlreadyRunning``. That is benign and must be swallowed as a
     debug note — never surfaced as an ERROR.
+
+    We patch the dispatcher module's ``_logger`` directly with a
+    ``MagicMock`` — this is immune to pytest-xdist worker state,
+    caplog propagation, prior tests reconfiguring the logger tree,
+    or handler filters. The mock records every call.
     """
+    from unittest.mock import MagicMock
+
+    from romarr.tasks import event_dispatch as event_dispatch_mod
 
     class _BusyScheduler:
         async def trigger(self, *_args, **_kwargs):  # type: ignore[no-untyped-def]
@@ -133,30 +143,32 @@ async def test_job_already_running_is_not_logged_as_error() -> None:
     channel = EventChannel()
     attach_event_dispatch(channel, _BusyScheduler())  # type: ignore[arg-type]
 
-    # Capture the dispatcher's logs by attaching a handler directly to
-    # its logger — bypasses pytest's ``caplog``, which relies on root-
-    # logger propagation. A prior test in the full suite may set
-    # ``propagate=False`` on ``romarr.tasks`` (or reconfigure it) and
-    # silently drop the DEBUG record we're asserting on. Attaching to
-    # the child logger sidesteps propagation entirely.
-    dispatcher_logger = logging.getLogger("romarr.tasks.event_dispatch")
-    prior_level = dispatcher_logger.level
-    records: list[logging.LogRecord] = []
+    mock_logger = MagicMock(spec=logging.Logger)
+    monkeypatch.setattr(event_dispatch_mod, "_logger", mock_logger)
 
-    class _ListHandler(logging.Handler):
-        def emit(self, record: logging.LogRecord) -> None:
-            records.append(record)
+    await channel.publish(OnGameAddedPayload(game=_game_ref()))
 
-    handler = _ListHandler(level=logging.DEBUG)
-    dispatcher_logger.setLevel(logging.DEBUG)
-    dispatcher_logger.addHandler(handler)
-    try:
-        await channel.publish(OnGameAddedPayload(game=_game_ref()))
-    finally:
-        dispatcher_logger.removeHandler(handler)
-        dispatcher_logger.setLevel(prior_level)
+    # No exception-level log — the dispatcher must swallow the benign
+    # ``JobAlreadyRunning`` without ``_logger.exception(...)``.
+    assert not mock_logger.exception.called, (
+        f"unexpected exception log: {mock_logger.exception.call_args_list}"
+    )
+    # Nor .error/.warning — those would surface in CI logs.
+    assert not mock_logger.error.called
+    assert not mock_logger.warning.called
 
-    # No ERROR-level record from the dispatcher …
-    assert not [r for r in records if r.levelno >= logging.ERROR]
-    # … and the skip is recorded at debug.
-    assert any("already running" in r.getMessage() for r in records)
+    # And exactly one debug note mentioning "already running".
+    debug_calls = [
+        (args, kwargs)
+        for args, kwargs in [
+            (call.args, call.kwargs) for call in mock_logger.debug.call_args_list
+        ]
+    ]
+    matching = [
+        args
+        for args, _kwargs in debug_calls
+        if args and "already running" in str(args[0])
+    ]
+    assert matching, (
+        f"expected a debug log mentioning 'already running', got: {debug_calls}"
+    )
