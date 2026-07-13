@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.9](https://github.com/sharkhunterr/romarr/-/compare/v0.14.8...v0.14.9) (2026-07-13)
+
+
+### Bug Fixes
+
+* **tests:** patch dispatcher _logger with MagicMock to survive full CI ([9120771](https://github.com/sharkhunterr/romarr/-/commit/91207715361ae20b2419c124bf8885e22b39325e))
+
 ### [0.14.8](https://github.com/sharkhunterr/romarr/-/compare/v0.14.7...v0.14.8) (2026-07-13)
 
 
