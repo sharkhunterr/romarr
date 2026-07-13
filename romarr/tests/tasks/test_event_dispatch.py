@@ -118,9 +118,7 @@ async def test_trigger_failure_does_not_propagate() -> None:
 
 
 @pytest.mark.asyncio
-async def test_job_already_running_is_not_logged_as_error(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
+async def test_job_already_running_is_not_logged_as_error() -> None:
     """``AutoCheckAdded`` is single-instance: when games are added
     back-to-back (e.g. a request manager dispatching a batch of
     approvals) a later ``OnGameAdded`` trigger raises
@@ -135,18 +133,30 @@ async def test_job_already_running_is_not_logged_as_error(
     channel = EventChannel()
     attach_event_dispatch(channel, _BusyScheduler())  # type: ignore[arg-type]
 
-    with caplog.at_level(logging.DEBUG, logger="romarr.tasks.event_dispatch"):
-        await channel.publish(OnGameAddedPayload(game=_game_ref()))
+    # Capture the dispatcher's logs by attaching a handler directly to
+    # its logger — bypasses pytest's ``caplog``, which relies on root-
+    # logger propagation. A prior test in the full suite may set
+    # ``propagate=False`` on ``romarr.tasks`` (or reconfigure it) and
+    # silently drop the DEBUG record we're asserting on. Attaching to
+    # the child logger sidesteps propagation entirely.
+    dispatcher_logger = logging.getLogger("romarr.tasks.event_dispatch")
+    prior_level = dispatcher_logger.level
+    records: list[logging.LogRecord] = []
 
-    # Only inspect the dispatcher's own records — a full-suite run
-    # can leak unrelated ERROR logs from other components into
-    # caplog, which has nothing to do with this behaviour.
-    dispatch_records = [
-        r for r in caplog.records if r.name == "romarr.tasks.event_dispatch"
-    ]
+    class _ListHandler(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            records.append(record)
+
+    handler = _ListHandler(level=logging.DEBUG)
+    dispatcher_logger.setLevel(logging.DEBUG)
+    dispatcher_logger.addHandler(handler)
+    try:
+        await channel.publish(OnGameAddedPayload(game=_game_ref()))
+    finally:
+        dispatcher_logger.removeHandler(handler)
+        dispatcher_logger.setLevel(prior_level)
+
     # No ERROR-level record from the dispatcher …
-    assert not [r for r in dispatch_records if r.levelno >= logging.ERROR]
+    assert not [r for r in records if r.levelno >= logging.ERROR]
     # … and the skip is recorded at debug.
-    assert any(
-        "already running" in r.getMessage() for r in dispatch_records
-    )
+    assert any("already running" in r.getMessage() for r in records)
