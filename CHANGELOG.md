@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.8](https://github.com/sharkhunterr/romarr/-/compare/v0.14.7...v0.14.8) (2026-07-13)
+
+
+### Bug Fixes
+
+* **tests:** pin event_dispatch caplog to a direct handler ([0c5f3ee](https://github.com/sharkhunterr/romarr/-/commit/0c5f3eef294e091e89bed4a984080940abf660f4))
+
 ### [0.14.7](https://github.com/sharkhunterr/romarr/-/compare/v0.14.6...v0.14.7) (2026-07-12)
 
 
