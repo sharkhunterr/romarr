@@ -13,3 +13,11 @@ assets/render/
 # OS / editor noise
 .DS_Store
 *.swp
+
+# Pytest — coverage state file written when a test run touches the
+# repo root (e.g. `pytest` from the git-root instead of romarr/).
+.coverage
+.coverage.*
+
+# Claude Code — session-local temp files
+.claude/settings.local.json.tmp.*
