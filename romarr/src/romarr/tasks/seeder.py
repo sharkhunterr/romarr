@@ -123,6 +123,18 @@ DEFAULT_CATALOGUE: tuple[_DefaultJob, ...] = (
         type="auto_check_added",
         # Event-driven: both schedule fields NULL.
     ),
+    _DefaultJob(
+        job_id="PackSourcesSync",
+        name="Pack Sources Sync",
+        # ``custom`` is the catch-all for jobs that don't map to a
+        # spec 012 catalogue type — avoids a CHECK-constraint
+        # migration for what's fundamentally a new orchestration.
+        type="custom",
+        cron="0 5 * * *",
+        # Off by default — operators opt in once they've registered
+        # at least one pack source.
+        enabled=False,
+    ),
 )
 
 

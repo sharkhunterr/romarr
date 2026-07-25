@@ -14,6 +14,41 @@
 
 ---
 
+# v0.15.4
+
+## 🔍 Platform packs — preview + auto-sync programmé
+
+Deux add-ons au workflow « sources GitHub » introduit dans v0.15.3.
+
+### 🔎 Preview avant apply
+
+Un bouton **Preview** sur chaque source ouvre un modal qui liste,
+pour chaque YAML trouvé, le résultat qu'aurait un vrai apply :
+`would_apply` / `would_skip` / `would_fail`, avec le diff par
+plateforme (insertions, updates, champs modifiés, warnings). Zéro
+écriture DB — un dry-run pur qui rejoue exactement la validation
+utilisée par le `POST /validate` classique.
+
+Depuis le modal, un bouton **Apply now** enchaîne directement la
+vraie sync sans re-fetch. Utile pour vérifier une source douteuse
+sans risque, ou juste voir ce que va changer un update.
+
+### ⏰ Sync automatique via le scheduler
+
+Nouveau job `PackSourcesSync` dans le catalogue des tâches
+(Settings → Tasks) :
+- **Cron par défaut** : `0 5 * * *` (tous les jours à 5 h)
+- **Désactivé par défaut** — l'operator l'active depuis Tasks
+  quand il a au moins une source enregistrée
+- **Modifiable** : cron ou intervalle éditables depuis l'UI Tasks
+- **Résultat** : le status et le count sont stampés sur la row
+  `pack_sources` (visibles dans Settings → Platforms) — success
+  global si toutes les sources sont ok, `partial` si au moins une
+  YAML a raté, `failed` si zéro pack appliqué et au moins une
+  erreur
+
+---
+
 # v0.15.3
 
 ## 🌐 Platform packs — sources GitHub configurables

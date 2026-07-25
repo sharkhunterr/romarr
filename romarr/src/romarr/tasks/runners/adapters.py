@@ -588,6 +588,63 @@ class BackupAdapter(_AdapterBase):
         )
 
 
+class PackSourcesSyncAdapter(_AdapterBase):
+    """Sweep every enabled ``PackSource`` and ingest the pack YAMLs it
+    advertises (Settings > Platforms → Pack sources).
+
+    Delegates to :func:`run_pack_sources_sync` when a sessionmaker is
+    on the context; falls back to the stub otherwise so scheduler
+    dispatch stays exercised in tests that don't wire the DB.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(job_id="PackSourcesSync")
+
+    async def _run(self, context: JobContext) -> JobResult:
+        from romarr.tasks.runners.pack_sources_sync import (
+            run_pack_sources_sync,
+        )
+
+        sessionmaker = getattr(context, "sessionmaker", None)
+        if sessionmaker is None:
+            return JobResult(
+                status=JobStatus.SUCCESS,
+                summary={"stub": True, "reason": "no sessionmaker"},
+            )
+        async with sessionmaker() as session:
+            result = await run_pack_sources_sync(
+                session, sessionmaker=sessionmaker
+            )
+
+        any_error = any(o.status == "error" for o in result.outcomes)
+        any_partial = any(o.status == "partial" for o in result.outcomes)
+        overall = (
+            JobStatus.FAILED
+            if any_error and result.total_applied == 0
+            else JobStatus.PARTIAL
+            if (any_error or any_partial)
+            else JobStatus.SUCCESS
+        )
+        return JobResult(
+            status=overall,
+            summary={
+                "sources": result.total_sources,
+                "applied_packs": result.total_applied,
+                "outcomes": [
+                    {
+                        "source_id": o.source_id,
+                        "name": o.name,
+                        "status": o.status,
+                        "applied": o.applied,
+                        "total_yamls": o.total_yamls,
+                        "error": o.error,
+                    }
+                    for o in result.outcomes
+                ],
+            },
+        )
+
+
 class LibraryScanAdapter(_AdapterBase):
     """Wraps spec 009's library full-scan (slice 209 wires the
     real scanner). When the JobContext supplies a sessionmaker
@@ -918,6 +975,7 @@ __all__ = [
     "HealthCheckAdapter",
     "LibraryScanAdapter",
     "MissingSearchAdapter",
+    "PackSourcesSyncAdapter",
     "RefreshGameMetadataAdapter",
     "RssSyncAdapter",
 ]

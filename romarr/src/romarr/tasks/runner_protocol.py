@@ -73,6 +73,7 @@ def build_default_registry(
         HealthCheckAdapter,
         LibraryScanAdapter,
         MissingSearchAdapter,
+        PackSourcesSyncAdapter,
         RefreshGameMetadataAdapter,
         RssSyncAdapter,
     )
@@ -87,6 +88,7 @@ def build_default_registry(
         "HealthCheck": HealthCheckAdapter(engine=health_engine),
         "LibraryScan": LibraryScanAdapter(),
         "AutoCheckAdded": AutoCheckAddedAdapter(),
+        "PackSourcesSync": PackSourcesSyncAdapter(),
     }
 
 

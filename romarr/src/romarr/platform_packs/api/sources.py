@@ -34,6 +34,8 @@ from romarr.platform_packs.remote import (
     classify_url,
     fetch_from_source,
 )
+from romarr.platform_packs.types import PackPlatformDiff
+from romarr.platform_packs.validate import validate_bytes
 
 router = APIRouter(
     prefix="/api/v3/rom/platform-pack-source",
@@ -97,6 +99,24 @@ class SyncResult(BaseModel):
     status: str  # "ok", "partial", "error"
     items: list[SyncItemOutcome] = Field(default_factory=list)
     applied_count: int = 0
+
+
+class PreviewItem(BaseModel):
+    """One YAML's dry-run outcome from a preview call."""
+
+    filename: str
+    source_url: str
+    pack_version: str
+    action: str  # "would_apply", "would_skip", "would_fail"
+    diff: list[PackPlatformDiff] = Field(default_factory=list)
+    parsing_strategies_affected: list[str] = Field(default_factory=list)
+    error_message: str | None = None
+
+
+class PreviewResult(BaseModel):
+    source_id: int
+    fetched_at: datetime
+    items: list[PreviewItem] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -370,6 +390,69 @@ async def sync_source(
         status=status_s,
         items=items,
         applied_count=applied_count,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Preview (dry-run) — fetches, validates, computes diff, applies NOTHING.
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/{source_id}/preview",
+    response_model=PreviewResult,
+    summary="Dry-run: fetch and diff without applying anything (admin).",
+)
+async def preview_source(
+    source_id: int,
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> PreviewResult:
+    """Fetch every YAML the source advertises and run each through
+    the same validation pipeline as a real apply, without touching
+    the DB. Useful before hitting ``/sync`` on an untrusted source.
+    """
+    row = await _get_or_404(db, source_id)
+    fetched_at = datetime.now(UTC)
+
+    try:
+        yamls = await fetch_from_source(row.url, row.kind)
+    except RemotePackError as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={"errorMessage": str(e), "errorCode": "remote_fetch_failed"},
+        ) from e
+
+    items: list[PreviewItem] = []
+    for yaml_body in yamls:
+        try:
+            v = await validate_bytes(db, body=yaml_body.body)
+            items.append(
+                PreviewItem(
+                    filename=yaml_body.filename,
+                    source_url=yaml_body.source_url,
+                    pack_version=v.pack_version,
+                    action=v.action,
+                    diff=v.diff,
+                    parsing_strategies_affected=v.parsing_strategies_affected,
+                    error_message=v.error_message,
+                )
+            )
+        except Exception as e:  # noqa: BLE001
+            items.append(
+                PreviewItem(
+                    filename=yaml_body.filename,
+                    source_url=yaml_body.source_url,
+                    pack_version="<unknown>",
+                    action="would_fail",
+                    error_message=f"{type(e).__name__}: {str(e)[:256]}",
+                )
+            )
+
+    return PreviewResult(
+        source_id=source_id,
+        fetched_at=fetched_at,
+        items=items,
     )
 
 
