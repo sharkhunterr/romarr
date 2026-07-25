@@ -214,14 +214,23 @@ export function CreateDownloadClientModal(
       role="dialog"
       aria-modal="true"
       aria-label={t(titleKey, { name: props.editing?.name ?? "" })}
-      className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/70 px-4 pt-[8vh] backdrop-blur-sm"
+      // `overflow-y-auto` + `py-[4vh]` : fallback si l'écran est vraiment
+      // petit (viewport < taille header+footer collés), la page peut
+      // scroller entièrement. `items-start` sur mobile → l'utilisateur
+      // voit d'abord le haut ; sur desktop `sm:items-center` centre pour
+      // un rendu plus classique.
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-zinc-950/70 px-4 py-[4vh] backdrop-blur-sm sm:items-center"
       onClick={props.onClose}
     >
       <div
-        className="w-full max-w-md overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xl"
+        // Layout flex-col + hauteur bornée + min-h-0 sur le body scrollable
+        // interne = header + footer TOUJOURS visibles quel que soit le
+        // contenu. Sans ça, un message d'erreur ajoutait à la hauteur du
+        // body qui poussait le footer hors du viewport sur mobile.
+        className="flex max-h-[92vh] w-full max-w-md flex-col rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="border-b border-zinc-800 px-4 py-3">
+        <header className="shrink-0 border-b border-zinc-800 px-4 py-3">
           <h2 className="text-sm font-semibold text-zinc-100">
             {t(titleKey, { name: props.editing?.name ?? "" })}
           </h2>
@@ -234,7 +243,10 @@ export function CreateDownloadClientModal(
           </p>
         </header>
 
-        <div className="space-y-3 p-4">
+        {/* min-h-0 est CRUCIAL : sans lui, flex-1 sur un enfant flex
+            hérite d'un min-height=auto qui ignore l'overflow-y-auto → le
+            body ne scrolle jamais et pousse le footer.  */}
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
           <label className="block">
             <span className="mb-1 block text-[0.65rem] uppercase tracking-widest text-zinc-500">
               {t("downloadClients.create.typeLabel")}
@@ -473,7 +485,7 @@ export function CreateDownloadClientModal(
           )}
         </div>
 
-        <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-zinc-800 px-4 py-3">
+        <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-zinc-800 px-4 py-3">
           <button
             type="button"
             onClick={runTest}

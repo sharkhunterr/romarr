@@ -93,11 +93,11 @@ export function MatchModal(props: MatchModalProps): ReactElement {
       role="dialog"
       aria-modal="true"
       aria-label={t("unidentified.match.modalTitle", { filename })}
-      className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/70 px-4 pt-[8vh] backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/70 px-4 overflow-y-auto py-[4vh] sm:items-center backdrop-blur-sm"
       onClick={props.onClose}
     >
       <div
-        className="w-full max-w-2xl overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xl"
+        className="w-full max-w-2xl flex max-h-[92vh] flex-col rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="border-b border-zinc-800 px-4 py-3">
@@ -139,7 +139,7 @@ export function MatchModal(props: MatchModalProps): ReactElement {
           )}
         </div>
 
-        <footer className="flex items-center justify-end gap-2 border-t border-zinc-800 px-4 py-3">
+        <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-zinc-800 px-4 py-3">
           <button
             type="button"
             onClick={props.onClose}

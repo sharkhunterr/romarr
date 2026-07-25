@@ -300,7 +300,7 @@ export function PackDetailModal({
       onClick={onClose}
     >
       <div
-        className="flex max-h-[82vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xl"
+        className="flex max-h-[82vh] w-full max-w-2xl flex-col flex max-h-[92vh] flex-col rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="border-b border-zinc-800 px-4 py-3">
@@ -385,7 +385,7 @@ export function PackDetailModal({
           )}
         </div>
 
-        <footer className="flex items-center justify-between gap-2 border-t border-zinc-800 bg-zinc-950/50 px-4 py-3">
+        <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-zinc-800 bg-zinc-950/50 px-4 py-3">
           <span className="text-[0.65rem] text-zinc-500">
             {items.isSuccess
               ? t("romPacks.triage.remaining", { count: unmatched.length })

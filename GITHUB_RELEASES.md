@@ -51,6 +51,31 @@ d'écriture sur `/data`. Nouveau `entrypoint.sh` :
 Résultat : `PUID=99 PGID=100` dans le template Unraid et ça marche
 sans manipuler les permissions sur l'hôte.
 
+### 📱 Modals mobile — footer toujours accessible
+
+Bug UX identifié en ajoutant Deluge : quand le body du modal grandit
+(erreur de test de connexion, message d'aide long, formulaire riche),
+le footer avec « Cancel / Save / Test » était poussé hors du viewport
+mobile et devenait inaccessible.
+
+Cause : les modals étaient en `overflow-hidden` avec un simple
+`pt-[8vh]` sur le backdrop — pas de max-height, pas de scroll interne.
+Sur écrans courts (téléphones, WebUI overlay Chromecast, etc.), tout
+ce qui dépassait était perdu.
+
+Fix appliqué à **23 modals** de l'app (DownloadClients, Indexers,
+Profiles ×6, RomPacks ×2, MediaManagement, Notifications, Metadata,
+Platforms, DatSources, AddGame, BulkTag/Delete ×3, Logs, Unidentified) :
+
+- Backdrop : `overflow-y-auto py-[4vh] sm:items-center` — scroll global
+  en fallback si viewport très court, centrage sur desktop
+- Container : `flex max-h-[92vh] flex-col rounded-lg` — hauteur bornée
+  qui active le flex-col
+- Body : `min-h-0 flex-1 overflow-y-auto` — scroll interne du contenu
+  long ; le `min-h-0` est CRUCIAL car flex-1 hérite d'un min-height=auto
+  qui ignore l'overflow sinon
+- Footer : `shrink-0` — garanti toujours visible
+
 ### 🌊 Deluge — download client implémenté
 
 Le stub Deluge devient un vrai client fonctionnel. Deluge 2.0+ est

@@ -231,11 +231,11 @@ export function CreateRomPackModal(
       aria-label={
         isEdit ? t("romPacks.modal.titleEdit") : t("romPacks.modal.titleAdd")
       }
-      className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/70 px-4 pt-[8vh] backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/70 px-4 overflow-y-auto py-[4vh] sm:items-center backdrop-blur-sm"
       onClick={props.onClose}
     >
       <div
-        className="flex max-h-[84vh] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xl"
+        className="flex max-h-[84vh] w-full max-w-lg flex-col flex max-h-[92vh] flex-col rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="border-b border-zinc-800 px-4 py-3">
@@ -486,7 +486,7 @@ export function CreateRomPackModal(
           )}
         </div>
 
-        <footer className="flex items-center justify-end gap-2 border-t border-zinc-800 bg-zinc-950/50 px-4 py-3">
+        <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-zinc-800 bg-zinc-950/50 px-4 py-3">
           <button
             type="button"
             onClick={props.onClose}

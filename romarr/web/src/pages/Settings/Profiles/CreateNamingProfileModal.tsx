@@ -91,7 +91,7 @@ export function CreateNamingProfileModal(
       onClick={props.onClose}
     >
       <div
-        className="w-full max-w-md overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xl"
+        className="w-full max-w-md flex max-h-[92vh] flex-col rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="border-b border-zinc-800 px-4 py-3">
@@ -103,7 +103,7 @@ export function CreateNamingProfileModal(
           </p>
         </header>
 
-        <div className="space-y-3 p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto space-y-3 p-4">
           <div className="grid grid-cols-2 gap-2">
             <label className="block">
               <span className="mb-1 block text-[0.65rem] uppercase tracking-widest text-zinc-500">
@@ -187,7 +187,7 @@ export function CreateNamingProfileModal(
           </fieldset>
         </div>
 
-        <footer className="flex items-center justify-end gap-2 border-t border-zinc-800 px-4 py-3">
+        <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-zinc-800 px-4 py-3">
           <button
             type="button"
             onClick={props.onClose}

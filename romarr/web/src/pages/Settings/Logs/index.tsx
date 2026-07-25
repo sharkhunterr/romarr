@@ -169,7 +169,7 @@ function LogDetailModal(props: {
       onClick={props.onClose}
     >
       <div
-        className="w-full max-w-2xl overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xl"
+        className="w-full max-w-2xl flex max-h-[92vh] flex-col rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-start justify-between gap-3 border-b border-zinc-800 px-4 py-3">
@@ -213,7 +213,7 @@ function LogDetailModal(props: {
             </section>
           )}
         </div>
-        <footer className="flex items-center justify-end gap-2 border-t border-zinc-800 px-4 py-3">
+        <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-zinc-800 px-4 py-3">
           <button
             type="button"
             onClick={props.onClose}

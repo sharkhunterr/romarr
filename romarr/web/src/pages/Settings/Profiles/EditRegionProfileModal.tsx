@@ -95,11 +95,11 @@ export function EditRegionProfileModal(props: Props): ReactElement {
       role="dialog"
       aria-modal="true"
       aria-label={t("profiles.region.edit.modalTitle", { name: profile.name })}
-      className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/70 px-4 pt-[8vh] backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-zinc-950/70 px-4 overflow-y-auto py-[4vh] sm:items-center backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xl"
+        className="w-full max-w-md flex max-h-[92vh] flex-col rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="border-b border-zinc-800 px-4 py-3">
@@ -108,7 +108,7 @@ export function EditRegionProfileModal(props: Props): ReactElement {
           </h2>
         </header>
 
-        <div className="space-y-3 p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto space-y-3 p-4">
           <label className="block">
             <span className="mb-1 block text-[0.65rem] uppercase tracking-widest text-zinc-500">
               {t("profiles.region.create.nameLabel")}
@@ -175,7 +175,7 @@ export function EditRegionProfileModal(props: Props): ReactElement {
           )}
         </div>
 
-        <footer className="flex items-center justify-end gap-2 border-t border-zinc-800 px-4 py-3">
+        <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-zinc-800 px-4 py-3">
           <button
             type="button"
             onClick={onClose}
