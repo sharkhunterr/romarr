@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.16](https://github.com/sharkhunterr/romarr/-/compare/v0.14.15...v0.14.16) (2026-07-25)
+
+
+### Features
+
+* **platform-packs:** config surface — builtin toggle + priority ([b8e1678](https://github.com/sharkhunterr/romarr/-/commit/b8e1678cf0f27ebeba91463ee50d557ee70febd0))
+
 ### [0.14.15](https://github.com/sharkhunterr/romarr/-/compare/v0.14.14...v0.14.15) (2026-07-25)
 
 
