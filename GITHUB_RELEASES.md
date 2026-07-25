@@ -14,6 +14,41 @@
 
 ---
 
+# v0.15.7
+
+## 📂 Media Management — picker de chemin pour ludothèque
+
+Fini le texte libre pour renseigner un chemin absolu de ludothèque.
+Le modal **Create library** (Settings → Media Management) affiche
+maintenant un bouton **Browse…** qui ouvre un explorateur de
+dossiers embarqué :
+
+- **Racine curated** — au niveau `/`, seuls les dossiers
+  probablement montés en `-v` sont surfacés : `/data`, `/downloads`,
+  `/roms`, `/media`, `/mnt`, `/config`, `/srv`, `/opt`, `/home`,
+  `/app`, `/library`, `/games`. Un badge « mount » signale les
+  entrées qui vivent sur un filesystem différent du parent (fort
+  indice qu'il s'agit d'un volume Docker).
+- **Navigation** — breadcrumbs cliquables, bouton `..` pour
+  remonter, listing des sous-dossiers (fichiers et dot-dirs
+  cachés).
+- **Sélection** — bouton « Pick » par entrée, ou « Pick current »
+  pour prendre le dossier en cours de visualisation.
+- **Text entry** — l'input texte reste actif au-dessus du picker :
+  écriture manuelle toujours possible pour les paths que le
+  browser ne surface pas.
+
+Prefixes système bloqués par sécurité : `/proc`, `/sys`, `/dev`,
+`/boot`, `/etc`, `/root`, `/run`, `/tmp`, `/var/log`,
+`/var/lib/docker`. Endpoint admin-only : la topologie du
+container n'est pas exposée aux utilisateurs read-only.
+
+### Endpoint
+
+`GET /api/v3/system/filesystem?path=<absolute-path>` — admin.
+
+---
+
 # v0.15.6
 
 ## ⚙️ Platform packs — toggle builtin + priorité configurables

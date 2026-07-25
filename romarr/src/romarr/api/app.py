@@ -33,6 +33,7 @@ from romarr.api.routers.auth import router as auth_router
 from romarr.api.routers.backup import router as backup_router
 from romarr.backup.api import router as backup_bundle_router
 from romarr.api.routers.calendar import router as calendar_router
+from romarr.api.routers.filesystem import router as filesystem_router
 from romarr.api.routers.cover import router as cover_router
 from romarr.api.routers.game import router as game_router
 from romarr.api.routers.history import router as history_router
@@ -691,6 +692,7 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     app.include_router(users_router)
     # Spec 013 — Sonarr-compat /api/v3/system/status (FR-031, US1).
     app.include_router(system_status_router)
+    app.include_router(filesystem_router)
     # Sonarr-compat shims so Prowlarr's "Test" against an
     # Apps → Sonarr registration populates without errors.
     app.include_router(rootfolder_router)

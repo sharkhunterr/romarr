@@ -21,6 +21,7 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
+import { PathPicker } from "@/components/shared/PathPicker";
 import {
   useCreateLibrary,
   useUpdateLibrary,
@@ -260,22 +261,20 @@ export function CreateLibraryModal(
             />
           </label>
 
-          <label className="block">
+          <div>
             <span className="mb-1 block text-[0.65rem] uppercase tracking-widest text-zinc-500">
               {t("mediaManagement.create.pathLabel")}
             </span>
-            <input
-              type="text"
+            <PathPicker
               value={path}
-              onChange={(e) => setPath(e.target.value)}
-              placeholder="/data/roms/megadrive"
+              onChange={setPath}
               disabled={submitting}
-              className="w-full rounded-md bg-zinc-950 px-3 py-2 font-mono text-xs text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
+              placeholder="/data/roms/megadrive"
             />
             <p className="mt-1 text-[0.65rem] text-zinc-500">
               {t("mediaManagement.create.pathHint")}
             </p>
-          </label>
+          </div>
 
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <ProfileSelect
