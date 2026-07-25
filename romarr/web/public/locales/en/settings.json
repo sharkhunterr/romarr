@@ -18,7 +18,8 @@
     "ui": "UI",
     "general": "General",
     "logs": "Logs",
-    "rom-packs": "ROM Pack Defaults"
+    "rom-packs": "ROM Pack Defaults",
+    "backup": "Backup & Restore"
   },
   "logs": {
     "title": "System Logs",

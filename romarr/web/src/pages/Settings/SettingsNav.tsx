@@ -11,6 +11,7 @@
  */
 
 import {
+  Archive,
   Bell,
   Database,
   Download,
@@ -56,6 +57,7 @@ export const SETTINGS_NAV_ENTRIES: readonly SettingsNavEntry[] = [
   { to: "/settings/unidentified", slug: "unidentified", Icon: HelpCircle, shipped: true },
   { to: "/settings/ui", slug: "ui", Icon: Palette, shipped: true },
   { to: "/settings/logs", slug: "logs", Icon: FileText, shipped: true },
+  { to: "/settings/backup", slug: "backup", Icon: Archive, shipped: true },
 ];
 
 function entryClass(isActive: boolean): string {

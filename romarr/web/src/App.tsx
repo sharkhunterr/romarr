@@ -36,6 +36,7 @@ import { LoginPage } from "@/pages/Login";
 import { NotFoundPage } from "@/pages/placeholders";
 import { RomPacksPage } from "@/pages/RomPacks";
 import { SetupPage } from "@/pages/Setup";
+import { BackupPage } from "@/pages/Settings/Backup";
 import { ConnectPage } from "@/pages/Settings/Connect";
 import { DatSourcesPage } from "@/pages/Settings/DatSources";
 import { DownloadClientsPage } from "@/pages/Settings/DownloadClients";
@@ -129,6 +130,7 @@ const router = createBrowserRouter([
               { path: "general", element: <GeneralPage /> },
               { path: "unidentified", element: <UnidentifiedPage /> },
               { path: "logs", element: <LogsPage /> },
+              { path: "backup", element: <BackupPage /> },
               { path: ":sub", element: <SettingsPlaceholder /> },
             ],
           },

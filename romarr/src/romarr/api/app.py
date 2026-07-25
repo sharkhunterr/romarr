@@ -31,6 +31,7 @@ from romarr.api.openapi import customize_openapi
 from romarr.api.spa import register_spa
 from romarr.api.routers.auth import router as auth_router
 from romarr.api.routers.backup import router as backup_router
+from romarr.backup.api import router as backup_bundle_router
 from romarr.api.routers.calendar import router as calendar_router
 from romarr.api.routers.cover import router as cover_router
 from romarr.api.routers.game import router as game_router
@@ -726,6 +727,9 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     # "trigger backup" flow is served by the command bus
     # (POST /api/v3/command {"name": "Backup"}).
     app.include_router(backup_router)
+    # À la carte bundle export/import — /api/v3/backup/{manifest,export,import}.
+    # Separate from the file-based system backup above.
+    app.include_router(backup_bundle_router)
     app.include_router(providers_router)
     app.include_router(field_priority_router)
     app.include_router(refresh_router)

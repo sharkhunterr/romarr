@@ -14,6 +14,50 @@
 
 ---
 
+# v0.15.2
+
+## 💾 Backup & Restore à la carte — export / import sélectif
+
+Nouvelle page **Settings → Backup & Restore** qui expose un système de
+sauvegarde/restauration à la carte : cochez les ressources voulues,
+générez un bundle JSON, réimportez-le dans n'importe quelle install
+Romarr (même version majeure).
+
+### Ce qui est backupable
+
+11 types de ressources couverts :
+- DAT Sources
+- Quality / Region / Dump / Language / Naming Profiles
+- Custom Formats
+- Download Clients (qBittorrent, SABnzbd, Deluge…)
+- Indexers (avec résolution FK par nom pour la portabilité)
+- Notifications (Apprise)
+- Platform Packs (métadonnées — les YAML doivent être re-uploadés)
+
+### Secrets opt-in
+
+Les passwords, API keys et URLs Apprise sont **chiffrés en DB avec
+Fernet** et **exclus par défaut** de l'export. Case à cocher
+« Include secrets in export » pour les inclure — utile pour cloner
+une install complète, à condition que l'instance cible partage le
+même `ROMARR_AUTH_SECRET_KEY`.
+
+### 3 modes d'import
+
+- **Upsert** (défaut) : add + update par name — safe, idempotent
+- **Merge** : add-only — préserve les configs existantes
+- **Replace** : delete-all + recreate — **destructif**, guardé par
+  confirmation UI explicite et libellé rouge
+
+### API
+
+3 endpoints admin-only sous `/api/v3/backup/` :
+- `GET /manifest` — liste ressources + compteurs
+- `POST /export` — génère le bundle JSON
+- `POST /import` — applique le bundle, retourne un bilan par ressource
+
+---
+
 # v0.15.1
 
 ## 🐳 Docker & installation — zero-config sur Unraid / Synology / NAS
