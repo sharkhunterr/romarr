@@ -14,6 +14,53 @@
 
 ---
 
+# v0.15.1
+
+## 🐳 Docker & installation — zero-config sur Unraid / Synology / NAS
+
+Installation Docker « il suffit de rebuilder » : trois frictions
+historiques éliminées d'un coup.
+
+> [!IMPORTANT]
+> Aucune migration DB. Pull `sharkhunterr/romarr:latest` et recréer
+> le container. Les operators Unraid qui avaient dû ajouter
+> `ROMARR_DATABASE_URL` en manuel peuvent maintenant la retirer.
+
+### 🔑 Une seule variable obligatoire — `ROMARR_AUTH_SECRET_KEY`
+
+Fini le `unable to open database file` au premier boot Docker. La
+config SQLite se déduit désormais automatiquement de
+`ROMARR_DATA_DIR` (`/data` par défaut dans l'image) via un
+`model_validator` Pydantic. Un URL explicite (PostgreSQL par
+exemple) reste évidemment respecté. Le `data_dir` est aussi créé
+automatiquement s'il n'existe pas — plus de crash silencieux sur
+un mount vide.
+
+### 👤 PUID / PGID au runtime — pattern LinuxServer.io
+
+Le volume monté sur Unraid appartient typiquement à `nobody:users`
+(99:100). Avant, le container démarrait figé en UID 1000 → refus
+d'écriture sur `/data`. Nouveau `entrypoint.sh` :
+
+- Lit les env `PUID` et `PGID` (défaut 1000)
+- Aligne le user `romarr` sur ces IDs via `usermod`/`groupmod`
+- `chown` `/data` (best-effort — n'échoue pas sur bind mounts NFS/CIFS)
+- Dégrade vers `romarr` via `gosu` — PID 1 reste `tini` pour la
+  propagation des signaux
+
+Résultat : `PUID=99 PGID=100` dans le template Unraid et ça marche
+sans manipuler les permissions sur l'hôte.
+
+### 🎨 Favicons PNG en plus du SVG
+
+Certains clients (vieux browsers, panels Unraid, agrégateurs de
+services *arr) n'ingèrent pas le SVG et affichaient un placeholder.
+Ajout de `favicon.png` (32) + `favicon-32/64/128.png`, référencés
+dans `index.html` en fallback après le SVG. Le browser prend le
+format qu'il comprend, ordre déterministe.
+
+---
+
 # v0.15.0
 
 ## 🔗 Native integration surface for request managers + search pipeline convergence

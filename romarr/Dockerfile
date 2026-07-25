@@ -48,7 +48,7 @@ FROM python:3.12-slim AS runtime
 # ``extract:bad-archive`` (slice 382).
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       tini ca-certificates unar \
+       tini ca-certificates unar gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # Unprivileged runtime user. PUID/PGID get applied at runtime via
@@ -83,10 +83,19 @@ RUN pip install --no-cache-dir .
 COPY --from=frontend-build /src/web/dist ./web/dist
 
 # Default data directory. Mount a volume here for persistence.
+# On chown à l'UID build par défaut ; l'entrypoint runtime réalignera
+# selon PUID/PGID de l'opérateur (pattern LSIO).
 RUN mkdir -p /data \
     && chown -R romarr:romarr /data /app
 
-USER romarr
+# Entrypoint qui applique PUID/PGID au runtime avant de dégrader
+# vers `romarr` — permet à Unraid/Synology/autres NAS de contrôler
+# l'ownership sans rebuild de l'image.
+COPY --chmod=755 scripts/entrypoint.sh /entrypoint.sh
+
+# On ne fige PAS `USER romarr` ici : le container démarre en root
+# pour que l'entrypoint puisse faire usermod + chown, puis exec en
+# romarr via `gosu` (voir scripts/entrypoint.sh).
 
 # Bootstrap + migrate + SPA enabled by default in the image so
 # `docker run romarr` produces a working install. Operators
@@ -102,10 +111,13 @@ ENV ROMARR_DATA_DIR=/data \
     ROMARR_AUTO_MIGRATE=true \
     ROMARR_SCHEDULER_ENABLED=true \
     ROMARR_SPA_ENABLED=true \
-    ROMARR_SPA_DIST_PATH=/app/web/dist
+    ROMARR_SPA_DIST_PATH=/app/web/dist \
+    PUID=1000 \
+    PGID=1000
 
 EXPOSE 8585
 VOLUME ["/data"]
 
-ENTRYPOINT ["/usr/bin/tini", "--", "romarr"]
+# tini → entrypoint (PUID/PGID + chown + gosu) → romarr
+ENTRYPOINT ["/usr/bin/tini", "--", "/entrypoint.sh", "romarr"]
 CMD ["serve", "--host", "0.0.0.0", "--port", "8585"]
