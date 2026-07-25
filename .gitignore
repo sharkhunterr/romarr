@@ -21,3 +21,11 @@ assets/render/
 
 # Claude Code — session-local temp files
 .claude/settings.local.json.tmp.*
+
+# Fichiers scratch d'outillage local (bases de données créées par
+# des scripts de test des repos voisins qui écrivent au cwd racine)
+smartunarr.db*
+smarttunarr.db*
+
+# Claude Code — état local (task_id, lock du scheduler)
+.claude/scheduled_tasks.lock
