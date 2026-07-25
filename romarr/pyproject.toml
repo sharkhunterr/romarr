@@ -81,6 +81,14 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/romarr"]
 
+# Built-in platform-pack YAMLs live at repo root under
+# ``../examples/platform-packs/`` (single source of truth, browsable
+# without opening the wheel). Ship them into the wheel at
+# ``romarr/builtin_packs/`` so ``importlib.resources`` finds them at
+# runtime just like a bundled resource.
+[tool.hatch.build.targets.wheel.force-include]
+"examples/platform-packs" = "romarr/builtin_packs"
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"
