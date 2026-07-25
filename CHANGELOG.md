@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.14](https://github.com/sharkhunterr/romarr/-/compare/v0.14.13...v0.14.14) (2026-07-25)
+
+
+### Bug Fixes
+
+* **tests:** reconcile with in-session changes ([ffe6019](https://github.com/sharkhunterr/romarr/-/commit/ffe6019f316aac7580224acb64a452a0df2b1ae6))
+
 ### [0.14.13](https://github.com/sharkhunterr/romarr/-/compare/v0.14.12...v0.14.13) (2026-07-25)
 
 
