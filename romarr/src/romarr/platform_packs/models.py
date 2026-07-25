@@ -15,11 +15,13 @@ from typing import Any
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     CheckConstraint,
     DateTime,
     Index,
     Integer,
     String,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -102,8 +104,61 @@ class PlatformPackApplicationLog(Base):
     )
 
 
+_SOURCE_KIND_VALUES = ("raw", "github_dir")
+_SOURCE_KIND_CHECK = (
+    "kind IN (" + ",".join(f"'{v}'" for v in _SOURCE_KIND_VALUES) + ")"
+)
+
+_LAST_STATUS_VALUES = ("ok", "partial", "error")
+_LAST_STATUS_CHECK = (
+    "last_status IS NULL OR last_status IN ("
+    + ",".join(f"'{v}'" for v in _LAST_STATUS_VALUES)
+    + ")"
+)
+
+
+class PackSource(Base, TimestampMixin):
+    """Remote source (typically a GitHub URL) that ships one or more
+    platform-pack YAML bodies.
+
+    Two ``kind``s :
+      * ``raw`` — the URL points directly at a single YAML file
+        (``raw.githubusercontent.com/...``, or any HTTPS ``*.yaml``).
+      * ``github_dir`` — the URL points at a GitHub directory; the
+        sync walks it and ingests every ``*.yaml`` / ``*.yml`` child.
+
+    ``kind`` is auto-detected at add-time via
+    :func:`romarr.platform_packs.remote.classify_url` and can be
+    overridden by the client if the heuristic misfires.
+    """
+
+    __tablename__ = "pack_sources"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    url: Mapped[str] = mapped_column(String, nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    last_synced_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_status: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    last_error: Mapped[str | None] = mapped_column(String, nullable=True)
+    last_applied_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
+
+    __table_args__ = (
+        UniqueConstraint("name", name="uq_pack_sources_name"),
+        CheckConstraint(_SOURCE_KIND_CHECK, name="ck_pack_sources_kind"),
+        CheckConstraint(_LAST_STATUS_CHECK, name="ck_pack_sources_last_status"),
+    )
+
+
 # Re-export for convenience in tests/code.
 __all__: list[Any] = [
+    "PackSource",
     "ParsingStrategy",
     "PlatformPackApplicationLog",
 ]

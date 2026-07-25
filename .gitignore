@@ -29,3 +29,6 @@ smarttunarr.db*
 
 # Claude Code — état local (task_id, lock du scheduler)
 .claude/scheduled_tasks.lock
+
+# Bundles /api/v3/backup/export — peuvent contenir des secrets
+romarr-backup-*.json

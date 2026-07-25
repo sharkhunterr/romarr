@@ -20,6 +20,7 @@ import {
 } from "@/lib/api/queries/platforms";
 
 import { PackRow } from "./PackRow";
+import { PackSourcesPanel } from "./PackSourcesPanel";
 import { PlatformDetailModal } from "./PlatformDetailModal";
 
 export function PlatformsPage(): ReactElement {
@@ -119,6 +120,8 @@ export function PlatformsPage(): ReactElement {
           </ul>
         )}
       </section>
+
+      <PackSourcesPanel />
 
       <section className="space-y-3">
         <header>

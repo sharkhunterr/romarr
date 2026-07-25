@@ -14,6 +14,51 @@
 
 ---
 
+# v0.15.3
+
+## 🌐 Platform packs — sources GitHub configurables
+
+Fini le upload manuel des YAML : chaque installation Romarr peut
+désormais enregistrer **une ou plusieurs URLs GitHub** comme
+sources de platform packs, puis synchroniser d'un clic.
+
+### Ce que l'user configure
+
+Dans **Settings → Platforms**, un panneau « Pack sources » avec :
+- **Nom** + **URL** — la source est ajoutée en un formulaire
+- Auto-détection du type :
+  - `raw` — URL pointant directement sur un `*.yaml`
+    (ex : `raw.githubusercontent.com/…/pack.yaml`)
+  - `github_dir` — URL de type
+    `https://github.com/{owner}/{repo}/tree/{branch}/{path}` — la
+    sync walk le dossier et ingère chaque YAML enfant
+- Enable/disable, delete, sync-now, historique du dernier run
+
+### Comportement à la sync
+
+Chaque YAML est passé au même `ingest_pack()` que l'upload manuel :
+validation schéma, diff, apply transactionnel, audit trail.
+Résultat par fichier : `applied` / `skipped` (déjà connu) / `failed`
+(erreur de validation isolée qui ne rollback pas les autres).
+
+### Endpoints admin
+
+`/api/v3/rom/platform-pack-source/*` :
+- `GET` — liste
+- `POST` — création (auto-détecte `kind`)
+- `PATCH /{id}` — toggle enabled / rename
+- `DELETE /{id}` — retire la source (les packs déjà appliqués restent)
+- `POST /{id}/sync` — fetch + ingest, bilan par YAML
+
+### Limites MVP
+
+- Repos publics seulement (pas d'auth token GitHub — v2)
+- Sync manuel uniquement — la scheduler-based auto-sync arrivera
+  en même temps que le task runner dédié
+- Max 200 YAMLs par listing (garde-fou), 2 MiB par pack
+
+---
+
 # v0.15.2
 
 ## 💾 Backup & Restore à la carte — export / import sélectif
