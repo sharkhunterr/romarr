@@ -65,17 +65,25 @@ _inflight: set[asyncio.Task[None]] = set()
 class WebhookPayload(BaseModel):
     """Common shape every supported download client posts.
 
-    qBittorrent and SABnzbd have different native shapes; for
-    MVP we accept the lowest-common-denominator fields and rely
-    on the operator's hook script to render them. Future client
-    variants (Transmission, Deluge, NZBGet) will land as a
-    discriminated union.
+    qBittorrent, SABnzbd et Deluge ont chacun leur mécanisme natif
+    d'exécution de script au download-complete :
+    - qBit : Settings → Downloads → « Run external program »
+    - SABnzbd : Settings → Categories → « Script »
+    - Deluge : plugin Execute (Preferences → Plugins → Execute) qui
+      appelle un script bash sur ``Torrent Complete``. Le script hit
+      cet endpoint avec l'info-hash en tant que
+      ``download_client_native_id``.
+
+    On accepte les 3 kinds. Les prochains (Transmission, NZBGet)
+    landent dans une slice ultérieure.
     """
 
     model_config = ConfigDict(extra="ignore")
 
     download_client_native_id: str
-    download_client_kind: Literal["qbittorrent", "sabnzbd"] = "qbittorrent"
+    download_client_kind: Literal[
+        "qbittorrent", "sabnzbd", "deluge"
+    ] = "qbittorrent"
 
 
 class WebhookAcceptedResponse(BaseModel):
