@@ -10,21 +10,22 @@ from romarr.tasks.models import Job
 from romarr.tasks.seeder import DEFAULT_CATALOGUE, seed_defaults
 
 # ---------------------------------------------------------------------------
-# T013 — fresh DB seeds nine documented rows (SC-001)
+# T013 — fresh DB seeds every documented row (SC-001)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_first_boot_seeds_nine(
+async def test_first_boot_seeds_full_catalogue(
     async_session: AsyncSession,
 ) -> None:
+    expected_count = len(DEFAULT_CATALOGUE)
     inserted = await seed_defaults(async_session)
-    assert inserted == 9
+    assert inserted == expected_count
 
     rows = (
         await async_session.execute(select(Job).order_by(Job.id))
     ).scalars().all()
-    assert len(rows) == 9
+    assert len(rows) == expected_count
 
     by_id = {row.id: row for row in rows}
     expected = {default.job_id for default in DEFAULT_CATALOGUE}
@@ -63,6 +64,10 @@ async def test_documented_schedules_match_catalogue(
     assert by_id["AutoCheckAdded"].schedule_cron is None
     assert by_id["AutoCheckAdded"].schedule_interval_seconds is None
 
+    # PackSourcesSync — off by default, daily at 05:00.
+    assert by_id["PackSourcesSync"].schedule_cron == "0 5 * * *"
+    assert by_id["PackSourcesSync"].enabled is False
+
 
 # ---------------------------------------------------------------------------
 # T014 — idempotent rerun
@@ -74,7 +79,7 @@ async def test_idempotent_rerun(async_session: AsyncSession) -> None:
     """Running the seeder twice inserts nothing on the second
     pass and leaves existing rows untouched."""
     first = await seed_defaults(async_session)
-    assert first == 9
+    assert first == len(DEFAULT_CATALOGUE)
 
     second = await seed_defaults(async_session)
     assert second == 0
@@ -82,7 +87,7 @@ async def test_idempotent_rerun(async_session: AsyncSession) -> None:
     rows = (
         await async_session.execute(select(Job))
     ).scalars().all()
-    assert len(rows) == 9
+    assert len(rows) == len(DEFAULT_CATALOGUE)
 
 
 # ---------------------------------------------------------------------------
@@ -185,9 +190,10 @@ async def test_partial_existing_inserts_only_missing(
     await async_session.commit()
 
     inserted = await seed_defaults(async_session)
-    assert inserted == 8  # 9 catalogue - 1 already present
+    # Full catalogue minus the one we pre-inserted.
+    assert inserted == len(DEFAULT_CATALOGUE) - 1
 
     rows = (
         await async_session.execute(select(Job))
     ).scalars().all()
-    assert len(rows) == 9
+    assert len(rows) == len(DEFAULT_CATALOGUE)

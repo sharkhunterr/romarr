@@ -1,29 +1,30 @@
-"""Deluge stub tests (T041)."""
+"""Deluge class-metadata tests.
+
+The previous stub tests (T041) asserted ``available=False`` and that
+every method raised ``NotImplementedError('deferred to v1')``. Deluge
+was fully implemented against Deluge 2.x's WebUI JSON-RPC in the
+0.15.x series; this file keeps a slim metadata smoke test now that
+the stub is gone. End-to-end behaviour is covered by the integration
+tests hitting a real Deluge container.
+"""
 
 from __future__ import annotations
 
-import pytest
-
 from romarr.downloaders.implementations.deluge import DelugeClient
-from romarr.downloaders.types import ClientType, TorrentMagnet
+from romarr.downloaders.types import ClientType
 
 
 def test_class_metadata() -> None:
     assert DelugeClient.client_type is ClientType.DELUGE
     assert DelugeClient.supports_torrents is True
     assert DelugeClient.supports_usenet is False
-    assert DelugeClient.available is False
+    assert DelugeClient.available is True
 
 
-async def test_methods_raise_deferred() -> None:
-    client = DelugeClient(client_id=2, name="Stub")
-    with pytest.raises(NotImplementedError, match="deferred to v1"):
-        await client.test_connection()
-    with pytest.raises(NotImplementedError, match="deferred to v1"):
-        await client.add_torrent(
-            TorrentMagnet(magnet_uri="magnet:?xt=urn:btih:def"),
-            category="romarr",
-            tags=["romarr"],
-        )
-    with pytest.raises(NotImplementedError, match="deferred to v1"):
-        await client.remove("hash", delete_files=False)
+def test_constructor_requires_credentials() -> None:
+    """The real implementation refuses to build without host / port /
+    password — no silent stub fallback."""
+    import pytest
+
+    with pytest.raises(TypeError):
+        DelugeClient(client_id=1, name="broken")  # type: ignore[call-arg]

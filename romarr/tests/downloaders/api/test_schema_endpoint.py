@@ -19,12 +19,13 @@ async def test_schema_lists_real_impls_and_stubs(
     rows = {r["implementation"]: r for r in response.json()}
     assert rows["qbittorrent"]["available"] is True
     assert rows["sabnzbd"]["available"] is True
+    assert rows["deluge"]["available"] is True
     assert rows["transmission"]["available"] is False
-    assert rows["deluge"]["available"] is False
     assert rows["nzbget"]["available"] is False
     # Real impls expose config fields; stubs do not.
     assert rows["qbittorrent"]["fields"]
     assert rows["sabnzbd"]["fields"]
+    assert rows["deluge"]["fields"]
     assert rows["transmission"]["fields"] == []
 
 
