@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.15](https://github.com/sharkhunterr/romarr/-/compare/v0.14.14...v0.14.15) (2026-07-25)
+
+
+### Bug Fixes
+
+* **docker:** copy examples/ into build context ([45e875a](https://github.com/sharkhunterr/romarr/-/commit/45e875a89f055c61be4fec45d12a17c3c144add3))
+
 ### [0.14.14](https://github.com/sharkhunterr/romarr/-/compare/v0.14.13...v0.14.14) (2026-07-25)
 
 
