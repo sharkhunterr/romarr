@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.13](https://github.com/sharkhunterr/romarr/-/compare/v0.14.12...v0.14.13) (2026-07-25)
+
+
+### Features
+
+* **backup:** à la carte backup/restore for 11 resource types ([ae34012](https://github.com/sharkhunterr/romarr/-/commit/ae340120dbe40428b2d18b27fafe2658beef853f))
+* **deluge:** implémentation complète du DownloadClient Deluge 2.0+ ([9f61cd8](https://github.com/sharkhunterr/romarr/-/commit/9f61cd87929e16f4ee22e7064183f9a299c3cfd6))
+* **deluge:** webhook importer accepte download_client_kind='deluge' ([bc35598](https://github.com/sharkhunterr/romarr/-/commit/bc35598fc1ac91ff489a28ca88cb213b486a9847))
+* **platform-packs:** GitHub-sourced platform pack sync ([e5dba3a](https://github.com/sharkhunterr/romarr/-/commit/e5dba3a8a0c4071220b0ff51b2e691b2b826dcf3))
+* **platform-packs:** preview modal + scheduled auto-sync ([1653481](https://github.com/sharkhunterr/romarr/-/commit/1653481937865e31356e4a4c1faba9080a276d3a))
+
+
+### Bug Fixes
+
+* **ui:** modals accessibles sur mobile — footer toujours visible ([640910f](https://github.com/sharkhunterr/romarr/-/commit/640910f8d2438aef98f0c8b4a2fe295039bcb5aa))
+
 ### [0.14.12](https://github.com/sharkhunterr/romarr/-/compare/v0.14.11...v0.14.12) (2026-07-25)
 
 
