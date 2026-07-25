@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.17](https://github.com/sharkhunterr/romarr/-/compare/v0.14.16...v0.14.17) (2026-07-25)
+
+
+### Features
+
+* **library:** browse container paths from the create-library modal ([287c7b9](https://github.com/sharkhunterr/romarr/-/commit/287c7b99a22faa5a52836a9126fe9598fac98414))
+
 ### [0.14.16](https://github.com/sharkhunterr/romarr/-/compare/v0.14.15...v0.14.16) (2026-07-25)
 
 
