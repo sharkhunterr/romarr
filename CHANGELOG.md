@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.10](https://github.com/sharkhunterr/romarr/-/compare/v0.14.9...v0.14.10) (2026-07-25)
+
+
+### Bug Fixes
+
+* **config:** SQLite auto-placée sous data_dir + favicons PNG (fallback SVG) ([5e8407b](https://github.com/sharkhunterr/romarr/-/commit/5e8407bffc0413bf5b1ea5e7daddc539f8fcc653))
+
 ### [0.14.9](https://github.com/sharkhunterr/romarr/-/compare/v0.14.8...v0.14.9) (2026-07-13)
 
 
