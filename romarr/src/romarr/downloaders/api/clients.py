@@ -32,6 +32,7 @@ from romarr.downloaders.implementations import (
     QBittorrentClient,
     SabnzbdClient,
 )
+from romarr.downloaders.implementations.deluge import DelugeClient
 from romarr.downloaders.models import DownloadClient as DownloadClientRow
 from romarr.downloaders.schemas import (
     DownloadClientCreate,
@@ -112,7 +113,7 @@ async def _get_or_404(db: AsyncSession, client_id: int) -> DownloadClientRow:
 
 def _ephemeral_client_from_create(
     payload: DownloadClientCreate,
-) -> QBittorrentClient | SabnzbdClient:
+) -> QBittorrentClient | SabnzbdClient | DelugeClient:
     """Build an in-memory client (no DB row yet) for ``?test=true``.
 
     The stub types are gated upstream by
@@ -147,6 +148,26 @@ def _ephemeral_client_from_create(
             host=payload.host,
             port=payload.port,
             api_key=payload.api_key,
+            use_ssl=payload.use_ssl,
+            url_base=payload.url_base,
+            ssl_cert_validation=payload.ssl_cert_validation,
+            category_default=payload.category_default,
+            timeout_seconds=payload.timeout_seconds,
+        )
+    if payload.type is ClientType.DELUGE:
+        # Deluge WebUI n'a qu'un password (pas d'username) — le
+        # validator DownloadClientCreate exige `password` non-None
+        # pour ce type. On importe DelugeClient localement pour
+        # éviter un import top-level supplémentaire dans un module
+        # déjà lourd.
+        from romarr.downloaders.implementations.deluge import DelugeClient
+        assert payload.password is not None
+        return DelugeClient(
+            client_id=0,
+            name=payload.name,
+            host=payload.host,
+            port=payload.port,
+            password=payload.password,
             use_ssl=payload.use_ssl,
             url_base=payload.url_base,
             ssl_cert_validation=payload.ssl_cert_validation,

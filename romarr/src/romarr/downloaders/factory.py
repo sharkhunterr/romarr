@@ -122,7 +122,24 @@ def build_client_from_row(row: DownloadClientRow) -> DownloadClient:
     if row.type == ClientType.TRANSMISSION.value:
         return TransmissionClient(client_id=row.id, name=row.name)
     if row.type == ClientType.DELUGE.value:
-        return DelugeClient(client_id=row.id, name=row.name)
+        # Deluge n'a pas de username — l'auth WebUI = password seul.
+        # Le champ ``password_encrypted`` de la row porte donc le
+        # password du WebUI (pas du daemon RPC, une confusion classique).
+        if row.password_encrypted is None:
+            raise ValueError(f"Deluge row {row.id} is missing WebUI password")
+        password = decrypt(row.password_encrypted).decode("utf-8")
+        return DelugeClient(
+            client_id=row.id,
+            name=row.name,
+            host=row.host,
+            port=row.port,
+            password=password,
+            use_ssl=row.use_ssl,
+            url_base=row.url_base,
+            ssl_cert_validation=ssl_setting,
+            category_default=row.category_default,
+            timeout_seconds=row.timeout_seconds,
+        )
     if row.type == ClientType.NZBGET.value:
         return NzbgetClient(client_id=row.id, name=row.name)
     if row.type == ClientType.GRABARR_DIRECT.value:

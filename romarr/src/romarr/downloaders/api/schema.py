@@ -42,6 +42,19 @@ _SAB_FIELDS: list[dict[str, Any]] = [
 ]
 
 
+# Deluge WebUI n'a pas de username — le password seul authentifie
+# l'opérateur qui accède au WebUI (Deluge distingue une seule identité
+# côté web). `category_default` devient le label du plugin Label
+# (auto-activé au premier ensure_category).
+_DELUGE_FIELDS: list[dict[str, Any]] = [
+    {"name": "host", "label": "Host", "type": "textbox"},
+    {"name": "port", "label": "Port", "type": "number"},
+    {"name": "password", "label": "Password", "type": "password", "secret": True},
+    {"name": "category_default", "label": "Category (label)", "type": "textbox"},
+    {"name": "use_ssl", "label": "Use SSL", "type": "checkbox"},
+]
+
+
 @router.get(
     "/schema",
     response_model=list[DownloadClientSchema],
@@ -75,9 +88,9 @@ async def schema_endpoint(
         DownloadClientSchema(
             implementation=ClientType.DELUGE,
             implementation_name="Deluge",
-            available=False,
+            available=True,
             config_contract="DelugeSettings",
-            fields=[],
+            fields=_DELUGE_FIELDS,
         ),
         DownloadClientSchema(
             implementation=ClientType.NZBGET,

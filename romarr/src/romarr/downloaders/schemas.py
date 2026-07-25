@@ -47,7 +47,9 @@ def _validate_credentials(
                   credentials are accepted (auth-bypass via qBit's
                   ``WebUI\\AuthSubnetWhitelist``, slice 379).
     sabnzbd     ⇒ api_key REQUIRED, username + password MUST be NULL.
-    Stubs (transmission/deluge/nzbget) accept anything — they'll
+    deluge      ⇒ password REQUIRED (WebUI n'a pas d'username),
+                  username + api_key MUST stay NULL.
+    Remaining stubs (transmission/nzbget) accept anything — they'll
     refuse via NotImplementedError before any credential is used.
     """
     if type_ == "qbittorrent":
@@ -65,6 +67,16 @@ def _validate_credentials(
             raise ValueError("sabnzbd must not carry a password")
         if not has_api_key:
             raise ValueError("sabnzbd requires an api_key")
+    elif type_ == "deluge":
+        # Deluge WebUI auth : password unique, pas d'username natif.
+        # api_key n'a aucun sens (Deluge n'a pas d'API-key concept —
+        # tout passe par le password WebUI + cookie session).
+        if username:
+            raise ValueError("deluge must not carry a username (WebUI has no username field)")
+        if has_api_key:
+            raise ValueError("deluge must not carry an api_key")
+        if not has_password:
+            raise ValueError("deluge requires a WebUI password")
 
 
 def _validate_source_type_enabled(

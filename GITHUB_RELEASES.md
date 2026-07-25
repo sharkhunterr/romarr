@@ -51,6 +51,32 @@ d'écriture sur `/data`. Nouveau `entrypoint.sh` :
 Résultat : `PUID=99 PGID=100` dans le template Unraid et ça marche
 sans manipuler les permissions sur l'hôte.
 
+### 🌊 Deluge — download client implémenté
+
+Le stub Deluge devient un vrai client fonctionnel. Deluge 2.0+ est
+supporté via son WebUI JSON-RPC (endpoint unique `POST /json`) :
+
+- **Auth** : password WebUI (pas d'username natif chez Deluge)
+- **Torrents** : magnet / URL / bytes .torrent — tous supportés
+- **Categories** : mappées sur le plugin **Label** de Deluge, auto-
+  activé au premier `ensure_category` si absent
+- **Idempotence** : re-ajouter un torrent déjà présent retourne son
+  hash sans crash (parse du message `"already in session (<hash>)"`)
+- **`romarr-imported` flag** : implémenté via un **second label**
+  distinct (Deluge n'a pas de tags multiples par torrent)
+- **Filter Deluge subtilité** : `is_finished: True` crashe le
+  filtermanager Deluge ≤2.2 avec « argument of type 'bool' is not
+  iterable » — workaround : on filtre côté Python plutôt que côté
+  serveur pour ce champ
+
+Testé end-to-end contre Deluge 2.2.0 (image LSIO) : test_connection,
+add_torrent (idempotent), get_status, list_managed_downloads,
+set_imported_tag, remove — tous passent.
+
+Prérequis : **le WebUI doit être attaché à un daemon** (Connection
+Manager côté Deluge, configuration one-shot). `test_connection` le
+détecte et remonte un message actionnable si absent.
+
 ### 🎨 Favicons PNG en plus du SVG
 
 Certains clients (vieux browsers, panels Unraid, agrégateurs de
