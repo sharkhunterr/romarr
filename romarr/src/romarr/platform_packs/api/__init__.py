@@ -9,11 +9,13 @@ Two routers, both admin-gated:
     format-CRUD endpoints under ``/api/v3/rom/platform``.
 """
 
+from romarr.platform_packs.api.config import router as config_router
 from romarr.platform_packs.api.packs import router as packs_router
 from romarr.platform_packs.api.platforms import router as platforms_router
 from romarr.platform_packs.api.sources import router as sources_router
 
 __all__ = [
+    "config_router",
     "packs_router",
     "platforms_router",
     "sources_router",

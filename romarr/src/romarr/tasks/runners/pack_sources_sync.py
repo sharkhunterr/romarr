@@ -27,6 +27,8 @@ from romarr.platform_packs import (
     PackVersionConflictError,
     ingest_pack,
 )
+from romarr.platform_packs.builtin import apply_builtin_pack
+from romarr.platform_packs.config import get_or_create_platform_pack_config
 from romarr.platform_packs.models import PackSource
 from romarr.platform_packs.remote import (
     RemotePackError,
@@ -155,6 +157,29 @@ async def run_pack_sources_sync(
         )
 
     await session.commit()
+
+    # Priority post-step: if config says builtin wins, re-apply the
+    # builtin pack over any slugs the community sync just touched.
+    # No-op when builtin is disabled or priority=community.
+    if result.total_applied > 0:
+        try:
+            cfg = await get_or_create_platform_pack_config(session)
+            await session.commit()
+            if cfg.builtin_enabled and cfg.priority == "builtin":
+                async with sessionmaker() as reapply_session:
+                    reapplied = await apply_builtin_pack(
+                        reapply_session, sessionmaker=sessionmaker
+                    )
+                    await reapply_session.commit()
+                _logger.info(
+                    "tasks.pack_sources_sync.builtin_priority_reapply",
+                    extra={"applied": reapplied is not None},
+                )
+        except Exception:  # noqa: BLE001
+            _logger.exception(
+                "tasks.pack_sources_sync.builtin_priority_reapply_failed"
+            )
+
     _logger.info(
         "tasks.pack_sources_sync.complete",
         extra={

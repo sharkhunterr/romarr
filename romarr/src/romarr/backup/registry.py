@@ -118,6 +118,8 @@ def _ensure_loaded() -> None:
         download_clients,
         indexers,
         notifications,
+        pack_sources,
+        platform_pack_config,
         platform_packs,
         profiles,
     )

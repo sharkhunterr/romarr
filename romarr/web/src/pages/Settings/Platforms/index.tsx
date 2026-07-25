@@ -19,6 +19,7 @@ import {
   type Platform,
 } from "@/lib/api/queries/platforms";
 
+import { PackConfigPanel } from "./PackConfigPanel";
 import { PackRow } from "./PackRow";
 import { PackSourcesPanel } from "./PackSourcesPanel";
 import { PlatformDetailModal } from "./PlatformDetailModal";
@@ -57,9 +58,53 @@ export function PlatformsPage(): ReactElement {
         </p>
       </header>
 
-      {/* Slice 402 — catalogue grid: click a card to see every
-          field of that Platform (aliases, format extensions,
-          provider IDs, pack provenance). */}
+      {/* Order: settings first (config + sources + history), the
+          catalogue grid at the end — settings drive what lands in
+          the catalogue, so surfacing them above is more actionable. */}
+      <PackConfigPanel />
+
+      <PackSourcesPanel />
+
+      <section className="space-y-3">
+        <header>
+          <h3 className="text-sm font-medium text-zinc-100">
+            {t("platforms.packs.heading")}
+          </h3>
+          <p className="text-[0.65rem] text-zinc-500">
+            {t("platforms.packs.subhead")}
+          </p>
+        </header>
+        {packs.isLoading && <ListSkeleton rows={3} />}
+        {packs.isError && (
+          <EmptyState
+            title={t("platforms.empty.title")}
+            description={packs.error.message}
+          />
+        )}
+        {packs.isSuccess && packs.data.length === 0 && (
+          <EmptyState
+            title={t("platforms.empty.title")}
+            description={t("platforms.empty.body")}
+          />
+        )}
+        {packs.isSuccess && packs.data.length > 0 && (
+          <>
+            <ul className="space-y-2">
+              {packs.data.map((pack) => (
+                <PackRow key={pack.pack_version} pack={pack} />
+              ))}
+            </ul>
+            <p className="rounded-md border border-dashed border-zinc-800 bg-zinc-900/20 p-3 text-[0.7rem] text-zinc-500">
+              {t("platforms.uploadHint")}
+            </p>
+          </>
+        )}
+      </section>
+
+      {/* Slice 402 — catalogue grid: click a card to see every field
+          of that Platform (aliases, format extensions, provider IDs,
+          pack provenance). Moved to the bottom so the actionable
+          settings come first. */}
       <section className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
@@ -118,44 +163,6 @@ export function PlatformsPage(): ReactElement {
               </li>
             ))}
           </ul>
-        )}
-      </section>
-
-      <PackSourcesPanel />
-
-      <section className="space-y-3">
-        <header>
-          <h3 className="text-sm font-medium text-zinc-100">
-            {t("platforms.packs.heading")}
-          </h3>
-          <p className="text-[0.65rem] text-zinc-500">
-            {t("platforms.packs.subhead")}
-          </p>
-        </header>
-        {packs.isLoading && <ListSkeleton rows={3} />}
-        {packs.isError && (
-          <EmptyState
-            title={t("platforms.empty.title")}
-            description={packs.error.message}
-          />
-        )}
-        {packs.isSuccess && packs.data.length === 0 && (
-          <EmptyState
-            title={t("platforms.empty.title")}
-            description={t("platforms.empty.body")}
-          />
-        )}
-        {packs.isSuccess && packs.data.length > 0 && (
-          <>
-            <ul className="space-y-2">
-              {packs.data.map((pack) => (
-                <PackRow key={pack.pack_version} pack={pack} />
-              ))}
-            </ul>
-            <p className="rounded-md border border-dashed border-zinc-800 bg-zinc-900/20 p-3 text-[0.7rem] text-zinc-500">
-              {t("platforms.uploadHint")}
-            </p>
-          </>
         )}
       </section>
 

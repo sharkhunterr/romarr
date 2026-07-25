@@ -28,6 +28,8 @@ from romarr.platform_packs import (
     PackVersionConflictError,
     ingest_pack,
 )
+from romarr.platform_packs.builtin import apply_builtin_pack
+from romarr.platform_packs.config import get_or_create_platform_pack_config
 from romarr.platform_packs.models import PackSource
 from romarr.platform_packs.remote import (
     RemotePackError,
@@ -383,6 +385,20 @@ async def sync_source(
     )
     row.last_applied_count = applied_count
     await db.commit()
+
+    # Priority post-step — re-apply builtin over community values if
+    # config says builtin wins. Only runs when at least one community
+    # pack landed, and never when the builtin is disabled.
+    if applied_count > 0:
+        try:
+            cfg = await get_or_create_platform_pack_config(db)
+            await db.commit()
+            if cfg.builtin_enabled and cfg.priority == "builtin":
+                async with sm() as reapply_session:
+                    await apply_builtin_pack(reapply_session, sessionmaker=sm)
+                    await reapply_session.commit()
+        except Exception:  # noqa: BLE001 — post-step failure ≠ sync failure
+            pass
 
     return SyncResult(
         source_id=source_id,

@@ -116,6 +116,43 @@ _LAST_STATUS_CHECK = (
     + ")"
 )
 
+_PRIORITY_VALUES = ("builtin", "community")
+_PRIORITY_CHECK = (
+    "priority IN (" + ",".join(f"'{v}'" for v in _PRIORITY_VALUES) + ")"
+)
+
+
+class PlatformPackConfig(Base, TimestampMixin):
+    """Singleton row driving the platform-pack subsystem.
+
+    ``builtin_enabled`` gates the boot-time auto-apply of the wheel-bundled
+    builtin pack. ``priority`` decides which side wins when the same slug
+    lives in both the builtin and a community source:
+
+      * ``"community"`` — natural apply order (builtin at boot, community
+        on sync) means community's later apply wins the shared slugs.
+      * ``"builtin"`` — after every community sync we re-apply the builtin
+        so builtin values overwrite whatever the community pack wrote for
+        overlapping slugs. Slugs the builtin doesn't touch stay as-is.
+
+    Exactly one row (``id = 1``); the API get-or-creates it.
+    """
+
+    __tablename__ = "platform_pack_config"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    builtin_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True
+    )
+    priority: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="community"
+    )
+
+    __table_args__ = (
+        CheckConstraint("id = 1", name="ck_platform_pack_config_singleton"),
+        CheckConstraint(_PRIORITY_CHECK, name="ck_platform_pack_config_priority"),
+    )
+
 
 class PackSource(Base, TimestampMixin):
     """Remote source (typically a GitHub URL) that ships one or more
@@ -161,4 +198,5 @@ __all__: list[Any] = [
     "PackSource",
     "ParsingStrategy",
     "PlatformPackApplicationLog",
+    "PlatformPackConfig",
 ]

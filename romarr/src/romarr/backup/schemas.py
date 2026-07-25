@@ -41,6 +41,8 @@ class ResourceKey(StrEnum):
     DOWNLOAD_CLIENTS = "download_clients"
     NOTIFICATIONS = "notifications"
     PLATFORM_PACKS = "platform_packs"
+    PACK_SOURCES = "pack_sources"
+    PLATFORM_PACK_CONFIG = "platform_pack_config"
 
 
 class ImportMode(StrEnum):

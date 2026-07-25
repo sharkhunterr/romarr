@@ -14,6 +14,53 @@
 
 ---
 
+# v0.15.6
+
+## ⚙️ Platform packs — toggle builtin + priorité configurables
+
+Nouveau panneau **Settings → Platforms → Pack configuration** (en
+tête de page, avant la liste des plateformes) avec deux réglages :
+
+### 1. Toggle built-in pack
+
+Case à cocher pour activer/désactiver le pack builtin livré avec
+Romarr. Décoché → aucune application au boot, l'install repose
+uniquement sur les sources GitHub configurées.
+
+Prend effet au prochain redémarrage.
+
+### 2. Priorité builtin vs community
+
+Radio « qui gagne quand un slug existe dans les deux packs » :
+
+- **Community wins** (défaut) — comportement historique : builtin
+  applique au boot, chaque sync community écrase les valeurs
+  builtin pour les slugs communs.
+- **Built-in wins** — après chaque sync community, Romarr
+  ré-applique le builtin par-dessus pour restaurer les valeurs
+  builtin sur les slugs partagés. Les slugs que le builtin ne
+  touche pas restent tels quels.
+
+### Réorganisation Platforms page
+
+Les paramètres actionnables (config + sources + historique packs)
+remontent en tête. Le catalogue des plateformes (grille) passe
+en bas — moins prioritaire quand on ouvre la page pour
+administrer.
+
+### Backup à la carte
+
+Deux nouvelles ressources dans le système d'export/import :
+
+- `pack_sources` — la liste des URLs GitHub enregistrées
+- `platform_pack_config` — les 2 réglages du panneau (singleton)
+
+Le handler `platform_packs` existant (méta-données des packs
+appliqués) est inchangé et reste un export métadonnées-only —
+les YAML ne sont pas dans le bundle (comportement MVP).
+
+---
+
 # v0.15.5
 
 ## 🧹 Platform packs — layout `examples/` + auto-découverte
