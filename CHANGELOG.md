@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.12](https://github.com/sharkhunterr/romarr/-/compare/v0.14.11...v0.14.12) (2026-07-25)
+
+
+### Bug Fixes
+
+* **docker:** PUID/PGID au runtime + gosu — installe zéro-friction sur Unraid ([53aaa02](https://github.com/sharkhunterr/romarr/-/commit/53aaa028cbca9dfc5512b2d104d54a70e3ee6f42))
+
 ### [0.14.11](https://github.com/sharkhunterr/romarr/-/compare/v0.14.10...v0.14.11) (2026-07-25)
 
 ### [0.14.10](https://github.com/sharkhunterr/romarr/-/compare/v0.14.9...v0.14.10) (2026-07-25)
