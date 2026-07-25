@@ -91,8 +91,13 @@ USER romarr
 # Bootstrap + migrate + SPA enabled by default in the image so
 # `docker run romarr` produces a working install. Operators
 # can flip these to false if they want explicit control.
+#
+# `ROMARR_DATABASE_URL` n'est PAS défini ici : Settings._derive_defaults
+# construit automatiquement `sqlite+aiosqlite:///{ROMARR_DATA_DIR}/romarr.db`
+# quand la variable est absente. Un opérateur qui veut PostgreSQL n'a
+# qu'à set ROMARR_DATABASE_URL explicitement — pas besoin de connaître
+# la mécanique interne des chemins SQLite.
 ENV ROMARR_DATA_DIR=/data \
-    ROMARR_DATABASE_URL=sqlite+aiosqlite:////data/romarr.db \
     ROMARR_BOOTSTRAP_ENABLED=true \
     ROMARR_AUTO_MIGRATE=true \
     ROMARR_SCHEDULER_ENABLED=true \

@@ -2,7 +2,14 @@
 <html lang="fr" class="dark">
   <head>
     <meta charset="UTF-8" />
+    <!-- SVG en priorité (rendu net à toute taille), PNG en fallback
+         pour les clients qui n'ingèrent pas le SVG (vieux browsers,
+         panels Unraid, agrégateurs *arr, etc.). L'ordre importe : le
+         browser prend le premier qu'il comprend. -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64.png" />
+    <link rel="icon" type="image/png" sizes="128x128" href="/favicon-128.png" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0a0a0a" />

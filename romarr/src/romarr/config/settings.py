@@ -8,8 +8,9 @@ means "use anonymous public access" (spec 001 FR-026a).
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,12 +25,18 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
-    # Database
+    # Database — chaîne vide par défaut. La valeur effective est
+    # calculée par `_derive_defaults()` : `sqlite+aiosqlite:///
+    # {data_dir}/romarr.db`. Ainsi un `data_dir` custom (via env
+    # ROMARR_DATA_DIR ou via l'image Docker) suffit à repositionner
+    # aussi la base — pas besoin de dupliquer ROMARR_DATABASE_URL.
+    # Un URL explicite (PostgreSQL par exemple) reste prioritaire.
     database_url: str = Field(
-        default="sqlite+aiosqlite:///./romarr.db",
-        description="SQLAlchemy connection URL. Defaults to SQLite for "
-        "out-of-the-box single-binary usage; PostgreSQL is supported "
-        "without code changes.",
+        default="",
+        description="SQLAlchemy connection URL. Vide (défaut) → SQLite "
+        "posé sous ``{data_dir}/romarr.db``. Renseigner explicitement "
+        "pour PostgreSQL ou un autre backend, ex: "
+        "``postgresql+asyncpg://user:pass@host/db``.",
     )
 
     # Hashing
@@ -313,6 +320,40 @@ class Settings(BaseSettings):
         "rather than IP — multiple operators behind a NAT "
         "shouldn't share a single budget.",
     )
+
+    @model_validator(mode="after")
+    def _derive_defaults(self) -> "Settings":
+        """Dérive `database_url` de `data_dir` + s'assure que le
+        dossier existe.
+
+        Objectif : « ça marche out-of-the-box quel que soit `data_dir` ».
+        Historiquement `database_url` avait un chemin relatif hardcodé
+        (`./romarr.db`) — sur Docker où le cwd n'est pas monté, ça
+        échouait avec `unable to open database file` alors même que
+        `/data` était bien monté. Ici on garantit :
+
+        - Si `database_url` vide  → SQLite auto-placée sous `data_dir`
+        - Si `database_url` explicite (PostgreSQL, ou SQLite custom)
+          → respect intégral, aucune modif
+        - Le `data_dir` est créé si absent (idempotent) pour ne pas
+          faire crasher SQLite au premier boot avec un dossier vide.
+        """
+        # `data_dir` peut être relatif à cwd (défaut `./data`) ou absolu.
+        # Path().mkdir gère les 2 sans transformation.
+        try:
+            Path(self.data_dir).mkdir(parents=True, exist_ok=True)
+        except OSError:
+            # Best-effort : si les droits ne le permettent pas, on
+            # laisse SQLite lever une erreur plus explicite au boot.
+            pass
+
+        if not self.database_url:
+            # Chemin absolu résolu → évite `./romarr.db` qui dépend du
+            # cwd du process (variable selon lanceur : uvicorn, tini,
+            # systemd, cronjob, tests…).
+            db_path = Path(self.data_dir).resolve() / "romarr.db"
+            self.database_url = f"sqlite+aiosqlite:///{db_path}"
+        return self
 
 
 @lru_cache(maxsize=1)
