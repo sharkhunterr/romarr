@@ -14,6 +14,43 @@
 
 ---
 
+# v0.15.5
+
+## 🧹 Platform packs — layout `examples/` + auto-découverte
+
+Refactor interne : les YAMLs builtin quittent leur cachette
+sous `src/romarr/builtin_packs/` (bundled à la main dans le wheel)
+pour vivre en clair sous **`romarr/examples/platform-packs/`** —
+navigable directement dans le repo, aux côtés du pack community
+d'exemple.
+
+### Fin du hardcoded `_BUILTIN_PACK_VERSION`
+
+Le loader ne pointe plus vers un nom de fichier précis. Au boot,
+il liste `builtin-YYYY.MM.NNN.yaml` dans le dossier et prend le
+plus récent par sort lexical. **Livrer un nouveau builtin =
+déposer un YAML, rien à toucher côté Python.**
+
+### Bundling wheel préservé
+
+Un `[tool.hatch.build.targets.wheel.force-include]` mappe
+`examples/platform-packs/` → `romarr/builtin_packs/` dans la
+wheel. Zéro impact runtime : les paths d'import restent
+identiques, les tests existants passent tels quels
+(`_BUILTIN_PACK_VERSION` reste importable comme constante
+calculée, backward-compat garantie).
+
+### Pourquoi c'est mieux
+
+- Une seule source de vérité pour chaque YAML — plus de risque
+  de drift entre `src/` et `examples/`.
+- Les operators / contributeurs voient tous les YAMLs (builtin +
+  community) au même endroit sans ouvrir un wheel.
+- Ajouter une nouvelle version builtin devient un simple `git add`
+  + bump de `pack_version` dans le nouveau fichier.
+
+---
+
 # v0.15.4
 
 ## 🔍 Platform packs — preview + auto-sync programmé
