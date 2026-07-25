@@ -75,6 +75,9 @@ RUN pip install --no-cache-dir --upgrade pip \
 COPY src/ ./src/
 COPY alembic.ini ./
 COPY README.md ./
+# Built-in platform-pack YAMLs — hatchling's force-include maps this
+# folder into the wheel at romarr/builtin_packs/ (see pyproject.toml).
+COPY examples/ ./examples/
 
 # Install Romarr itself (resolves runtime deps from pyproject.toml).
 RUN pip install --no-cache-dir .
