@@ -17,7 +17,9 @@
 import { useEffect, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
+import { SecretInput } from "@/components/shared/SecretInput";
 import {
+  useMetadataProviderSecrets,
   useTestMetadataProvider,
   useUpdateMetadataProvider,
   type MetadataProvider,
@@ -109,9 +111,31 @@ export function ConfigureProviderModal(
   const [error, setError] = useState<string | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
+  // Pull the decrypted config so the modal can pre-fill existing
+  // credentials — no need to skip already-set fields anymore.
+  // Skips the fetch entirely for no-creds providers.
+  const secrets = useMetadataProviderSecrets(
+    provider.provider_name,
+    !noCreds,
+  );
+
   useEffect(() => {
-    setValues(Object.fromEntries(fields.map((f) => [f.key, ""])));
-  }, [provider.provider_name]);
+    // Reset when switching provider or when the secrets payload lands.
+    // If no config is stored yet the fetch returns {}, so every field
+    // starts blank as before.
+    const stored = secrets.data ?? {};
+    const seeded = Object.fromEntries(
+      fields.map((f) => [f.key, String(stored[f.key] ?? "")]),
+    );
+    setValues(seeded);
+    // Auto-expand the advanced disclosure when the operator has
+    // populated a value in there — otherwise it's easy to think a
+    // field is empty when it's just hidden behind the collapsed
+    // details.
+    if (advancedFields.some((f) => stored[f.key])) {
+      setAdvancedOpen(true);
+    }
+  }, [provider.provider_name, secrets.data]);
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>): void {
     e.preventDefault();
@@ -213,21 +237,38 @@ export function ConfigureProviderModal(
                     </span>
                   )}
                 </span>
-                <input
-                  type={f.secret ? "password" : "text"}
-                  autoComplete={f.secret ? "new-password" : "off"}
-                  value={values[f.key] ?? ""}
-                  placeholder={f.placeholder}
-                  onChange={(e) =>
-                    setValues((prev) => ({ ...prev, [f.key]: e.target.value }))
-                  }
-                  className={[
-                    "w-full rounded-md bg-zinc-900 px-3 py-2 text-sm text-zinc-100",
-                    "ring-1 ring-inset ring-zinc-700",
-                    "focus-visible:outline-none focus-visible:ring-2",
-                    "focus-visible:ring-brand",
-                  ].join(" ")}
-                />
+                {f.secret ? (
+                  <SecretInput
+                    value={values[f.key] ?? ""}
+                    onChange={(next) =>
+                      setValues((prev) => ({ ...prev, [f.key]: next }))
+                    }
+                    placeholder={f.placeholder}
+                    disabled={secrets.isPending}
+                    ariaLabel={f.label}
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    autoComplete="off"
+                    value={values[f.key] ?? ""}
+                    placeholder={f.placeholder}
+                    disabled={secrets.isPending}
+                    onChange={(e) =>
+                      setValues((prev) => ({
+                        ...prev,
+                        [f.key]: e.target.value,
+                      }))
+                    }
+                    className={[
+                      "w-full rounded-md bg-zinc-900 px-3 py-2 text-sm text-zinc-100",
+                      "ring-1 ring-inset ring-zinc-700",
+                      "focus-visible:outline-none focus-visible:ring-2",
+                      "focus-visible:ring-brand",
+                      "disabled:cursor-not-allowed disabled:opacity-60",
+                    ].join(" ")}
+                  />
+                )}
               </label>
             ))}
 
@@ -246,24 +287,38 @@ export function ConfigureProviderModal(
                   {advancedFields.map((f) => (
                     <label key={f.key} className="block text-xs text-zinc-400">
                       <span className="mb-1 block">{f.label}</span>
-                      <input
-                        type={f.secret ? "password" : "text"}
-                        autoComplete={f.secret ? "new-password" : "off"}
-                        value={values[f.key] ?? ""}
-                        placeholder={f.placeholder}
-                        onChange={(e) =>
-                          setValues((prev) => ({
-                            ...prev,
-                            [f.key]: e.target.value,
-                          }))
-                        }
-                        className={[
-                          "w-full rounded-md bg-zinc-900 px-3 py-2 text-sm text-zinc-100",
-                          "ring-1 ring-inset ring-zinc-700",
-                          "focus-visible:outline-none focus-visible:ring-2",
-                          "focus-visible:ring-brand",
-                        ].join(" ")}
-                      />
+                      {f.secret ? (
+                        <SecretInput
+                          value={values[f.key] ?? ""}
+                          onChange={(next) =>
+                            setValues((prev) => ({ ...prev, [f.key]: next }))
+                          }
+                          placeholder={f.placeholder}
+                          disabled={secrets.isPending}
+                          ariaLabel={f.label}
+                        />
+                      ) : (
+                        <input
+                          type="text"
+                          autoComplete="off"
+                          value={values[f.key] ?? ""}
+                          placeholder={f.placeholder}
+                          disabled={secrets.isPending}
+                          onChange={(e) =>
+                            setValues((prev) => ({
+                              ...prev,
+                              [f.key]: e.target.value,
+                            }))
+                          }
+                          className={[
+                            "w-full rounded-md bg-zinc-900 px-3 py-2 text-sm text-zinc-100",
+                            "ring-1 ring-inset ring-zinc-700",
+                            "focus-visible:outline-none focus-visible:ring-2",
+                            "focus-visible:ring-brand",
+                            "disabled:cursor-not-allowed disabled:opacity-60",
+                          ].join(" ")}
+                        />
+                      )}
                     </label>
                   ))}
                 </div>

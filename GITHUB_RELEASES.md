@@ -14,6 +14,40 @@
 
 ---
 
+# v0.15.8
+
+## 👁 Metadata sources — édition des credentials avec pré-remplissage + toggle œil
+
+**Settings → Metadata Sources → Configure** peut désormais éditer
+une clé existante sans re-taper toute la config, et chaque champ
+secret embarque un icône œil pour révéler / masquer la valeur en
+place.
+
+### Ce qui change
+
+- **Pré-remplissage** — le modal fetch `GET /api/v3/metadata/provider/{name}/secrets` (admin-only, nouveau) au montage et remplit les champs avec les valeurs déchiffrées actuelles. Corriger un typo dans une clé API ne demande plus de tout retaper.
+- **Eye toggle intégré** — nouveau composant réutilisable
+  `SecretInput` (in-input eye button). Par défaut le champ est
+  masqué comme un password ; un clic sur l'œil bascule en mode texte
+  monospace pour vérifier / copier la valeur. État local, jamais
+  persisté.
+- **Advanced section auto-expand** — quand un champ ScreenScraper
+  `devid` / `devpassword` est déjà rempli, la section « Advanced »
+  s'ouvre automatiquement au montage — évite l'illusion d'un champ
+  vide caché derrière un `<details>` collapsed.
+
+### Endpoint
+
+`GET /api/v3/metadata/provider/{provider_name}/secrets` → admin
+uniquement, renvoie le config déchiffré comme JSON plat. `{}` si
+le provider n'est pas encore configuré.
+
+Le `SecretInput` est extrait dans `web/src/components/shared/` —
+prêt à être ré-utilisé pour les indexers, download clients,
+notifications, etc.
+
+---
+
 # v0.15.7
 
 ## 📂 Media Management — picker de chemin pour ludothèque

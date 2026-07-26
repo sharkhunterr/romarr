@@ -29,6 +29,8 @@ export type MetadataProviderTestResult =
   components["schemas"]["ProviderTestResponse"];
 
 const PROVIDERS_KEY = ["settings", "metadata-providers"] as const;
+const PROVIDER_SECRETS_KEY = (name: string) =>
+  ["settings", "metadata-provider-secrets", name] as const;
 
 export function useMetadataProviders(): UseQueryResult<
   MetadataProvider[],
@@ -38,6 +40,28 @@ export function useMetadataProviders(): UseQueryResult<
     queryKey: PROVIDERS_KEY,
     queryFn: () => apiFetch<MetadataProvider[]>("/api/v3/metadata/provider"),
     staleTime: 30_000,
+  });
+}
+
+/**
+ * Fetch the DECRYPTED config for a provider, keyed by name.
+ * Powers the pre-fill of the configure-modal so operators can
+ * see + edit existing keys without re-typing. Admin-gated; never
+ * cached across sessions (staleTime kept low + no persistence).
+ */
+export function useMetadataProviderSecrets(
+  providerName: string,
+  enabled: boolean = true,
+): UseQueryResult<Record<string, string>, ApiError> {
+  return useQuery<Record<string, string>, ApiError>({
+    queryKey: PROVIDER_SECRETS_KEY(providerName),
+    queryFn: () =>
+      apiFetch<Record<string, string>>(
+        `/api/v3/metadata/provider/${encodeURIComponent(providerName)}/secrets`,
+      ),
+    enabled: enabled && providerName.length > 0,
+    staleTime: 0,
+    gcTime: 0,
   });
 }
 

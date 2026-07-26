@@ -207,3 +207,63 @@ async def test_test_endpoint_for_unimplemented_provider(
     finally:
         if saved is not None:
             PROVIDER_REGISTRY["launchbox"] = saved
+
+
+# ---------------------------------------------------------------------------
+# GET /{name}/secrets — decrypt for the configure-modal pre-fill.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_secrets_returns_decrypted_config(
+    api_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+    metadata_env: Any,
+) -> None:
+    await seed_provider_rows(api_engine)
+    await _login_admin(api_engine, api_client)
+
+    # First set a config
+    await api_client.put(
+        "/api/v3/metadata/provider/igdb",
+        json={"config": {"client_id": "cli", "client_secret": "shh"}},
+    )
+    # Then read it back decrypted
+    r = await api_client.get("/api/v3/metadata/provider/igdb/secrets")
+    assert r.status_code == 200, r.text
+    assert r.json() == {"client_id": "cli", "client_secret": "shh"}
+
+
+@pytest.mark.asyncio
+async def test_secrets_returns_empty_when_unconfigured(
+    api_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+    metadata_env: Any,
+) -> None:
+    await seed_provider_rows(api_engine)
+    await _login_admin(api_engine, api_client)
+    r = await api_client.get("/api/v3/metadata/provider/igdb/secrets")
+    assert r.status_code == 200
+    assert r.json() == {}
+
+
+@pytest.mark.asyncio
+async def test_secrets_requires_admin(
+    api_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+    metadata_env: Any,
+) -> None:
+    r = await api_client.get("/api/v3/metadata/provider/igdb/secrets")
+    assert r.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_secrets_unknown_provider_404(
+    api_client: httpx.AsyncClient,
+    api_engine: AsyncEngine,
+    metadata_env: Any,
+) -> None:
+    await seed_provider_rows(api_engine)
+    await _login_admin(api_engine, api_client)
+    r = await api_client.get("/api/v3/metadata/provider/nope/secrets")
+    assert r.status_code == 404

@@ -148,6 +148,37 @@ async def read_provider(
     return _to_read(await _get_or_404(db, provider_name))
 
 
+@router.get(
+    "/{provider_name}/secrets",
+    response_model=dict[str, Any],
+    summary=(
+        "Return a provider's DECRYPTED config as a plain JSON object "
+        "(admin only). Used by the UI to pre-fill the configure modal "
+        "so operators can edit an existing key without re-typing it. "
+        "``{}`` if the provider isn't configured yet."
+    ),
+)
+async def read_provider_secrets(
+    provider_name: str,
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict[str, Any]:
+    row = await _get_or_404(db, provider_name)
+    if row.config_encrypted is None:
+        return {}
+    try:
+        return json.loads(decrypt(row.config_encrypted).decode("utf-8"))
+    except Exception as exc:  # noqa: BLE001 — surface the cause safely
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "errorMessage": "decrypt_failed",
+                "errorCode": "decrypt_failed",
+                "details": str(exc),
+            },
+        ) from exc
+
+
 @router.put(
     "/{provider_name}",
     response_model=ProviderConfigRead,
