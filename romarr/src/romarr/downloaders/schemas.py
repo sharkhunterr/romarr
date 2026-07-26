@@ -17,9 +17,36 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, Any, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from romarr.downloaders.types import ClientType  # noqa: TC001 — Pydantic v2 runtime use
+
+
+def _normalize_host(raw: str) -> str:
+    """Strip a scheme (``http(s)://``) + trailing slashes / paths from a
+    host string. Operators routinely paste a full URL
+    (``http://192.168.1.24:8112``) into the Host field of the Add /
+    Edit Download Client modal; without this cleanup the client's
+    base-URL builder produces ``http://http://192.168.1.24:8112/api``
+    and DNS fails with ``[Errno -2] Name or service not known``.
+
+    We keep only the hostname portion — anything after ``:port/`` is
+    dropped. The operator's ``port`` and ``url_base`` fields remain
+    the source of truth for those pieces.
+    """
+    from urllib.parse import urlparse
+
+    value = raw.strip()
+    if "://" in value:
+        parsed = urlparse(value)
+        # ``urlparse`` requires a scheme to populate ``.hostname``;
+        # fall back to raw stripping when the parse doesn't land one.
+        if parsed.hostname:
+            return parsed.hostname
+    # No scheme — user typed ``192.168.1.24`` or ``qbittorrent`` (a
+    # docker-network hostname). Strip any accidental trailing
+    # slashes / paths without touching the host itself.
+    return value.split("/", 1)[0].rstrip()
 
 
 class _Base(BaseModel):
@@ -167,6 +194,10 @@ class DownloadClientCreate(_Base):
     # to type='grabarr_direct'. Other types leave it None.
     download_root: Annotated[str | None, Field(default=None, max_length=512)] = None
 
+    _normalize_host_field = field_validator("host", mode="before")(
+        classmethod(lambda cls, v: _normalize_host(v) if isinstance(v, str) else v)
+    )
+
     @model_validator(mode="after")
     def _check(self) -> Self:
         _validate_credentials(
@@ -218,6 +249,10 @@ class DownloadClientUpdate(_Base):
     ssl_cert_validation: _SslValidation | None = None
     timeout_seconds: Annotated[int | None, Field(default=None, ge=5, le=600)] = None
     download_root: Annotated[str | None, Field(default=None, max_length=512)] = None
+
+    _normalize_host_field = field_validator("host", mode="before")(
+        classmethod(lambda cls, v: _normalize_host(v) if isinstance(v, str) else v)
+    )
 
 
 # ---------------------------------------------------------------------------

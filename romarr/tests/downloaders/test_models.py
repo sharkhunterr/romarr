@@ -223,3 +223,43 @@ def test_at_least_one_source_type_enabled() -> None:
             )
         )
     assert "at least one of enable_for_torrents" in str(exc.value)
+
+
+# ---------------------------------------------------------------------------
+# Host normalization — a full URL pasted into the "host" field
+# (http://192.168.1.24:8112 / https://qbit/) is stripped down to
+# the bare hostname so the client's base_url builder doesn't produce
+# ``http://http://192.168.1.24:8112/api`` and hit DNS with a garbage
+# hostname.
+# ---------------------------------------------------------------------------
+
+
+def test_host_normalizer_strips_scheme_and_port() -> None:
+    row = DownloadClientCreate(
+        **_qbit_payload(host="http://192.168.1.24:8112")
+    )
+    assert row.host == "192.168.1.24"
+
+
+def test_host_normalizer_strips_https_and_path() -> None:
+    row = DownloadClientCreate(
+        **_qbit_payload(host="https://qbit.example.com:8443/gui/")
+    )
+    assert row.host == "qbit.example.com"
+
+
+def test_host_normalizer_leaves_bare_host_intact() -> None:
+    row = DownloadClientCreate(**_qbit_payload(host="qbittorrent"))
+    assert row.host == "qbittorrent"
+    row = DownloadClientCreate(**_qbit_payload(host="192.168.1.24"))
+    assert row.host == "192.168.1.24"
+
+
+def test_host_normalizer_applies_on_update() -> None:
+    from romarr.downloaders.schemas import DownloadClientUpdate
+
+    upd = DownloadClientUpdate(host="http://192.168.1.24:8112")
+    assert upd.host == "192.168.1.24"
+    # None passes through unchanged (partial update).
+    upd = DownloadClientUpdate(name="rename")
+    assert upd.host is None
