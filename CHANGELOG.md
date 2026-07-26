@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.23](https://github.com/sharkhunterr/romarr/-/compare/v0.14.22...v0.14.23) (2026-07-26)
+
+
+### Bug Fixes
+
+* **search:** platform-mismatch reject on release-scoped rounds + surface no_grab_reason ([9c94002](https://github.com/sharkhunterr/romarr/-/commit/9c94002455c76d4ceed6177fdaca8beccaba7989))
+
 ### [0.14.22](https://github.com/sharkhunterr/romarr/-/compare/v0.14.21...v0.14.22) (2026-07-26)
 
 
