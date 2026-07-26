@@ -14,382 +14,260 @@
 
 ---
 
-# v0.15.8
-
-## 👁 Metadata sources — édition des credentials avec pré-remplissage + toggle œil
-
-**Settings → Metadata Sources → Configure** peut désormais éditer
-une clé existante sans re-taper toute la config, et chaque champ
-secret embarque un icône œil pour révéler / masquer la valeur en
-place.
-
-### Ce qui change
-
-- **Pré-remplissage** — le modal fetch `GET /api/v3/metadata/provider/{name}/secrets` (admin-only, nouveau) au montage et remplit les champs avec les valeurs déchiffrées actuelles. Corriger un typo dans une clé API ne demande plus de tout retaper.
-- **Eye toggle intégré** — nouveau composant réutilisable
-  `SecretInput` (in-input eye button). Par défaut le champ est
-  masqué comme un password ; un clic sur l'œil bascule en mode texte
-  monospace pour vérifier / copier la valeur. État local, jamais
-  persisté.
-- **Advanced section auto-expand** — quand un champ ScreenScraper
-  `devid` / `devpassword` est déjà rempli, la section « Advanced »
-  s'ouvre automatiquement au montage — évite l'illusion d'un champ
-  vide caché derrière un `<details>` collapsed.
-
-### Endpoint
-
-`GET /api/v3/metadata/provider/{provider_name}/secrets` → admin
-uniquement, renvoie le config déchiffré comme JSON plat. `{}` si
-le provider n'est pas encore configuré.
-
-Le `SecretInput` est extrait dans `web/src/components/shared/` —
-prêt à être ré-utilisé pour les indexers, download clients,
-notifications, etc.
-
----
-
-# v0.15.7
-
-## 📂 Media Management — picker de chemin pour ludothèque
-
-Fini le texte libre pour renseigner un chemin absolu de ludothèque.
-Le modal **Create library** (Settings → Media Management) affiche
-maintenant un bouton **Browse…** qui ouvre un explorateur de
-dossiers embarqué :
-
-- **Racine curated** — au niveau `/`, seuls les dossiers
-  probablement montés en `-v` sont surfacés : `/data`, `/downloads`,
-  `/roms`, `/media`, `/mnt`, `/config`, `/srv`, `/opt`, `/home`,
-  `/app`, `/library`, `/games`. Un badge « mount » signale les
-  entrées qui vivent sur un filesystem différent du parent (fort
-  indice qu'il s'agit d'un volume Docker).
-- **Navigation** — breadcrumbs cliquables, bouton `..` pour
-  remonter, listing des sous-dossiers (fichiers et dot-dirs
-  cachés).
-- **Sélection** — bouton « Pick » par entrée, ou « Pick current »
-  pour prendre le dossier en cours de visualisation.
-- **Text entry** — l'input texte reste actif au-dessus du picker :
-  écriture manuelle toujours possible pour les paths que le
-  browser ne surface pas.
-
-Prefixes système bloqués par sécurité : `/proc`, `/sys`, `/dev`,
-`/boot`, `/etc`, `/root`, `/run`, `/tmp`, `/var/log`,
-`/var/lib/docker`. Endpoint admin-only : la topologie du
-container n'est pas exposée aux utilisateurs read-only.
-
-### Endpoint
-
-`GET /api/v3/system/filesystem?path=<absolute-path>` — admin.
-
----
-
-# v0.15.6
-
-## ⚙️ Platform packs — toggle builtin + priorité configurables
-
-Nouveau panneau **Settings → Platforms → Pack configuration** (en
-tête de page, avant la liste des plateformes) avec deux réglages :
-
-### 1. Toggle built-in pack
-
-Case à cocher pour activer/désactiver le pack builtin livré avec
-Romarr. Décoché → aucune application au boot, l'install repose
-uniquement sur les sources GitHub configurées.
-
-Prend effet au prochain redémarrage.
-
-### 2. Priorité builtin vs community
-
-Radio « qui gagne quand un slug existe dans les deux packs » :
-
-- **Community wins** (défaut) — comportement historique : builtin
-  applique au boot, chaque sync community écrase les valeurs
-  builtin pour les slugs communs.
-- **Built-in wins** — après chaque sync community, Romarr
-  ré-applique le builtin par-dessus pour restaurer les valeurs
-  builtin sur les slugs partagés. Les slugs que le builtin ne
-  touche pas restent tels quels.
-
-### Réorganisation Platforms page
-
-Les paramètres actionnables (config + sources + historique packs)
-remontent en tête. Le catalogue des plateformes (grille) passe
-en bas — moins prioritaire quand on ouvre la page pour
-administrer.
-
-### Backup à la carte
-
-Deux nouvelles ressources dans le système d'export/import :
-
-- `pack_sources` — la liste des URLs GitHub enregistrées
-- `platform_pack_config` — les 2 réglages du panneau (singleton)
-
-Le handler `platform_packs` existant (méta-données des packs
-appliqués) est inchangé et reste un export métadonnées-only —
-les YAML ne sont pas dans le bundle (comportement MVP).
-
----
-
-# v0.15.5
-
-## 🧹 Platform packs — layout `examples/` + auto-découverte
-
-Refactor interne : les YAMLs builtin quittent leur cachette
-sous `src/romarr/builtin_packs/` (bundled à la main dans le wheel)
-pour vivre en clair sous **`romarr/examples/platform-packs/`** —
-navigable directement dans le repo, aux côtés du pack community
-d'exemple.
-
-### Fin du hardcoded `_BUILTIN_PACK_VERSION`
-
-Le loader ne pointe plus vers un nom de fichier précis. Au boot,
-il liste `builtin-YYYY.MM.NNN.yaml` dans le dossier et prend le
-plus récent par sort lexical. **Livrer un nouveau builtin =
-déposer un YAML, rien à toucher côté Python.**
-
-### Bundling wheel préservé
-
-Un `[tool.hatch.build.targets.wheel.force-include]` mappe
-`examples/platform-packs/` → `romarr/builtin_packs/` dans la
-wheel. Zéro impact runtime : les paths d'import restent
-identiques, les tests existants passent tels quels
-(`_BUILTIN_PACK_VERSION` reste importable comme constante
-calculée, backward-compat garantie).
-
-### Pourquoi c'est mieux
-
-- Une seule source de vérité pour chaque YAML — plus de risque
-  de drift entre `src/` et `examples/`.
-- Les operators / contributeurs voient tous les YAMLs (builtin +
-  community) au même endroit sans ouvrir un wheel.
-- Ajouter une nouvelle version builtin devient un simple `git add`
-  + bump de `pack_version` dans le nouveau fichier.
-
----
-
-# v0.15.4
-
-## 🔍 Platform packs — preview + auto-sync programmé
-
-Deux add-ons au workflow « sources GitHub » introduit dans v0.15.3.
-
-### 🔎 Preview avant apply
-
-Un bouton **Preview** sur chaque source ouvre un modal qui liste,
-pour chaque YAML trouvé, le résultat qu'aurait un vrai apply :
-`would_apply` / `would_skip` / `would_fail`, avec le diff par
-plateforme (insertions, updates, champs modifiés, warnings). Zéro
-écriture DB — un dry-run pur qui rejoue exactement la validation
-utilisée par le `POST /validate` classique.
-
-Depuis le modal, un bouton **Apply now** enchaîne directement la
-vraie sync sans re-fetch. Utile pour vérifier une source douteuse
-sans risque, ou juste voir ce que va changer un update.
-
-### ⏰ Sync automatique via le scheduler
-
-Nouveau job `PackSourcesSync` dans le catalogue des tâches
-(Settings → Tasks) :
-- **Cron par défaut** : `0 5 * * *` (tous les jours à 5 h)
-- **Désactivé par défaut** — l'operator l'active depuis Tasks
-  quand il a au moins une source enregistrée
-- **Modifiable** : cron ou intervalle éditables depuis l'UI Tasks
-- **Résultat** : le status et le count sont stampés sur la row
-  `pack_sources` (visibles dans Settings → Platforms) — success
-  global si toutes les sources sont ok, `partial` si au moins une
-  YAML a raté, `failed` si zéro pack appliqué et au moins une
-  erreur
-
----
-
-# v0.15.3
-
-## 🌐 Platform packs — sources GitHub configurables
-
-Fini le upload manuel des YAML : chaque installation Romarr peut
-désormais enregistrer **une ou plusieurs URLs GitHub** comme
-sources de platform packs, puis synchroniser d'un clic.
-
-### Ce que l'user configure
-
-Dans **Settings → Platforms**, un panneau « Pack sources » avec :
-- **Nom** + **URL** — la source est ajoutée en un formulaire
-- Auto-détection du type :
-  - `raw` — URL pointant directement sur un `*.yaml`
-    (ex : `raw.githubusercontent.com/…/pack.yaml`)
-  - `github_dir` — URL de type
-    `https://github.com/{owner}/{repo}/tree/{branch}/{path}` — la
-    sync walk le dossier et ingère chaque YAML enfant
-- Enable/disable, delete, sync-now, historique du dernier run
-
-### Comportement à la sync
-
-Chaque YAML est passé au même `ingest_pack()` que l'upload manuel :
-validation schéma, diff, apply transactionnel, audit trail.
-Résultat par fichier : `applied` / `skipped` (déjà connu) / `failed`
-(erreur de validation isolée qui ne rollback pas les autres).
-
-### Endpoints admin
-
-`/api/v3/rom/platform-pack-source/*` :
-- `GET` — liste
-- `POST` — création (auto-détecte `kind`)
-- `PATCH /{id}` — toggle enabled / rename
-- `DELETE /{id}` — retire la source (les packs déjà appliqués restent)
-- `POST /{id}/sync` — fetch + ingest, bilan par YAML
-
-### Limites MVP
-
-- Repos publics seulement (pas d'auth token GitHub — v2)
-- Sync manuel uniquement — la scheduler-based auto-sync arrivera
-  en même temps que le task runner dédié
-- Max 200 YAMLs par listing (garde-fou), 2 MiB par pack
-
----
-
-# v0.15.2
-
-## 💾 Backup & Restore à la carte — export / import sélectif
-
-Nouvelle page **Settings → Backup & Restore** qui expose un système de
-sauvegarde/restauration à la carte : cochez les ressources voulues,
-générez un bundle JSON, réimportez-le dans n'importe quelle install
-Romarr (même version majeure).
-
-### Ce qui est backupable
-
-11 types de ressources couverts :
-- DAT Sources
-- Quality / Region / Dump / Language / Naming Profiles
-- Custom Formats
-- Download Clients (qBittorrent, SABnzbd, Deluge…)
-- Indexers (avec résolution FK par nom pour la portabilité)
-- Notifications (Apprise)
-- Platform Packs (métadonnées — les YAML doivent être re-uploadés)
-
-### Secrets opt-in
-
-Les passwords, API keys et URLs Apprise sont **chiffrés en DB avec
-Fernet** et **exclus par défaut** de l'export. Case à cocher
-« Include secrets in export » pour les inclure — utile pour cloner
-une install complète, à condition que l'instance cible partage le
-même `ROMARR_AUTH_SECRET_KEY`.
-
-### 3 modes d'import
-
-- **Upsert** (défaut) : add + update par name — safe, idempotent
-- **Merge** : add-only — préserve les configs existantes
-- **Replace** : delete-all + recreate — **destructif**, guardé par
-  confirmation UI explicite et libellé rouge
-
-### API
-
-3 endpoints admin-only sous `/api/v3/backup/` :
-- `GET /manifest` — liste ressources + compteurs
-- `POST /export` — génère le bundle JSON
-- `POST /import` — applique le bundle, retourne un bilan par ressource
-
----
-
-# v0.15.1
-
-## 🐳 Docker & installation — zero-config sur Unraid / Synology / NAS
-
-Installation Docker « il suffit de rebuilder » : trois frictions
-historiques éliminées d'un coup.
-
-> [!IMPORTANT]
-> Aucune migration DB. Pull `sharkhunterr/romarr:latest` et recréer
-> le container. Les operators Unraid qui avaient dû ajouter
-> `ROMARR_DATABASE_URL` en manuel peuvent maintenant la retirer.
-
-### 🔑 Une seule variable obligatoire — `ROMARR_AUTH_SECRET_KEY`
-
-Fini le `unable to open database file` au premier boot Docker. La
-config SQLite se déduit désormais automatiquement de
-`ROMARR_DATA_DIR` (`/data` par défaut dans l'image) via un
-`model_validator` Pydantic. Un URL explicite (PostgreSQL par
-exemple) reste évidemment respecté. Le `data_dir` est aussi créé
-automatiquement s'il n'existe pas — plus de crash silencieux sur
-un mount vide.
-
-### 👤 PUID / PGID au runtime — pattern LinuxServer.io
-
-Le volume monté sur Unraid appartient typiquement à `nobody:users`
-(99:100). Avant, le container démarrait figé en UID 1000 → refus
-d'écriture sur `/data`. Nouveau `entrypoint.sh` :
-
-- Lit les env `PUID` et `PGID` (défaut 1000)
-- Aligne le user `romarr` sur ces IDs via `usermod`/`groupmod`
-- `chown` `/data` (best-effort — n'échoue pas sur bind mounts NFS/CIFS)
-- Dégrade vers `romarr` via `gosu` — PID 1 reste `tini` pour la
-  propagation des signaux
-
-Résultat : `PUID=99 PGID=100` dans le template Unraid et ça marche
-sans manipuler les permissions sur l'hôte.
-
-### 📱 Modals mobile — footer toujours accessible
-
-Bug UX identifié en ajoutant Deluge : quand le body du modal grandit
-(erreur de test de connexion, message d'aide long, formulaire riche),
-le footer avec « Cancel / Save / Test » était poussé hors du viewport
-mobile et devenait inaccessible.
-
-Cause : les modals étaient en `overflow-hidden` avec un simple
-`pt-[8vh]` sur le backdrop — pas de max-height, pas de scroll interne.
-Sur écrans courts (téléphones, WebUI overlay Chromecast, etc.), tout
-ce qui dépassait était perdu.
-
-Fix appliqué à **23 modals** de l'app (DownloadClients, Indexers,
-Profiles ×6, RomPacks ×2, MediaManagement, Notifications, Metadata,
-Platforms, DatSources, AddGame, BulkTag/Delete ×3, Logs, Unidentified) :
-
-- Backdrop : `overflow-y-auto py-[4vh] sm:items-center` — scroll global
-  en fallback si viewport très court, centrage sur desktop
-- Container : `flex max-h-[92vh] flex-col rounded-lg` — hauteur bornée
-  qui active le flex-col
-- Body : `min-h-0 flex-1 overflow-y-auto` — scroll interne du contenu
-  long ; le `min-h-0` est CRUCIAL car flex-1 hérite d'un min-height=auto
-  qui ignore l'overflow sinon
-- Footer : `shrink-0` — garanti toujours visible
-
-### 🌊 Deluge — download client implémenté
-
-Le stub Deluge devient un vrai client fonctionnel. Deluge 2.0+ est
-supporté via son WebUI JSON-RPC (endpoint unique `POST /json`) :
-
-- **Auth** : password WebUI (pas d'username natif chez Deluge)
-- **Torrents** : magnet / URL / bytes .torrent — tous supportés
-- **Categories** : mappées sur le plugin **Label** de Deluge, auto-
-  activé au premier `ensure_category` si absent
-- **Idempotence** : re-ajouter un torrent déjà présent retourne son
-  hash sans crash (parse du message `"already in session (<hash>)"`)
-- **`romarr-imported` flag** : implémenté via un **second label**
-  distinct (Deluge n'a pas de tags multiples par torrent)
-- **Filter Deluge subtilité** : `is_finished: True` crashe le
-  filtermanager Deluge ≤2.2 avec « argument of type 'bool' is not
-  iterable » — workaround : on filtre côté Python plutôt que côté
-  serveur pour ce champ
-
-Testé end-to-end contre Deluge 2.2.0 (image LSIO) : test_connection,
-add_torrent (idempotent), get_status, list_managed_downloads,
-set_imported_tag, remove — tous passent.
-
-Prérequis : **le WebUI doit être attaché à un daemon** (Connection
-Manager côté Deluge, configuration one-shot). `test_connection` le
-détecte et remonte un message actionnable si absent.
-
-### 🎨 Favicons PNG en plus du SVG
-
-Certains clients (vieux browsers, panels Unraid, agrégateurs de
-services *arr) n'ingèrent pas le SVG et affichaient un placeholder.
-Ajout de `favicon.png` (32) + `favicon-32/64/128.png`, référencés
-dans `index.html` en fallback après le SVG. Le browser prend le
-format qu'il comprend, ordre déterministe.
-
----
 
 # v0.15.0
+
+## 🌟 Big-picture — this release consolidates everything shipped since v0.14.11
+
+A dense stretch of quality-of-life and infrastructure work
+landed between the two milestones. Grouped by theme below.
+
+---
+
+## 🐳 Docker & installation — zero-config deployments
+
+Container installs now boot on any NAS / homelab without a
+custom compose file :
+
+- **Runtime PUID / PGID** — the entrypoint honours the LSIO-style
+  `PUID` / `PGID` env pair and re-owns `/data` before dropping to
+  the `romarr` user via `gosu`. Unraid, Synology and QNAP all
+  work out of the box.
+- **SQLite auto-placement** — no more mandatory
+  `ROMARR_DATABASE_URL`. When unset, the settings resolver builds
+  an absolute `sqlite+aiosqlite:///` URL under `ROMARR_DATA_DIR`
+  and creates the directory if missing.
+- **Favicon** — 32 / 64 / 128 PNGs shipped alongside the SVG so
+  browsers that ignore SVG favicons don't fall back to a blank
+  tab.
+- **Dockerfile fixed to bundle `examples/`** — the wheel build
+  needs `examples/platform-packs/` for its hatchling
+  force-include mapping; the Dockerfile now `COPY`s it.
+
+---
+
+## ⬇️ Deluge — first-class download client
+
+The Deluge stub is gone. `DownloadClient` now supports Deluge
+2.0+ end-to-end via its WebUI JSON-RPC :
+
+- Full CRUD from the UI, connectivity probe, category creation
+  through the Label plugin (auto-enabled if missing)
+- State-machine mapping (`Downloading`, `Seeding`, `Paused`,
+  `Error`, `Completed`) → Romarr's canonical `DownloadState`
+- Handles all three add-flavours : magnet URI, torrent URL, raw
+  bytes (`.torrent` upload)
+- Idempotent `add_torrent` — Deluge's "already in session
+  (`<hash>`)" reply is parsed as success, not failure
+- Client-side filter workaround for Deluge ≤ 2.2's bug where
+  `is_finished: True` in `filter_dict` crashes the daemon
+- `set_imported_tag()` renames the label to `imported` so the
+  importer knows what it's already processed
+- Full activity + import wiring : queue reconciler tracks Deluge
+  jobs, the webhook importer accepts
+  `download_client_kind='deluge'`, folder-mapping-based imports
+  work identically to qBittorrent / SABnzbd
+
+---
+
+## 📱 Mobile UX — modals always usable
+
+Every modal footer used to slip below the viewport on portrait
+phones as soon as the body grew — 23 modals rewritten to the same
+flex pattern :
+
+- Backdrop is scrollable (`overflow-y-auto py-[4vh]
+  sm:items-center`)
+- Container is bounded (`flex max-h-[92vh] flex-col`)
+- Body scrolls internally (`min-h-0 flex-1 overflow-y-auto`)
+- Footer buttons stay pinned (`shrink-0`)
+
+Applied uniformly across every operator-facing dialog.
+
+---
+
+## 💾 Backup & Restore — à la carte export / import
+
+New **Settings → Backup & Restore** page + admin-only API
+(`/api/v3/backup/{manifest,export,import}`) covering **13
+resource types** :
+
+- DAT sources · Quality / Region / Dump / Language / Naming
+  profiles · Custom formats
+- Indexers (with FK-by-name resolution for portability) ·
+  Download clients
+- Notifications (Apprise)
+- Platform packs (metadata-only — YAML bodies re-fetch on demand)
+- Pack sources · Platform-pack config
+
+**Three import modes** : `upsert` (default, add + update by
+name), `merge` (add-only, preserves existing), `replace`
+(destructive wipe + recreate, guarded by an explicit UI
+confirmation and red button).
+
+**Secrets are opt-in** on export — passwords, API keys and
+Apprise URLs (Fernet-encrypted in the DB) are excluded by
+default. Include-secrets tick is required to bundle them ; the
+target install must share the same `ROMARR_AUTH_SECRET_KEY` to
+decrypt.
+
+---
+
+## 🌐 Platform packs — GitHub-sourced with preview + auto-sync
+
+The built-in platform pack is no longer the only game in town.
+Operators can register any GitHub URL as a trusted pack source
+and let Romarr sync from it on demand or on a schedule.
+
+### Pack sources — configurable at will
+
+**Settings → Platforms → Pack sources** panel with :
+
+- Name + URL entry ; kind auto-detected :
+  - `raw` — the URL points at a single `*.yaml` file
+  - `github_dir` — the URL points at a repo directory
+    (`github.com/{owner}/{repo}/tree/{branch}/{path}` or the
+    REST contents endpoint), the walker fetches every YAML child
+- Enable / disable, sync-now, delete
+- Per-source stamp of `last_synced_at`, `last_status`
+  (`ok | partial | error`), `last_error`, `last_applied_count`
+
+Only public repos in this release ; auth-token support for
+private repos is deferred.
+
+### Preview before apply
+
+**Preview** button on every source opens a modal listing each
+YAML with its dry-run outcome (`would_apply`, `would_skip`,
+`would_fail`) plus the per-platform diff (insertions, updates,
+warnings). Zero DB writes. Includes an **Apply now** shortcut
+that chains straight into a real sync without re-fetching.
+
+### Scheduled auto-sync
+
+New `PackSourcesSync` job in the scheduler catalogue
+(`Settings → Tasks`) — daily at 05:00, disabled by default.
+Operators enable it once they have at least one source
+registered. Per-source outcomes are stamped on the row visible in
+`Settings → Platforms`.
+
+### Toggle + priority for the built-in pack
+
+New singleton config surface `platform_pack_config`
+(migration 0038) with two knobs on **Settings → Platforms →
+Pack configuration** (top of the page) :
+
+- **`builtin_enabled`** — gates the boot-time auto-apply of the
+  wheel-bundled built-in pack. Off = the install runs on
+  community sources only.
+- **`priority`** = `"community"` (default) — natural apply order,
+  community's later apply wins overlapping slugs — or
+  `"builtin"` — after every community sync, re-apply the
+  built-in over shared slugs so its values remain
+  authoritative.
+
+Endpoints : `GET` / `PATCH /api/v3/rom/platform-pack-config`.
+
+### Built-in pack — clean layout + auto-discovery
+
+The two historical built-in YAMLs
+(`builtin-2026.04.001.yaml`, `builtin-2026.05.002.yaml`) moved
+out of `src/romarr/builtin_packs/` (bundled resource) into a
+browsable `examples/platform-packs/` folder alongside the
+community example, `platform-pack-community.yaml`. Hatchling
+`force-include` keeps them bundled into the wheel at the same
+runtime path — no wheel API change.
+
+Loader dropped its hardcoded `_BUILTIN_PACK_VERSION = "..."`
+constant and auto-discovers the newest `builtin-YYYY.MM.NNN.yaml`
+by lexical version sort. **Shipping a new built-in is now a
+single YAML drop — zero Python change**.
+
+### Platforms page reorganised
+
+Actionable settings (config + sources + packs history) now lead
+the page. The catalogue grid moved to the bottom — it's the
+read-only tail of the pipeline, not what operators come to
+configure.
+
+---
+
+## 📂 Library create modal — filesystem browser
+
+The library-create form used to ask for a bare absolute path.
+It now embeds a **Browse…** button that opens an in-place
+directory browser :
+
+- Root listing surfaces `/data`, `/downloads`, `/roms`,
+  `/media`, `/mnt`, `/config`, `/srv`, `/opt`, `/home`, `/app`,
+  `/library`, `/games` — filtered to whatever actually exists in
+  the container
+- A `mount` badge flags entries that sit on a different
+  filesystem from their parent (strong hint of a Docker volume)
+- Breadcrumbs, `..` navigation, per-entry Pick + "Pick current
+  directory" shortcut
+- Manual text entry stays live above the picker — the picker is
+  additive, never the only entry channel
+
+Blocked prefixes for defense-in-depth : `/proc`, `/sys`, `/dev`,
+`/boot`, `/etc`, `/root`, `/run`, `/tmp`, `/var/log`,
+`/var/lib/docker`.
+
+Endpoint : `GET /api/v3/system/filesystem?path=<abs>` (admin).
+
+---
+
+## 👁 Secret fields — pre-fill + eye toggle
+
+Editing an existing API key no longer means retyping it from
+scratch. Two configure modals rebuilt around a new reusable
+`SecretInput` component :
+
+- **Settings → Metadata Sources → Configure** — pre-fills every
+  provider's decrypted config (IGDB client id + secret,
+  ScreenScraper ssid + password + optional dev key,
+  MobyGames / SteamGridDB / RetroAchievements API keys) so
+  tweaking one field is a one-line edit. Auto-expands the
+  Advanced disclosure when it contains a stored value.
+- **Settings → Indexers → Edit** — same treatment for the
+  `api_key` field.
+
+Every secret field now embeds an **eye icon on the right** to
+reveal / hide the value in place. Revealed values render in
+monospace to make long tokens easier to eyeball. State is
+component-local — never persisted, never leaked across mounts.
+
+Endpoints (admin-only, never invoked by list / read paths) :
+
+- `GET /api/v3/metadata/provider/{name}/secrets` → decrypted
+  JSON dict, `{}` if unset
+- `GET /api/v3/indexer/{id}/secrets` →
+  `{"api_key": "..." | null}`
+
+---
+
+## 🔧 Test hygiene + build correctness
+
+- Deluge stub tests rewritten to match the real implementation
+  (available = True, constructor requires credentials)
+- Provider-schema test flipped the Deluge assertion
+- Seeder tests rewired against `len(DEFAULT_CATALOGUE)` so
+  future catalogue growth doesn't need a test diff
+- Scheduler flaky test (`test_disabled_job_raises_unless_forced`)
+  ported to `service.await_run()` — deterministic wait via the
+  scheduler's inflight bookkeeping instead of DB polling. The
+  `tests/tasks/` bucket now runs 189 / 189 green under
+  concurrent load
+
+## 🗂 Migrations
+
+- `0037_pack_sources` — remote pack-source registry table
+- `0038_platform_pack_config` — singleton config row (builtin
+  toggle + priority)
+
+---
+
+# Draft notes (never tagged) — Native integration surface
 
 ## 🔗 Native integration surface for request managers + search pipeline convergence
 
