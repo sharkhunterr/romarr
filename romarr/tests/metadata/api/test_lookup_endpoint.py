@@ -722,3 +722,77 @@ async def test_integration_platforms_lists_supported(
     assert resp.status_code == 200, resp.json()
     ids = {p["igdb_id"] for p in resp.json()["platforms"]}
     assert {24, 19} <= ids
+
+
+@pytest.mark.asyncio
+async def test_lookup_add_creates_wanted_release(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Sonarr-model behavior: adding a monitored Game auto-creates a
+    placeholder Release with status='wanted' so MissingSearch has
+    something to grab on the next tick.
+    """
+    from romarr.domain.models import Release
+
+    await _seed_admin_and_login(api_engine, api_client)
+    platform_id = await _seed_platform(api_engine)
+
+    resp = await api_client.post(
+        "/api/v3/game/lookup/add",
+        json={
+            "providerName": "igdb",
+            "providerGameId": "9999",
+            "title": "Metroid Fusion",
+            "platformId": platform_id,
+            "monitored": True,
+        },
+    )
+    assert resp.status_code == 201, resp.json()
+    game_id = resp.json()["id"]
+
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        releases = (
+            await session.execute(
+                select(Release).where(Release.game_id == game_id)
+            )
+        ).scalars().all()
+    assert len(releases) == 1
+    assert releases[0].status == "wanted"
+    assert releases[0].monitored is True
+    assert releases[0].name == "Metroid Fusion"
+
+
+@pytest.mark.asyncio
+async def test_lookup_add_unmonitored_skips_release(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """When monitored=False the operator just wants the metadata
+    entry — no placeholder Release, MissingSearch stays hands-off.
+    """
+    from romarr.domain.models import Release
+
+    await _seed_admin_and_login(api_engine, api_client)
+    platform_id = await _seed_platform(api_engine)
+
+    resp = await api_client.post(
+        "/api/v3/game/lookup/add",
+        json={
+            "providerName": "igdb",
+            "providerGameId": "8888",
+            "title": "Metroid Prime",
+            "platformId": platform_id,
+            "monitored": False,
+        },
+    )
+    assert resp.status_code == 201, resp.json()
+    game_id = resp.json()["id"]
+
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        releases = (
+            await session.execute(
+                select(Release).where(Release.game_id == game_id)
+            )
+        ).scalars().all()
+    assert releases == []

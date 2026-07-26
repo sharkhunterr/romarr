@@ -31,7 +31,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from romarr.api.dependencies import get_db, get_event_channel, require_admin
 from romarr.auth import Principal
-from romarr.domain.models import Game, Platform
+from romarr.domain.enums import DumpStatus, NamingConvention
+from romarr.domain.models import Game, Platform, Release
 from romarr.domain.schemas import GameRead
 from romarr.metadata.providers import MetadataProvider
 from romarr.metadata.registry import load_enabled_providers
@@ -490,6 +491,26 @@ async def add_game_from_lookup(
     setattr(game, column, provider_pk)
 
     db.add(game)
+    await db.flush()  # populate game.id for the placeholder release FK
+
+    # Sonarr-model: monitoring a game means we WANT it — auto-create
+    # a placeholder Release with status='wanted' so MissingSearch has
+    # something to grab. Skipped when monitored=False (operator only
+    # wants the metadata entry, not the auto-acquire behaviour).
+    if game.monitored:
+        placeholder = Release(
+            game_id=game.id,
+            name=body.title.strip(),
+            regions=[],
+            languages=[],
+            dump_status=DumpStatus.UNKNOWN,
+            naming_convention=NamingConvention.UNKNOWN,
+            status="wanted",
+            monitored=True,
+            library_id=resolved_library_id,
+        )
+        db.add(placeholder)
+
     await db.commit()
     await db.refresh(game)
 
