@@ -347,7 +347,11 @@ async def test_disabled_job_raises_unless_forced(
     # ``force=True`` bypasses the disabled gate.
     run_id = await service.trigger("Disabled", force=True)
     assert run_id > 0
-    await _wait_for_run_terminal(sessionmaker, run_id)
+    # Deterministic wait via the scheduler's own inflight bookkeeping —
+    # the DB-polling variant used to flake here when the tasks/ bucket
+    # ran together (SQLite StaticPool contention between the runner
+    # task and the polling session).
+    await service.await_run(run_id)
     assert len(runner_calls) == 1
 
 
@@ -579,37 +583,6 @@ async def test_trigger_records_triggered_by(
 
 # ---------------------------------------------------------------------------
 # Internals helpers
-
-
-async def _wait_for_run_terminal(
-    sessionmaker: async_sessionmaker,
-    run_id: int,
-    *,
-    timeout: float = 30.0,
-) -> None:
-    """Poll the JobRun row until it reaches a terminal status.
-
-    Yields a few extra event-loop ticks after observing
-    terminal so the runner task's ``add_done_callback`` has
-    fired — otherwise a follow-up trigger could see the task
-    still in the inflight set even though its row is already
-    persisted.
-    """
-    deadline = asyncio.get_event_loop().time() + timeout
-    while asyncio.get_event_loop().time() < deadline:
-        async with sessionmaker() as session:
-            run = await session.get(JobRun, run_id)
-            if run is not None and run.status != "running":
-                # Yield extra ticks so the task's done callback
-                # fires and the scheduler's inflight bookkeeping
-                # catches up with the persisted state.
-                for _ in range(3):
-                    await asyncio.sleep(0)
-                return
-        await asyncio.sleep(0.05)
-    raise AssertionError(
-        f"job_run {run_id} did not reach terminal status within {timeout}s"
-    )
 
 
 # Sanity: confirm the public types are importable.
