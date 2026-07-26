@@ -823,7 +823,17 @@ class LibraryScanAdapter(_AdapterBase):
                     library_path=library_path,
                     accepted_extensions=accepted,
                     progress_sink=_sink,
+                    # Turn "Scan" into what operators expect: files
+                    # dropped into the library folder become
+                    # Game+Release+Dump on the next scan — parsed
+                    # from filename, enriched by DAT match when
+                    # available, ready for later metadata refresh.
+                    auto_ingest_unmatched=True,
                 )
+                # Handler committed its writes at flush time; commit
+                # the session so the auto-ingested Games / Releases /
+                # Dumps persist past the scanner's session close.
+                await session.commit()
                 processed_files_overall += result.files_seen
                 matched_overall += result.files_linked
                 unmatched_overall += result.files_unmatched

@@ -113,6 +113,7 @@ async def full_scan(
     progress_every: int = _DEFAULT_PROGRESS_EVERY,
     hasher: Hasher | None = None,
     create_release_for_unmatched: bool = False,
+    auto_ingest_unmatched: bool = False,
 ) -> FullScanResult:
     """Walk ``library_path``; hash and link every matching file.
 
@@ -225,6 +226,27 @@ async def full_scan(
         # create the Release. We count it here so the operator
         # sees the number of new files awaiting import.
         emitter.record_unmatched(now=datetime.now(UTC))
+
+        # Auto-ingest path — parses the filename, matches against
+        # any ingested DAT, and creates Game+Release+Dump in one
+        # step. This is what "Scan" is expected to do end-to-end;
+        # the older ``create_release_for_unmatched`` branch requires
+        # a monitored Game to already exist and can't fill an empty
+        # library.
+        if auto_ingest_unmatched:
+            from romarr.libraries.scanner.auto_import import auto_ingest_file
+
+            try:
+                await auto_ingest_file(
+                    session,
+                    file_path=file_path,
+                    hash_result=hash_result,
+                    library_id=library_id,
+                    size_bytes=size_on_disk,
+                )
+                files_linked += 1
+            except Exception:  # noqa: BLE001 — one file must not abort the scan
+                pass
 
         # T040 / FR-014 — when the operator wants the scanner to
         # create Releases (rather than just count), delegate to the
