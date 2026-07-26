@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.19](https://github.com/sharkhunterr/romarr/-/compare/v0.14.18...v0.14.19) (2026-07-26)
+
+
+### Bug Fixes
+
+* **tests:** deflake test_disabled_job_raises_unless_forced ([805754b](https://github.com/sharkhunterr/romarr/-/commit/805754b149e8ec4529268e82ba8d1e22d5f76d76))
+
 ### [0.14.18](https://github.com/sharkhunterr/romarr/-/compare/v0.14.17...v0.14.18) (2026-07-26)
 
 
