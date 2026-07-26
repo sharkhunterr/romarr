@@ -20,11 +20,13 @@
  * Strings resolve through ``settings:indexers.create.*``.
  */
 
-import { useState, type ReactElement } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
+import { SecretInput } from "@/components/shared/SecretInput";
 import {
   useCreateIndexer,
+  useIndexerSecrets,
   useProbeIndexer,
   useUpdateIndexer,
   type Indexer,
@@ -73,6 +75,16 @@ export function CreateIndexerModal(
   const [name, setName] = useState(editing?.name ?? "");
   const [url, setUrl] = useState(editing?.url ?? "");
   const [apiKey, setApiKey] = useState("");
+
+  // In edit mode, pre-fill the api_key from the backend so operators
+  // can see + tweak the existing value instead of typing "leave blank
+  // to preserve" or guessing what's stored.
+  const secrets = useIndexerSecrets(editing?.id, isEdit);
+  useEffect(() => {
+    if (isEdit && secrets.data?.api_key) {
+      setApiKey(secrets.data.api_key);
+    }
+  }, [isEdit, secrets.data?.api_key]);
   const [enableRss, setEnableRss] = useState(editing?.enable_rss ?? true);
   const [enableAutomatic, setEnableAutomatic] = useState(
     editing?.enable_automatic_search ?? true,
@@ -265,18 +277,16 @@ export function CreateIndexerModal(
             <span className="mb-1 block text-[0.65rem] uppercase tracking-widest text-zinc-500">
               {t("indexers.create.apiKeyLabel")}
             </span>
-            <input
-              type="password"
+            <SecretInput
               value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
+              onChange={setApiKey}
               placeholder={
                 isEdit
                   ? t("indexers.edit.apiKeyPlaceholder")
                   : t("indexers.create.apiKeyPlaceholder")
               }
-              disabled={submitting}
-              autoComplete="new-password"
-              className="w-full rounded-md bg-zinc-950 px-3 py-2 font-mono text-xs text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={submitting || (isEdit && secrets.isPending)}
+              ariaLabel={t("indexers.create.apiKeyLabel")}
             />
             <p className="mt-1 text-[0.65rem] text-zinc-500">
               {isEdit

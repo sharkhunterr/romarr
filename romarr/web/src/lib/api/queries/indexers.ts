@@ -39,12 +39,38 @@ export type GrabarrWizardResponse =
   components["schemas"]["GrabarrWizardResponse"];
 
 const INDEXERS_KEY = ["settings", "indexers"] as const;
+const INDEXER_SECRETS_KEY = (id: number) =>
+  ["settings", "indexer-secrets", id] as const;
 
 export function useIndexers(): UseQueryResult<Indexer[], ApiError> {
   return useQuery<Indexer[], ApiError>({
     queryKey: INDEXERS_KEY,
     queryFn: () => apiFetch<Indexer[]>("/api/v3/indexer"),
     staleTime: 30_000,
+  });
+}
+
+/**
+ * Fetch a single indexer's DECRYPTED api_key so the edit modal can
+ * pre-fill the field. Admin-only backend endpoint, never cached
+ * across sessions (gcTime: 0). Skipped for id ≤ 0 (create mode).
+ */
+export interface IndexerSecrets {
+  api_key: string | null;
+}
+
+export function useIndexerSecrets(
+  indexerId: number | null | undefined,
+  enabled: boolean = true,
+): UseQueryResult<IndexerSecrets, ApiError> {
+  const id = typeof indexerId === "number" ? indexerId : 0;
+  return useQuery<IndexerSecrets, ApiError>({
+    queryKey: INDEXER_SECRETS_KEY(id),
+    queryFn: () =>
+      apiFetch<IndexerSecrets>(`/api/v3/indexer/${id}/secrets`),
+    enabled: enabled && id > 0,
+    staleTime: 0,
+    gcTime: 0,
   });
 }
 

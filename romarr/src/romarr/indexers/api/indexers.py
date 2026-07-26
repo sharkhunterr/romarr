@@ -39,7 +39,7 @@ from romarr.indexers.schemas import (
     IndexerSchemaEntry,
     IndexerUpdate,
 )
-from romarr.metadata.encryption import encrypt
+from romarr.metadata.encryption import decrypt, encrypt
 
 router = APIRouter(prefix="/api/v3/indexer", tags=["Indexers"])
 
@@ -193,6 +193,45 @@ async def read_indexer(
 ) -> IndexerRead:
     row = await _get_or_404(db, indexer_id)
     return _to_read(row)
+
+
+class _IndexerSecretsRead(BaseModel):
+    """Just the decrypted secret bag — kept off IndexerRead so the
+    list endpoint never accidentally leaks the key."""
+
+    api_key: str | None = None
+
+
+@router.get(
+    "/{indexer_id}/secrets",
+    response_model=_IndexerSecretsRead,
+    summary=(
+        "Return the indexer's DECRYPTED api_key (admin only). Used "
+        "by the edit-indexer modal to pre-fill the API key field so "
+        "operators can edit an existing indexer without re-typing "
+        "the key. Returns ``{'api_key': null}`` when no key is set."
+    ),
+)
+async def read_indexer_secrets(
+    indexer_id: int,
+    _admin: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> _IndexerSecretsRead:
+    row = await _get_or_404(db, indexer_id)
+    if row.api_key_encrypted is None:
+        return _IndexerSecretsRead(api_key=None)
+    try:
+        api_key = decrypt(row.api_key_encrypted).decode("utf-8")
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "errorMessage": "decrypt_failed",
+                "errorCode": "decrypt_failed",
+                "details": str(exc),
+            },
+        ) from exc
+    return _IndexerSecretsRead(api_key=api_key)
 
 
 async def _get_or_404(db: AsyncSession, indexer_id: int) -> Indexer:

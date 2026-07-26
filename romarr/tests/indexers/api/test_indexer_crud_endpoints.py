@@ -371,3 +371,75 @@ def test_decrypt_secret_strips_legacy_json_quotes() -> None:
 
     new_blob = encrypt(b"hex-key-32")
     assert decrypt_secret(new_blob) == "hex-key-32"
+
+
+# ---------------------------------------------------------------------------
+# GET /{id}/secrets — decrypt for the edit-indexer modal pre-fill.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_secrets_returns_decrypted_api_key(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    await seed_admin_and_login(api_engine, api_client)
+    r = await api_client.post("/api/v3/indexer", json=_VALID_PAYLOAD)
+    assert r.status_code == 201
+    indexer_id = r.json()["id"]
+
+    r = await api_client.get(f"/api/v3/indexer/{indexer_id}/secrets")
+    assert r.status_code == 200, r.text
+    assert r.json() == {"api_key": "nznb-key"}
+
+
+@pytest.mark.asyncio
+async def test_secrets_returns_null_when_no_key(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Indexers created without an api_key (grabarr wizard path, or
+    manually) report a null api_key on the secrets endpoint."""
+    await seed_admin_and_login(api_engine, api_client)
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        session.add(
+            Indexer(
+                name="Keyless",
+                implementation="torznab",
+                url="https://k.test",
+                api_key_encrypted=None,
+                categories=[],
+                priority=25,
+                enabled=True,
+                enable_rss=True,
+                enable_automatic_search=True,
+                enable_interactive_search=True,
+                rate_limit_seconds=5,
+                min_seeders=1,
+                source="manual",
+            )
+        )
+        await session.commit()
+        row = (
+            await session.execute(select(Indexer).where(Indexer.name == "Keyless"))
+        ).scalar_one()
+
+    r = await api_client.get(f"/api/v3/indexer/{row.id}/secrets")
+    assert r.status_code == 200
+    assert r.json() == {"api_key": None}
+
+
+@pytest.mark.asyncio
+async def test_secrets_requires_admin(
+    api_client: httpx.AsyncClient,
+) -> None:
+    r = await api_client.get("/api/v3/indexer/1/secrets")
+    assert r.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_secrets_unknown_indexer_returns_404(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    await seed_admin_and_login(api_engine, api_client)
+    r = await api_client.get("/api/v3/indexer/999999/secrets")
+    assert r.status_code == 404
