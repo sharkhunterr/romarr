@@ -134,5 +134,16 @@ async def import_bundle(
                 key=key,
                 errors=[f"handler failed: {type(e).__name__}: {e}"],
             )
+            # A failed handler may have left rows in a partial state
+            # inside the session — roll back to a clean slate before
+            # the next resource runs.
+            await session.rollback()
         outcomes.append(outcome)
+
+    # Persist EVERY handler's writes now — handlers only ``flush`` so
+    # foreign-key targets are visible mid-transaction; commit is the
+    # service's job. Without this, the per-request session closes,
+    # aiosqlite rolls back and the API 200 response is a lie
+    # (outcome counters non-zero, DB unchanged).
+    await session.commit()
     return ImportResult(outcomes=outcomes)

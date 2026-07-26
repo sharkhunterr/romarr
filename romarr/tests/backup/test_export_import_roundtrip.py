@@ -139,3 +139,65 @@ async def test_export_then_import_upsert_updates_counts(
 async def test_manifest_requires_admin(api_client: httpx.AsyncClient) -> None:
     r = await api_client.get("/api/v3/backup/manifest")
     assert r.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_import_actually_persists_new_rows(
+    api_client: httpx.AsyncClient, api_engine: AsyncEngine
+) -> None:
+    """Regression: import_bundle used to flush without commit, so
+    the API returned +N counters but nothing landed in the DB.
+    This test imports a fresh (never-seeded) profile and confirms
+    it actually shows up after the request closes."""
+    await _seed_admin_and_login(api_engine, api_client)
+
+    hand_crafted_bundle = {
+        "romarr_version": "test",
+        "exported_at": "2026-07-26T00:00:00Z",
+        "include_secrets": False,
+        "resources": {
+            "quality_profiles": [
+                {
+                    "name": "commit-me-please",
+                    "allowed_formats": ["chd"],
+                    "preferred_format": "chd",
+                    "require_dat_verified": False,
+                    "allow_archive_double_compression": False,
+                    "upgrade_until_format": "chd",
+                    "auto_grab_min_score": 0,
+                    "seed_key": None,
+                    "is_user_modified": True,
+                    "is_factory_default": False,
+                }
+            ]
+        },
+    }
+
+    r = await api_client.post(
+        "/api/v3/backup/import",
+        json={
+            "bundle": hand_crafted_bundle,
+            "resources": ["quality_profiles"],
+            "mode": "upsert",
+        },
+    )
+    assert r.status_code == 200, r.text
+    outcome = next(
+        o for o in r.json()["outcomes"] if o["key"] == "quality_profiles"
+    )
+    assert outcome["created"] == 1
+    assert outcome["errors"] == []
+
+    # Cross-check via a fresh session — if the service forgot to
+    # commit, this query returns nothing.
+    sm = async_sessionmaker(api_engine, expire_on_commit=False)
+    async with sm() as session:
+        found = (
+            await session.execute(
+                select(QualityProfile).where(
+                    QualityProfile.name == "commit-me-please"
+                )
+            )
+        ).scalar_one_or_none()
+    assert found is not None, "import returned +1 but no row was committed"
+    assert found.preferred_format == "chd"
