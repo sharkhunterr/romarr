@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.21](https://github.com/sharkhunterr/romarr/-/compare/v0.14.20...v0.14.21) (2026-07-26)
+
+
+### Features
+
+* **scanner:** auto-ingest unmatched files into Game+Release+Dump ([ca43bf2](https://github.com/sharkhunterr/romarr/-/commit/ca43bf2299f703608d85d0d11a21304323d9ce2b))
+
 ### [0.14.20](https://github.com/sharkhunterr/romarr/-/compare/v0.14.19...v0.14.20) (2026-07-26)
 
 
