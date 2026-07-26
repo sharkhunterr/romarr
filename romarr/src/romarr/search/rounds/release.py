@@ -25,10 +25,11 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import select
 
-from romarr.domain.models import Game, Release
+from romarr.domain.models import Game, Platform, Release
 from romarr.indexers.errors import IndexerAuthError, IndexerProtocolError
 from romarr.search.history import record_round
 from romarr.search.pipeline import run_pipeline
+from romarr.search.platform_match import match_platform_in_title
 from romarr.search.preload import (
     preload_custom_formats,
     preload_default_profiles,
@@ -37,7 +38,12 @@ from romarr.search.preload import (
     preload_library_state,
 )
 from romarr.search.rounds.manual import _RESULT_HARD_CAP, _ClientFactory
-from romarr.search.types import Candidate, SearchRoundReport
+from romarr.search.types import (
+    Candidate,
+    Rejection,
+    RejectionCode,
+    SearchRoundReport,
+)
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -93,6 +99,17 @@ async def run_release_search(
     indexer_rows = await preload_indexers(session, indexer_ids=indexer_ids)
     library_state = await preload_library_state(session)
     custom_formats = await preload_custom_formats(session)
+    # Cache the full platform catalogue for the per-candidate
+    # ``match_platform_in_title`` call below — used to hard-reject
+    # cross-platform hits (a Wii U virtual-console re-release of a
+    # GBA game must not grab into a GBA library).
+    platforms_all = tuple(
+        (await session.execute(select(Platform))).scalars().all()
+    )
+    # A release-scoped search targets exactly one platform — the
+    # one of the parent Game. We use it as the reference for the
+    # platform-mismatch reject (same rule as slice 458 in manual.py).
+    target_platform_id = game.platform_id if game is not None else None
 
     quality = profiles.get("quality")
     region = profiles.get("region")
@@ -149,6 +166,38 @@ async def run_release_search(
                 custom_formats=custom_formats,
                 file_format="",
             )
+            # Hard-reject cross-platform hits — the title spells
+            # a console different from the release's parent Game
+            # platform. Same guard slice 458 added on manual.py:
+            # without it the fuzzy title match binds a Wii U /
+            # 3DS virtual-console re-release to a GBA game just
+            # because the game title happens to match.
+            detected = match_platform_in_title(result.title, platforms_all)
+            if detected is not None:
+                candidate = candidate.model_copy(
+                    update={"platform_id": detected.id}
+                )
+                if (
+                    target_platform_id is not None
+                    and detected.id != target_platform_id
+                    and candidate.rejection is None
+                ):
+                    candidate = candidate.model_copy(
+                        update={
+                            "rejection": Rejection(
+                                code=RejectionCode.PLATFORM_MISMATCH,
+                                field="platform_id",
+                                message=(
+                                    f"title advertises platform "
+                                    f"#{detected.id} ({detected.slug}); "
+                                    f"release is scoped to platform "
+                                    f"#{target_platform_id}"
+                                ),
+                            ),
+                            "would_auto_reject": True,
+                            "score_breakdown": None,
+                        }
+                    )
             per_indexer_candidates.append(candidate)
         return indexer_id, per_indexer_candidates, "ok", was_overcap
 

@@ -402,13 +402,18 @@ export function HistoryRow(props: HistoryRowProps): ReactElement {
         )}
         {/* job_run rows ship an ``outputSummary`` dict the runner
             populates (e.g. RssSync → indexers_succeeded / candidates
-            / grabs_dispatched / grabs_failed). Render the non-null
-            numeric entries as their own DetailItems so the grid
-            stays balanced. */}
+            / grabs_dispatched / grabs_failed / no_grab_reason).
+            Render both numeric AND non-empty string entries so
+            diagnostic fields like ``no_grab_reason`` reach the
+            operator (without them, "GRABS: 0" is silent about why). */}
         {event.eventType === "job_run" &&
           event.outputSummary &&
           Object.entries(event.outputSummary as Record<string, unknown>)
-            .filter(([, v]) => typeof v === "number")
+            .filter(
+              ([, v]) =>
+                typeof v === "number" ||
+                (typeof v === "string" && v.length > 0),
+            )
             .map(([k, v]) => (
               <DetailItem
                 key={k}

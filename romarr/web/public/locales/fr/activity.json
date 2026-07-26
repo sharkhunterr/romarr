@@ -99,7 +99,15 @@
       "grabs_to_dispatch": "Grabs à dispatcher",
       "grabs_dispatched": "Grabs dispatchés",
       "grabs_failed": "Grabs en échec",
-      "refreshed": "Rafraîchis"
+      "refreshed": "Rafraîchis",
+      "gameId": "Jeu (id)",
+      "platformId": "Plateforme (id)",
+      "grabs": "Grabs",
+      "best_score": "Meilleur score",
+      "min_score": "Seuil (min score)",
+      "no_grab_reason": "Raison — pas de grab",
+      "dispatch_status": "Statut dispatch",
+      "title": "Titre"
     },
     "noGrabReason": {
       "unidentified": "Titre non rattaché à un jeu de la bibliothèque",
@@ -108,7 +116,10 @@
       "no_eligible_candidates": "Aucun candidat n'a passé le pipeline",
       "empty_feed": "Flux indexeur vide",
       "indexer_failed": "Échec de récupération de l'indexeur",
-      "rejected": "Rejeté par le pipeline"
+      "rejected": "Rejeté par le pipeline",
+      "below_min_score": "Score du meilleur candidat sous le seuil du profil",
+      "already_imported": "Jeu déjà présent en bibliothèque",
+      "dispatch_failed": "Échec de l'envoi au download client (client non configuré ?)"
     },
     "importedVia": {
       "webhook": "webhook",

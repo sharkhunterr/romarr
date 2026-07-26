@@ -50,6 +50,13 @@ class AutoCheckAddedResult:
     grabs: int
     skipped: bool = False
     skip_reason: str | None = None
+    # Populated only when the grab decision path actually ran (has
+    # candidates + went through ``dispatch_best_for_game``). Surfaces
+    # in the task summary + Activity view so the operator sees WHY a
+    # search with 100 candidates and best_score=95 resulted in 0
+    # grabs — the previous shape was silent about it.
+    best_score: int | None = None
+    no_grab_reason: str | None = None
 
 
 SearchFn = Callable[
@@ -98,12 +105,14 @@ async def _default_search(
 
 DispatchFn = Callable[
     ["AsyncSession", int, list],
-    Awaitable[bool],
+    Awaitable[Any],
 ]
-"""Async callable: ``(session, game_id, candidates) -> dispatched``.
+"""Async callable: ``(session, game_id, candidates) -> dispatched_or_outcome``.
 
-Tests inject a fake; the default re-derives the winning candidate
-and dispatches it to the download client.
+Tests may inject a fake that returns a plain ``bool``; the production
+default returns the full ``dispatch_best_for_game`` outcome dict
+(``dispatched`` / ``best_score`` / ``no_grab_reason`` / ``status``)
+so the caller can surface the reason in the task summary.
 """
 
 
@@ -111,26 +120,27 @@ async def _default_dispatch(
     session: "AsyncSession",
     game_id: int,
     candidates: list,
-) -> bool:
+) -> dict:
     """Production grab path — ``run_manual_search`` returns
     ``grabs=[]`` by contract (the operator picks), so on-add (an
     auto-grab path, per :func:`dispatch_best_for_game`'s docstring)
     has to re-derive the winner and dispatch it itself, honouring
     the game's profile score floor — exactly like the missing /
-    cutoff / rss rounds."""
+    cutoff / rss rounds. Returns the full outcome dict so the
+    caller can propagate ``best_score`` + ``no_grab_reason`` into
+    the task summary."""
     from romarr.search.rounds._shared import (
         dispatch_best_for_game,
         load_min_score_for_game,
     )
 
     min_score = await load_min_score_for_game(session, game_id)
-    outcome = await dispatch_best_for_game(
+    return await dispatch_best_for_game(
         session,
         game_id=game_id,
         candidates=candidates,
         min_score=min_score,
     )
-    return bool(outcome.get("dispatched"))
 
 
 async def run_search_on_add(
@@ -185,7 +195,16 @@ async def run_search_on_add(
         report = await fn(session, game.title, game.platform_id)
 
     candidates = list(getattr(report, "candidates", []) or [])
-    grabbed = await dispatch(session, game.id, candidates)
+    outcome = await dispatch(session, game.id, candidates)
+    # Backward-compat with the boolean-returning test fakes.
+    if isinstance(outcome, bool):
+        grabbed = outcome
+        best_score = None
+        no_grab_reason = None
+    else:
+        grabbed = bool(outcome.get("dispatched"))
+        best_score = outcome.get("best_score")
+        no_grab_reason = None if grabbed else outcome.get("no_grab_reason")
     grabs = 1 if grabbed else 0
     _logger.info(
         "tasks.auto_check_added.complete",
@@ -194,6 +213,8 @@ async def run_search_on_add(
             "platform_id": game.platform_id,
             "candidates": len(candidates),
             "grabs": grabs,
+            "best_score": best_score,
+            "no_grab_reason": no_grab_reason,
         },
     )
     return AutoCheckAddedResult(
@@ -202,6 +223,8 @@ async def run_search_on_add(
         platform_id=game.platform_id,
         candidates=len(candidates),
         grabs=grabs,
+        best_score=best_score,
+        no_grab_reason=no_grab_reason,
     )
 
 
