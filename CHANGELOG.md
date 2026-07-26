@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.20](https://github.com/sharkhunterr/romarr/-/compare/v0.14.19...v0.14.20) (2026-07-26)
+
+
+### Bug Fixes
+
+* **backup:** import_bundle now commits — was silently rolling back ([76683c4](https://github.com/sharkhunterr/romarr/-/commit/76683c4f30c59dc78bf9a31570a72e4cb18e800c))
+
 ### [0.14.19](https://github.com/sharkhunterr/romarr/-/compare/v0.14.18...v0.14.19) (2026-07-26)
 
 
