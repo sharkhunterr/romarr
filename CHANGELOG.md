@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.22](https://github.com/sharkhunterr/romarr/-/compare/v0.14.21...v0.14.22) (2026-07-26)
+
+
+### Features
+
+* **add-new:** auto-create a wanted Release when a monitored Game lands ([fec9dbc](https://github.com/sharkhunterr/romarr/-/commit/fec9dbc4c4eb7490ad45dc9624c65e620bd57e44))
+* **examples:** community pack v2026.07.200 — .zip/.7z/.rar on every platform ([2a8e06c](https://github.com/sharkhunterr/romarr/-/commit/2a8e06c1ead4ad8a67a3682721aab1da8bca6ad6))
+
 ### [0.14.21](https://github.com/sharkhunterr/romarr/-/compare/v0.14.20...v0.14.21) (2026-07-26)
 
 

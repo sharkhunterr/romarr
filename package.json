@@ -1,6 +1,6 @@
 {
   "name": "romarr",
-  "version": "0.14.21",
+  "version": "0.14.22",
   "description": "Self-hosted ROM acquisition manager for the *arr ecosystem — DAT-verified library, quality/region/dump/language profiles, Torznab search across Grabarr + Prowlarr, and a bundled React UI.",
   "private": true,
   "scripts": {
