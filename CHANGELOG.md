@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.24](https://github.com/sharkhunterr/romarr/-/compare/v0.14.23...v0.14.24) (2026-07-26)
+
+
+### Bug Fixes
+
+* **downloaders:** normalise host field — strip pasted scheme + port ([943eb7a](https://github.com/sharkhunterr/romarr/-/commit/943eb7ab5f207681ea1e3e4fb0232e8b6057d0a2))
+
 ### [0.14.23](https://github.com/sharkhunterr/romarr/-/compare/v0.14.22...v0.14.23) (2026-07-26)
 
 
