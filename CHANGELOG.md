@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.18](https://github.com/sharkhunterr/romarr/-/compare/v0.14.17...v0.14.18) (2026-07-26)
+
+
+### Features
+
+* **indexers:** edit modal pre-fills api_key + eye toggle ([e892228](https://github.com/sharkhunterr/romarr/-/commit/e892228998151cff980e3a2e655eb2c1e54db0f8))
+* **metadata:** edit existing provider secrets in place + eye toggle ([9d16f61](https://github.com/sharkhunterr/romarr/-/commit/9d16f6126d1904bcdba2693c32eceae179ad49e0))
+
 ### [0.14.17](https://github.com/sharkhunterr/romarr/-/compare/v0.14.16...v0.14.17) (2026-07-25)
 
 
