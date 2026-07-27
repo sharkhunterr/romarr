@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.25](https://github.com/sharkhunterr/romarr/-/compare/v0.14.24...v0.14.25) (2026-07-27)
+
+
+### Bug Fixes
+
+* **dispatch:** skip unconfigured clients + surface real reason ([9cc0101](https://github.com/sharkhunterr/romarr/-/commit/9cc01016606203f4b1d65c9ad3b2971b4fe573d7))
+
 ### [0.14.24](https://github.com/sharkhunterr/romarr/-/compare/v0.14.23...v0.14.24) (2026-07-26)
 
 
