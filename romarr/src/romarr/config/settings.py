@@ -155,13 +155,14 @@ class Settings(BaseSettings):
         "configuration.",
     )
     importer_watcher_enabled: bool = Field(
-        default=False,
+        default=True,
         description="Enable the polling watcher (FR-001 fallback to "
         "the webhook surface). When True, the lifespan starts a "
         "background loop that polls every enabled download client "
-        "for completed downloads on a 30 s cadence. Default OFF for "
-        "the test suite + dev workflows; production deployments "
-        "set ROMARR_IMPORTER_WATCHER_ENABLED=true.",
+        "for completed downloads on a 30 s cadence. Default ON so "
+        "a fresh Docker deployment doesn't sit at 'downloading 0%' "
+        "forever; test suites explicitly set "
+        "ROMARR_IMPORTER_WATCHER_ENABLED=false to avoid the loop.",
     )
 
     # Cover storage

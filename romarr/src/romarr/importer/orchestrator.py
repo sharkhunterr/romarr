@@ -498,21 +498,83 @@ async def run_import(
                     game_id=monitored_game_id,
                 )
 
-                new_release = Release(
-                    game_id=monitored_game_id,
-                    name=source_path.stem,
-                    regions=regions_for_release,
-                    languages=languages_for_release,
-                    dump_status=_DumpStatus.VERIFIED,
-                    naming_convention=_NamingConvention.NO_INTRO,
-                    status="wanted",
-                    library_id=library_id_for_release,
+                # Prefer promoting an existing placeholder release
+                # (the ``wanted`` row Add-New creates alongside the
+                # Game — same title, no regions, UNKNOWN dump status)
+                # over creating a brand-new row. Without this, the
+                # library ends up with the empty placeholder + the
+                # imported release side by side; the operator has to
+                # manually delete the placeholder every time.
+                #
+                # The parser gives us proper regions/languages/dump
+                # status here, so we just fill them in on the
+                # placeholder and reuse its id.
+                game_title_row = (
+                    await session.execute(
+                        select(Game.title).where(
+                            Game.id == monitored_game_id
+                        )
+                    )
+                ).scalar_one_or_none()
+                placeholder_q = (
+                    select(Release)
+                    .where(
+                        Release.game_id == monitored_game_id,
+                        Release.status == "wanted",
+                        Release.dump_status == _DumpStatus.UNKNOWN,
+                    )
+                    .order_by(Release.id)
                 )
-                session.add(new_release)
-                await session.commit()
-                await session.refresh(new_release)
-                candidates = [new_release.id]
-                candidate_rows = [(new_release.id, regions_for_release)]
+                placeholder_candidates = (
+                    await session.execute(placeholder_q)
+                ).scalars().all()
+                placeholder = None
+                for candidate_rel in placeholder_candidates:
+                    if (
+                        not candidate_rel.regions
+                        and not candidate_rel.languages
+                        and (
+                            game_title_row is None
+                            or candidate_rel.name == game_title_row
+                        )
+                    ):
+                        placeholder = candidate_rel
+                        break
+
+                if placeholder is not None:
+                    placeholder.name = source_path.stem
+                    placeholder.regions = regions_for_release
+                    placeholder.languages = languages_for_release
+                    placeholder.dump_status = _DumpStatus.VERIFIED
+                    placeholder.naming_convention = (
+                        _NamingConvention.NO_INTRO
+                    )
+                    if placeholder.library_id is None:
+                        placeholder.library_id = library_id_for_release
+                    await session.commit()
+                    await session.refresh(placeholder)
+                    candidates = [placeholder.id]
+                    candidate_rows = [
+                        (placeholder.id, regions_for_release)
+                    ]
+                else:
+                    new_release = Release(
+                        game_id=monitored_game_id,
+                        name=source_path.stem,
+                        regions=regions_for_release,
+                        languages=languages_for_release,
+                        dump_status=_DumpStatus.VERIFIED,
+                        naming_convention=_NamingConvention.NO_INTRO,
+                        status="wanted",
+                        library_id=library_id_for_release,
+                    )
+                    session.add(new_release)
+                    await session.commit()
+                    await session.refresh(new_release)
+                    candidates = [new_release.id]
+                    candidate_rows = [
+                        (new_release.id, regions_for_release)
+                    ]
 
         if len(candidates) > 1:
             # Region-disambiguate: parse the filename for region

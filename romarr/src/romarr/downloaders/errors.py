@@ -62,11 +62,31 @@ class NoEligibleClientError(DownloaderError):
     """
 
 
+class NeedsMagnetClientError(DownloaderError):
+    """``grabarr_direct`` resolved a candidate to a magnet URI but
+    can't handle magnets itself. The dispatcher catches this and
+    re-routes the dispatch to the next torrent-capable client (the
+    operator's qBittorrent, typically), passing the magnet through
+    as a :class:`~romarr.downloaders.types.TorrentMagnet` source.
+
+    Carries the resolved ``magnet_uri`` so the dispatcher can build
+    the new source without re-hitting ``/resolve``.
+    """
+
+    def __init__(self, magnet_uri: str) -> None:
+        super().__init__(
+            "grabarr_direct resolved to torrent_magnet — needs a "
+            "magnet-capable client (qBittorrent)"
+        )
+        self.magnet_uri = magnet_uri
+
+
 __all__ = [
     "AuthError",
     "CategoryWarning",
     "ConnectionError",
     "DownloaderError",
+    "NeedsMagnetClientError",
     "NoEligibleClientError",
     "TLSError",
     "VersionError",

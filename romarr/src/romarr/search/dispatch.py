@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING
 
 from romarr.downloaders.errors import (
     AuthError,
+    NeedsMagnetClientError,
     NoEligibleClientError,
     VersionError,
 )
@@ -137,6 +138,10 @@ async def dispatch_winner(
         )
 
     tags = list(standard_tags or [])
+    # Track which clients we've already tried so a re-route (e.g.
+    # NeedsMagnetClientError from grabarr_direct) can't infinite-loop
+    # onto the same client.
+    tried_client_ids: set[int] = {client_id}
     try:
         if source_kind is SourceKind.TORRENT:
             url = candidate.download_url
@@ -174,6 +179,78 @@ async def dispatch_winner(
         else:
             source_n = NzbUrl(url=candidate.download_url)
             native_id = await client.add_nzb(source_n, category="romarr")
+    except NeedsMagnetClientError as exc:
+        # grabarr_direct returned "torrent_magnet" from /resolve and
+        # can't handle magnets. Re-route to the next torrent-capable
+        # client (typically qBittorrent) with the magnet payload.
+        # Filter out clients we've already tried so a broken config
+        # can't loop forever.
+        remaining = [
+            c for c in candidates if c.id not in tried_client_ids
+        ]
+        if not remaining:
+            return DispatchOutcome(
+                status=DispatchStatus.NO_ELIGIBLE_CLIENT,
+                client_id=client_id,
+                reason=(
+                    "grabarr_direct returned torrent_magnet but no "
+                    "other torrent-capable client is configured — "
+                    "add a qBittorrent download client"
+                ),
+            )
+        alt_decision = route_release(
+            source_kind=SourceKind.TORRENT,
+            indexer_download_client_id=indexer_pin,
+            candidates=remaining,
+        )
+        try:
+            alt_client_id = consume_decision(alt_decision)
+        except NoEligibleClientError as no_alt:
+            return DispatchOutcome(
+                status=DispatchStatus.NO_ELIGIBLE_CLIENT,
+                client_id=client_id,
+                reason=(
+                    "grabarr_direct returned torrent_magnet + "
+                    f"re-route failed: {no_alt}"
+                ),
+            )
+        tried_client_ids.add(alt_client_id)
+        try:
+            alt_client = await client_factory(alt_client_id)
+        except Exception as alt_exc:
+            return DispatchOutcome(
+                status=DispatchStatus.FAILED,
+                client_id=alt_client_id,
+                reason=f"magnet re-route client build failed: {alt_exc}",
+            )
+        try:
+            magnet_source = TorrentMagnet(magnet_uri=exc.magnet_uri)
+            native_id = await alt_client.add_torrent(
+                magnet_source, category="romarr", tags=tags
+            )
+        except DownloaderConnError as re_exc:
+            return DispatchOutcome(
+                status=DispatchStatus.PENDING_RETRY,
+                client_id=alt_client_id,
+                reason=f"magnet re-route transient: {re_exc}",
+            )
+        except (AuthError, VersionError) as re_exc:
+            return DispatchOutcome(
+                status=DispatchStatus.FAILED,
+                client_id=alt_client_id,
+                reason=f"magnet re-route non-transient: {re_exc}",
+            )
+        except Exception as re_exc:  # noqa: BLE001
+            return DispatchOutcome(
+                status=DispatchStatus.FAILED,
+                client_id=alt_client_id,
+                reason=f"magnet re-route unexpected: {re_exc}",
+            )
+        return DispatchOutcome(
+            status=DispatchStatus.GRABBED,
+            client_id=alt_client_id,
+            client_native_id=native_id,
+        )
     except DownloaderConnError as exc:
         return DispatchOutcome(
             status=DispatchStatus.PENDING_RETRY,

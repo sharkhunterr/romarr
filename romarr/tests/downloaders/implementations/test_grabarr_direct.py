@@ -638,18 +638,23 @@ async def test_http_direct_remove_cancels_in_flight_and_deletes(
     assert not (tmp_path / "romarr" / "sample.zip").exists()
 
 
-# ---- torrent_magnet branch (still deferred to R2e) -----------------------
+# ---- torrent_magnet branch — re-route via NeedsMagnetClientError ---------
 
 
 @respx.mock
-async def test_torrent_magnet_at_client_layer_is_routing_misconfig(
+async def test_torrent_magnet_raises_needs_magnet_client_error(
     tmp_path: Path,
 ) -> None:
-    """Post-R2e the dispatcher pre-resolves grabarr indexers and
-    re-routes torrent_magnet results to qBit before they reach
-    this client. If a magnet still hits ``add_torrent`` it means
-    routing picked grabarr_direct despite the URL — surface the
-    misconfig as a ``DownloaderError`` operators can action."""
+    """When /resolve returns torrent_magnet, grabarr_direct raises
+    :class:`NeedsMagnetClientError` carrying the magnet URI. The
+    dispatcher catches this and re-routes to the operator's qBit
+    client (covered in tests/search/test_dispatch.py).
+
+    The pending snapshot is cleared before the raise so a subsequent
+    ``get_status(native_id)`` correctly reports 'unknown' rather than
+    leaving a phantom QUEUED entry the reconciler will keep polling."""
+    from romarr.downloaders.errors import NeedsMagnetClientError
+
     token = "tokMagnet"
     respx.get(f"{_BASE}/romarr/roms_all/api/v1/resolve/{token}").mock(
         return_value=httpx.Response(
@@ -668,16 +673,15 @@ async def test_torrent_magnet_at_client_layer_is_routing_misconfig(
         )
     )
     client = _client(tmp_path)
-    with pytest.raises(DownloaderError, match="pre-resolve"):
+    with pytest.raises(NeedsMagnetClientError) as exc_info:
         await client.add_torrent(
             TorrentUrl(url=_torznab_url(token=token)),
             category="romarr",
             tags=[],
         )
-    # The snapshot is still stashed before the raise — operators
-    # can introspect ``self._pending`` post-mortem to debug the
-    # routing misconfig.
-    assert f"grabarr-{token}" in client._pending  # noqa: SLF001
+    assert exc_info.value.magnet_uri == "magnet:?xt=urn:btih:abc123"
+    # Snapshot cleared — no phantom QUEUED entry for the reconciler.
+    assert f"grabarr-{token}" not in client._pending  # noqa: SLF001
 
 
 # ---- resolve error paths -------------------------------------------------

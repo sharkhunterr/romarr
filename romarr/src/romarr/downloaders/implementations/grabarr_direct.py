@@ -56,6 +56,7 @@ from romarr.downloaders.errors import (
     AuthError,
     ConnectionError as DownloaderConnError,
     DownloaderError,
+    NeedsMagnetClientError,
     TLSError,
     VersionError,
 )
@@ -289,21 +290,16 @@ class GrabarrDirectClient(DownloadClient):
         self._pending[native_id] = snap
 
         if resolve["method"] == "torrent_magnet":
-            # Slice 426 / R2e — the dispatcher's
-            # ``maybe_pre_resolve`` in
-            # :mod:`romarr.search.dispatch_grabarr` catches
-            # torrent_magnet results BEFORE routing and re-routes
-            # them to the operator's qBit row, filtering
-            # grabarr_direct out of the candidate pool. If this
-            # branch fires, the operator's qBit + Grabarr config
-            # are out of sync — surface the gap loudly.
-            raise DownloaderError(
-                "grabarr_direct received a torrent_magnet resolve at "
-                "add_torrent — the dispatcher's pre-resolve should "
-                "have re-routed this to the operator's qBit client. "
-                "Check that a qBittorrent download client is "
-                "configured and enabled for torrents."
-            )
+            # Grabarr-hosted candidate turned out to be a magnet
+            # (MiNERVA / AudioBookBay / Vimm / PlanetEmu adapters).
+            # grabarr_direct can't seed the magnet itself; hand it
+            # back to the dispatcher so it re-routes to the operator's
+            # magnet-capable client (qBittorrent). The magnet URI is
+            # carried on the exception so the dispatcher doesn't have
+            # to re-hit ``/resolve``.
+            magnet_uri = resolve.get("magnet_uri", "")
+            self._pending.pop(native_id, None)
+            raise NeedsMagnetClientError(magnet_uri)
 
         if resolve["method"] != "http_direct":
             raise DownloaderError(

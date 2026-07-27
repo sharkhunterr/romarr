@@ -25,6 +25,87 @@ from romarr.importer.types import ImportContext
 
 
 @pytest.mark.asyncio
+async def test_placeholder_release_is_promoted_not_duplicated(
+    async_session: AsyncSession, tmp_path: Path
+) -> None:
+    """Add-New creates a placeholder Release (name=game.title,
+    dump_status=UNKNOWN, empty regions/languages) alongside the Game.
+    When the operator subsequently grabs a real ROM whose filename
+    matches the No-Intro naming convention, the importer's
+    create-fresh-release fallback must PROMOTE the placeholder
+    (rename + fill regions/languages/dump_status) instead of leaving
+    the placeholder orphaned next to the newly-imported release.
+
+    Pre-slice the Metroid Fusion USA grab landed 2 rows: the
+    ``Metroid Fusion`` (unknown/unknown) placeholder + a new
+    ``Metroid Fusion (USA)`` (US/No-Intro) release. Post-slice the
+    placeholder itself becomes the imported release.
+    """
+    from romarr.domain.enums import DumpStatus as _DumpStatus
+
+    platform = Platform(slug="gba", name="Game Boy Advance")
+    async_session.add(platform)
+    await async_session.commit()
+    await async_session.refresh(platform)
+
+    game = Game(
+        platform_id=platform.id,
+        slug="metroid-fusion",
+        title="Metroid Fusion",
+        monitored=True,
+    )
+    async_session.add(game)
+    await async_session.commit()
+    await async_session.refresh(game)
+
+    # Placeholder: name == game.title, empty regions/languages,
+    # dump_status=UNKNOWN — matches what Add-New emits.
+    placeholder = Release(
+        game_id=game.id,
+        name="Metroid Fusion",
+        regions=[],
+        languages=[],
+        dump_status=_DumpStatus.UNKNOWN,
+        naming_convention=NamingConvention.UNKNOWN,
+        status="wanted",
+    )
+    async_session.add(placeholder)
+    await async_session.commit()
+    await async_session.refresh(placeholder)
+    placeholder_id_before = placeholder.id
+
+    # The grabbed file has a proper No-Intro filename with region.
+    rom = tmp_path / "downloads" / "Metroid Fusion (USA).gba"
+    rom.parent.mkdir(parents=True, exist_ok=True)
+    rom.write_bytes(b"\x00" * 4096)
+
+    context = ImportContext(
+        source_path=rom,
+        correlation_id=uuid4(),
+        imported_via="manual",
+        pre_matched_game_id=game.id,  # simulates a manual grab
+    )
+    await run_import(context, session=async_session)
+
+    releases = (
+        await async_session.execute(
+            select(Release).where(Release.game_id == game.id)
+        )
+    ).scalars().all()
+    # Exactly ONE release remains — the promoted placeholder, not
+    # a fresh row alongside a dangling empty one.
+    assert len(releases) == 1, f"expected 1 release, got {len(releases)}"
+    promoted = releases[0]
+    assert promoted.id == placeholder_id_before, (
+        "placeholder was replaced instead of promoted"
+    )
+    assert promoted.name == "Metroid Fusion (USA)"
+    # Parser normalises "USA" → the ISO short code the codebase uses.
+    assert promoted.regions and promoted.regions[0] in {"USA", "US"}
+    assert promoted.dump_status == _DumpStatus.VERIFIED
+
+
+@pytest.mark.asyncio
 async def test_auto_import_when_game_match_resolves_to_one_wanted_release(
     async_session: AsyncSession, tmp_path: Path
 ) -> None:

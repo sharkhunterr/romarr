@@ -7,12 +7,19 @@ for speed — Alembic is exercised separately by the migration test).
 
 from __future__ import annotations
 
+import os
 from collections.abc import AsyncIterator
 
 import httpx
 import pytest_asyncio
 from httpx import ASGITransport
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+
+# The importer watcher + queue reconciler defaults are prod-safe
+# (start automatically). Tests build the app without a real database
+# lifecycle so the reconciler loop would either flake or leak — force
+# it off unless a test explicitly opts in by unsetting this env var.
+os.environ.setdefault("ROMARR_IMPORTER_WATCHER_ENABLED", "false")
 
 # Importing the models module ensures every model class is registered
 # with the metadata before create_all runs. Each spec's models live

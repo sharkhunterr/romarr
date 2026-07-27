@@ -8,6 +8,7 @@ import pytest
 
 from romarr.downloaders.errors import (
     AuthError,
+    NeedsMagnetClientError,
 )
 from romarr.downloaders.errors import (
     ConnectionError as DownloaderConnError,
@@ -348,6 +349,84 @@ async def test_resolve_network_error_falls_back_to_url(
     src = await _resolve_torrent_source("http://example.test/x.torrent")
     assert isinstance(src, TorrentUrl)
     assert str(src.url).rstrip("/") == "http://example.test/x.torrent"
+
+
+@pytest.mark.asyncio
+async def test_needs_magnet_client_error_reroutes_to_next_client() -> None:
+    """grabarr_direct raising NeedsMagnetClientError must trigger a
+    re-route to the next torrent-capable client (qBit) with the
+    magnet from /resolve. The original client_id must not be tried
+    again (no infinite loop)."""
+    from romarr.downloaders.types import TorrentMagnet
+
+    # Two candidates — id=1 is grabarr_direct (raises), id=2 is qBit
+    candidates = [
+        RoutingCandidate(
+            id=1, priority=1, enabled=True,
+            enable_for_torrents=True, enable_for_usenet=False,
+        ),
+        RoutingCandidate(
+            id=2, priority=2, enabled=True,
+            enable_for_torrents=True, enable_for_usenet=False,
+        ),
+    ]
+
+    grabarr_client = _FakeDownloadClient(
+        client_id=1,
+        raise_on_add=NeedsMagnetClientError(
+            "magnet:?xt=urn:btih:reroutedhash&dn=Test"
+        ),
+    )
+    qbit_client = _FakeDownloadClient(client_id=2)
+
+    async def factory(client_id: int) -> _FakeDownloadClient:
+        if client_id == 1:
+            return grabarr_client
+        assert client_id == 2, f"unexpected re-route to client_id={client_id}"
+        return qbit_client
+
+    outcome = await dispatch_winner(
+        candidate=_candidate(
+            download_url="https://grabarr.test/torznab/roms_all/download/tok.torrent"
+        ),
+        candidates=candidates,
+        client_factory=factory,
+    )
+    assert outcome.status is DispatchStatus.GRABBED
+    assert outcome.client_id == 2  # re-routed to qBit
+    assert outcome.client_native_id == "info-hash-abc"
+    assert len(qbit_client.add_torrent_calls) == 1
+    src = qbit_client.add_torrent_calls[0]["source"]
+    assert isinstance(src, TorrentMagnet)
+    assert src.magnet_uri.startswith("magnet:?xt=urn:btih:reroutedhash")
+
+
+@pytest.mark.asyncio
+async def test_needs_magnet_client_error_no_alt_returns_no_eligible() -> None:
+    """grabarr_direct returns torrent_magnet but no other torrent
+    client is configured → outcome must be NO_ELIGIBLE_CLIENT with
+    an actionable reason (not a silent FAILED)."""
+    candidates = [
+        RoutingCandidate(
+            id=1, priority=1, enabled=True,
+            enable_for_torrents=True, enable_for_usenet=False,
+        ),
+    ]
+    grabarr_client = _FakeDownloadClient(
+        client_id=1,
+        raise_on_add=NeedsMagnetClientError("magnet:?xt=urn:btih:x"),
+    )
+
+    async def factory(client_id: int) -> _FakeDownloadClient:
+        return grabarr_client
+
+    outcome = await dispatch_winner(
+        candidate=_candidate(),
+        candidates=candidates,
+        client_factory=factory,
+    )
+    assert outcome.status is DispatchStatus.NO_ELIGIBLE_CLIENT
+    assert "qBittorrent" in (outcome.reason or "")
 
 
 @pytest.mark.asyncio
