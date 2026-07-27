@@ -219,6 +219,12 @@ class GrabarrDirectClient(DownloadClient):
         version = body.get("version") or "unknown"
         return str(version)
 
+    # The dispatcher must NOT resolve the URL for us — the whole point
+    # of ``grabarr_direct`` is to hand Grabarr its own Torznab URL so
+    # ``/resolve`` picks the transfer method (http_direct / magnet /
+    # active_seed). See :attr:`DownloadClient.preserves_source_url`.
+    preserves_source_url: ClassVar[bool] = True
+
     async def add_torrent(
         self,
         source: TorrentSource,

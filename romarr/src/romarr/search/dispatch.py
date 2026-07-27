@@ -43,6 +43,7 @@ from romarr.downloaders.routing import (
 from romarr.downloaders.types import (
     NzbUrl,
     SourceKind,
+    TorrentBytes,
     TorrentMagnet,
     TorrentUrl,
 )
@@ -139,11 +140,34 @@ async def dispatch_winner(
     try:
         if source_kind is SourceKind.TORRENT:
             url = candidate.download_url
-            source = (
-                TorrentMagnet(magnet_uri=url)
-                if url.startswith("magnet:")
-                else TorrentUrl(url=url)
-            )
+            if url.startswith("magnet:"):
+                source = TorrentMagnet(magnet_uri=url)
+            elif getattr(client, "preserves_source_url", False):
+                # The client demands the raw indexer URL (e.g.
+                # ``grabarr_direct`` needs the Torznab token URL to
+                # hit Grabarr's ``/resolve``). Do NOT convert.
+                source = TorrentUrl(url=url)
+            else:
+                # Resolve the URL ourselves so the download client
+                # doesn't have to. Two failure modes we work around:
+                #
+                #   1. The indexer redirects to a magnet URI
+                #      (Grabarr's typical torrent-mode response —
+                #      Location: magnet:xxx with 302). Torrent
+                #      clients invoked via ``add_torrent_url`` don't
+                #      follow HTTP→magnet redirects; Deluge in
+                #      particular hangs waiting for a .torrent
+                #      binary and eventually reports "User timeout
+                #      caused connection failure".
+                #   2. The indexer generates the .torrent on demand
+                #      and takes 30-90 s (Grabarr's active_seed
+                #      mode). Clients' internal HTTP fetch caps at
+                #      ~30 s and reports the same timeout as (1).
+                #
+                # Any resolution failure falls back to the URL form
+                # so the pre-proxy behaviour is preserved for
+                # indexers we never had trouble with.
+                source = await _resolve_torrent_source(url)
             native_id = await client.add_torrent(
                 source, category="romarr", tags=tags
             )
@@ -174,6 +198,63 @@ async def dispatch_winner(
         client_id=client_id,
         client_native_id=native_id,
     )
+
+
+_TORRENT_BYTES_CAP = 10 * 1024 * 1024  # 10 MiB — .torrent metadata files are ~10-500 KiB
+_TORRENT_FETCH_TIMEOUT = 90.0  # seconds; Grabarr active_seed can take 30-60 s
+
+
+async def _resolve_torrent_source(
+    url: str,
+) -> TorrentBytes | TorrentMagnet | TorrentUrl:
+    """Fetch ``url`` and return the shape the download client can act on.
+
+    Three outcomes :
+
+      * The response is a redirect (301 / 302 / 303 / 307 / 308) whose
+        ``Location`` is a ``magnet:`` URI → return
+        :class:`TorrentMagnet` so the client adds the hash directly
+        (no HTTP fetch on its side).
+      * The response body is a ``.torrent`` bencoded blob → return
+        :class:`TorrentBytes` and let the client add it from memory.
+      * Anything else (network error, oversized body, unexpected
+        content-type) → fall back to :class:`TorrentUrl` and let the
+        client try the URL directly. Matches the pre-proxy behaviour.
+    """
+    import httpx
+
+    try:
+        async with httpx.AsyncClient(
+            timeout=_TORRENT_FETCH_TIMEOUT,
+            follow_redirects=False,  # We MUST see a magnet Location.
+        ) as client:
+            resp = await client.get(url)
+    except Exception:  # noqa: BLE001 — fall through to the URL form
+        return TorrentUrl(url=url)
+
+    # 30x with magnet Location → hand the client a real magnet URI.
+    if resp.status_code in (301, 302, 303, 307, 308):
+        location = resp.headers.get("location", "")
+        if location.startswith("magnet:"):
+            return TorrentMagnet(magnet_uri=location)
+        # HTTP → HTTP redirect: give up and let the client follow it.
+        return TorrentUrl(url=url)
+
+    # 2xx with a plausibly-torrent body → push bytes.
+    if 200 <= resp.status_code < 300:
+        body = resp.content
+        if len(body) > _TORRENT_BYTES_CAP:
+            return TorrentUrl(url=url)
+        # ``.torrent`` bencoded files always start with ``d`` (dict).
+        # A short sanity check filters HTML error pages that fooled a
+        # 200 status code.
+        if body.startswith(b"d"):
+            return TorrentBytes(data=body)
+        return TorrentUrl(url=url)
+
+    # Any other status → let the client try (it may know something
+    # we don't, or at least the operator gets a clearer 4xx/5xx).
+    return TorrentUrl(url=url)
 
 
 __all__ = ["DispatchOutcome", "DispatchStatus", "dispatch_winner"]

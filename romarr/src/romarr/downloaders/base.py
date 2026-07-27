@@ -55,6 +55,19 @@ class DownloadClient(ABC):
     available: ClassVar[bool] = True
     """``False`` for v1-deferred stubs (transmission, deluge, nzbget)."""
 
+    preserves_source_url: ClassVar[bool] = False
+    """True iff the client REQUIRES the original download URL as-is
+    (no server-side redirect resolution or ``.torrent`` proxy-fetch).
+
+    ``grabarr_direct`` sets this to True: it must receive the Torznab
+    ``/download/{token}.torrent`` URL verbatim so it can hit Grabarr's
+    ``/resolve`` endpoint; substituting a magnet or raw bytes breaks
+    the whole point of the direct pipeline. Regular BitTorrent clients
+    (qBit, Deluge, Transmission) leave this at False — the dispatcher
+    is then free to convert 302→magnet or fetch bytes before hand-off,
+    which sidesteps client-side quirks like Deluge's inability to
+    follow HTTP→magnet redirects."""
+
     # ---- runtime configuration ------------------------------------------------
 
     def __init__(self, *, client_id: int, name: str) -> None:
