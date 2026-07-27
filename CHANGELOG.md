@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.26](https://github.com/sharkhunterr/romarr/-/compare/v0.14.25...v0.14.26) (2026-07-27)
+
+
+### Bug Fixes
+
+* **dispatch:** resolve 302→magnet server-side so clients get TorrentMagnet ([942c9e3](https://github.com/sharkhunterr/romarr/-/commit/942c9e3f653fca261e818852ca3ee0476c23d276))
+
 ### [0.14.25](https://github.com/sharkhunterr/romarr/-/compare/v0.14.24...v0.14.25) (2026-07-27)
 
 
