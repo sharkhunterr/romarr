@@ -144,6 +144,7 @@ class RssSyncAdapter(_AdapterBase):
     async def _run(self, context: JobContext) -> JobResult:
         from sqlalchemy import select
 
+        from romarr.downloaders.is_configured import is_client_configured
         from romarr.downloaders.models import DownloadClient
         from romarr.downloaders.routing import RoutingCandidate
         from romarr.indexers.models import Indexer
@@ -204,6 +205,7 @@ class RssSyncAdapter(_AdapterBase):
                     enabled=r.enabled,
                     enable_for_torrents=r.enable_for_torrents,
                     enable_for_usenet=r.enable_for_usenet,
+                    is_configured=is_client_configured(r),
                 )
                 for r in client_rows
             ]

@@ -62,6 +62,11 @@ class RoutingCandidate(BaseModel):
     enabled: bool
     enable_for_torrents: bool
     enable_for_usenet: bool
+    # Populated from ``DownloadClient.is_configured`` — True iff the
+    # row carries the credential its type expects (password for
+    # qBit/Deluge, api_key for SAB/Grabarr). Default True keeps
+    # older callers that don't wire the field back-compatible.
+    is_configured: bool = True
 
     def supports(self, source_kind: SourceKind) -> bool:
         if source_kind is SourceKind.TORRENT:
@@ -70,7 +75,15 @@ class RoutingCandidate(BaseModel):
 
 
 def _eligible(candidate: RoutingCandidate, source_kind: SourceKind) -> bool:
-    return candidate.enabled and candidate.supports(source_kind)
+    # Skip clients missing their credentials — dispatching to one
+    # produces confusing ``pending_retry`` errors when the actual
+    # cause is "no password saved". The Test button is the operator
+    # signal that a client is ready; is_configured=True mirrors it.
+    return (
+        candidate.enabled
+        and candidate.is_configured
+        and candidate.supports(source_kind)
+    )
 
 
 def route_release(

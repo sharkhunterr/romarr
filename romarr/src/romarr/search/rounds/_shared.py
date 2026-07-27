@@ -356,6 +356,7 @@ async def dispatch_best_for_game(
       * ``status`` (str|None) — ``DispatchStatus.value`` when we
         actually called the dispatcher.
     """
+    from romarr.downloaders.is_configured import is_client_configured
     from romarr.downloaders.models import DownloadClient
     from romarr.downloaders.routing import RoutingCandidate
     from romarr.search._clients import make_download_client_factory
@@ -455,6 +456,7 @@ async def dispatch_best_for_game(
             enabled=r.enabled,
             enable_for_torrents=r.enable_for_torrents,
             enable_for_usenet=r.enable_for_usenet,
+            is_configured=is_client_configured(r),
         )
         for r in client_rows
     ]
@@ -490,10 +492,30 @@ async def dispatch_best_for_game(
         "no_grab_reason": (
             None
             if dispatched
-            else f"dispatch_failed: {outcome.status.value}"
+            # Include the dispatcher's underlying ``reason`` when it
+            # supplied one — a bare ``pending_retry`` tells the
+            # operator nothing about which client failed or why,
+            # while ``pending_retry: transient: Deluge auth failed``
+            # points straight at the fix.
+            else _fmt_dispatch_reason(outcome)
         ),
         "status": outcome.status.value,
     }
+
+
+def _fmt_dispatch_reason(outcome: object) -> str:
+    """Combine DispatchOutcome.status + .reason into the operator
+    string. ``dispatch_failed: <status>`` when no reason is set,
+    ``dispatch_failed: <status>: <reason>`` otherwise.
+    """
+    status = getattr(outcome, "status", None)
+    status_val = getattr(status, "value", status)
+    reason = getattr(outcome, "reason", None)
+    if reason:
+        # Truncate long stack-traces to keep the summary readable.
+        r = str(reason).strip().splitlines()[0][:180]
+        return f"dispatch_failed: {status_val}: {r}"
+    return f"dispatch_failed: {status_val}"
 
 
 async def _ensure_queue_entry_for_grab(

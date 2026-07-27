@@ -52,13 +52,9 @@ router = APIRouter(prefix="/api/v3/downloadclient", tags=["DownloadClients"])
 
 
 def _to_read(row: DownloadClientRow) -> DownloadClientRead:
-    is_configured = (
-        row.password_encrypted is not None
-        if row.type == ClientType.QBITTORRENT.value
-        else row.api_key_encrypted is not None
-        if row.type == ClientType.SABNZBD.value
-        else False
-    )
+    from romarr.downloaders.is_configured import is_client_configured
+
+    is_configured = is_client_configured(row)
     return DownloadClientRead.model_validate(
         {
             "id": row.id,

@@ -22,6 +22,7 @@ from romarr.api.models import QueueEntry
 from romarr.auth import Principal
 from romarr.domain.models import Game, Platform, PlatformFormat, Release
 from romarr.downloaders.models import DownloadClient
+from romarr.downloaders.is_configured import is_client_configured
 from romarr.downloaders.routing import RoutingCandidate
 from romarr.downloaders.types import SourceKind
 from romarr.indexers.models import Indexer
@@ -213,6 +214,7 @@ async def _routing_candidates(session: AsyncSession) -> list[RoutingCandidate]:
             enabled=row.enabled,
             enable_for_torrents=row.enable_for_torrents,
             enable_for_usenet=row.enable_for_usenet,
+            is_configured=is_client_configured(row),
         )
         for row in rows
     ]
