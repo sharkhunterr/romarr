@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.28](https://github.com/sharkhunterr/romarr/-/compare/v0.14.27...v0.14.28) (2026-07-27)
+
+
+### Bug Fixes
+
+* **qbittorrent:** recognise qBit 5.x QBT_SID_<port> cookie + probe fallback ([786bfb1](https://github.com/sharkhunterr/romarr/-/commit/786bfb180fc9fe802311c02dcbe46ab68ee99699))
+
 ### [0.14.27](https://github.com/sharkhunterr/romarr/-/compare/v0.14.26...v0.14.27) (2026-07-27)
 
 ### [0.14.26](https://github.com/sharkhunterr/romarr/-/compare/v0.14.25...v0.14.26) (2026-07-27)
