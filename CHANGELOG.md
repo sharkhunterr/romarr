@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.29](https://github.com/sharkhunterr/romarr/-/compare/v0.14.28...v0.14.29) (2026-07-27)
+
+
+### Bug Fixes
+
+* three post-first-import papercuts (watcher default, magnet re-route, placeholder promotion) ([57ef86e](https://github.com/sharkhunterr/romarr/-/commit/57ef86ef68926726745d7163fa7cb01f27c859af))
+
 ### [0.14.28](https://github.com/sharkhunterr/romarr/-/compare/v0.14.27...v0.14.28) (2026-07-27)
 
 
