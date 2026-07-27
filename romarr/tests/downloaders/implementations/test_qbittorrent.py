@@ -118,6 +118,69 @@ async def test_login_403_raises_auth() -> None:
         await _client().test_connection()
 
 
+@respx.mock
+async def test_login_accepts_qbit5_qbt_sid_cookie() -> None:
+    """qBittorrent 5.x renames the session cookie from ``SID`` to
+    ``QBT_SID_<internal-port>`` (e.g. ``QBT_SID_8080``) and returns
+    204 instead of ``200 Ok.`` on login. Both must be recognised as
+    a successful session — no probe should be needed."""
+    respx.post(f"{_BASE}/auth/login").mock(
+        return_value=httpx.Response(
+            204,
+            headers={
+                "Set-Cookie": (
+                    "QBT_SID_8080=fnm+XfAfqdB92RorMJ3ZfK+RwHmaZCDy; "
+                    "HttpOnly; path=/"
+                )
+            },
+        )
+    )
+    respx.get(f"{_BASE}/app/webapiVersion").mock(
+        return_value=httpx.Response(200, content=b"2.11.4")
+    )
+    respx.get(f"{_BASE}/app/version").mock(
+        return_value=httpx.Response(200, content=b"v5.2.3")
+    )
+    version = await _client().test_connection()
+    assert "qBittorrent" in version
+    assert "v5.2.3" in version
+
+
+@respx.mock
+async def test_login_no_cookie_but_probe_succeeds_is_treated_as_authed() -> None:
+    """qBit with AuthSubnetWhitelist covering Romarr returns 200 (or 204)
+    without a Set-Cookie because it bypasses auth per-request. Romarr
+    used to reject this as ``did not return an SID cookie`` even though
+    subsequent API calls work fine. The probe now confirms auth is
+    effectively in place before failing."""
+    respx.post(f"{_BASE}/auth/login").mock(
+        return_value=httpx.Response(204)  # no body, no cookie
+    )
+    respx.get(f"{_BASE}/app/webapiVersion").mock(
+        return_value=httpx.Response(200, content=b"2.9.3")
+    )
+    respx.get(f"{_BASE}/app/version").mock(
+        return_value=httpx.Response(200, content=b"v4.6.5")
+    )
+    version = await _client().test_connection()
+    assert "qBittorrent" in version
+    assert "v4.6.5" in version
+
+
+@respx.mock
+async def test_login_no_cookie_and_probe_401_raises_auth() -> None:
+    """Empty login response + probe returns 401 = the creds really are
+    wrong (qBit lied with a 2xx on the login itself)."""
+    respx.post(f"{_BASE}/auth/login").mock(
+        return_value=httpx.Response(204)
+    )
+    respx.get(f"{_BASE}/app/version").mock(
+        return_value=httpx.Response(401, content=b"")
+    )
+    with pytest.raises(AuthError):
+        await _client().test_connection()
+
+
 # ---------------------------------------------------------------------------
 # CL003 / FR-005a — minimum webapi version
 # ---------------------------------------------------------------------------

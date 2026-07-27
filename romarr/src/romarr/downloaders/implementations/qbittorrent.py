@@ -166,18 +166,36 @@ class QBittorrentClient(DownloadClient):
         body = response.text.strip().lower()
         if body and body != "ok.":
             raise AuthError(f"qBittorrent rejected login: {response.text!r}")
-        # No SID cookie when qBit's ``WebUI\AuthSubnetWhitelist``
-        # accepts the caller (slice 380): the server doesn't
-        # bother minting a session because it'll bypass auth on
-        # every subsequent request anyway. We only treat the
-        # missing cookie as an error when the operator
-        # explicitly asked for credentials by setting a
-        # username/password — in that case the absence means
-        # qBit didn't login as expected.
-        if (
-            self._username or self._password
-        ) and "SID" not in client.cookies:
-            raise AuthError("qBittorrent did not return an SID cookie")
+        # Session cookie detection. qBit's cookie name changed with 5.x:
+        #   * qBit ≤ 4.x → ``SID``
+        #   * qBit 5.x  → ``QBT_SID_<internal-port>`` (e.g.
+        #     ``QBT_SID_8080``); the port encoded is qBit's internal
+        #     listen port, NOT the port Romarr talks to (Docker port
+        #     mapping is invisible to qBit).
+        # We accept ANY cookie whose name starts with ``SID`` or
+        # ``QBT_SID``. When no session cookie is present, probe
+        # ``/api/v2/app/version`` to tell apart "subnet-bypass /
+        # cookieless-but-authed" from "creds are wrong".
+        has_session_cookie = any(
+            name.upper().startswith(("SID", "QBT_SID"))
+            for name in client.cookies.keys()
+        )
+        if not has_session_cookie:
+            probe = await client.get(
+                f"{self.base_url}/app/version",
+                headers={"Referer": self._origin},
+            )
+            if probe.status_code in (401, 403):
+                raise AuthError(
+                    "qBittorrent rejected login (no session cookie and "
+                    f"probe returned HTTP {probe.status_code})"
+                )
+            if probe.status_code >= 400:
+                raise AuthError(
+                    "qBittorrent probe after cookieless login failed: "
+                    f"HTTP {probe.status_code}"
+                )
+            # 2xx probe → treat as authenticated (subnet-bypass case).
 
     @property
     def _origin(self) -> str:
