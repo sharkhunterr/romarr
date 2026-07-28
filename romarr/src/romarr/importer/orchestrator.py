@@ -1211,8 +1211,27 @@ async def run_import(
             "re-add it."
         )
     else:
+        # Build a diagnostic string the operator can act on instead
+        # of the opaque "no game matched" default. We surface :
+        #   * the filename that was analysed,
+        #   * whether SHA-1 was computed + looked up in the DAT,
+        #   * the parser's best guess (title + platform hint),
+        #   * the closest monitored game by fuzzy score (if any).
+        # All best-effort — any diagnostic failure falls through to
+        # the plain message so we never turn a park failure into a
+        # crash.
+        try:
+            diag = await _diagnose_no_match(
+                session=session,
+                source_path=source_path,
+                sha1=sha1,
+            )
+        except Exception:  # noqa: BLE001
+            diag = None
         failure_exc = GameNotMatched(
-            "no game matched (orchestrator still in audit-only mode)"
+            "no game matched"
+            + (f" — {diag}" if diag else "")
+            + f" (filename={context.source_path.name!r})"
         )
     outcome = await make_failure_outcome(
         session=session,
@@ -1958,6 +1977,118 @@ def _read_header_platform(source_path: "Path") -> str | None:
         if result.status is HeaderReadStatus.OK and result.platform_slug:
             return result.platform_slug
     return None
+
+
+async def _diagnose_no_match(
+    *,
+    session: AsyncSession,
+    source_path: "Path",
+    sha1: str | None,
+) -> str | None:
+    """Human-readable explanation of WHY the game matcher gave up.
+
+    Called only from the ``match:no_game`` failure branch to enrich
+    the ``GameNotMatched`` exception message. Runs the same three
+    signals :meth:`_identify_suggestions` uses (header, filename
+    parser, DAT), then finds the closest monitored game by
+    RapidFuzz WRatio so the operator sees the near-miss (typical:
+    a monitored ``"Disney's Tarzan: Return to the Jungle"`` when
+    the file is named ``"Tarzan - Return to the Jungle …"``).
+
+    Returns something like:
+        ``parser='Tarzan Return to the Jungle' platform=GBA
+        closest='Disney's Tarzan: Return to the Jungle' score=78
+        (< 85 threshold)``
+
+    ``None`` when the diagnostic itself can't run — the caller
+    falls back to the plain "no game matched" message.
+    """
+    parts: list[str] = []
+
+    # 1. Parser guess
+    try:
+        parsed = default_dispatcher().parse(source_path.name)
+    except Exception:  # noqa: BLE001
+        parsed = None
+    parsed_title: str | None = None
+    if parsed and parsed.title:
+        parsed_title = parsed.title
+        parts.append(f"parser={parsed.title!r} (conf={parsed.confidence:.2f})")
+
+    # 2. Platform hint
+    platform_slug: str | None = None
+    try:
+        platform_slug = await asyncio.to_thread(
+            _read_header_platform, source_path
+        )
+    except Exception:  # noqa: BLE001
+        platform_slug = None
+    if not platform_slug and parsed and parsed.extra:
+        platform_slug = parsed.extra.get("platform_slug")
+    platform_id: int | None = None
+    if platform_slug:
+        row = (
+            await session.execute(
+                select(Platform.id).where(Platform.slug == platform_slug)
+            )
+        ).scalar_one_or_none()
+        if row is not None:
+            platform_id = int(row)
+        parts.append(f"platform={platform_slug}")
+
+    # 3. SHA-1 / DAT probe
+    if sha1 and platform_id is not None:
+        try:
+            dat_manager = DatManager(session)
+            best_dat = await dat_manager.best_match_by_sha1(
+                platform_id=platform_id, sha1=sha1
+            )
+        except Exception:  # noqa: BLE001
+            best_dat = None
+        if best_dat is not None and best_dat.winner.name:
+            parts.append(f"dat={best_dat.winner.name!r}")
+        else:
+            parts.append("dat=no_match")
+
+    # 4. Closest monitored game by RapidFuzz — surfaces the
+    # near-miss (Disney's Tarzan case).
+    if parsed_title or source_path.stem:
+        needle = parsed_title or source_path.stem
+        try:
+            games_q = select(Game.id, Game.title, Game.platform_id).where(
+                Game.monitored.is_(True)
+            )
+            if platform_id is not None:
+                games_q = games_q.where(Game.platform_id == platform_id)
+            games = (await session.execute(games_q)).all()
+        except Exception:  # noqa: BLE001
+            games = []
+        best: tuple[str, int] | None = None
+        if games:
+            from rapidfuzz import fuzz
+            import re as _re
+
+            bracket_re = _re.compile(r"\[[^\]]*\]")
+
+            def _clean(t: str) -> str:
+                return bracket_re.sub(" ", t).lower().strip()
+
+            cleaned = _clean(needle)
+            for _gid, gtitle, _pid in games:
+                if not gtitle:
+                    continue
+                score = int(fuzz.WRatio(cleaned, _clean(gtitle)))
+                if best is None or score > best[1]:
+                    best = (gtitle, score)
+        if best is not None:
+            gate = "≥ 85 OK" if best[1] >= 85 else "< 85 threshold"
+            parts.append(
+                f"closest={best[0]!r} score={best[1]} ({gate})"
+            )
+        else:
+            parts.append("closest=no_monitored_games")
+
+    return " ".join(parts) if parts else None
 
 
 async def _identify_suggestions(
