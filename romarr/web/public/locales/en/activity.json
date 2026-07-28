@@ -33,6 +33,11 @@
     "removeAria": "Remove download {{id}} (also drops files)",
     "removeConfirm": "Remove this download AND delete its on-disk files?",
     "removeFailedFallback": "Failed to remove",
+    "retry": "Retry",
+    "retrying": "Retrying…",
+    "retryAria": "Retry download {{id}}",
+    "retryFailedFallback": "Retry failed",
+    "manualMatch": "Manual match →",
     "filter": {
       "ariaLabel": "Queue state filter",
       "all": "All",

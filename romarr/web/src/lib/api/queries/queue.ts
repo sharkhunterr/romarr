@@ -124,3 +124,29 @@ export function useDeleteQueueEntry(): UseMutationResult<
     },
   });
 }
+
+/**
+ * Reset a failed / stuck / pending_retry queue entry so the
+ * next scheduler tick re-fires the download client action
+ * (T046 — ``POST /api/v3/queue/{id}/retry``).
+ *
+ * State-only reset: `attempt_count` cleared, `last_attempt_at`
+ * blanked, error message cleared, state → ``stuck``. The
+ * scheduler tick picks it up on its next cadence.
+ */
+export function useRetryQueueEntry(): UseMutationResult<
+  QueueEntry,
+  ApiError,
+  number
+> {
+  const qc = useQueryClient();
+  return useMutation<QueueEntry, ApiError, number>({
+    mutationFn: (id) =>
+      apiFetch<QueueEntry>(`/api/v3/queue/${id}/retry`, {
+        method: "POST",
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["queue"] });
+    },
+  });
+}

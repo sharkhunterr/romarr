@@ -24,6 +24,7 @@ import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useDownloadClientsById } from "@/lib/api/queries/download-clients";
 import {
   useDeleteQueueEntry,
+  useRetryQueueEntry,
   useQueue,
   type QueueEntry,
   type QueueState,
@@ -143,6 +144,14 @@ function QueueRow(props: {
   const { t } = useTranslation("activity");
   const { entry, clientName } = props;
   const remove = useDeleteQueueEntry();
+  const retry = useRetryQueueEntry();
+  // Retry is meaningful only for entries the scheduler can pick
+  // back up — completed rows are terminal, active rows already
+  // moving. Matches the backend's 409-on-completed guard.
+  const canRetry =
+    entry.state === "failed" ||
+    entry.state === "stuck" ||
+    entry.state === "pending_retry";
   const stateClass =
     STATE_BADGE[entry.state] ??
     "bg-zinc-800 text-zinc-300 ring-zinc-700";
@@ -274,7 +283,40 @@ function QueueRow(props: {
         </p>
       )}
 
-      <div className="mt-2 flex justify-end">
+      <div className="mt-2 flex justify-end gap-2">
+        {entry.state === "failed" &&
+          (entry.errorMsg ?? "").startsWith("match:no_game") && (
+            <a
+              href="/settings/unidentified"
+              className={[
+                "rounded-md border border-zinc-700 px-2.5 py-1",
+                "text-[0.65rem] font-medium text-zinc-200",
+                "hover:bg-zinc-800",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+              ].join(" ")}
+            >
+              {t("queue.manualMatch")}
+            </a>
+          )}
+        {canRetry && (
+          <button
+            type="button"
+            onClick={() => retry.mutate(entry.id)}
+            disabled={retry.isPending}
+            className={[
+              "rounded-md border border-brand/50 px-2.5 py-1",
+              "text-[0.65rem] font-medium text-brand",
+              "hover:bg-brand/10",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+              "disabled:cursor-not-allowed disabled:opacity-60",
+            ].join(" ")}
+            aria-label={t("queue.retryAria", {
+              id: entry.downloadClientNativeId,
+            })}
+          >
+            {retry.isPending ? t("queue.retrying") : t("queue.retry")}
+          </button>
+        )}
         <button
           type="button"
           onClick={onRemove}
@@ -293,6 +335,11 @@ function QueueRow(props: {
           {remove.isPending ? t("queue.removing") : t("queue.remove")}
         </button>
       </div>
+      {retry.isError && (
+        <p role="alert" className="mt-1 text-right text-[0.65rem] text-red-300">
+          {retry.error?.message ?? t("queue.retryFailedFallback")}
+        </p>
+      )}
       {remove.isError && (
         <p role="alert" className="mt-1 text-right text-[0.65rem] text-red-300">
           {remove.error?.message ?? t("queue.removeFailedFallback")}

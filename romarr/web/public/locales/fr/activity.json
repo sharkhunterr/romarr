@@ -33,6 +33,11 @@
     "removeAria": "Retirer le téléchargement {{id}} (supprime aussi les fichiers)",
     "removeConfirm": "Retirer ce téléchargement ET supprimer ses fichiers sur disque ?",
     "removeFailedFallback": "Échec de la suppression",
+    "retry": "Réessayer",
+    "retrying": "Relance…",
+    "retryAria": "Réessayer le téléchargement {{id}}",
+    "retryFailedFallback": "Échec de la relance",
+    "manualMatch": "Match manuel →",
     "filter": {
       "ariaLabel": "Filtre d'état de la file",
       "all": "Tous",
