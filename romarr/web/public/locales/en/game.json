@@ -346,6 +346,10 @@
       "failed_one": "Indexer responded with an error. Check the indexer's health in Settings → Indexers.",
       "failed_other": "{{count}} indexers responded with errors. Check Settings → Indexers."
     },
+    "scoreBreakdown": {
+      "title": "Score breakdown",
+      "total": "Total: {{total}}"
+    },
     "detail": {
       "fields": {
         "indexer": "Indexer",

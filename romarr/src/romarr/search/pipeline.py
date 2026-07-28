@@ -25,7 +25,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from romarr.profiles.evaluator import ProfileEvaluator
-from romarr.profiles.scoring import compute_custom_format_score
+from romarr.profiles.scoring import (
+    compute_custom_format_score,
+    compute_matched_custom_formats,
+)
 from romarr.profiles.types import Decision, ReleaseFacts
 from romarr.search.types import (
     Candidate,
@@ -575,22 +578,33 @@ def run_pipeline(
                     )
                 )
 
-    # ---- 10: Custom Format scoring — rejector becomes a heavy malus ----------
-    cf_score = compute_custom_format_score(custom_formats, facts)
+    # ---- 10: Custom Format scoring — one contribution per matched CF --------
+    # Pre-slice this emitted a single opaque ``custom_format aggregate``
+    # line; operators couldn't tell WHICH CustomFormat rejected a
+    # candidate. Now every matched CF gets its own contribution
+    # (source=custom_format, name=<CF name>, value=<CF score>) so the
+    # breakdown reads e.g. ``custom_format · Non-ROM content · -10000``.
+    # The rejector penalty is emitted as a separate summary line when
+    # the aggregate crosses the threshold — the individual per-CF
+    # values remain visible so the operator sees which format(s)
+    # caused the rejection.
+    matched_cfs = compute_matched_custom_formats(custom_formats, facts)
+    cf_score = 0
+    for cf_name, cf_value in matched_cfs:
+        cf_score += cf_value
+        contributions.append(
+            ScoreContribution(
+                source="custom_format",
+                name=cf_name,
+                value=cf_value,
+            )
+        )
     if cf_score <= -1000:  # Configurable rejector threshold per FR-011
         contributions.append(
             ScoreContribution(
                 source="custom_format",
-                name="custom-format rejector matched",
+                name="rejector threshold reached",
                 value=PENALTY_CUSTOM_FORMAT_REJECTOR,
-            )
-        )
-    elif cf_score:
-        contributions.append(
-            ScoreContribution(
-                source="custom_format",
-                name="custom_format aggregate",
-                value=cf_score,
             )
         )
 

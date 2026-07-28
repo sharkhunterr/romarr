@@ -3,20 +3,40 @@
  *
  * Surfaces every field on ``PlatformRead``: identity (slug,
  * name, short_name, manufacturer, year, generation), aliases
- * used by the grab + manual-search detectors, on-disk format
- * extensions, metadata provider IDs (IGDB / ScreenScraper /
- * MobyGames / LaunchBox / RetroAchievements), and the pack
- * provenance (source + version) that introduced the row.
+ * used by the grab + manual-search detectors, metadata provider
+ * IDs (IGDB / ScreenScraper / MobyGames / LaunchBox /
+ * RetroAchievements), and the pack provenance (source +
+ * version) that introduced the row.
+ *
+ * Also folds the former "Quality Definitions" catalogue in as a
+ * ``Formats`` section — each recognised extension, its
+ * ``format_type`` (cartridge / disc / …), size floor/ceiling,
+ * and the pack it came from. Editing per-format lives under the
+ * admin per-platform format CRUD.
  */
 
-import { type ReactElement } from "react";
+import { useMemo, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Platform } from "@/lib/api/queries/platforms";
+import {
+  useQualityDefinitions,
+  type QualityDefinitionFormat,
+} from "@/lib/api/queries/quality-definitions";
 
 interface PlatformDetailModalProps {
   platform: Platform;
   onClose: () => void;
+}
+
+const _MB = 1024 * 1024;
+
+function _formatSize(bytes: number | null, unbounded: string): string {
+  if (bytes === null) return unbounded;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < _MB) return `${(bytes / 1024).toFixed(0)} KB`;
+  if (bytes < 1024 * _MB) return `${(bytes / _MB).toFixed(1)} MB`;
+  return `${(bytes / (1024 * _MB)).toFixed(2)} GB`;
 }
 
 export function PlatformDetailModal(
@@ -25,6 +45,15 @@ export function PlatformDetailModal(
   const { t } = useTranslation("settings");
   const { platform } = props;
   const aliases = platform.aliases ?? [];
+  const qualityDefs = useQualityDefinitions();
+  const formats: QualityDefinitionFormat[] = useMemo(() => {
+    if (!qualityDefs.isSuccess) return [];
+    const entry = qualityDefs.data.find(
+      (p) => p.platform_id === platform.id,
+    );
+    return entry?.formats ?? [];
+  }, [qualityDefs.isSuccess, qualityDefs.data, platform.id]);
+  const unbounded = t("platforms.detail.unbounded");
   return (
     <div
       role="dialog"
@@ -131,6 +160,82 @@ export function PlatformDetailModal(
                 }
               />
             </dl>
+          </Section>
+
+          <Section title={t("platforms.detail.sections.formats")}>
+            {qualityDefs.isLoading && (
+              <p className="text-[0.7rem] text-zinc-500">
+                {t("platforms.detail.formats.loading")}
+              </p>
+            )}
+            {qualityDefs.isError && (
+              <p className="text-[0.7rem] text-red-400">
+                {qualityDefs.error.message}
+              </p>
+            )}
+            {qualityDefs.isSuccess && formats.length === 0 && (
+              <p className="text-[0.7rem] text-zinc-500">
+                {t("platforms.detail.formats.empty")}
+              </p>
+            )}
+            {qualityDefs.isSuccess && formats.length > 0 && (
+              <div className="-mx-4 overflow-x-auto sm:mx-0">
+                <table className="min-w-full text-[0.7rem]">
+                  <thead className="text-[0.6rem] uppercase tracking-widest text-zinc-500">
+                    <tr>
+                      <th className="px-2 py-1 text-left">
+                        {t("platforms.detail.formats.extension")}
+                      </th>
+                      <th className="px-2 py-1 text-left">
+                        {t("platforms.detail.formats.type")}
+                      </th>
+                      <th className="px-2 py-1 text-right">
+                        {t("platforms.detail.formats.minSize")}
+                      </th>
+                      <th className="px-2 py-1 text-right">
+                        {t("platforms.detail.formats.maxSize")}
+                      </th>
+                      <th className="px-2 py-1 text-left">
+                        {t("platforms.detail.formats.source")}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {formats.map((f) => (
+                      <tr
+                        key={f.id}
+                        className="border-t border-zinc-800/60"
+                      >
+                        <td className="px-2 py-1 font-mono text-zinc-100">
+                          {f.extension}
+                        </td>
+                        <td className="px-2 py-1 text-zinc-300">
+                          {f.format_type}
+                        </td>
+                        <td className="px-2 py-1 text-right font-mono text-zinc-400">
+                          {_formatSize(f.min_size_bytes, unbounded)}
+                        </td>
+                        <td className="px-2 py-1 text-right font-mono text-zinc-400">
+                          {_formatSize(f.max_size_bytes, unbounded)}
+                        </td>
+                        <td className="px-2 py-1">
+                          <span
+                            className={[
+                              "rounded px-1.5 py-0.5 text-[0.6rem]",
+                              f.pack_source === "builtin"
+                                ? "bg-zinc-800 text-zinc-300"
+                                : "bg-emerald-700/30 text-emerald-200",
+                            ].join(" ")}
+                          >
+                            {f.pack_source}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </Section>
 
           {platform.newznab_category_ids &&

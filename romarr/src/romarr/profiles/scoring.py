@@ -49,6 +49,26 @@ def compute_custom_format_score(
     return total
 
 
+def compute_matched_custom_formats(
+    formats: Iterable[_CustomFormatShape],
+    facts: ReleaseFacts,
+) -> list[tuple[str, int]]:
+    """Return ``(name, score)`` for every CustomFormat that matched.
+
+    Enables the search pipeline to surface per-format contributions
+    in :class:`ScoreBreakdown` instead of a single opaque
+    ``custom_format aggregate`` line — operators need to know
+    WHICH CustomFormat rejected a candidate, not just that "some
+    custom format" did.
+    """
+    matched: list[tuple[str, int]] = []
+    for fmt in formats:
+        if _format_matches(fmt, facts):
+            name = getattr(fmt, "name", None) or "custom_format"
+            matched.append((str(name), int(fmt.score)))
+    return matched
+
+
 def _format_matches(
     fmt: _CustomFormatShape, facts: ReleaseFacts
 ) -> bool:
@@ -257,4 +277,8 @@ def _walk_condition(condition: Mapping[str, Any]) -> Iterable[Mapping[str, Any]]
             yield branch
 
 
-__all__ = ["compute_custom_format_score", "expected_naming_conventions"]
+__all__ = [
+    "compute_custom_format_score",
+    "compute_matched_custom_formats",
+    "expected_naming_conventions",
+]

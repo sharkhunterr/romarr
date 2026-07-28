@@ -346,6 +346,10 @@
       "failed_one": "L'indexeur a renvoyé une erreur. Vérifiez sa santé dans Paramètres → Indexeurs.",
       "failed_other": "{{count}} indexeurs en erreur. Vérifiez Paramètres → Indexeurs."
     },
+    "scoreBreakdown": {
+      "title": "Détail du score",
+      "total": "Total : {{total}}"
+    },
     "detail": {
       "fields": {
         "indexer": "Indexeur",

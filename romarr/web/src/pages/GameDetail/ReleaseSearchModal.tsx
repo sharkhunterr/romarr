@@ -575,6 +575,10 @@ function CandidateRow(props: {
       )}
 
       {expanded && (
+        <ScoreBreakdownPanel candidate={candidate} />
+      )}
+
+      {expanded && (
         <div className="mt-1 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 rounded border border-zinc-800/70 bg-zinc-950/40 p-2 text-[0.7rem]">
           {/* Slice 451 — DAT match panel. Surfaces *what* the
               hash matched against (canonical entry name, DAT
@@ -1020,6 +1024,68 @@ export function ReleaseSearchModal(
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Expanded scoring breakdown — shows the total + each per-source
+ * contribution as a chip. Positive contributions render in the
+ * brand tone, negative in red so the operator immediately sees
+ * which parts of the pipeline penalised the candidate (typical
+ * offenders: ``custom_format`` when a rejector matched,
+ * ``size`` when the file is outside profile bounds).
+ *
+ * Rendered inside the expandable row of ``CandidateRow`` so the
+ * detail lives next to the candidate it explains, not behind a
+ * hover-only browser tooltip.
+ */
+function ScoreBreakdownPanel(props: { candidate: Candidate }): ReactElement | null {
+  const { t } = useTranslation("game");
+  const { candidate } = props;
+  const contributions = _scoreContributions(candidate);
+  if (contributions.length === 0) return null;
+  const total = _scoreOf(candidate);
+  return (
+    <div className="mt-1 rounded border border-zinc-800/70 bg-zinc-950/40 p-2 text-[0.7rem]">
+      <div className="mb-1 flex items-baseline justify-between">
+        <span className="text-[0.65rem] uppercase tracking-widest text-zinc-400">
+          {t("search.scoreBreakdown.title")}
+        </span>
+        {total !== null && (
+          <span className="font-mono text-xs text-zinc-100">
+            {t("search.scoreBreakdown.total", { total })}
+          </span>
+        )}
+      </div>
+      <ul className="flex flex-wrap gap-1">
+        {contributions.map((c, i) => {
+          const positive = c.value > 0;
+          const negative = c.value < 0;
+          const tone = positive
+            ? "bg-brand/20 text-brand"
+            : negative
+              ? "bg-red-950/40 text-red-300"
+              : "bg-zinc-800 text-zinc-300";
+          const sign = positive ? "+" : "";
+          return (
+            <li
+              key={i}
+              className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono ${tone}`}
+              title={`${c.source} · ${c.name}`}
+            >
+              <span className="text-[0.6rem] uppercase tracking-wider opacity-70">
+                {c.source}
+              </span>
+              <span className="text-zinc-100/80">{c.name}</span>
+              <span className="font-semibold">
+                {sign}
+                {c.value}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

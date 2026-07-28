@@ -6,7 +6,6 @@
     "comingSoon": "soon",
     "profiles": "Profiles",
     "media-management": "Media Management",
-    "quality-definitions": "Quality Definitions",
     "indexers": "Indexers",
     "download-clients": "Download Clients",
     "dat-sources": "DAT Sources",
@@ -1037,11 +1036,13 @@
     "detail": {
       "modalTitle": "{{name}} — details",
       "close": "Close",
+      "unbounded": "—",
       "sections": {
         "identity": "Identity",
         "aliases": "Aliases (used by grab + manual search detection)",
         "providerIds": "Metadata provider IDs",
-        "newznabCategories": "Newznab category IDs"
+        "newznabCategories": "Newznab category IDs",
+        "formats": "Recognised formats"
       },
       "fields": {
         "slug": "Slug (folder name)",
@@ -1050,6 +1051,15 @@
         "manufacturer": "Manufacturer",
         "releaseYear": "Release year",
         "pack": "From pack"
+      },
+      "formats": {
+        "loading": "Loading formats…",
+        "empty": "No format defined for this platform.",
+        "extension": "Extension",
+        "type": "Type",
+        "minSize": "Min size",
+        "maxSize": "Max size",
+        "source": "Source"
       }
     }
   },
