@@ -170,5 +170,17 @@
         "values": "\\((?:M4A|MP3|FLAC|OGG|WAV|AAC|OPUS)\\)"
       }
     ]
+  },
+  {
+    "seed_key": "prefer-minerva-source",
+    "name": "MiNERVA Archive (preferred source)",
+    "score": 30,
+    "conditions": [
+      {
+        "field": "title",
+        "operator": "matches_regex",
+        "values": "\\[MiNERVA Archive\\]"
+      }
+    ]
   }
 ]

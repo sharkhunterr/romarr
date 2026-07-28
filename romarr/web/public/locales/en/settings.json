@@ -867,6 +867,15 @@
       "conditionsHint": "All conditions must match (AND logic). The \"Title\" field regexes on the raw indexer title — great for rejecting Music/OST/Manual entries the parser can't semantically classify.",
       "addCondition": "Add",
       "removeCondition": "Remove",
+      "presetsLabel": "Presets",
+      "presetsPick": "Load a preset…",
+      "presets": {
+        "musicOst": "Reject Music/OST/Manual",
+        "minervaSource": "Prefer MiNERVA (+30)",
+        "sourceRegex": "Preferred sources (regex)",
+        "releaseGroup": "Preferred team / release group",
+        "freeleech": "Freeleech (+10)"
+      },
       "field": "Field",
       "operator": "Operator",
       "value": "Value",

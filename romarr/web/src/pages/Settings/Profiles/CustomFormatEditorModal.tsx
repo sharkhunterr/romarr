@@ -79,6 +79,87 @@ function _emptyCondition(): DraftCondition {
   return { field: "title", operator: "matches_regex", raw: "" };
 }
 
+// Ready-to-use starting points the operator can pick from a menu.
+// Each preset fills the whole form (name + score + conditions);
+// the operator then tweaks and saves. Kept intentionally short —
+// the goal is "click preset, adjust regex, save" rather than a
+// full rules language.
+interface CFPreset {
+  key: string;
+  labelKey: string; // i18n key under customFormats.editor.presets.<key>
+  name: string;
+  score: number;
+  conditions: DraftCondition[];
+}
+
+const _PRESETS: readonly CFPreset[] = [
+  {
+    key: "musicOst",
+    labelKey: "musicOst",
+    name: "Non-ROM content",
+    score: -10000,
+    conditions: [
+      {
+        field: "title",
+        operator: "matches_regex",
+        raw: "\\b(?:Music|Soundtrack|OST|Manual|Video|Scan|Cover Art|Artwork)\\b",
+      },
+    ],
+  },
+  {
+    key: "minervaSource",
+    labelKey: "minervaSource",
+    name: "MiNERVA Archive (preferred source)",
+    score: 30,
+    conditions: [
+      {
+        field: "title",
+        operator: "matches_regex",
+        raw: "\\[MiNERVA Archive\\]",
+      },
+    ],
+  },
+  {
+    key: "sourceRegex",
+    labelKey: "sourceRegex",
+    name: "Preferred indexer source",
+    score: 20,
+    conditions: [
+      {
+        field: "title",
+        operator: "matches_regex",
+        raw: "\\[(?:CDRomance|Vimm|Edge Emulation)\\]",
+      },
+    ],
+  },
+  {
+    key: "releaseGroup",
+    labelKey: "releaseGroup",
+    name: "Preferred release group",
+    score: 15,
+    conditions: [
+      {
+        field: "release_group",
+        operator: "matches_regex",
+        raw: "^(?:GROUP1|GROUP2)$",
+      },
+    ],
+  },
+  {
+    key: "freeleech",
+    labelKey: "freeleech",
+    name: "Freeleech",
+    score: 10,
+    conditions: [
+      {
+        field: "tags",
+        operator: "matches_regex",
+        raw: "\\[freeleech\\]",
+      },
+    ],
+  },
+];
+
 function _projectCondition(
   draft: DraftCondition,
 ): CustomFormatConditionInput | null {
@@ -227,6 +308,29 @@ export function CustomFormatEditorModal(
     setConditions((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function _loadPreset(key: string): void {
+    const preset = _PRESETS.find((p) => p.key === key);
+    if (!preset) return;
+    // Only pre-fill name/score when creating — editing an existing
+    // CF preserves its identity so the operator can't accidentally
+    // rename a live profile-referenced format.
+    if (!isEdit) {
+      setName(preset.name);
+      setScoreText(String(preset.score));
+    }
+    setConditions(
+      preset.conditions.map((c) => ({
+        field: c.field,
+        operator: c.operator,
+        raw: c.raw,
+        regexError:
+          c.operator === "matches_regex" && c.raw
+            ? _validateRegex(c.raw)
+            : undefined,
+      })),
+    );
+  }
+
   function _onSubmit(e: React.FormEvent): void {
     e.preventDefault();
     if (!canSubmit) return;
@@ -334,17 +438,39 @@ export function CustomFormatEditorModal(
         </p>
 
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-medium text-zinc-300">
               {t("customFormats.editor.conditions")}
             </p>
-            <button
-              type="button"
-              onClick={_add}
-              className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
-            >
-              + {t("customFormats.editor.addCondition")}
-            </button>
+            <div className="flex items-center gap-2">
+              <select
+                aria-label={t("customFormats.editor.presetsLabel")}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    _loadPreset(e.target.value);
+                    e.target.value = "";
+                  }
+                }}
+                defaultValue=""
+                className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200"
+              >
+                <option value="">
+                  {t("customFormats.editor.presetsPick")}
+                </option>
+                {_PRESETS.map((p) => (
+                  <option key={p.key} value={p.key}>
+                    {t(`customFormats.editor.presets.${p.labelKey}`)}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={_add}
+                className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800"
+              >
+                + {t("customFormats.editor.addCondition")}
+              </button>
+            </div>
           </div>
           <p className="text-[0.7rem] text-zinc-500">
             {t("customFormats.editor.conditionsHint")}

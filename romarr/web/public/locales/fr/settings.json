@@ -863,6 +863,15 @@
       "conditionsHint": "Toutes les conditions doivent matcher (ET logique). Le champ « Titre » regex sur le titre brut d'indexeur — utile pour rejeter les entrées Music/OST/Manual que le parser ne peut pas classifier.",
       "addCondition": "Ajouter",
       "removeCondition": "Retirer",
+      "presetsLabel": "Presets",
+      "presetsPick": "Charger un preset…",
+      "presets": {
+        "musicOst": "Rejeter Music/OST/Manual",
+        "minervaSource": "Préférer MiNERVA (+30)",
+        "sourceRegex": "Sources préférées (regex)",
+        "releaseGroup": "Team / release group préférés",
+        "freeleech": "Freeleech (+10)"
+      },
       "field": "Champ",
       "operator": "Opérateur",
       "value": "Valeur",
