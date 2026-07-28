@@ -173,8 +173,15 @@ async def reconcile_once(
                     # "checksum_mismatch", "upstream 404", "CF
                     # challenge" inline instead of operators
                     # having to grep the container logs.
+                    # Surface the client-reported reason for both
+                    # ``failed`` (terminal) AND ``stuck`` (torrent
+                    # stalled with no peers, save-path gone, etc.).
+                    # A stalled row that shows "no peers found" tells
+                    # the operator to check tracker health / VPN
+                    # firewall / DHT connectivity, whereas a bare
+                    # "stuck" chip left them guessing.
                     new_error: str | None = None
-                    if new_state == "failed":
+                    if new_state in ("failed", "stuck"):
                         new_error = status.error
                     if (
                         row.progress == new_progress

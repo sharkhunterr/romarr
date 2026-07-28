@@ -1057,6 +1057,21 @@ def _build_status(
         _coerce_int(payload.get("size"))
         or _coerce_int(payload.get("total_size"))
     )
+    # Surface an operator-actionable reason for the STALLED / FAILED
+    # states so the queue reconciler writes something useful into
+    # ``error_msg`` instead of the generic "download failed".
+    # ``num_seeds`` / ``num_leechs`` come from qBit's own bookkeeping
+    # so a stall-with-zero-peers reads clearly as "no peers".
+    seeders = _coerce_int(payload.get("num_seeds"))
+    peers = _coerce_int(payload.get("num_leechs"))
+    error: str | None = None
+    if state is DownloadState.STALLED:
+        error = (
+            f"qBit state=stalledDL — no download progress "
+            f"(seeds={seeders or 0}, peers={peers or 0})"
+        )
+    elif state is DownloadState.FAILED:
+        error = f"qBit state={raw_state!r}"
     return DownloadStatus(
         client_id=client_id,
         client_native_id=str(payload.get("hash", "")).lower(),
@@ -1064,14 +1079,15 @@ def _build_status(
         state=state,
         progress=progress,
         eta_seconds=eta_seconds,
-        seeders=_coerce_int(payload.get("num_seeds")),
-        peers=_coerce_int(payload.get("num_leechs")),
+        seeders=seeders,
+        peers=peers,
         download_rate_bps=_coerce_int(payload.get("dlspeed")),
         upload_rate_bps=_coerce_int(payload.get("upspeed")),
         total_bytes=total_bytes,
         save_path=save_path,
         completed_paths=completed_paths,
         fetched_at=fetched_at,
+        error=error,
     )
 
 
