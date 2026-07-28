@@ -13,7 +13,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useCustomFormats } from "@/lib/api/queries/custom-formats";
 
-import { CreateCustomFormatModal } from "./CreateCustomFormatModal";
+import { CustomFormatEditorModal } from "./CustomFormatEditorModal";
 import { CustomFormatRow } from "./CustomFormatRow";
 
 export function CustomFormatsTab(): ReactElement {
@@ -37,7 +37,7 @@ export function CustomFormatsTab(): ReactElement {
       </div>
 
       {createOpen && (
-        <CreateCustomFormatModal onClose={() => setCreateOpen(false)} />
+        <CustomFormatEditorModal onClose={() => setCreateOpen(false)} />
       )}
 
       {formats.isLoading && <ListSkeleton rows={4} />}

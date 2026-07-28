@@ -285,6 +285,7 @@ class CustomFormatCondition(_Base):
     """
 
     field: Literal[
+        "title",
         "tags",
         "region",
         "format",

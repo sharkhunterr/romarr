@@ -26,6 +26,7 @@ import type { components } from "@/types/api/schema";
 export type CustomFormat = components["schemas"]["CustomFormatRead"];
 
 export type CustomFormatField =
+  | "title"
   | "tags"
   | "region"
   | "format"
@@ -78,6 +79,35 @@ export function useCreateCustomFormat(): UseMutationResult<
     mutationFn: (payload) =>
       apiFetch<CustomFormat>("/api/v3/customformat", {
         method: "POST",
+        json: payload,
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: CUSTOM_FORMATS_KEY });
+    },
+  });
+}
+
+export interface CustomFormatUpdate {
+  name?: string;
+  score?: number;
+  conditions?: CustomFormatConditionInput[];
+}
+
+export interface UpdateCustomFormatVariables {
+  id: number;
+  payload: CustomFormatUpdate;
+}
+
+export function useUpdateCustomFormat(): UseMutationResult<
+  CustomFormat,
+  ApiError,
+  UpdateCustomFormatVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<CustomFormat, ApiError, UpdateCustomFormatVariables>({
+    mutationFn: ({ id, payload }) =>
+      apiFetch<CustomFormat>(`/api/v3/customformat/${id}`, {
+        method: "PUT",
         json: payload,
       }),
     onSuccess: () => {

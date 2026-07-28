@@ -8,6 +8,7 @@
  * builder + create/update flow lands in a follow-up slice.
  */
 
+import { Pencil } from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -15,6 +16,8 @@ import {
   useDeleteCustomFormat,
   type CustomFormat,
 } from "@/lib/api/queries/custom-formats";
+
+import { CustomFormatEditorModal } from "./CustomFormatEditorModal";
 
 interface CustomFormatRowProps {
   format: CustomFormat;
@@ -72,6 +75,7 @@ export function CustomFormatRow(props: CustomFormatRowProps): ReactElement {
 
   const [confirming, setConfirming] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   function confirmDelete(): void {
     del.mutate(format.id);
@@ -120,6 +124,18 @@ export function CustomFormatRow(props: CustomFormatRowProps): ReactElement {
         </button>
         <button
           type="button"
+          onClick={() => setEditOpen(true)}
+          className={[
+            "flex min-h-[36px] items-center gap-1 rounded-md border border-zinc-700 px-3 text-xs font-medium",
+            "text-zinc-200 hover:bg-zinc-900",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+          ].join(" ")}
+        >
+          <Pencil size={12} strokeWidth={2.2} aria-hidden="true" />
+          {t("customFormats.edit.button")}
+        </button>
+        <button
+          type="button"
           onClick={() => setConfirming(true)}
           disabled={format.is_factory_default}
           title={
@@ -142,6 +158,13 @@ export function CustomFormatRow(props: CustomFormatRowProps): ReactElement {
         <div className="mt-3 space-y-2">
           <ConditionsList conditions={format.conditions} />
         </div>
+      )}
+
+      {editOpen && (
+        <CustomFormatEditorModal
+          format={format}
+          onClose={() => setEditOpen(false)}
+        />
       )}
 
       {confirming && (

@@ -283,3 +283,52 @@ def test_corpus(
 
 def test_corpus_has_expected_size() -> None:
     assert len(_CORPUS) == 20  # SC-003 mandates >= 50; this is a strong start
+
+
+# ---------------------------------------------------------------------------
+# Title field (slice: non-ROM content rejection via CustomFormat)
+# ---------------------------------------------------------------------------
+
+
+def test_title_field_matches_regex_bracket_marker(
+    make_facts: Callable[..., ReleaseFacts],
+) -> None:
+    """A CustomFormat that regex-matches on the raw indexer title
+    fires when a bracket marker (e.g. ``[Nintendo Music (M4A)]``)
+    is present. Enables blocking non-ROM content adapters cannot
+    semantically classify."""
+
+    class _CF:
+        score = -1000
+        conditions = [
+            {
+                "field": "title",
+                "operator": "matches_regex",
+                "values": r"\[(?:[^\]]* )?(?:Music|Soundtrack|OST|Manual)\b",
+            }
+        ]
+
+    facts = make_facts(
+        title=(
+            "[MiNERVA Archive] [No-Intro] [Nintendo - Nintendo Music (M4A)] "
+            "[World] Kirby's Dream Land [ZIP]"
+        )
+    )
+    assert compute_custom_format_score([_CF()], facts) == -1000
+
+
+def test_title_field_no_match_returns_zero(
+    make_facts: Callable[..., ReleaseFacts],
+) -> None:
+    class _CF:
+        score = -1000
+        conditions = [
+            {
+                "field": "title",
+                "operator": "matches_regex",
+                "values": r"\bMusic\b|\bOST\b",
+            }
+        ]
+
+    facts = make_facts(title="[No-Intro] Sonic the Hedgehog (USA) [ZIP]")
+    assert compute_custom_format_score([_CF()], facts) == 0

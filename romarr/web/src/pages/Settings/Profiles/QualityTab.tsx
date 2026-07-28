@@ -14,7 +14,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useQualityProfiles } from "@/lib/api/queries/quality-profiles";
 
-import { CreateQualityProfileModal } from "./CreateQualityProfileModal";
+import { QualityProfileEditorModal } from "./QualityProfileEditorModal";
 import { QualityProfileRow } from "./QualityProfileRow";
 
 export function QualityTab(): ReactElement {
@@ -38,7 +38,7 @@ export function QualityTab(): ReactElement {
       </div>
 
       {createOpen && (
-        <CreateQualityProfileModal onClose={() => setCreateOpen(false)} />
+        <QualityProfileEditorModal onClose={() => setCreateOpen(false)} />
       )}
 
       {profiles.isLoading && <ListSkeleton rows={3} />}

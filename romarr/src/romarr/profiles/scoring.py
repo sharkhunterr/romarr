@@ -105,6 +105,13 @@ def _single_condition_matches(
 
 
 def _extract(field_name: str, facts: ReleaseFacts) -> Any:
+    if field_name == "title":
+        # The raw indexer title (e.g.
+        # ``[MiNERVA Archive] [No-Intro] [Nintendo - Nintendo Music
+        # (M4A)] [World] Kirby's Dream Land [ZIP]``). Enables
+        # regex-based Custom Formats that reject non-ROM content by
+        # bracket markers the parser can't semantically classify.
+        return facts.title or ""
     if field_name == "tags":
         return list(facts.tags)
     if field_name == "region":

@@ -20,7 +20,7 @@ import {
   type QualityProfile,
 } from "@/lib/api/queries/quality-profiles";
 
-import { CreateQualityProfileModal } from "./CreateQualityProfileModal";
+import { QualityProfileEditorModal } from "./QualityProfileEditorModal";
 
 interface QualityProfileRowProps {
   profile: QualityProfile;
@@ -148,7 +148,7 @@ export function QualityProfileRow(
       </div>
 
       {editOpen && (
-        <CreateQualityProfileModal
+        <QualityProfileEditorModal
           profile={profile}
           onClose={() => setEditOpen(false)}
         />

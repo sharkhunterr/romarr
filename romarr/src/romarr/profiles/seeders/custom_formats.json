@@ -146,5 +146,29 @@
     "conditions": [
       {"field": "naming_convention", "operator": "equals", "values": "mame"}
     ]
+  },
+  {
+    "seed_key": "non-rom-content",
+    "name": "Non-ROM content",
+    "score": -10000,
+    "conditions": [
+      {
+        "field": "title",
+        "operator": "matches_regex",
+        "values": "\\b(?:Music|Soundtrack|OST|Manual|Manuals|Video|Videos|Scan|Scans|Cover Art|Artwork|Poster|Wallpaper|Screensaver|Trailer)\\b"
+      }
+    ]
+  },
+  {
+    "seed_key": "audio-format-in-title",
+    "name": "Audio Format in Title",
+    "score": -10000,
+    "conditions": [
+      {
+        "field": "title",
+        "operator": "matches_regex",
+        "values": "\\((?:M4A|MP3|FLAC|OGG|WAV|AAC|OPUS)\\)"
+      }
+    ]
   }
 ]
