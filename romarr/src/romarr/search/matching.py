@@ -20,6 +20,7 @@ before calling the pipeline.
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 from rapidfuzz import fuzz, process
@@ -31,9 +32,19 @@ if TYPE_CHECKING:
 FUZZY_THRESHOLD = 85
 """WRatio score floor — anything below is treated as "no match" (FR-009)."""
 
+# ``[Region]``, ``[Team]``, ``[MiNERVA Archive]``, ``[No-Intro]``, …
+# — all noise for the fuzzy title match. A MiNERVA candidate like
+# ``[MiNERVA Archive] [Redump] [Sony - PlayStation 2] [Korea] [KO]
+# Jak II [ZIP]`` scored 60% against ``Jak II`` because the sheer
+# bracket volume drowned the actual game name; stripping brackets
+# first gets it to 100%. The parser downstream still consumes the
+# raw title for tag / region / language extraction — this scrub
+# only affects the fuzzy-name comparator.
+_BRACKET_RE = re.compile(r"\[[^\]]*\]")
+
 
 def _processor(text: str) -> str:
-    return text.lower().strip()
+    return _BRACKET_RE.sub(" ", text).lower().strip()
 
 
 def _gather_searchable(game: MonitoredGame) -> list[str]:

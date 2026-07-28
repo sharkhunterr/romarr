@@ -124,6 +124,31 @@ def test_case_insensitive_match() -> None:
     assert match[0].id == 1
 
 
+def test_bracket_heavy_title_still_matches() -> None:
+    """MiNERVA / No-Intro indexers wrap the title in multiple
+    ``[Tag]`` brackets (``[MiNERVA Archive] [Redump] [Sony -
+    PlayStation 2] [Korea] [KO] Jak II [ZIP]``). Pre-slice the
+    fuzzy comparator scored that at 60% against the plain "Jak II"
+    monitored game — below the 85 threshold — and returned no
+    match, rejecting an otherwise-valid candidate. The processor
+    now strips ``[…]`` blocks before RapidFuzz sees the string, so
+    the game name reads clean and the match lands at ~100."""
+    games = (MonitoredGame(id=42, platform_id=8, title="Jak II"),)
+    match = resolve_to_game(
+        title=(
+            "[MiNERVA Archive] [Redump] [Sony - PlayStation 2] "
+            "[Korea] [KO] Jak II [ZIP]"
+        ),
+        hash_sha1=None,
+        hash_crc32=None,
+        monitored_games=games,
+        dat_lookup=_none_dat,  # type: ignore[arg-type]
+    )
+    assert match is not None
+    assert match[0].id == 42
+    assert match[1] >= 85
+
+
 def test_picks_a_match_among_close_titles() -> None:
     """When several similar titles all clear the threshold, the matcher
     picks one deterministically. WRatio's partial-substring scoring
