@@ -392,8 +392,32 @@ class QBittorrentClient(DownloadClient):
             except ValueError:
                 files = []
 
+            # When the torrent is in error / stalled, fetch tracker
+            # status too so the error message can explain WHY (typical
+            # cause: qBit inside a VPN container with UDP tracker
+            # egress blocked → every tracker times out → torrent
+            # never announces → 0 peers → error state).
+            trackers: list[dict[str, Any]] = []
+            raw_state = str(data.get("state", ""))
+            if raw_state in ("error", "stalledDL", "missingFiles"):
+                try:
+                    tr_response = await self._get(
+                        client,
+                        "/torrents/trackers",
+                        hash=client_native_id.lower(),
+                    )
+                    tr_payload = tr_response.json()
+                    if isinstance(tr_payload, list):
+                        trackers = [t for t in tr_payload if isinstance(t, dict)]
+                except (ValueError, Exception):  # noqa: BLE001
+                    trackers = []
+
             return _build_status(
-                self.client_id, data, files=files, fetched_at=datetime.now(UTC)
+                self.client_id,
+                data,
+                files=files,
+                fetched_at=datetime.now(UTC),
+                trackers=trackers,
             )
 
     async def list_managed_downloads(self) -> list[ManagedDownload]:
@@ -1018,6 +1042,7 @@ def _build_status(
     *,
     files: list[dict[str, Any]],
     fetched_at: datetime,
+    trackers: list[dict[str, Any]] | None = None,
 ) -> DownloadStatus:
     raw_state = str(payload.get("state", "unknown"))
     state = _STATE_MAP.get(raw_state, DownloadState.QUEUED)
@@ -1065,6 +1090,13 @@ def _build_status(
     seeders = _coerce_int(payload.get("num_seeds"))
     peers = _coerce_int(payload.get("num_leechs"))
     error: str | None = None
+    # Non-status trackers (DHT / PeX / LSD) show up in the list
+    # but their "url" starts with ``**`` and they aren't
+    # per-tracker announcements — only count the real trackers.
+    real_trackers = [
+        t for t in (trackers or [])
+        if isinstance(t.get("url"), str) and not t["url"].startswith("**")
+    ]
     if state is DownloadState.STALLED:
         error = (
             f"qBit state=stalledDL — no download progress "
@@ -1072,6 +1104,52 @@ def _build_status(
         )
     elif state is DownloadState.FAILED:
         error = f"qBit state={raw_state!r}"
+        # For error / stalled states, tracker health + peer
+        # reachability often IS the reason. Two distinct failure
+        # shapes we can now diagnose:
+        #   1. All trackers status=4 → outbound blocked (VPN /
+        #      firewall / DNS). Message points at that.
+        #   2. Some trackers status=2 with seeds > 0, but the
+        #      torrent itself sees num_seeds=num_leechs=0 →
+        #      trackers work but qBit can't connect to any peer.
+        #      Typical: NAT / listen port not forwarded / peer
+        #      connectivity issue. Message points at that.
+        if real_trackers:
+            working = [
+                t for t in real_trackers
+                if _coerce_int(t.get("status")) == 2
+            ]
+            failed = [
+                t for t in real_trackers
+                if _coerce_int(t.get("status")) == 4
+            ]
+            working_with_seeds = [
+                t for t in working
+                if (_coerce_int(t.get("num_seeds")) or 0) > 0
+            ]
+            total_advertised_seeds = sum(
+                (_coerce_int(t.get("num_seeds")) or 0)
+                for t in working
+            )
+            if failed and not working:
+                sample = (failed[0].get("msg") or "unreachable").strip()
+                error = (
+                    f"{error} — {len(failed)}/{len(real_trackers)} "
+                    f"trackers failed (first: {sample!r}). Check "
+                    "qBit's firewall / VPN tracker egress."
+                )
+            elif working_with_seeds and (seeders or 0) == 0 and (peers or 0) == 0:
+                error = (
+                    f"{error} — {len(working)}/{len(real_trackers)} "
+                    f"trackers OK announce {total_advertised_seeds} "
+                    "seeds but qBit connected to 0 peers. Likely NAT "
+                    "/ port-forward (6881) / peer connectivity issue."
+                )
+            elif failed:
+                error = (
+                    f"{error} — {len(failed)}/{len(real_trackers)} "
+                    "trackers failed"
+                )
     return DownloadStatus(
         client_id=client_id,
         client_native_id=str(payload.get("hash", "")).lower(),
