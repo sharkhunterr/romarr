@@ -100,6 +100,20 @@ class DownloadClient(Base, TimestampMixin):
     download_root: Mapped[str | None] = mapped_column(
         String(512), nullable=True
     )
+    # Radarr-style remote path mapping. When the download client
+    # reports content_path=/downloads/foo.zip but Romarr's runtime
+    # sees the volume mounted at /mnt/qbit/foo.zip, remote_path
+    # holds ``/downloads`` and local_path holds ``/mnt/qbit`` so
+    # the reconciler + importer swap the prefix before touching
+    # the filesystem. Both NULL = no remap (default; only needed
+    # when Romarr and the client live on different sides of a
+    # volume mount, e.g. Romarr on host + qBit in Docker).
+    remote_path: Mapped[str | None] = mapped_column(
+        String(512), nullable=True
+    )
+    local_path: Mapped[str | None] = mapped_column(
+        String(512), nullable=True
+    )
 
     __table_args__ = (
         UniqueConstraint(

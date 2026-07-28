@@ -285,6 +285,8 @@ async def _recover_orphaned_completions(
     from datetime import UTC, datetime as _dt
 
     from romarr.importer._dispatch import build_managed_download_dispatcher
+    from romarr.downloaders.models import DownloadClient as _DownloadClientRow
+    from romarr.downloaders.path_mapping import remap_path
     from romarr.downloaders.types import ManagedDownload
 
     async with session_factory() as session:
@@ -301,13 +303,35 @@ async def _recover_orphaned_completions(
             return 0
         now = _dt.now(UTC)
         dispatchable: list[QueueEntry] = []
+        # Cache the client rows we've already loaded so the
+        # per-row remap lookup doesn't fire a query per orphan.
+        client_rows: dict[int, _DownloadClientRow | None] = {}
         for row in orphans:
             # Romarr-internal downloads (NULL client — slice 465)
             # never go through the watcher dispatcher; their
             # ingest pipeline owns the post-download steps.
             if row.download_client_id is None:
                 continue
-            path = row.content_path or ""
+            raw_path = row.content_path or ""
+            if row.download_client_id not in client_rows:
+                client_rows[row.download_client_id] = (
+                    await session.execute(
+                        select(_DownloadClientRow).where(
+                            _DownloadClientRow.id == row.download_client_id
+                        )
+                    )
+                ).scalar_one_or_none()
+            client_row = client_rows[row.download_client_id]
+            # Radarr-style remote → local remap so the reconciler's
+            # ``os.path.exists`` check sees the file at the mount
+            # Romarr's process can actually reach (typical: qBit
+            # in Docker sees /downloads, Romarr on the host sees
+            # /mnt/qbit/downloads).
+            path = remap_path(
+                raw_path,
+                remote_path=getattr(client_row, "remote_path", None),
+                local_path=getattr(client_row, "local_path", None),
+            ) or ""
             if not path or not os.path.exists(path):
                 # File genuinely gone (disk-full cleanup, manual
                 # delete, …) — stamp it so we stop re-checking and
@@ -315,9 +339,14 @@ async def _recover_orphaned_completions(
                 row.import_attempted_at = now
                 row.state = "failed"
                 row.error_msg = (
-                    row.error_msg or "completed file missing on disk"
+                    row.error_msg
+                    or f"completed file missing on disk (looked at {path!r})"
                 )
                 continue
+            # Mirror the remapped path onto the row so the
+            # dispatcher below + downstream importer see the local
+            # path, not the client-side one.
+            row.content_path = path
             row.import_attempted_at = now
             dispatchable.append(row)
         # Commit the stamps BEFORE running any import so a crash

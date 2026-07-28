@@ -74,6 +74,12 @@ export function CreateDownloadClientModal(
   const [timeoutSeconds, setTimeoutSeconds] = useState<number>(
     props.editing?.timeout_seconds ?? 60,
   );
+  const [remotePath, setRemotePath] = useState<string>(
+    props.editing?.remote_path ?? "",
+  );
+  const [localPath, setLocalPath] = useState<string>(
+    props.editing?.local_path ?? "",
+  );
 
   // qBittorrent / Transmission / Deluge: username + password.
   // SAB / NZBGet (Newznab): api_key.
@@ -122,6 +128,8 @@ export function CreateDownloadClientModal(
       username: !usesApiKey ? username.trim() || null : null,
       password:
         includeSecrets && !usesApiKey ? password.trim() || null : null,
+      remote_path: remotePath.trim() || null,
+      local_path: localPath.trim() || null,
     } as DownloadClientCreate;
   }
 
@@ -145,6 +153,8 @@ export function CreateDownloadClientModal(
         enable_for_usenet: enableUsenet,
         username: !usesApiKey ? username.trim() || null : null,
         timeout_seconds: timeoutSeconds,
+        remote_path: remotePath.trim() || null,
+        local_path: localPath.trim() || null,
       };
       if (!usesApiKey && password.trim().length > 0) {
         payload.password = password.trim();
@@ -448,6 +458,43 @@ export function CreateDownloadClientModal(
               {t("downloadClients.create.timeoutHint")}
             </p>
           </label>
+
+          <fieldset className="rounded-md border border-zinc-800 bg-zinc-950/40 p-3">
+            <legend className="px-1 text-[0.65rem] uppercase tracking-widest text-zinc-500">
+              {t("downloadClients.create.pathMappingLegend")}
+            </legend>
+            <p className="mb-2 text-[0.65rem] text-zinc-500">
+              {t("downloadClients.create.pathMappingHint")}
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1 block text-[0.65rem] uppercase tracking-widest text-zinc-500">
+                  {t("downloadClients.create.remotePathLabel")}
+                </span>
+                <input
+                  type="text"
+                  value={remotePath}
+                  onChange={(e) => setRemotePath(e.target.value)}
+                  disabled={submitting}
+                  placeholder="/downloads"
+                  className="w-full rounded-md bg-zinc-950 px-3 py-2 font-mono text-xs text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-[0.65rem] uppercase tracking-widest text-zinc-500">
+                  {t("downloadClients.create.localPathLabel")}
+                </span>
+                <input
+                  type="text"
+                  value={localPath}
+                  onChange={(e) => setLocalPath(e.target.value)}
+                  disabled={submitting}
+                  placeholder="/mnt/qbit/downloads"
+                  className="w-full rounded-md bg-zinc-950 px-3 py-2 font-mono text-xs text-zinc-100 ring-1 ring-inset ring-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed disabled:opacity-60"
+                />
+              </label>
+            </div>
+          </fieldset>
 
           {(probeResult || probeError) && (
             <div

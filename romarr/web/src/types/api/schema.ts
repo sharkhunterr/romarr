@@ -4,43 +4,7 @@
  */
 
 export interface paths {
-    "/api/v3/applications": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List registered Prowlarr instances (admin only). */
-        get: operations["list_applications_api_v3_applications_get"];
-        put?: never;
-        /** Register a Prowlarr instance (admin only). Returns app_token ONCE. */
-        post: operations["register_application_api_v3_applications_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/applications/{application_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read one Prowlarr application (admin only). */
-        get: operations["read_application_api_v3_applications__application_id__get"];
-        put?: never;
-        post?: never;
-        /** Unregister a Prowlarr application (admin only). Token hash is dropped. */
-        delete: operations["unregister_application_api_v3_applications__application_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/applications/{application_id}/rotate-token": {
+    "/api/v3/auth/setup": {
         parameters: {
             query?: never;
             header?: never;
@@ -50,76 +14,15 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Mint a fresh API key for an existing application (admin only). The previous key stops authenticating immediately. Returns the new plaintext key EXACTLY ONCE.
-         * @description Operator lost the original API key (we only kept the hash);
-         *     rotate to mint a fresh one. The Prowlarr URL + Prowlarr-side
-         *     API key stay unchanged — only the Romarr key Prowlarr uses to
-         *     call back changes.
-         */
-        post: operations["rotate_application_token_api_v3_applications__application_id__rotate_token_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/auth/api-key": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List the authenticated user's API keys (plaintext never re-shown) */
-        get: operations["list_my_api_keys_api_v3_auth_api_key_get"];
-        put?: never;
-        /** Mint an API key (FR-005). Plaintext is returned exactly once. */
-        post: operations["create_my_api_key_api_v3_auth_api_key_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/auth/api-key/{api_key_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Revoke an API key. Idempotent. */
-        delete: operations["delete_my_api_key_api_v3_auth_api_key__api_key_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/auth/config": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Public auth-config probe — what login flows the SPA should render. No authentication required.
-         * @description Return the public auth-config so the Login page knows
-         *     whether to render the OIDC SSO button (spec 014 T101 + spec
-         *     010 FR-026 forward-spec'd OIDC).
+         * Consume the bootstrap setup token and create the first admin user
+         * @description FR-020 / FR-021. Token comes from the ``X-Setup-Token`` header.
          *
-         *     Today OIDC isn't shipped — the endpoint returns
-         *     ``{oidc_enabled: false}``. When the OIDC backend lands the
-         *     body grows ``{oidc_enabled: true, oidc_provider_label,
-         *     oidc_start_url}`` so the Login page can wire the
-         *     ``Sign in with SSO`` button to the right authority.
+         *     Per FR-010a, this endpoint shares the per-IP rate limit with
+         *     /login and /oidc/callback. Per FR-020 the operation is atomic —
+         *     success returns the new admin and sets a session cookie so the
+         *     operator is logged in immediately.
          */
-        get: operations["get_auth_config_api_v3_auth_config_get"];
-        put?: never;
-        post?: never;
+        post: operations["setup_api_v3_auth_setup_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -171,6 +74,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/auth/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public auth-config probe — what login flows the SPA should render. No authentication required.
+         * @description Return the public auth-config so the Login page knows
+         *     whether to render the OIDC SSO button (spec 014 T101 + spec
+         *     010 FR-026 forward-spec'd OIDC).
+         *
+         *     Today OIDC isn't shipped — the endpoint returns
+         *     ``{oidc_enabled: false}``. When the OIDC backend lands the
+         *     body grows ``{oidc_enabled: true, oidc_provider_label,
+         *     oidc_start_url}`` so the Login page can wire the
+         *     ``Sign in with SSO`` button to the right authority.
+         */
+        get: operations["get_auth_config_api_v3_auth_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/auth/me": {
         parameters: {
             query?: never;
@@ -189,7 +120,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v3/auth/setup": {
+    "/api/v3/auth/api-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the authenticated user's API keys (plaintext never re-shown) */
+        get: operations["list_my_api_keys_api_v3_auth_api_key_get"];
+        put?: never;
+        /** Mint an API key (FR-005). Plaintext is returned exactly once. */
+        post: operations["create_my_api_key_api_v3_auth_api_key_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/auth/api-key/{api_key_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke an API key. Idempotent. */
+        delete: operations["delete_my_api_key_api_v3_auth_api_key__api_key_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/user": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List every user (admin only). The id=0 system sentinel is hidden. */
+        get: operations["list_users_endpoint_api_v3_user_get"];
+        put?: never;
+        /** Create a user (admin only). */
+        post: operations["create_user_endpoint_api_v3_user_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/user/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a user by id (admin only). */
+        get: operations["read_user_endpoint_api_v3_user__user_id__get"];
+        /** Update a user's role / email / active flag (admin only). */
+        put: operations["update_user_endpoint_api_v3_user__user_id__put"];
+        post?: never;
+        /** Delete a user (admin only). Refuses the lone admin and the system sentinel. */
+        delete: operations["delete_user_endpoint_api_v3_user__user_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/user/{user_id}/reset-password": {
         parameters: {
             query?: never;
             header?: never;
@@ -199,70 +202,33 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Consume the bootstrap setup token and create the first admin user
-         * @description FR-020 / FR-021. Token comes from the ``X-Setup-Token`` header.
+         * Mint a one-time password-reset token (admin only).
+         * @description SMTP integration is out of scope at MVP — the admin shares the
+         *     plaintext out-of-band (chat, sticky note, password manager).
+         */
+        post: operations["admin_reset_password_api_v3_user__user_id__reset_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/system/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Status
+         * @description Sonarr-compatible system status.
          *
-         *     Per FR-010a, this endpoint shares the per-IP rate limit with
-         *     /login and /oidc/callback. Per FR-020 the operation is atomic —
-         *     success returns the new admin and sets a session cookie so the
-         *     operator is logged in immediately.
+         *     Public callers receive ``{version, isProduction}`` only;
+         *     authenticated callers receive the full Sonarr v3 + v4 union
+         *     field set (FR-031, SC-001).
          */
-        post: operations["setup_api_v3_auth_setup_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/blocklist": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List blocklist entries (admin only). */
-        get: operations["list_blocklist_api_v3_blocklist_get"];
-        put?: never;
-        /** Add a blocklist entry (admin only). */
-        post: operations["add_to_blocklist_api_v3_blocklist_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/blocklist/{entry_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Delete a blocklist entry (admin only). */
-        delete: operations["remove_from_blocklist_api_v3_blocklist__entry_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/calendar": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Preservation events between start (inclusive) and end (exclusive). MVP returns []; data sources land later.
-         * @description MVP — returns the empty list. The shape is pinned so the
-         *     frontend month-view can wire against it now and a future
-         *     data-source slice will populate without churn.
-         */
-        get: operations["list_calendar_api_v3_calendar_get"];
+        get: operations["get_status_api_v3_system_status_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -271,44 +237,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v3/command": {
+    "/api/v3/system/stats": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
-        /**
-         * Post Command
-         * @description Fire a Sonarr-shaped command. Admin-only.
-         *
-         *     The payload's ``name`` field maps to a Romarr ``job_id``
-         *     via :func:`resolve_command`. Optional camelCase kwargs
-         *     (``gameId``, ``libraryId``) are forwarded as
-         *     ``JobContext.parameters``.
-         */
-        post: operations["post_command_api_v3_command_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/command/_known": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Known Commands
-         * @description Return the list of recognised Sonarr command names.
-         *     Useful for the operator UI's discoverability.
-         */
-        get: operations["list_known_commands_api_v3_command__known_get"];
+        /** Aggregate counts (games / releases / dumps / wanted / imports today). Drives the Dashboard stat cards. */
+        get: operations["get_stats_api_v3_system_stats_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -317,84 +254,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v3/command/{command_id}": {
+    "/api/v3/system/filesystem": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get Command Status
-         * @description Read a command's status by id (= ``job_run.id``).
-         */
-        get: operations["get_command_status_api_v3_command__command_id__get"];
-        put?: never;
-        post?: never;
-        /**
-         * Cancel Command
-         * @description Cancel an in-flight command. Admin-only.
-         *
-         *     Mirrors the runs-endpoint contract: 404 if the command
-         *     doesn't exist; 409 if it's already in a terminal state;
-         *     503 if no cancellation registry is wired (scheduler off).
-         *     Otherwise delegates to spec 012's
-         *     :class:`CancellationRegistry` for the two-phase cooperative
-         *     cancel + force-terminate protocol and returns 202 with the
-         *     resolved ``forced`` flag.
-         */
-        delete: operations["cancel_command_api_v3_command__command_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/cover/{game_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Stream the cover for a Game (any authenticated user). Cached for 24h with the ``immutable`` directive; the frontend cache-busts via ``?v=<updated_at>``. */
-        get: operations["get_cover_api_v3_cover__game_id__get"];
-        /** Override the cover for a Game by fetching bytes from an operator-supplied URL (admin only). Optionally auto-locks the cover field so the metadata aggregator stops overwriting it. */
-        put: operations["put_cover_api_v3_cover__game_id__put"];
-        post?: never;
-        /** Clear the cover for a Game — removes the on-disk file and nulls ``cover_path`` (admin only). The aggregator will refetch on the next refresh unless ``cover`` is locked. */
-        delete: operations["delete_cover_api_v3_cover__game_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/customformat": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List customformat (any authenticated user). */
-        get: operations["list_rows_api_v3_customformat_get"];
-        put?: never;
-        /** Create a customformat (admin only). */
-        post: operations["create_row_api_v3_customformat_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/customformat/schema": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** JSON Schema descriptor for customformat (any authenticated user). */
-        get: operations["get_schema_api_v3_customformat_schema_get"];
+        /** List subdirectories of a path (admin). */
+        get: operations["list_directory_api_v3_system_filesystem_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -403,634 +271,17 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v3/customformat/{row_id}": {
+    "/api/v3/rootfolder": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Read one customformat (any authenticated user). */
-        get: operations["read_row_api_v3_customformat__row_id__get"];
-        /** Update a customformat (admin only). Flips is_user_modified=true. */
-        put: operations["update_row_api_v3_customformat__row_id__put"];
-        post?: never;
-        /** Delete a customformat (admin only). ``?force=true`` is a future-extension knob: today the cascade detection still 409s when the profile is bound, because the library.*_profile_id columns are NOT NULL — a force-unbind would require either a schema change to allow NULL or a 'substitute with factory default' rebind. */
-        delete: operations["delete_row_api_v3_customformat__row_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/dat-source": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * DAT cache summary grouped by source (any authenticated user).
-         * @description One row per distinct ``DatEntry.source``, with entry count
-         *     + platform count + latest updated_at. The Settings page pairs
-         *     this with the per-row source list below.
-         */
-        get: operations["summary_api_v3_dat_source_get"];
+        /** Sonarr-compat root folder list. Each Romarr Library projects to one root-folder row so Prowlarr / Notifiarr / etc. can populate their pickers. */
+        get: operations["list_root_folders_api_v3_rootfolder_get"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/dat-source/sources": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List configured DAT source URLs (any authenticated user). */
-        get: operations["list_sources_api_v3_dat_source_sources_get"];
-        put?: never;
-        /** Register a new DAT source URL (admin only). */
-        post: operations["create_source_api_v3_dat_source_sources_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/dat-source/sources/refresh-all": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Re-fetch + re-ingest every enabled DAT source (admin only). */
-        post: operations["refresh_all_api_v3_dat_source_sources_refresh_all_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/dat-source/sources/{source_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** Update a DAT source (admin only). */
-        put: operations["update_source_api_v3_dat_source_sources__source_id__put"];
-        post?: never;
-        /** Delete a DAT source (admin only). Ingested DatEntry rows kept. */
-        delete: operations["delete_source_api_v3_dat_source_sources__source_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/dat-source/sources/{source_id}/refresh": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Re-fetch + re-ingest one DAT source (admin only). */
-        post: operations["refresh_source_api_v3_dat_source_sources__source_id__refresh_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/downloadclient": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List configured download clients (admin only). */
-        get: operations["list_clients_api_v3_downloadclient_get"];
-        put?: never;
-        /** Create a download client (admin only). ``?test=true`` runs connectivity probe before persistence. */
-        post: operations["create_client_api_v3_downloadclient_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/downloadclient/schema": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List download-client implementations Romarr knows about. */
-        get: operations["schema_endpoint_api_v3_downloadclient_schema_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/downloadclient/test": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Probe an unsaved download-client payload without persisting a row. Used by the Create / Edit modals so operators can validate connectivity before saving. */
-        post: operations["probe_client_payload_api_v3_downloadclient_test_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/downloadclient/{client_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read one download client (admin only). */
-        get: operations["read_client_api_v3_downloadclient__client_id__get"];
-        /** Update a download client (admin only). ``password`` / ``api_key`` are re-encrypted only when present in the body. */
-        put: operations["update_client_api_v3_downloadclient__client_id__put"];
-        post?: never;
-        /** Delete a download client (admin only). */
-        delete: operations["delete_client_api_v3_downloadclient__client_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/downloadclient/{client_id}/test": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Run a connectivity probe against the configured client (admin only). */
-        post: operations["test_client_api_v3_downloadclient__client_id__test_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/game": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List games (any authenticated user). Supports title-substring + platform filters. */
-        get: operations["list_games_api_v3_game_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/game/bulk-delete": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Delete a batch of Games — and their Releases / Dumps via cascade — without touching ROM files on disk (admin only). Capped at 500 ids per call. Per the constitution, on-disk cleanup is the per-library lifecycle policy's job, not this endpoint's. */
-        post: operations["bulk_delete_api_v3_game_bulk_delete_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/game/bulk-monitor": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Flip the monitored flag on a batch of games (admin only). Capped at 500 ids per call. Returns the number of rows updated and the ids that didn't resolve. */
-        post: operations["bulk_monitor_api_v3_game_bulk_monitor_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/game/bulk-tag": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Add or remove a set of tags across a batch of Games (admin only). Capped at 500 game ids and 50 tag ids per call. The per-row tag list is canonicalised (sorted, deduped) on every write. */
-        post: operations["bulk_tag_api_v3_game_bulk_tag_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/game/lookup": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Search every enabled metadata provider for games matching the query. Returns the merged candidate list ranked by confidence (admin only). */
-        get: operations["lookup_games_api_v3_game_lookup_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/game/lookup/add": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Add a Game to the Library from a lookup candidate. The metadata aggregator enriches the rest of the fields asynchronously via the ``needs_metadata_refresh`` flag (admin only). */
-        post: operations["add_game_from_lookup_api_v3_game_lookup_add_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/game/{game_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read one game (any authenticated user). */
-        get: operations["read_game_api_v3_game__game_id__get"];
-        put?: never;
-        post?: never;
-        /** Delete a single Game — and its Releases / Dumps via cascade — without touching ROM files on disk (admin only). Sweeps the polymorphic ``tag_assignment`` rows for the game and any cascaded releases. The bulk endpoint at /api/v3/game/bulk-delete handles batches. */
-        delete: operations["delete_game_api_v3_game__game_id__delete"];
-        options?: never;
-        head?: never;
-        /** Toggle a Game's ``monitored`` flag (admin only). All other fields are owned by the metadata aggregator. */
-        patch: operations["patch_game_api_v3_game__game_id__patch"];
-        trace?: never;
-    };
-    "/api/v3/game/{game_id}/dump": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List every Dump that belongs to a game (joined through the game's Releases). Drives GameDetail > Files. */
-        get: operations["list_dumps_for_game_api_v3_game__game_id__dump_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/game/{game_id}/field": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Manually edit one text metadata field on a Game (admin only). Title, summary, developer, publisher, age_rating are supported today; auto-locks the field by default so the aggregator stops overwriting it. */
-        patch: operations["patch_field_api_v3_game__game_id__field_patch"];
-        trace?: never;
-    };
-    "/api/v3/game/{game_id}/locked-fields": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Lock or unlock one metadata field on a Game (admin only). Locked fields are skipped by the aggregator on every refresh — the constitutional anti-RomM-#1770 mechanism (FR-008). */
-        patch: operations["patch_locked_fields_api_v3_game__game_id__locked_fields_patch"];
-        trace?: never;
-    };
-    "/api/v3/game/{game_id}/metadata": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Per-provider metadata snapshot for a Game — IDs, cached payloads, fetched-at timestamps, plus per-algo file hashes from every imported Dump. Drives the Game detail's Metadata tab (slice 409). */
-        get: operations["read_game_metadata_api_v3_game__game_id__metadata_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/game/{game_id}/notes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** Replace the operator-owned free-text notes for a Game (admin only). Notes are never touched by the metadata aggregator, distinct from the provider-owned summary. */
-        put: operations["put_notes_api_v3_game__game_id__notes_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/game/{game_id}/refresh-metadata": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Refresh metadata for a Game from the enabled providers (admin only). */
-        post: operations["refresh_metadata_endpoint_api_v3_game__game_id__refresh_metadata_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/game/{game_id}/release": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List every Release for a game. Drives the Match form's Release picker. */
-        get: operations["list_releases_for_game_api_v3_game__game_id__release_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Health
-         * @description Tiered health snapshot.
-         *
-         *     Anonymous: ``{status: "ok"|"warning"|"error"}`` only.
-         *     Authenticated (any role): full ``HealthSnapshot`` with
-         *     per-category breakdown and structured messages.
-         */
-        get: operations["get_health_api_v3_health_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/health/refresh": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Refresh Health
-         * @description Run the engine on demand. Admin-gated because each cycle
-         *     fires outbound HTTP probes against indexers / download
-         *     clients (SSRF surface, FR-024b).
-         *
-         *     The engine instance is read off ``request.app.state``; if
-         *     the lifespan hasn't installed one yet, returns the
-         *     persisted snapshot without refreshing (so the endpoint is
-         *     still callable for a UI ping).
-         */
-        post: operations["refresh_health_api_v3_health_refresh_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/history": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Unified history: import / search / job_run rows merged and paginated chronologically. */
-        get: operations["list_history_api_v3_history_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/history/since": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Unified history filtered to entries whose ``date`` is >= ``date`` query param.
-         * @description Strict ``date >= since`` filter, paginated like the
-         *     parent endpoint. Useful for "what happened since I last
-         *     checked" polling without dragging the whole feed.
-         */
-        get: operations["list_history_since_api_v3_history_since_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/indexer": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List configured indexers (admin only). */
-        get: operations["list_indexers_api_v3_indexer_get"];
-        put?: never;
-        /** Create an indexer (admin only). ``?test=true`` runs caps+search first. */
-        post: operations["create_indexer_api_v3_indexer_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/indexer/grabarr": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Atomic Add-Grabarr wizard (admin only). Creates a linked download_client + indexer pair after a /health probe. */
-        post: operations["add_grabarr_api_v3_indexer_grabarr_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/indexer/schema": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Newznab + Torznab schema entries (Prowlarr expects this). */
-        get: operations["schema_endpoint_api_v3_indexer_schema_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/indexer/test": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Probe an unsaved (URL, api_key) pair without persisting an Indexer row. Used by the Create / Edit modals so operators validate connectivity before saving. */
-        post: operations["probe_indexer_payload_api_v3_indexer_test_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/indexer/{indexer_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read one indexer (admin only). */
-        get: operations["read_indexer_api_v3_indexer__indexer_id__get"];
-        /** Update an indexer (admin only). The ``api_key`` field is re-encrypted only when present in the body. */
-        put: operations["update_indexer_api_v3_indexer__indexer_id__put"];
-        post?: never;
-        /** Delete an indexer (admin only). Notifies Prowlarr if pushed by it. */
-        delete: operations["delete_indexer_api_v3_indexer__indexer_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/indexer/{indexer_id}/test": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Run caps + minimal search to confirm the indexer is reachable. */
-        post: operations["test_indexer_api_v3_indexer__indexer_id__test_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1054,15 +305,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v3/metadata/field-priority": {
+    "/api/v3/tag": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Return the per-field provider priority list (admin only). */
-        get: operations["list_field_priority_api_v3_metadata_field_priority_get"];
+        /** List every tag. */
+        get: operations["list_tags_api_v3_tag_get"];
+        put?: never;
+        /** Create a tag (admin). */
+        post: operations["create_tag_api_v3_tag_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/tag/detail/{tag_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Show every entity currently tagged with this id. */
+        get: operations["tag_detail_api_v3_tag_detail__tag_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1071,264 +340,20 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v3/metadata/field-priority/{field_name}": {
+    "/api/v3/tag/{tag_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        /** Replace the ordered provider list for a single field (admin only). */
-        put: operations["update_field_priority_api_v3_metadata_field_priority__field_name__put"];
+        /** Read one tag by id. */
+        get: operations["read_tag_api_v3_tag__tag_id__get"];
+        /** Update one tag's label or colour (admin). */
+        put: operations["update_tag_api_v3_tag__tag_id__put"];
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/metadata/provider": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List every metadata provider's config (admin only). */
-        get: operations["list_providers_api_v3_metadata_provider_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/metadata/provider/{provider_name}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read one metadata provider's config (admin only). */
-        get: operations["read_provider_api_v3_metadata_provider__provider_name__get"];
-        /** Update a metadata provider's toggle / config / limits (admin only). */
-        put: operations["update_provider_api_v3_metadata_provider__provider_name__put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/metadata/provider/{provider_name}/test": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Probe a configured provider's reachability (admin only). */
-        post: operations["test_provider_api_v3_metadata_provider__provider_name__test_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/notification": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Notifications */
-        get: operations["list_notifications_api_v3_notification_get"];
-        put?: never;
-        /**
-         * Create Notification
-         * @description Create a notification target.
-         *
-         *     Validates the Apprise URL via ``Apprise.add(...)`` (FR-004),
-         *     every non-null template via the sandboxed renderer (FR-013),
-         *     and at-least-one-event flag via the schema (FR-005). On
-         *     success, the URL is Fernet-encrypted at rest; only the
-         *     scheme prefix is persisted in plaintext for the read shape.
-         */
-        post: operations["create_notification_api_v3_notification_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/notification/schema": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List Implementations
-         * @description Per FR-023, the UI's "add notification" wizard fetches a
-         *     list of supported target implementations. Romarr exposes two:
-         *
-         *       * ``apprise`` — operator pastes any Apprise URL
-         *         (``discord://``, ``tgram://``, ``ntfys://``, …) and
-         *         Romarr handles the transport.
-         *       * ``webhook`` — Sonarr v3-format JSON POST to a configured
-         *         URL via the ``json://`` / ``jsons://`` Apprise schemes.
-         */
-        get: operations["list_implementations_api_v3_notification_schema_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/notification/webhook-payloads.md": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Webhook Payloads Md
-         * @description Return the FR-006a cross-walk as ``text/markdown``.
-         */
-        get: operations["webhook_payloads_md_api_v3_notification_webhook_payloads_md_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/notification/{notification_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read Notification */
-        get: operations["read_notification_api_v3_notification__notification_id__get"];
-        /** Update Notification */
-        put: operations["update_notification_api_v3_notification__notification_id__put"];
-        post?: never;
-        /** Delete Notification */
-        delete: operations["delete_notification_api_v3_notification__notification_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/notification/{notification_id}/test": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Test Notification
-         * @description Fire a synthetic ``OnImport`` event with placeholder data
-         *     through the same dispatcher real events use (FR-016).
-         *
-         *     Admin-gated because it triggers outbound HTTP to the
-         *     configured URL — same SSRF-rationale as spec 005's
-         *     download-client connectivity test (FR-024b).
-         */
-        post: operations["test_notification_api_v3_notification__notification_id__test_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/quality-definition": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List per-platform format size bounds (any authenticated user).
-         * @description One row per Platform; ``formats`` lists every PlatformFormat
-         *     with its min / max size bounds. Sorted alphabetically on
-         *     platform name + format extension for deterministic UI rendering.
-         */
-        get: operations["list_quality_definitions_api_v3_quality_definition_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/qualityprofile": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List qualityprofile (any authenticated user). */
-        get: operations["list_rows_api_v3_qualityprofile_get"];
-        put?: never;
-        /** Create a qualityprofile (admin only). */
-        post: operations["create_row_api_v3_qualityprofile_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/qualityprofile/schema": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** JSON Schema descriptor for qualityprofile (any authenticated user). */
-        get: operations["get_schema_api_v3_qualityprofile_schema_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/qualityprofile/{row_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read one qualityprofile (any authenticated user). */
-        get: operations["read_row_api_v3_qualityprofile__row_id__get"];
-        /** Update a qualityprofile (admin only). Flips is_user_modified=true. */
-        put: operations["update_row_api_v3_qualityprofile__row_id__put"];
-        post?: never;
-        /** Delete a qualityprofile (admin only). ``?force=true`` is a future-extension knob: today the cascade detection still 409s when the profile is bound, because the library.*_profile_id columns are NOT NULL — a force-unbind would require either a schema change to allow NULL or a 'substitute with factory default' rebind. */
-        delete: operations["delete_row_api_v3_qualityprofile__row_id__delete"];
+        /** Delete one tag (admin). Returns HTTP 409 if the tag is currently assigned to any entity unless ?force=true is set, in which case the assignments are cascaded. */
+        delete: operations["delete_tag_api_v3_tag__tag_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1411,33 +436,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v3/rom/dumpprofile": {
+    "/api/v3/wanted/missing": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List dumpprofile (any authenticated user). */
-        get: operations["list_rows_api_v3_rom_dumpprofile_get"];
-        put?: never;
-        /** Create a dumpprofile (admin only). */
-        post: operations["create_row_api_v3_rom_dumpprofile_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/dumpprofile/schema": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** JSON Schema descriptor for dumpprofile (any authenticated user). */
-        get: operations["get_schema_api_v3_rom_dumpprofile_schema_get"];
+        /** Releases the operator has flagged monitored but Romarr hasn't acquired yet (status='wanted'). */
+        get: operations["list_missing_api_v3_wanted_missing_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1446,42 +453,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v3/rom/dumpprofile/{row_id}": {
+    "/api/v3/wanted/cutoff": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Read one dumpprofile (any authenticated user). */
-        get: operations["read_row_api_v3_rom_dumpprofile__row_id__get"];
-        /** Update a dumpprofile (admin only). Flips is_user_modified=true. */
-        put: operations["update_row_api_v3_rom_dumpprofile__row_id__put"];
-        post?: never;
-        /** Delete a dumpprofile (admin only). ``?force=true`` is a future-extension knob: today the cascade detection still 409s when the profile is bound, because the library.*_profile_id columns are NOT NULL — a force-unbind would require either a schema change to allow NULL or a 'substitute with factory default' rebind. */
-        delete: operations["delete_row_api_v3_rom_dumpprofile__row_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/exporters": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List the exporter catalog (any authenticated user).
-         * @description Return the static catalog of exporters Romarr ships.
-         *
-         *     Per-import dispatch + last-run tracking are deferred — this
-         *     endpoint surfaces metadata only so the Settings UI can render
-         *     an operator-visible list with descriptions + on-disk format
-         *     hints.
-         */
-        get: operations["list_exporters_endpoint_api_v3_rom_exporters_get"];
+        /** Releases that ARE imported but don't yet meet the configured upgrade cutoff (cutoff_met=false). */
+        get: operations["list_cutoff_api_v3_wanted_cutoff_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1490,45 +470,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v3/rom/exporters/runs/{library_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Per-(library, exporter) emission tracking (any user).
-         * @description T077 / FR-019 — return the per-exporter run rows for one
-         *     library. Empty list when no exporter has fired yet.
-         */
-        get: operations["list_library_exporter_runs_api_v3_rom_exporters_runs__library_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/exporters/{name}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read one exporter descriptor. */
-        get: operations["read_exporter_api_v3_rom_exporters__name__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/exporters/{name}/run": {
+    "/api/v3/wanted/missing/search": {
         parameters: {
             query?: never;
             header?: never;
@@ -1537,203 +479,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Materialize + write the exporter file (admin only).
-         * @description T078 — run one exporter on demand for a (library, platform).
-         *
-         *     The endpoint refuses when the exporter's per-library enable
-         *     flag is False so the manual-run can't bypass the operator's
-         *     opt-out. ESDE is the only exporter wired today; pegasus /
-         *     launchbox / romm return 501 with a clear marker until their
-         *     materializers ship.
-         */
-        post: operations["run_exporter_api_v3_rom_exporters__name__run_post"];
+        /** Trigger a missing-search round (admin only). Probes up to ``limit`` wanted Releases, oldest-first; manual-search is invoked per Release and grab dispatch is left to the scheduler tick or operator action. */
+        post: operations["trigger_missing_search_api_v3_wanted_missing_search_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v3/rom/import/history": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List import-history rows (any authenticated user). Paginated; filterable by game_id / release_id / imported_via / success. */
-        get: operations["list_history_api_v3_rom_import_history_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/import/manual": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Post Import Manual
-         * @description Bulk manual import — admin-only.
-         *
-         *     Each entry is dispatched to ``run_import`` with a fresh
-         *     correlation id; the response carries the resulting
-         *     ``import_history`` row per entry. Per-entry exceptions are
-         *     isolated (one failure doesn't drop the batch).
-         */
-        post: operations["post_import_manual_api_v3_rom_import_manual_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/import/retry/{import_history_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Post Import Retry
-         * @description Retry a previously-imported file.
-         *
-         *     Looks up the original ``import_history`` row, replays
-         *     ``run_import`` against its ``source_path`` with a fresh
-         *     correlation id. Returns the freshly-created
-         *     ``import_history`` row; the original is preserved
-         *     (FR-035).
-         */
-        post: operations["post_import_retry_api_v3_rom_import_retry__import_history_id__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/languageprofile": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List languageprofile (any authenticated user). */
-        get: operations["list_rows_api_v3_rom_languageprofile_get"];
-        put?: never;
-        /** Create a languageprofile (admin only). */
-        post: operations["create_row_api_v3_rom_languageprofile_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/languageprofile/schema": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** JSON Schema descriptor for languageprofile (any authenticated user). */
-        get: operations["get_schema_api_v3_rom_languageprofile_schema_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/languageprofile/{row_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read one languageprofile (any authenticated user). */
-        get: operations["read_row_api_v3_rom_languageprofile__row_id__get"];
-        /** Update a languageprofile (admin only). Flips is_user_modified=true. */
-        put: operations["update_row_api_v3_rom_languageprofile__row_id__put"];
-        post?: never;
-        /** Delete a languageprofile (admin only). ``?force=true`` is a future-extension knob: today the cascade detection still 409s when the profile is bound, because the library.*_profile_id columns are NOT NULL — a force-unbind would require either a schema change to allow NULL or a 'substitute with factory default' rebind. */
-        delete: operations["delete_row_api_v3_rom_languageprofile__row_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/library": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List all libraries (any authenticated user). */
-        get: operations["list_libraries_api_v3_rom_library_get"];
-        put?: never;
-        /** Create a library (admin only). */
-        post: operations["create_library_api_v3_rom_library_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/library/{library_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read a single library (any authenticated user). */
-        get: operations["read_library_api_v3_rom_library__library_id__get"];
-        /** Partial update of a library (admin only). */
-        put: operations["update_library_api_v3_rom_library__library_id__put"];
-        post?: never;
-        /** Delete a library (admin only). ``?force=true`` unbinds attached Releases first; rejected when ``keep_dump_history=true`` and historical Dumps reference the library (FR-027). */
-        delete: operations["delete_library_api_v3_rom_library__library_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/library/{library_id}/scan": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Post Scan Library
-         * @description Trigger a full scan against a single library.
-         */
-        post: operations["post_scan_library_api_v3_rom_library__library_id__scan_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/manual-import": {
+    "/api/v3/calendar": {
         parameters: {
             query?: never;
             header?: never;
@@ -1741,78 +495,56 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Manual Import Listing
-         * @description Walk ``folder`` and return the manual-import candidate grid.
-         *
-         *     Read-only — no DB writes (FR-022).
+         * Preservation events between start (inclusive) and end (exclusive). MVP returns []; data sources land later.
+         * @description MVP — returns the empty list. The shape is pinned so the
+         *     frontend month-view can wire against it now and a future
+         *     data-source slice will populate without churn.
          */
-        get: operations["get_manual_import_listing_api_v3_rom_manual_import_get"];
+        get: operations["list_calendar_api_v3_calendar_get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/quality-definition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         /**
-         * Post Manual Import Bulk
-         * @description Run the operator's bulk decisions against the importer.
+         * List per-platform format size bounds (any authenticated user).
+         * @description One row per Platform; ``formats`` lists every PlatformFormat
+         *     with its min / max size bounds. Sorted alphabetically on
+         *     platform name + format extension for deterministic UI rendering.
          */
-        post: operations["post_manual_import_bulk_api_v3_rom_manual_import_post"];
+        get: operations["list_quality_definitions_api_v3_quality_definition_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v3/rom/namingprofile": {
+    "/api/v3/dat-source": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List namingprofile (any authenticated user). */
-        get: operations["list_rows_api_v3_rom_namingprofile_get"];
-        put?: never;
-        /** Create a namingprofile (admin only). */
-        post: operations["create_row_api_v3_rom_namingprofile_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/namingprofile/preview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
         /**
-         * Render a candidate naming template against a sample release without persisting (admin only). Returns the rendered filename.
-         * @description Render the supplied template against the sample release.
-         *
-         *     Spec 001's ``Release`` table will land before spec 006's preview
-         *     is wired against real rows; today we use a synthetic sample so
-         *     operators can iterate on templates the moment they install.
-         *     Once the search engine slice exposes a release-fetch helper, this
-         *     endpoint will look up ``payload.sample_release_id`` and replace
-         *     the synthetic facts with the real ones.
+         * DAT cache summary grouped by source (any authenticated user).
+         * @description One row per distinct ``DatEntry.source``, with entry count
+         *     + platform count + latest updated_at. The Settings page pairs
+         *     this with the per-row source list below.
          */
-        post: operations["preview_template_api_v3_rom_namingprofile_preview_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/namingprofile/schema": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** JSON Schema descriptor for namingprofile (any authenticated user). */
-        get: operations["get_schema_api_v3_rom_namingprofile_schema_get"];
+        get: operations["summary_api_v3_dat_source_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1821,61 +553,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v3/rom/namingprofile/{row_id}": {
+    "/api/v3/dat-source/sources": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Read one namingprofile (any authenticated user). */
-        get: operations["read_row_api_v3_rom_namingprofile__row_id__get"];
-        /** Update a namingprofile (admin only). Flips is_user_modified=true. */
-        put: operations["update_row_api_v3_rom_namingprofile__row_id__put"];
-        post?: never;
-        /** Delete a namingprofile (admin only). ``?force=true`` is a future-extension knob: today the cascade detection still 409s when the profile is bound, because the library.*_profile_id columns are NOT NULL — a force-unbind would require either a schema change to allow NULL or a 'substitute with factory default' rebind. */
-        delete: operations["delete_row_api_v3_rom_namingprofile__row_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/platform": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List every platform in the catalogue (any authenticated user). Drives the Library / Wanted / AddNew filter dropdowns on the frontend. */
-        get: operations["list_platforms_api_v3_rom_platform_get"];
+        /** List configured DAT source URLs (any authenticated user). */
+        get: operations["list_sources_api_v3_dat_source_sources_get"];
         put?: never;
-        post?: never;
+        /** Register a new DAT source URL (admin only). */
+        post: operations["create_source_api_v3_dat_source_sources_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v3/rom/platform-pack": {
+    "/api/v3/dat-source/sources/{source_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List every persisted platform pack (admin only). */
-        get: operations["list_packs_api_v3_rom_platform_pack_get"];
-        put?: never;
-        /** Upload + apply a community pack (admin only). */
-        post: operations["upload_pack_api_v3_rom_platform_pack_post"];
-        delete?: never;
+        get?: never;
+        /** Update a DAT source (admin only). */
+        put: operations["update_source_api_v3_dat_source_sources__source_id__put"];
+        post?: never;
+        /** Delete a DAT source (admin only). Ingested DatEntry rows kept. */
+        delete: operations["delete_source_api_v3_dat_source_sources__source_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v3/rom/platform-pack/validate": {
+    "/api/v3/dat-source/sources/{source_id}/refresh": {
         parameters: {
             query?: never;
             header?: never;
@@ -1884,32 +598,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Validate a pack without applying it (admin only). */
-        post: operations["validate_only_api_v3_rom_platform_pack_validate_post"];
+        /** Re-fetch + re-ingest one DAT source (admin only). */
+        post: operations["refresh_source_api_v3_dat_source_sources__source_id__refresh_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v3/rom/platform-pack/{pack_version}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Detail + audit history for a single pack (admin only). */
-        get: operations["read_pack_api_v3_rom_platform_pack__pack_version__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/platform-pack/{pack_version}/apply": {
+    "/api/v3/dat-source/sources/refresh-all": {
         parameters: {
             query?: never;
             header?: never;
@@ -1918,103 +615,23 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Re-apply a known pack (idempotent skip if state matches).
-         * @description Re-applying without the body is only meaningful when the pack
-         *     body is reachable from the original source — at MVP we mark this
-         *     endpoint as ``not_implemented`` because we don't persist pack
-         *     bodies. The endpoint signature is locked in so callers can target
-         *     a stable URL; a v1+ slice can store ``platform_pack.body`` and
-         *     drop in the real implementation.
-         */
-        post: operations["reapply_pack_api_v3_rom_platform_pack__pack_version__apply_post"];
+        /** Re-fetch + re-ingest every enabled DAT source (admin only). */
+        post: operations["refresh_all_api_v3_dat_source_sources_refresh_all_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v3/rom/platform/{platform_id}/format": {
+    "/api/v3/game/lookup": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List a platform's formats (admin only). */
-        get: operations["list_formats_api_v3_rom_platform__platform_id__format_get"];
-        put?: never;
-        /** Add a format (admin only). Platform must be user-overridden. */
-        post: operations["post_format_api_v3_rom_platform__platform_id__format_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/platform/{platform_id}/format/{format_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** Update a format (admin only). Platform must be user-overridden. */
-        put: operations["put_format_api_v3_rom_platform__platform_id__format__format_id__put"];
-        post?: never;
-        /** Delete a format (admin only). Idempotent. */
-        delete: operations["delete_format_endpoint_api_v3_rom_platform__platform_id__format__format_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/platform/{platform_id}/override": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Mark a platform as user-overridden (admin only). Idempotent. */
-        post: operations["post_override_api_v3_rom_platform__platform_id__override_post"];
-        /** Release a user-override (admin only). */
-        delete: operations["delete_override_api_v3_rom_platform__platform_id__override_delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/regionprofile": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List regionprofile (any authenticated user). */
-        get: operations["list_rows_api_v3_rom_regionprofile_get"];
-        put?: never;
-        /** Create a regionprofile (admin only). */
-        post: operations["create_row_api_v3_rom_regionprofile_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/regionprofile/schema": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** JSON Schema descriptor for regionprofile (any authenticated user). */
-        get: operations["get_schema_api_v3_rom_regionprofile_schema_get"];
+        /** Search every enabled metadata provider for games matching the query. Returns the merged candidate list ranked by confidence (admin only). */
+        get: operations["lookup_games_api_v3_game_lookup_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2023,26 +640,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v3/rom/regionprofile/{row_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read one regionprofile (any authenticated user). */
-        get: operations["read_row_api_v3_rom_regionprofile__row_id__get"];
-        /** Update a regionprofile (admin only). Flips is_user_modified=true. */
-        put: operations["update_row_api_v3_rom_regionprofile__row_id__put"];
-        post?: never;
-        /** Delete a regionprofile (admin only). ``?force=true`` is a future-extension knob: today the cascade detection still 409s when the profile is bound, because the library.*_profile_id columns are NOT NULL — a force-unbind would require either a schema change to allow NULL or a 'substitute with factory default' rebind. */
-        delete: operations["delete_row_api_v3_rom_regionprofile__row_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/release/bulk-delete": {
+    "/api/v3/game/lookup/add": {
         parameters: {
             query?: never;
             header?: never;
@@ -2051,9 +649,268 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Delete a batch of Releases — and their Dumps via cascade — without touching ROM files on disk (admin only). Capped at 500 ids per call. */
-        post: operations["bulk_delete_releases_api_v3_rom_release_bulk_delete_post"];
+        /** Add a Game to the Library from a lookup candidate. The metadata aggregator enriches the rest of the fields asynchronously via the ``needs_metadata_refresh`` flag (admin only). */
+        post: operations["add_game_from_lookup_api_v3_game_lookup_add_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/game/integrations/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Acquire an IGDB game (external request managers). Resolves the IGDB platform to Romarr's catalogue and adds the game to the first library. Idempotent on (platform, igdb_id). Admin only. */
+        post: operations["integration_request_game_api_v3_game_integrations_request_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/game/integrations/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Check whether an IGDB game is already in the Romarr library (external request managers). Admin only. */
+        get: operations["integration_game_status_api_v3_game_integrations_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/game/integrations/platforms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the IGDB platforms Romarr can acquire games for (external request managers). A manager uses this to only offer a request button for platforms Romarr can resolve. Admin only. */
+        get: operations["integration_platforms_api_v3_game_integrations_platforms_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/game": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List games (any authenticated user). Supports title-substring + platform filters. */
+        get: operations["list_games_api_v3_game_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/game/bulk-monitor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Flip the monitored flag on a batch of games (admin only). Capped at 500 ids per call. Returns the number of rows updated and the ids that didn't resolve. */
+        post: operations["bulk_monitor_api_v3_game_bulk_monitor_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/game/bulk-delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Delete a batch of Games — and their Releases / Dumps via cascade — without touching ROM files on disk (admin only). Capped at 500 ids per call. Per the constitution, on-disk cleanup is the per-library lifecycle policy's job, not this endpoint's. */
+        post: operations["bulk_delete_api_v3_game_bulk_delete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/game/bulk-tag": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add or remove a set of tags across a batch of Games (admin only). Capped at 500 game ids and 50 tag ids per call. The per-row tag list is canonicalised (sorted, deduped) on every write. */
+        post: operations["bulk_tag_api_v3_game_bulk_tag_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/game/{game_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one game (any authenticated user). */
+        get: operations["read_game_api_v3_game__game_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete a single Game — and its Releases / Dumps via cascade — without touching ROM files on disk (admin only). Sweeps the polymorphic ``tag_assignment`` rows for the game and any cascaded releases. The bulk endpoint at /api/v3/game/bulk-delete handles batches. */
+        delete: operations["delete_game_api_v3_game__game_id__delete"];
+        options?: never;
+        head?: never;
+        /** Toggle a Game's ``monitored`` flag (admin only). All other fields are owned by the metadata aggregator. */
+        patch: operations["patch_game_api_v3_game__game_id__patch"];
+        trace?: never;
+    };
+    "/api/v3/game/{game_id}/metadata": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Per-provider metadata snapshot for a Game — IDs, cached payloads, fetched-at timestamps, plus per-algo file hashes from every imported Dump. Drives the Game detail's Metadata tab (slice 409). */
+        get: operations["read_game_metadata_api_v3_game__game_id__metadata_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/game/{game_id}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List every Release for a game. Drives the Match form's Release picker. */
+        get: operations["list_releases_for_game_api_v3_game__game_id__release_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/game/{game_id}/locked-fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Lock or unlock one metadata field on a Game (admin only). Locked fields are skipped by the aggregator on every refresh — the constitutional anti-RomM-#1770 mechanism (FR-008). */
+        patch: operations["patch_locked_fields_api_v3_game__game_id__locked_fields_patch"];
+        trace?: never;
+    };
+    "/api/v3/game/{game_id}/field": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Manually edit one text metadata field on a Game (admin only). Title, summary, developer, publisher, age_rating are supported today; auto-locks the field by default so the aggregator stops overwriting it. */
+        patch: operations["patch_field_api_v3_game__game_id__field_patch"];
+        trace?: never;
+    };
+    "/api/v3/game/{game_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace the operator-owned free-text notes for a Game (admin only). Notes are never touched by the metadata aggregator, distinct from the provider-owned summary. */
+        put: operations["put_notes_api_v3_game__game_id__notes_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/game/{game_id}/dump": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List every Dump that belongs to a game (joined through the game's Releases). Drives GameDetail > Files. */
+        get: operations["list_dumps_for_game_api_v3_game__game_id__dump_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/cover/{game_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream the cover for a Game (any authenticated user). Cached for 24h with the ``immutable`` directive; the frontend cache-busts via ``?v=<updated_at>``. */
+        get: operations["get_cover_api_v3_cover__game_id__get"];
+        /** Override the cover for a Game by fetching bytes from an operator-supplied URL (admin only). Optionally auto-locks the cover field so the metadata aggregator stops overwriting it. */
+        put: operations["put_cover_api_v3_cover__game_id__put"];
+        post?: never;
+        /** Clear the cover for a Game — removes the on-disk file and nulls ``cover_path`` (admin only). The aggregator will refetch on the next refresh unless ``cover`` is locked. */
+        delete: operations["delete_cover_api_v3_cover__game_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2076,7 +933,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v3/rom/release/grab": {
+    "/api/v3/rom/release/bulk-delete": {
         parameters: {
             query?: never;
             header?: never;
@@ -2085,8 +942,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Manual grab of one indexer result (admin only). ``?force=true`` overrides the blocklist gate. */
-        post: operations["manual_grab_api_v3_rom_release_grab_post"];
+        /** Delete a batch of Releases — and their Dumps via cascade — without touching ROM files on disk (admin only). Capped at 500 ids per call. */
+        post: operations["bulk_delete_releases_api_v3_rom_release_bulk_delete_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2111,174 +968,40 @@ export interface paths {
         patch: operations["patch_release_api_v3_rom_release__release_id__patch"];
         trace?: never;
     };
-    "/api/v3/rom/scan": {
+    "/api/v3/history": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Unified history: import / search / job_run rows merged and paginated chronologically. */
+        get: operations["list_history_api_v3_history_get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/history/since": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
         /**
-         * Post Scan All
-         * @description Trigger a full scan across every enabled library.
+         * Unified history filtered to entries whose ``date`` is >= ``date`` query param.
+         * @description Strict ``date >= since`` filter, paginated like the
+         *     parent endpoint. Useful for "what happened since I last
+         *     checked" polling without dragging the whole feed.
          */
-        post: operations["post_scan_all_api_v3_rom_scan_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/search/history": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List search-history rows (admin only). Filterable by game / type. */
-        get: operations["list_history_api_v3_rom_search_history_get"];
+        get: operations["list_history_since_api_v3_history_since_get"];
         put?: never;
         post?: never;
         delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/search/manual": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Run a manual search round (admin only). */
-        post: operations["manual_search_api_v3_rom_search_manual_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/search/release/{release_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Run a release-scoped search round (admin only). */
-        post: operations["release_search_api_v3_rom_search_release__release_id__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/unidentified": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List unidentified dumps (any authenticated user). */
-        get: operations["list_unidentified_api_v3_rom_unidentified_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/unidentified/{entry_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Delete an unidentified-dump row (admin only). The source file on disk is NOT removed (FR-038). */
-        delete: operations["delete_unidentified_api_v3_rom_unidentified__entry_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rom/unidentified/{entry_id}/match": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Match an unidentified dump to a Game + Release and import it (admin only). Mirrors the manual-flow `import_known` orchestrator surface (slice 83): hash + coalesce-check + persist Dump + record import_history. */
-        post: operations["match_unidentified_api_v3_rom_unidentified__entry_id__match_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/rootfolder": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Sonarr-compat root folder list. Each Romarr Library projects to one root-folder row so Prowlarr / Notifiarr / etc. can populate their pickers. */
-        get: operations["list_root_folders_api_v3_rootfolder_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/system/backup": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List every backup file under ``Settings.backup_path``. Each entry carries filename / lastWriteTime / size. Returns [] when the directory is empty or absent. */
-        get: operations["list_backups_api_v3_system_backup_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/system/backup/{filename}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Delete a backup file. Admin-only. The destructive Article XII confirmation flow lives in the operator UI; the API itself just removes the file when called. */
-        delete: operations["delete_backup_api_v3_system_backup__filename__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2343,15 +1066,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v3/system/stats": {
+    "/api/v3/system/backup": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Aggregate counts (games / releases / dumps / wanted / imports today). Drives the Dashboard stat cards. */
-        get: operations["get_stats_api_v3_system_stats_get"];
+        /** List every backup file under ``Settings.backup_path``. Each entry carries filename / lastWriteTime / size. Returns [] when the directory is empty or absent. */
+        get: operations["list_backups_api_v3_system_backup_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2360,7 +1083,556 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v3/system/status": {
+    "/api/v3/system/backup/{filename}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a backup file. Admin-only. The destructive Article XII confirmation flow lives in the operator UI; the API itself just removes the file when called. */
+        delete: operations["delete_backup_api_v3_system_backup__filename__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/backup/manifest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Liste des ressources backupables + leur nombre d'items actuels. */
+        get: operations["get_manifest_api_v3_backup_manifest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/backup/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Génère un bundle JSON des ressources sélectionnées.
+         * @description Le bundle est retourné en JSON natif. L'UI le télécharge côté
+         *     client (`URL.createObjectURL` + `<a download>`) — pas de fichier
+         *     stocké côté serveur.
+         */
+        post: operations["post_export_api_v3_backup_export_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/backup/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Applique un bundle. Retourne un bilan par ressource.
+         * @description Un bundle peut contenir plus de ressources que ce qui est
+         *     demandé — le service ne traite que l'intersection (bundle × wanted).
+         */
+        post: operations["post_import_api_v3_backup_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/metadata/provider": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List every metadata provider's config (admin only). */
+        get: operations["list_providers_api_v3_metadata_provider_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/metadata/provider/{provider_name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one metadata provider's config (admin only). */
+        get: operations["read_provider_api_v3_metadata_provider__provider_name__get"];
+        /** Update a metadata provider's toggle / config / limits (admin only). */
+        put: operations["update_provider_api_v3_metadata_provider__provider_name__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/metadata/provider/{provider_name}/secrets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return a provider's DECRYPTED config as a plain JSON object (admin only). Used by the UI to pre-fill the configure modal so operators can edit an existing key without re-typing it. ``{}`` if the provider isn't configured yet. */
+        get: operations["read_provider_secrets_api_v3_metadata_provider__provider_name__secrets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/metadata/provider/{provider_name}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Probe a configured provider's reachability (admin only). */
+        post: operations["test_provider_api_v3_metadata_provider__provider_name__test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/metadata/field-priority": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the per-field provider priority list (admin only). */
+        get: operations["list_field_priority_api_v3_metadata_field_priority_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/metadata/field-priority/{field_name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace the ordered provider list for a single field (admin only). */
+        put: operations["update_field_priority_api_v3_metadata_field_priority__field_name__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/game/{game_id}/refresh-metadata": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refresh metadata for a Game from the enabled providers (admin only). */
+        post: operations["refresh_metadata_endpoint_api_v3_game__game_id__refresh_metadata_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/game/{game_id}/provider/{provider_name}/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search ONE provider for relink candidates against this game's title (admin only). The operator picks the right hit and POSTs it to /relink. */
+        get: operations["list_relink_candidates_api_v3_game__game_id__provider__provider_name__candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/game/{game_id}/provider/{provider_name}/relink": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pin a new provider id on this game, drop the stale cache row, and force a refresh so the new payload lands atomically (admin only). */
+        post: operations["relink_provider_api_v3_game__game_id__provider__provider_name__relink_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/game/{game_id}/provider/{provider_name}/clear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Detach a provider from this game (FK → NULL, cache row purged) and re-aggregate from the surviving providers (admin only). */
+        post: operations["clear_provider_api_v3_game__game_id__provider__provider_name__clear_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/platform-pack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List every persisted platform pack (admin only). */
+        get: operations["list_packs_api_v3_rom_platform_pack_get"];
+        put?: never;
+        /** Upload + apply a community pack (admin only). */
+        post: operations["upload_pack_api_v3_rom_platform_pack_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/platform-pack/{pack_version}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detail + audit history for a single pack (admin only). */
+        get: operations["read_pack_api_v3_rom_platform_pack__pack_version__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/platform-pack/{pack_version}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-apply a known pack (idempotent skip if state matches).
+         * @description Re-applying without the body is only meaningful when the pack
+         *     body is reachable from the original source — at MVP we mark this
+         *     endpoint as ``not_implemented`` because we don't persist pack
+         *     bodies. The endpoint signature is locked in so callers can target
+         *     a stable URL; a v1+ slice can store ``platform_pack.body`` and
+         *     drop in the real implementation.
+         */
+        post: operations["reapply_pack_api_v3_rom_platform_pack__pack_version__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/platform-pack/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Validate a pack without applying it (admin only). */
+        post: operations["validate_only_api_v3_rom_platform_pack_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/platform-pack-source": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List every registered pack source (admin). */
+        get: operations["list_sources_api_v3_rom_platform_pack_source_get"];
+        put?: never;
+        /** Register a new remote pack source (admin). */
+        post: operations["create_source_api_v3_rom_platform_pack_source_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/platform-pack-source/{source_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a source (admin). Does not un-apply the packs it fed. */
+        delete: operations["delete_source_api_v3_rom_platform_pack_source__source_id__delete"];
+        options?: never;
+        head?: never;
+        /** Toggle enabled or rename a source (admin). */
+        patch: operations["update_source_api_v3_rom_platform_pack_source__source_id__patch"];
+        trace?: never;
+    };
+    "/api/v3/rom/platform-pack-source/{source_id}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Fetch and ingest every pack the source advertises (admin). */
+        post: operations["sync_source_api_v3_rom_platform_pack_source__source_id__sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/platform-pack-source/{source_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dry-run: fetch and diff without applying anything (admin).
+         * @description Fetch every YAML the source advertises and run each through
+         *     the same validation pipeline as a real apply, without touching
+         *     the DB. Useful before hitting ``/sync`` on an untrusted source.
+         */
+        post: operations["preview_source_api_v3_rom_platform_pack_source__source_id__preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/platform-pack-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the platform-pack config singleton. */
+        get: operations["get_config_api_v3_rom_platform_pack_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update the builtin toggle and/or priority (admin). */
+        patch: operations["update_config_api_v3_rom_platform_pack_config_patch"];
+        trace?: never;
+    };
+    "/api/v3/rom/platform": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List every platform in the catalogue (any authenticated user). Drives the Library / Wanted / AddNew filter dropdowns on the frontend. */
+        get: operations["list_platforms_api_v3_rom_platform_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/platform/{platform_id}/override": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark a platform as user-overridden (admin only). Idempotent. */
+        post: operations["post_override_api_v3_rom_platform__platform_id__override_post"];
+        /** Release a user-override (admin only). */
+        delete: operations["delete_override_api_v3_rom_platform__platform_id__override_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/platform/{platform_id}/format": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List a platform's formats (admin only). */
+        get: operations["list_formats_api_v3_rom_platform__platform_id__format_get"];
+        put?: never;
+        /** Add a format (admin only). Platform must be user-overridden. */
+        post: operations["post_format_api_v3_rom_platform__platform_id__format_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/platform/{platform_id}/format/{format_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update a format (admin only). Platform must be user-overridden. */
+        put: operations["put_format_api_v3_rom_platform__platform_id__format__format_id__put"];
+        post?: never;
+        /** Delete a format (admin only). Idempotent. */
+        delete: operations["delete_format_endpoint_api_v3_rom_platform__platform_id__format__format_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom-pack/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Global ROM-pack defaults (any authenticated user). */
+        get: operations["get_config_api_v3_rom_pack_config_get"];
+        /** Update the global ROM-pack defaults (admin only). */
+        put: operations["update_config_api_v3_rom_pack_config_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom-pack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List ROM content packs (any authenticated user). */
+        get: operations["list_packs_api_v3_rom_pack_get"];
+        put?: never;
+        /** Register a new URL-sourced ROM content pack (admin only). */
+        post: operations["create_pack_api_v3_rom_pack_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom-pack/{pack_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One ROM content pack (any authenticated user). */
+        get: operations["get_pack_api_v3_rom_pack__pack_id__get"];
+        /** Update a ROM content pack (admin only). */
+        put: operations["update_pack_api_v3_rom_pack__pack_id__put"];
+        post?: never;
+        /**
+         * Delete a ROM content pack + its item rows (admin only).
+         * @description Drops the ``rom_pack`` row; ``rom_pack_item`` rows cascade.
+         *     Imported Games / Dumps stay in the Library — only the pack's
+         *     bookkeeping is removed.
+         */
+        delete: operations["delete_pack_api_v3_rom_pack__pack_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom-pack/{pack_id}/items": {
         parameters: {
             query?: never;
             header?: never;
@@ -2368,16 +1640,1371 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Status
-         * @description Sonarr-compatible system status.
-         *
-         *     Public callers receive ``{version, isProduction}`` only;
-         *     authenticated callers receive the full Sonarr v3 + v4 union
-         *     field set (FR-031, SC-001).
+         * Per-file outcomes for one pack (any authenticated user).
+         * @description The triage modal (slice 462) pulls this with
+         *     ``status_filter=unmatched`` to render the per-file picker.
          */
-        get: operations["get_status_api_v3_system_status_get"];
+        get: operations["list_pack_items_api_v3_rom_pack__pack_id__items_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom-pack/{pack_id}/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Force-stop a stuck pack ingest (admin only). Cancels any in-flight task, drops the Activity mirror, and flips the pack to ``failed`` so the operator can re-ingest, edit or delete it.
+         * @description Recovery path for a pack stranded mid-ingest (process
+         *     restart killed the task, exception escaped the orchestrator,
+         *     …). A no-op when the pack is already in an actionable state
+         *     so the operator can hit Reset safely.
+         */
+        post: operations["reset_pack_api_v3_rom_pack__pack_id__reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom-pack/grab": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Grab one indexer result as a ROM content pack (admin only). ``?force=true`` overrides the blocklist gate.
+         * @description Dispatch a chosen indexer result to a download client and
+         *     register it as a ``grab``-sourced pack. When the download
+         *     completes the watcher routes it to the pack ingest pipeline.
+         *
+         *     The heavy search/dispatch deps are imported lazily — this
+         *     router is on the app's import-time critical path and most
+         *     requests never reach the grab branch.
+         */
+        post: operations["grab_pack_api_v3_rom_pack_grab_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom-pack/{pack_id}/ingest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trigger download → extract → import for one pack (admin only).
+         * @description Fire the ingest pipeline as a detached task and return the
+         *     row immediately. The pipeline owns its own sessions and
+         *     drives ``status`` through downloading → … → done / failed —
+         *     the Content Packs page polls this row for progress.
+         */
+        post: operations["ingest_pack_api_v3_rom_pack__pack_id__ingest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom-pack/{pack_id}/items/{item_id}/associate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Manually associate an unmatched ROM with a Game (admin only).
+         * @description Run the standard importer against the extracted ROM with
+         *     the operator-chosen Game pinned. On success the ROM lands in
+         *     that Game's Library and the item flips to ``imported``.
+         */
+        post: operations["associate_item_api_v3_rom_pack__pack_id__items__item_id__associate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom-pack/{pack_id}/items/{item_id}/park": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Park an unmatched ROM in unidentified_dump (admin only).
+         * @description Hand the ROM to ``unidentified_dump`` so it shows up in
+         *     Settings → Unidentified for later identification, leaving the
+         *     extracted file in place.
+         */
+        post: operations["park_item_api_v3_rom_pack__pack_id__items__item_id__park_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom-pack/{pack_id}/items/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete an unmatched ROM's extracted file (admin only).
+         * @description Remove the extracted ROM from disk and mark the item
+         *     ``deleted``. The row is kept as an audit trail of what the
+         *     pack contained — only the file goes.
+         */
+        delete: operations["delete_item_api_v3_rom_pack__pack_id__items__item_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List registered Prowlarr instances (admin only). */
+        get: operations["list_applications_api_v3_applications_get"];
+        put?: never;
+        /** Register a Prowlarr instance (admin only). Returns app_token ONCE. */
+        post: operations["register_application_api_v3_applications_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/applications/{application_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one Prowlarr application (admin only). */
+        get: operations["read_application_api_v3_applications__application_id__get"];
+        put?: never;
+        post?: never;
+        /** Unregister a Prowlarr application (admin only). Token hash is dropped. */
+        delete: operations["unregister_application_api_v3_applications__application_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/applications/{application_id}/rotate-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mint a fresh API key for an existing application (admin only). The previous key stops authenticating immediately. Returns the new plaintext key EXACTLY ONCE.
+         * @description Operator lost the original API key (we only kept the hash);
+         *     rotate to mint a fresh one. The Prowlarr URL + Prowlarr-side
+         *     API key stay unchanged — only the Romarr key Prowlarr uses to
+         *     call back changes.
+         */
+        post: operations["rotate_application_token_api_v3_applications__application_id__rotate_token_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/indexer/grabarr": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Atomic Add-Grabarr wizard (admin only). Creates a linked download_client + indexer pair after a /health probe. */
+        post: operations["add_grabarr_api_v3_indexer_grabarr_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/indexer/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Newznab + Torznab schema entries (Prowlarr expects this). */
+        get: operations["schema_endpoint_api_v3_indexer_schema_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/indexer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List configured indexers (admin only). */
+        get: operations["list_indexers_api_v3_indexer_get"];
+        put?: never;
+        /** Create an indexer (admin only). ``?test=true`` runs caps+search first. */
+        post: operations["create_indexer_api_v3_indexer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/indexer/{indexer_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one indexer (admin only). */
+        get: operations["read_indexer_api_v3_indexer__indexer_id__get"];
+        /** Update an indexer (admin only). The ``api_key`` field is re-encrypted only when present in the body. */
+        put: operations["update_indexer_api_v3_indexer__indexer_id__put"];
+        post?: never;
+        /** Delete an indexer (admin only). Notifies Prowlarr if pushed by it. */
+        delete: operations["delete_indexer_api_v3_indexer__indexer_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/indexer/{indexer_id}/secrets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the indexer's DECRYPTED api_key (admin only). Used by the edit-indexer modal to pre-fill the API key field so operators can edit an existing indexer without re-typing the key. Returns ``{'api_key': null}`` when no key is set. */
+        get: operations["read_indexer_secrets_api_v3_indexer__indexer_id__secrets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/indexer/{indexer_id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run caps + minimal search to confirm the indexer is reachable. */
+        post: operations["test_indexer_api_v3_indexer__indexer_id__test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/indexer/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Probe an unsaved (URL, api_key) pair without persisting an Indexer row. Used by the Create / Edit modals so operators validate connectivity before saving. */
+        post: operations["probe_indexer_payload_api_v3_indexer_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/library": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all libraries (any authenticated user). */
+        get: operations["list_libraries_api_v3_rom_library_get"];
+        put?: never;
+        /** Create a library (admin only). */
+        post: operations["create_library_api_v3_rom_library_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/library/{library_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a single library (any authenticated user). */
+        get: operations["read_library_api_v3_rom_library__library_id__get"];
+        /** Partial update of a library (admin only). */
+        put: operations["update_library_api_v3_rom_library__library_id__put"];
+        post?: never;
+        /** Delete a library (admin only). ``?force=true`` unbinds attached Releases first; rejected when ``keep_dump_history=true`` and historical Dumps reference the library (FR-027). */
+        delete: operations["delete_library_api_v3_rom_library__library_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Scan All
+         * @description Trigger a full scan across every enabled library.
+         */
+        post: operations["post_scan_all_api_v3_rom_scan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/library/{library_id}/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Scan Library
+         * @description Trigger a full scan against a single library.
+         */
+        post: operations["post_scan_library_api_v3_rom_library__library_id__scan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/exporters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the exporter catalog (any authenticated user).
+         * @description Return the static catalog of exporters Romarr ships.
+         *
+         *     Per-import dispatch + last-run tracking are deferred — this
+         *     endpoint surfaces metadata only so the Settings UI can render
+         *     an operator-visible list with descriptions + on-disk format
+         *     hints.
+         */
+        get: operations["list_exporters_endpoint_api_v3_rom_exporters_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/exporters/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one exporter descriptor. */
+        get: operations["read_exporter_api_v3_rom_exporters__name__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/exporters/{name}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Materialize + write the exporter file (admin only).
+         * @description T078 — run one exporter on demand for a (library, platform).
+         *
+         *     The endpoint refuses when the exporter's per-library enable
+         *     flag is False so the manual-run can't bypass the operator's
+         *     opt-out. ESDE is the only exporter wired today; pegasus /
+         *     launchbox / romm return 501 with a clear marker until their
+         *     materializers ship.
+         */
+        post: operations["run_exporter_api_v3_rom_exporters__name__run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/exporters/runs/{library_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Per-(library, exporter) emission tracking (any user).
+         * @description T077 / FR-019 — return the per-exporter run rows for one
+         *     library. Empty list when no exporter has fired yet.
+         */
+        get: operations["list_library_exporter_runs_api_v3_rom_exporters_runs__library_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/manual-import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Manual Import Listing
+         * @description Walk ``folder`` and return the manual-import candidate grid.
+         *
+         *     Read-only — no DB writes (FR-022).
+         */
+        get: operations["get_manual_import_listing_api_v3_rom_manual_import_get"];
+        put?: never;
+        /**
+         * Post Manual Import Bulk
+         * @description Run the operator's bulk decisions against the importer.
+         */
+        post: operations["post_manual_import_bulk_api_v3_rom_manual_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/downloadclient/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List download-client implementations Romarr knows about. */
+        get: operations["schema_endpoint_api_v3_downloadclient_schema_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/downloadclient": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List configured download clients (admin only). */
+        get: operations["list_clients_api_v3_downloadclient_get"];
+        put?: never;
+        /** Create a download client (admin only). ``?test=true`` runs connectivity probe before persistence. */
+        post: operations["create_client_api_v3_downloadclient_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/downloadclient/{client_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one download client (admin only). */
+        get: operations["read_client_api_v3_downloadclient__client_id__get"];
+        /** Update a download client (admin only). ``password`` / ``api_key`` are re-encrypted only when present in the body. */
+        put: operations["update_client_api_v3_downloadclient__client_id__put"];
+        post?: never;
+        /** Delete a download client (admin only). */
+        delete: operations["delete_client_api_v3_downloadclient__client_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/downloadclient/{client_id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run a connectivity probe against the configured client (admin only). */
+        post: operations["test_client_api_v3_downloadclient__client_id__test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/downloadclient/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Probe an unsaved download-client payload without persisting a row. Used by the Create / Edit modals so operators can validate connectivity before saving. */
+        post: operations["probe_client_payload_api_v3_downloadclient_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/qualityprofile/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** JSON Schema descriptor for qualityprofile (any authenticated user). */
+        get: operations["get_schema_api_v3_qualityprofile_schema_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/qualityprofile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List qualityprofile (any authenticated user). */
+        get: operations["list_rows_api_v3_qualityprofile_get"];
+        put?: never;
+        /** Create a qualityprofile (admin only). */
+        post: operations["create_row_api_v3_qualityprofile_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/qualityprofile/{row_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one qualityprofile (any authenticated user). */
+        get: operations["read_row_api_v3_qualityprofile__row_id__get"];
+        /** Update a qualityprofile (admin only). Flips is_user_modified=true. */
+        put: operations["update_row_api_v3_qualityprofile__row_id__put"];
+        post?: never;
+        /** Delete a qualityprofile (admin only). ``?force=true`` is a future-extension knob: today the cascade detection still 409s when the profile is bound, because the library.*_profile_id columns are NOT NULL — a force-unbind would require either a schema change to allow NULL or a 'substitute with factory default' rebind. */
+        delete: operations["delete_row_api_v3_qualityprofile__row_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/regionprofile/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** JSON Schema descriptor for regionprofile (any authenticated user). */
+        get: operations["get_schema_api_v3_rom_regionprofile_schema_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/regionprofile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List regionprofile (any authenticated user). */
+        get: operations["list_rows_api_v3_rom_regionprofile_get"];
+        put?: never;
+        /** Create a regionprofile (admin only). */
+        post: operations["create_row_api_v3_rom_regionprofile_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/regionprofile/{row_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one regionprofile (any authenticated user). */
+        get: operations["read_row_api_v3_rom_regionprofile__row_id__get"];
+        /** Update a regionprofile (admin only). Flips is_user_modified=true. */
+        put: operations["update_row_api_v3_rom_regionprofile__row_id__put"];
+        post?: never;
+        /** Delete a regionprofile (admin only). ``?force=true`` is a future-extension knob: today the cascade detection still 409s when the profile is bound, because the library.*_profile_id columns are NOT NULL — a force-unbind would require either a schema change to allow NULL or a 'substitute with factory default' rebind. */
+        delete: operations["delete_row_api_v3_rom_regionprofile__row_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/dumpprofile/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** JSON Schema descriptor for dumpprofile (any authenticated user). */
+        get: operations["get_schema_api_v3_rom_dumpprofile_schema_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/dumpprofile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List dumpprofile (any authenticated user). */
+        get: operations["list_rows_api_v3_rom_dumpprofile_get"];
+        put?: never;
+        /** Create a dumpprofile (admin only). */
+        post: operations["create_row_api_v3_rom_dumpprofile_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/dumpprofile/{row_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one dumpprofile (any authenticated user). */
+        get: operations["read_row_api_v3_rom_dumpprofile__row_id__get"];
+        /** Update a dumpprofile (admin only). Flips is_user_modified=true. */
+        put: operations["update_row_api_v3_rom_dumpprofile__row_id__put"];
+        post?: never;
+        /** Delete a dumpprofile (admin only). ``?force=true`` is a future-extension knob: today the cascade detection still 409s when the profile is bound, because the library.*_profile_id columns are NOT NULL — a force-unbind would require either a schema change to allow NULL or a 'substitute with factory default' rebind. */
+        delete: operations["delete_row_api_v3_rom_dumpprofile__row_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/languageprofile/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** JSON Schema descriptor for languageprofile (any authenticated user). */
+        get: operations["get_schema_api_v3_rom_languageprofile_schema_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/languageprofile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List languageprofile (any authenticated user). */
+        get: operations["list_rows_api_v3_rom_languageprofile_get"];
+        put?: never;
+        /** Create a languageprofile (admin only). */
+        post: operations["create_row_api_v3_rom_languageprofile_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/languageprofile/{row_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one languageprofile (any authenticated user). */
+        get: operations["read_row_api_v3_rom_languageprofile__row_id__get"];
+        /** Update a languageprofile (admin only). Flips is_user_modified=true. */
+        put: operations["update_row_api_v3_rom_languageprofile__row_id__put"];
+        post?: never;
+        /** Delete a languageprofile (admin only). ``?force=true`` is a future-extension knob: today the cascade detection still 409s when the profile is bound, because the library.*_profile_id columns are NOT NULL — a force-unbind would require either a schema change to allow NULL or a 'substitute with factory default' rebind. */
+        delete: operations["delete_row_api_v3_rom_languageprofile__row_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/namingprofile/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** JSON Schema descriptor for namingprofile (any authenticated user). */
+        get: operations["get_schema_api_v3_rom_namingprofile_schema_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/namingprofile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List namingprofile (any authenticated user). */
+        get: operations["list_rows_api_v3_rom_namingprofile_get"];
+        put?: never;
+        /** Create a namingprofile (admin only). */
+        post: operations["create_row_api_v3_rom_namingprofile_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/namingprofile/{row_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one namingprofile (any authenticated user). */
+        get: operations["read_row_api_v3_rom_namingprofile__row_id__get"];
+        /** Update a namingprofile (admin only). Flips is_user_modified=true. */
+        put: operations["update_row_api_v3_rom_namingprofile__row_id__put"];
+        post?: never;
+        /** Delete a namingprofile (admin only). ``?force=true`` is a future-extension knob: today the cascade detection still 409s when the profile is bound, because the library.*_profile_id columns are NOT NULL — a force-unbind would require either a schema change to allow NULL or a 'substitute with factory default' rebind. */
+        delete: operations["delete_row_api_v3_rom_namingprofile__row_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/namingprofile/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Render a candidate naming template against a sample release without persisting (admin only). Returns the rendered filename.
+         * @description Render the supplied template against the sample release.
+         *
+         *     Spec 001's ``Release`` table will land before spec 006's preview
+         *     is wired against real rows; today we use a synthetic sample so
+         *     operators can iterate on templates the moment they install.
+         *     Once the search engine slice exposes a release-fetch helper, this
+         *     endpoint will look up ``payload.sample_release_id`` and replace
+         *     the synthetic facts with the real ones.
+         */
+        post: operations["preview_template_api_v3_rom_namingprofile_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/customformat/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** JSON Schema descriptor for customformat (any authenticated user). */
+        get: operations["get_schema_api_v3_customformat_schema_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/customformat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List customformat (any authenticated user). */
+        get: operations["list_rows_api_v3_customformat_get"];
+        put?: never;
+        /** Create a customformat (admin only). */
+        post: operations["create_row_api_v3_customformat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/customformat/{row_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one customformat (any authenticated user). */
+        get: operations["read_row_api_v3_customformat__row_id__get"];
+        /** Update a customformat (admin only). Flips is_user_modified=true. */
+        put: operations["update_row_api_v3_customformat__row_id__put"];
+        post?: never;
+        /** Delete a customformat (admin only). ``?force=true`` is a future-extension knob: today the cascade detection still 409s when the profile is bound, because the library.*_profile_id columns are NOT NULL — a force-unbind would require either a schema change to allow NULL or a 'substitute with factory default' rebind. */
+        delete: operations["delete_row_api_v3_customformat__row_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/search/manual": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run a manual search round (admin only). */
+        post: operations["manual_search_api_v3_rom_search_manual_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/search/release/{release_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run a release-scoped search round (admin only). */
+        post: operations["release_search_api_v3_rom_search_release__release_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/release/grab": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Manual grab of one indexer result (admin only). ``?force=true`` overrides the blocklist gate. */
+        post: operations["manual_grab_api_v3_rom_release_grab_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/search/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List search-history rows (admin only). Filterable by game / type. */
+        get: operations["list_history_api_v3_rom_search_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/blocklist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List blocklist entries (admin only). */
+        get: operations["list_blocklist_api_v3_blocklist_get"];
+        put?: never;
+        /** Add a blocklist entry (admin only). */
+        post: operations["add_to_blocklist_api_v3_blocklist_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/blocklist/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a blocklist entry (admin only). */
+        delete: operations["remove_from_blocklist_api_v3_blocklist__entry_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/webhook/download-complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Notify Romarr that a download is complete and ready to import. Bearer-token authenticated; rate-limited 10 req/min/IP. */
+        post: operations["download_complete_api_v3_webhook_download_complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/import/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List import-history rows (any authenticated user). Paginated; filterable by game_id / release_id / imported_via / success. */
+        get: operations["list_history_api_v3_rom_import_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/unidentified": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List unidentified dumps (any authenticated user). */
+        get: operations["list_unidentified_api_v3_rom_unidentified_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/unidentified/{entry_id}/match": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Match an unidentified dump to a Game + Release and import it (admin only). Mirrors the manual-flow `import_known` orchestrator surface (slice 83): hash + coalesce-check + persist Dump + record import_history. */
+        post: operations["match_unidentified_api_v3_rom_unidentified__entry_id__match_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/unidentified/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete an unidentified-dump row (admin only). The source file on disk is NOT removed (FR-038). */
+        delete: operations["delete_unidentified_api_v3_rom_unidentified__entry_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/import/manual": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Import Manual
+         * @description Bulk manual import — admin-only.
+         *
+         *     Each entry is dispatched to ``run_import`` with a fresh
+         *     correlation id; the response carries the resulting
+         *     ``import_history`` row per entry. Per-entry exceptions are
+         *     isolated (one failure doesn't drop the batch).
+         */
+        post: operations["post_import_manual_api_v3_rom_import_manual_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/rom/import/retry/{import_history_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Import Retry
+         * @description Retry a previously-imported file.
+         *
+         *     Looks up the original ``import_history`` row, replays
+         *     ``run_import`` against its ``source_path`` with a fresh
+         *     correlation id. Returns the freshly-created
+         *     ``import_history`` row; the original is preserved
+         *     (FR-035).
+         */
+        post: operations["post_import_retry_api_v3_rom_import_retry__import_history_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/notification/webhook-payloads.md": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Webhook Payloads Md
+         * @description Return the FR-006a cross-walk as ``text/markdown``.
+         */
+        get: operations["webhook_payloads_md_api_v3_notification_webhook_payloads_md_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/notification/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Implementations
+         * @description Per FR-023, the UI's "add notification" wizard fetches a
+         *     list of supported target implementations. Romarr exposes two:
+         *
+         *       * ``apprise`` — operator pastes any Apprise URL
+         *         (``discord://``, ``tgram://``, ``ntfys://``, …) and
+         *         Romarr handles the transport.
+         *       * ``webhook`` — Sonarr v3-format JSON POST to a configured
+         *         URL via the ``json://`` / ``jsons://`` Apprise schemes.
+         */
+        get: operations["list_implementations_api_v3_notification_schema_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/notification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Notifications */
+        get: operations["list_notifications_api_v3_notification_get"];
+        put?: never;
+        /**
+         * Create Notification
+         * @description Create a notification target.
+         *
+         *     Validates the Apprise URL via ``Apprise.add(...)`` (FR-004),
+         *     every non-null template via the sandboxed renderer (FR-013),
+         *     and at-least-one-event flag via the schema (FR-005). On
+         *     success, the URL is Fernet-encrypted at rest; only the
+         *     scheme prefix is persisted in plaintext for the read shape.
+         */
+        post: operations["create_notification_api_v3_notification_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/notification/{notification_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Notification */
+        get: operations["read_notification_api_v3_notification__notification_id__get"];
+        /** Update Notification */
+        put: operations["update_notification_api_v3_notification__notification_id__put"];
+        post?: never;
+        /** Delete Notification */
+        delete: operations["delete_notification_api_v3_notification__notification_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/notification/{notification_id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test Notification
+         * @description Fire a synthetic ``OnImport`` event with placeholder data
+         *     through the same dispatcher real events use (FR-016).
+         *
+         *     Admin-gated because it triggers outbound HTTP to the
+         *     configured URL — same SSRF-rationale as spec 005's
+         *     download-client connectivity test (FR-024b).
+         */
+        post: operations["test_notification_api_v3_notification__notification_id__test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Health
+         * @description Tiered health snapshot.
+         *
+         *     Anonymous: ``{status: "ok"|"warning"|"error"}`` only.
+         *     Authenticated (any role): full ``HealthSnapshot`` with
+         *     per-category breakdown and structured messages.
+         */
+        get: operations["get_health_api_v3_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/health/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh Health
+         * @description Run the engine on demand. Admin-gated because each cycle
+         *     fires outbound HTTP probes against indexers / download
+         *     clients (SSRF surface, FR-024b).
+         *
+         *     The engine instance is read off ``request.app.state``; if
+         *     the lifespan hasn't installed one yet, returns the
+         *     persisted snapshot without refreshing (so the endpoint is
+         *     still callable for a UI ping).
+         */
+        post: operations["refresh_health_api_v3_health_refresh_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2424,6 +3051,31 @@ export interface paths {
          *     within 60 s without a restart (FR-026).
          */
         patch: operations["patch_task_api_v3_system_tasks__job_id__patch"];
+        trace?: never;
+    };
+    "/api/v3/system/tasks/{job_id}/trigger": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trigger Task
+         * @description Manually fire a job. Admin-only.
+         *
+         *     The optional ``?force=true`` query bypasses the
+         *     ``enabled=False`` gate (US5.2). Auto-pause is also
+         *     bypassed for manual triggers — only scheduled cycles get
+         *     the gate.
+         */
+        post: operations["trigger_task_api_v3_system_tasks__job_id__trigger_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v3/system/tasks/{job_id}/runs": {
@@ -2476,7 +3128,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v3/system/tasks/{job_id}/trigger": {
+    "/api/v3/command/_known": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Known Commands
+         * @description Return the list of recognised Sonarr command names.
+         *     Useful for the operator UI's discoverability.
+         */
+        get: operations["list_known_commands_api_v3_command__known_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/command": {
         parameters: {
             query?: never;
             header?: never;
@@ -2486,196 +3159,48 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Trigger Task
-         * @description Manually fire a job. Admin-only.
+         * Post Command
+         * @description Fire a Sonarr-shaped command. Admin-only.
          *
-         *     The optional ``?force=true`` query bypasses the
-         *     ``enabled=False`` gate (US5.2). Auto-pause is also
-         *     bypassed for manual triggers — only scheduled cycles get
-         *     the gate.
+         *     The payload's ``name`` field maps to a Romarr ``job_id``
+         *     via :func:`resolve_command`. Optional camelCase kwargs
+         *     (``gameId``, ``libraryId``) are forwarded as
+         *     ``JobContext.parameters``.
          */
-        post: operations["trigger_task_api_v3_system_tasks__job_id__trigger_post"];
+        post: operations["post_command_api_v3_command_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v3/tag": {
+    "/api/v3/command/{command_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List every tag. */
-        get: operations["list_tags_api_v3_tag_get"];
-        put?: never;
-        /** Create a tag (admin). */
-        post: operations["create_tag_api_v3_tag_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/tag/detail/{tag_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Show every entity currently tagged with this id. */
-        get: operations["tag_detail_api_v3_tag_detail__tag_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/tag/{tag_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read one tag by id. */
-        get: operations["read_tag_api_v3_tag__tag_id__get"];
-        /** Update one tag's label or colour (admin). */
-        put: operations["update_tag_api_v3_tag__tag_id__put"];
-        post?: never;
-        /** Delete one tag (admin). Returns HTTP 409 if the tag is currently assigned to any entity unless ?force=true is set, in which case the assignments are cascaded. */
-        delete: operations["delete_tag_api_v3_tag__tag_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/user": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List every user (admin only). The id=0 system sentinel is hidden. */
-        get: operations["list_users_endpoint_api_v3_user_get"];
-        put?: never;
-        /** Create a user (admin only). */
-        post: operations["create_user_endpoint_api_v3_user_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/user/{user_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read a user by id (admin only). */
-        get: operations["read_user_endpoint_api_v3_user__user_id__get"];
-        /** Update a user's role / email / active flag (admin only). */
-        put: operations["update_user_endpoint_api_v3_user__user_id__put"];
-        post?: never;
-        /** Delete a user (admin only). Refuses the lone admin and the system sentinel. */
-        delete: operations["delete_user_endpoint_api_v3_user__user_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/user/{user_id}/reset-password": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
         /**
-         * Mint a one-time password-reset token (admin only).
-         * @description SMTP integration is out of scope at MVP — the admin shares the
-         *     plaintext out-of-band (chat, sticky note, password manager).
+         * Get Command Status
+         * @description Read a command's status by id (= ``job_run.id``).
          */
-        post: operations["admin_reset_password_api_v3_user__user_id__reset_password_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/wanted/cutoff": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Releases that ARE imported but don't yet meet the configured upgrade cutoff (cutoff_met=false). */
-        get: operations["list_cutoff_api_v3_wanted_cutoff_get"];
+        get: operations["get_command_status_api_v3_command__command_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/wanted/missing": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Releases the operator has flagged monitored but Romarr hasn't acquired yet (status='wanted'). */
-        get: operations["list_missing_api_v3_wanted_missing_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/wanted/missing/search": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Trigger a missing-search round (admin only). Probes up to ``limit`` wanted Releases, oldest-first; manual-search is invoked per Release and grab dispatch is left to the scheduler tick or operator action. */
-        post: operations["trigger_missing_search_api_v3_wanted_missing_search_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v3/webhook/download-complete": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Notify Romarr that a download is complete and ready to import. Bearer-token authenticated; rate-limited 10 req/min/IP. */
-        post: operations["download_complete_api_v3_webhook_download_complete_post"];
-        delete?: never;
+        /**
+         * Cancel Command
+         * @description Cancel an in-flight command. Admin-only.
+         *
+         *     Mirrors the runs-endpoint contract: 404 if the command
+         *     doesn't exist; 409 if it's already in a terminal state;
+         *     503 if no cancellation registry is wired (scheduler off).
+         *     Otherwise delegates to spec 012's
+         *     :class:`CancellationRegistry` for the two-phase cooperative
+         *     cancel + force-terminate protocol and returns 202 with the
+         *     resolved ``forced`` flag.
+         */
+        delete: operations["cancel_command_api_v3_command__command_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2690,25 +3215,25 @@ export interface components {
          * @description Read-side shape — plaintext is never resurrected.
          */
         ApiKeyPublic: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Key Prefix */
+            key_prefix: string;
+            /** Scopes */
+            scopes: string[];
+            /** Expires At */
+            expires_at?: string | null;
+            /** Last Used At */
+            last_used_at?: string | null;
+            /** Last Used Ip */
+            last_used_ip?: string | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
-            /** Expires At */
-            expires_at?: string | null;
-            /** Id */
-            id: number;
-            /** Key Prefix */
-            key_prefix: string;
-            /** Last Used At */
-            last_used_at?: string | null;
-            /** Last Used Ip */
-            last_used_ip?: string | null;
-            /** Name */
-            name: string;
-            /** Scopes */
-            scopes: string[];
             /**
              * Updated At
              * Format: date-time
@@ -2719,16 +3244,16 @@ export interface components {
         ApplicationCreate: {
             /** Name */
             name: string;
-            /** Prowlarr Api Key */
-            prowlarr_api_key: string;
-            /** Prowlarr Url */
-            prowlarr_url: string;
             /**
              * Sync Level
              * @default full_sync
              * @enum {string}
              */
             sync_level: "disabled" | "add_only" | "full_sync";
+            /** Prowlarr Url */
+            prowlarr_url: string;
+            /** Prowlarr Api Key */
+            prowlarr_api_key: string;
         };
         /**
          * ApplicationCreateResult
@@ -2738,45 +3263,45 @@ export interface components {
          *     return :class:`ApplicationRead` (no token).
          */
         ApplicationCreateResult: {
-            /** App Token */
-            app_token: string;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Sync Level */
+            sync_level: string;
+            /** Prowlarr Url */
+            prowlarr_url: string;
+            /** Enabled */
+            enabled: boolean;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
-            /** Enabled */
-            enabled: boolean;
-            /** Id */
-            id: number;
             /** Last Sync At */
             last_sync_at: string | null;
-            /** Name */
-            name: string;
-            /** Prowlarr Url */
-            prowlarr_url: string;
-            /** Sync Level */
-            sync_level: string;
+            /** App Token */
+            app_token: string;
         };
         /** ApplicationRead */
         ApplicationRead: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Sync Level */
+            sync_level: string;
+            /** Prowlarr Url */
+            prowlarr_url: string;
+            /** Enabled */
+            enabled: boolean;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
-            /** Enabled */
-            enabled: boolean;
-            /** Id */
-            id: number;
             /** Last Sync At */
             last_sync_at: string | null;
-            /** Name */
-            name: string;
-            /** Prowlarr Url */
-            prowlarr_url: string;
-            /** Sync Level */
-            sync_level: string;
         };
         /**
          * BackupFileEntry
@@ -2795,27 +3320,27 @@ export interface components {
         };
         /** BlocklistRead */
         BlocklistRead: {
+            /** Id */
+            id: number;
+            /** Indexer Id */
+            indexer_id: number | null;
+            /** Indexer Guid */
+            indexer_guid: string | null;
+            /** Release Title */
+            release_title: string;
+            /** Hash Sha1 */
+            hash_sha1: string | null;
+            /** Hash Crc32 */
+            hash_crc32: string | null;
+            /** Reason */
+            reason: string;
+            /** Added By */
+            added_by: string;
             /**
              * Added At
              * Format: date-time
              */
             added_at: string;
-            /** Added By */
-            added_by: string;
-            /** Hash Crc32 */
-            hash_crc32: string | null;
-            /** Hash Sha1 */
-            hash_sha1: string | null;
-            /** Id */
-            id: number;
-            /** Indexer Guid */
-            indexer_guid: string | null;
-            /** Indexer Id */
-            indexer_id: number | null;
-            /** Reason */
-            reason: string;
-            /** Release Title */
-            release_title: string;
         };
         /** Body_upload_pack_api_v3_rom_platform_pack_post */
         Body_upload_pack_api_v3_rom_platform_pack_post: {
@@ -2837,10 +3362,14 @@ export interface components {
          * BulkDeleteRequest
          * @description POST /api/v3/game/bulk-delete — destroy a batch of Games.
          *
-         *     Per the constitution Romarr never auto-deletes ROM files on
-         *     disk; this surface only removes the database row (and its
-         *     Releases / Dumps via cascade). Operators choose whether on-
-         *     disk cleanup happens via the per-library lifecycle policy.
+         *     By default this surface only removes the database rows (and
+         *     their Releases / Dumps via cascade); ROM files on disk stay
+         *     put per the per-library lifecycle policy.
+         *
+         *     When ``deleteFiles`` is true the cascade is extended to the
+         *     on-disk ROMs — each Dump's ``path`` is unlinked best-effort
+         *     before the row is dropped. The operator opts into this from
+         *     the destructive-action modal.
          *
          *     Capped at 500 ids per call so an accidental "select all"
          *     can't run away. The UI shards larger selections client-side
@@ -2850,6 +3379,11 @@ export interface components {
         BulkDeleteRequest: {
             /** Gameids */
             gameIds: number[];
+            /**
+             * Deletefiles
+             * @default false
+             */
+            deleteFiles: boolean;
         };
         /**
          * BulkDeleteResponse
@@ -2878,20 +3412,20 @@ export interface components {
          */
         BulkMissingSearchResponse: {
             /**
-             * Grabbed
-             * @description Releases for which at least one grab was dispatched.
+             * Total
+             * @description Releases inspected this round.
              */
-            grabbed: number;
+            total: number;
             /**
              * Succeeded
              * @description Releases whose search round produced ≥ 1 candidate.
              */
             succeeded: number;
             /**
-             * Total
-             * @description Releases inspected this round.
+             * Grabbed
+             * @description Releases for which at least one grab was dispatched.
              */
-            total: number;
+            grabbed: number;
         };
         /**
          * BulkMonitorRequest
@@ -2920,10 +3454,10 @@ export interface components {
          *     any ids the operator passed that didn't resolve to a Game.
          */
         BulkMonitorResponse: {
-            /** Missing */
-            missing: number[];
             /** Updated */
             updated: number;
+            /** Missing */
+            missing: number[];
         };
         /**
          * BulkReleaseDeleteRequest
@@ -2956,20 +3490,20 @@ export interface components {
          *     selections client-side.
          */
         BulkReleaseMonitorRequest: {
-            /** Monitored */
-            monitored: boolean;
             /** Releaseids */
             releaseIds: number[];
+            /** Monitored */
+            monitored: boolean;
         };
         /**
          * BulkReleaseMonitorResponse
          * @description Response envelope for the release bulk-monitor endpoint.
          */
         BulkReleaseMonitorResponse: {
-            /** Missing */
-            missing: number[];
             /** Updated */
             updated: number;
+            /** Missing */
+            missing: number[];
         };
         /**
          * BulkTagRequest
@@ -2986,25 +3520,50 @@ export interface components {
          *     pass for larger selections.
          */
         BulkTagRequest: {
+            /** Gameids */
+            gameIds: number[];
+            /** Tagids */
+            tagIds: number[];
             /**
              * Action
              * @enum {string}
              */
             action: "add" | "remove";
-            /** Gameids */
-            gameIds: number[];
-            /** Tagids */
-            tagIds: number[];
         };
         /**
          * BulkTagResponse
          * @description Response envelope for the bulk-tag endpoint.
          */
         BulkTagResponse: {
-            /** Missing */
-            missing: number[];
             /** Updated */
             updated: number;
+            /** Missing */
+            missing: number[];
+        };
+        /**
+         * Bundle
+         * @description Format sur disque du bundle. Sérialisable/parseable en JSON pur
+         *     (les bytes Fernet sont encodés en base64 par les handlers).
+         */
+        Bundle: {
+            /** Romarr Version */
+            romarr_version: string;
+            /**
+             * Exported At
+             * Format: date-time
+             */
+            exported_at: string;
+            /**
+             * Include Secrets
+             * @default false
+             */
+            include_secrets: boolean;
+            /** Resources */
+            resources?: {
+                [key: string]: {
+                    [key: string]: unknown;
+                }[];
+            };
         };
         /**
          * CalendarEvent
@@ -3019,15 +3578,15 @@ export interface components {
         CalendarEvent: {
             /** Id */
             id: number;
+            /** Title */
+            title: string;
+            /** Platformid */
+            platformId?: number | null;
             /**
              * Kind
              * @description Event kind — one of 'rom-hack', 'homebrew', 'translation', 'reissue'.
              */
             kind: string;
-            /** Monitored */
-            monitored: boolean;
-            /** Platformid */
-            platformId?: number | null;
             /**
              * Releasedate
              * @description Local-date YYYY-MM-DD form, no timezone.
@@ -3038,12 +3597,12 @@ export interface components {
              * Format: date-time
              */
             releaseDateUtc: string;
-            /** Sourceurl */
-            sourceUrl?: string | null;
+            /** Monitored */
+            monitored: boolean;
             /** Summary */
             summary?: string | null;
-            /** Title */
-            title: string;
+            /** Sourceurl */
+            sourceUrl?: string | null;
         };
         /**
          * Candidate
@@ -3055,80 +3614,80 @@ export interface components {
          *     introspecting ``rejection``.
          */
         Candidate: {
-            /**
-             * Already Owned
-             * @default false
-             */
-            already_owned: boolean;
-            /** Description */
-            description?: string | null;
-            /** Download Url */
-            download_url: string;
-            /** Download Volume Factor */
-            download_volume_factor?: number | null;
-            dump_status?: components["schemas"]["DumpStatus"] | null;
-            /** File Format */
-            file_format?: string | null;
-            /** Genre */
-            genre?: string | null;
-            /** Grabs */
-            grabs?: number | null;
-            /** Hash Crc32 */
-            hash_crc32?: string | null;
-            /** Hash Md5 */
-            hash_md5?: string | null;
-            /** Hash Sha1 */
-            hash_sha1?: string | null;
-            /** Indexer Guid */
-            indexer_guid: string;
             /** Indexer Id */
             indexer_id: number;
-            /** Info Url */
-            info_url?: string | null;
-            /** Languages */
-            languages?: string[];
-            /** Match Score */
-            match_score?: number | null;
+            /** Indexer Guid */
+            indexer_guid: string;
+            /** Title */
+            title: string;
+            /** Download Url */
+            download_url: string;
+            /** Size Bytes */
+            size_bytes?: number | null;
+            /** Seeders */
+            seeders?: number | null;
             /** Matched Game Id */
             matched_game_id?: number | null;
             /** Matched Release Id */
             matched_release_id?: number | null;
-            naming_convention?: components["schemas"]["NamingConvention"] | null;
-            /** Nfo Url */
-            nfo_url?: string | null;
             /** Platform Id */
             platform_id?: number | null;
-            /** Pre Grab Dat Entry Name */
-            pre_grab_dat_entry_name?: string | null;
-            /** Pre Grab Dat Entry Source */
-            pre_grab_dat_entry_source?: string | null;
+            /** Region */
+            region?: string | null;
+            /** Languages */
+            languages?: string[];
+            dump_status?: components["schemas"]["DumpStatus"] | null;
+            naming_convention?: components["schemas"]["NamingConvention"] | null;
+            /** File Format */
+            file_format?: string | null;
+            score_breakdown?: components["schemas"]["ScoreBreakdown"] | null;
+            rejection?: components["schemas"]["Rejection"] | null;
+            /**
+             * Would Auto Reject
+             * @default false
+             */
+            would_auto_reject: boolean;
             /**
              * Pre Grab Dat Match
              * @default skipped
              * @enum {string}
              */
             pre_grab_dat_match: "verified" | "hack" | "none" | "skipped";
-            /** Region */
-            region?: string | null;
-            rejection?: components["schemas"]["Rejection"] | null;
-            score_breakdown?: components["schemas"]["ScoreBreakdown"] | null;
-            /** Seeders */
-            seeders?: number | null;
-            /** Size Bytes */
-            size_bytes?: number | null;
-            /** Title */
-            title: string;
-            /** Title Match Score */
-            title_match_score?: number | null;
-            /** Upload Volume Factor */
-            upload_volume_factor?: number | null;
+            /** Pre Grab Dat Entry Name */
+            pre_grab_dat_entry_name?: string | null;
+            /** Pre Grab Dat Entry Source */
+            pre_grab_dat_entry_source?: string | null;
+            /** Hash Sha1 */
+            hash_sha1?: string | null;
+            /** Hash Md5 */
+            hash_md5?: string | null;
+            /** Hash Crc32 */
+            hash_crc32?: string | null;
             /**
-             * Would Auto Reject
+             * Already Owned
              * @default false
              */
-            would_auto_reject: boolean;
+            already_owned: boolean;
+            /** Title Match Score */
+            title_match_score?: number | null;
+            /** Match Score */
+            match_score?: number | null;
+            /** Grabs */
+            grabs?: number | null;
+            /** Download Volume Factor */
+            download_volume_factor?: number | null;
+            /** Upload Volume Factor */
+            upload_volume_factor?: number | null;
+            /** Description */
+            description?: string | null;
             /** Year */
             year?: number | null;
+            /** Genre */
+            genre?: string | null;
+            /** Info Url */
+            info_url?: string | null;
+            /** Nfo Url */
+            nfo_url?: string | null;
         };
         /**
          * ClientType
@@ -3142,6 +3701,23 @@ export interface components {
          * @enum {string}
          */
         ClientType: "qbittorrent" | "sabnzbd" | "transmission" | "deluge" | "nzbget" | "grabarr_direct";
+        /** ConfigResponse */
+        ConfigResponse: {
+            /** Builtin Enabled */
+            builtin_enabled: boolean;
+            /**
+             * Priority
+             * @enum {string}
+             */
+            priority: "builtin" | "community";
+        };
+        /** ConfigUpdate */
+        ConfigUpdate: {
+            /** Builtin Enabled */
+            builtin_enabled?: boolean | null;
+            /** Priority */
+            priority?: ("builtin" | "community") | null;
+        };
         /**
          * ConnectivityWarning
          * @description Non-blocking observation surfaced by the connectivity tester.
@@ -3170,102 +3746,102 @@ export interface components {
          */
         CoverOverrideRequest: {
             /**
-             * Auto Lock
-             * @default true
-             */
-            auto_lock: boolean;
-            /**
              * Url
              * Format: uri
              */
             url: string;
+            /**
+             * Auto Lock
+             * @default true
+             */
+            auto_lock: boolean;
         };
         /** CreateApiKeyRequest */
         CreateApiKeyRequest: {
-            /** Expires At */
-            expires_at?: string | null;
             /** Name */
             name: string;
             /** Scopes */
             scopes?: string[];
+            /** Expires At */
+            expires_at?: string | null;
         };
         /** CreateTagRequest */
         CreateTagRequest: {
+            /** Name */
+            name: string;
+            /** Label */
+            label: string;
             /**
              * Color
              * @default #9BBC0F
              */
             color: string;
-            /** Label */
-            label: string;
-            /** Name */
-            name: string;
         };
         /** CreateUserRequest */
         CreateUserRequest: {
-            /** Email */
-            email?: string | null;
-            /**
-             * Is Active
-             * @default true
-             */
-            is_active: boolean;
+            /** Username */
+            username: string;
             /** Password */
             password?: string | null;
+            /** Email */
+            email?: string | null;
             /**
              * Role
              * @default user
              */
             role: string;
-            /** Username */
-            username: string;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
         };
         /**
          * CreatedApiKeyResponse
          * @description Returned ONCE at create-time. Carries the plaintext key.
          */
         CreatedApiKeyResponse: {
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Expires At */
-            expires_at?: string | null;
             /** Id */
             id: number;
-            /** Key Prefix */
-            key_prefix: string;
             /** Name */
             name: string;
             /** Plaintext */
             plaintext: string;
+            /** Key Prefix */
+            key_prefix: string;
             /** Scopes */
             scopes: string[];
-        };
-        /** CustomFormatRead */
-        CustomFormatRead: {
-            /** Conditions */
-            conditions: {
-                [key: string]: unknown;
-            }[];
+            /** Expires At */
+            expires_at?: string | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+        };
+        /** CustomFormatRead */
+        CustomFormatRead: {
             /** Id */
             id: number;
-            /** Is Factory Default */
-            is_factory_default: boolean;
-            /** Is User Modified */
-            is_user_modified: boolean;
             /** Name */
             name: string;
             /** Score */
             score: number;
+            /** Conditions */
+            conditions: {
+                [key: string]: unknown;
+            }[];
+            /** Is Factory Default */
+            is_factory_default: boolean;
+            /** Is User Modified */
+            is_user_modified: boolean;
             /** Seed Key */
             seed_key: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
             /**
              * Updated At
              * Format: date-time
@@ -3274,62 +3850,62 @@ export interface components {
         };
         /** DatSourceCreate */
         DatSourceCreate: {
+            /** Name */
+            name: string;
+            /** Url */
+            url: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "no-intro" | "redump" | "tosec" | "goodtools" | "hasheous" | "playmatch" | "custom";
+            /** Platform Id */
+            platform_id: number;
             /**
              * Enabled
              * @default true
              */
             enabled: boolean;
+        };
+        /** DatSourceRead */
+        DatSourceRead: {
+            /** Id */
+            id: number;
             /** Name */
             name: string;
-            /** Platform Id */
-            platform_id: number;
+            /** Url */
+            url: string;
             /**
              * Source
              * @enum {string}
              */
             source: "no-intro" | "redump" | "tosec" | "goodtools" | "hasheous" | "playmatch" | "custom";
-            /** Url */
-            url: string;
-        };
-        /** DatSourceRead */
-        DatSourceRead: {
+            /** Platform Id */
+            platform_id: number;
+            /** Platform Slug */
+            platform_slug?: string | null;
+            /** Platform Name */
+            platform_name?: string | null;
+            /** Enabled */
+            enabled: boolean;
+            /** Last Refresh At */
+            last_refresh_at: string | null;
+            /** Last Refresh Status */
+            last_refresh_status: ("ok" | "failed" | "running") | null;
+            /** Last Refresh Error */
+            last_refresh_error: string | null;
+            /** Last Entry Count */
+            last_entry_count: number | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
-            /** Enabled */
-            enabled: boolean;
-            /** Id */
-            id: number;
-            /** Last Entry Count */
-            last_entry_count: number | null;
-            /** Last Refresh At */
-            last_refresh_at: string | null;
-            /** Last Refresh Error */
-            last_refresh_error: string | null;
-            /** Last Refresh Status */
-            last_refresh_status: ("ok" | "failed" | "running") | null;
-            /** Name */
-            name: string;
-            /** Platform Id */
-            platform_id: number;
-            /** Platform Name */
-            platform_name?: string | null;
-            /** Platform Slug */
-            platform_slug?: string | null;
-            /**
-             * Source
-             * @enum {string}
-             */
-            source: "no-intro" | "redump" | "tosec" | "goodtools" | "hasheous" | "playmatch" | "custom";
             /**
              * Updated At
              * Format: date-time
              */
             updated_at: string;
-            /** Url */
-            url: string;
         };
         /**
          * DatSourceSummary
@@ -3340,23 +3916,23 @@ export interface components {
          *     last refresh'.
          */
         DatSourceSummary: {
-            /** Entry Count */
-            entry_count: number;
-            /** Latest Updated At */
-            latest_updated_at: string | null;
-            /** Platform Count */
-            platform_count: number;
             /** Source */
             source: string;
+            /** Entry Count */
+            entry_count: number;
+            /** Platform Count */
+            platform_count: number;
+            /** Latest Updated At */
+            latest_updated_at: string | null;
         };
         /** DatSourceUpdate */
         DatSourceUpdate: {
-            /** Enabled */
-            enabled?: boolean | null;
             /** Name */
             name?: string | null;
             /** Url */
             url?: string | null;
+            /** Enabled */
+            enabled?: boolean | null;
         };
         /**
          * DownloadClientCreate
@@ -3366,6 +3942,24 @@ export interface components {
          *     encrypted by the application before persistence (FR-022).
          */
         DownloadClientCreate: {
+            /** Name */
+            name: string;
+            type: components["schemas"]["ClientType"];
+            /** Host */
+            host: string;
+            /** Port */
+            port: number;
+            /**
+             * Use Ssl
+             * @default false
+             */
+            use_ssl: boolean;
+            /** Url Base */
+            url_base?: string | null;
+            /** Username */
+            username?: string | null;
+            /** Password */
+            password?: string | null;
             /** Api Key */
             api_key?: string | null;
             /**
@@ -3373,8 +3967,13 @@ export interface components {
              * @default romarr
              */
             category_default: string;
-            /** Download Root */
-            download_root?: string | null;
+            /** Tags */
+            tags?: unknown[] | null;
+            /**
+             * Priority
+             * @default 1
+             */
+            priority: number;
             /**
              * Enable For Torrents
              * @default false
@@ -3390,19 +3989,6 @@ export interface components {
              * @default true
              */
             enabled: boolean;
-            /** Host */
-            host: string;
-            /** Name */
-            name: string;
-            /** Password */
-            password?: string | null;
-            /** Port */
-            port: number;
-            /**
-             * Priority
-             * @default 1
-             */
-            priority: number;
             /**
              * Remove Completed Downloads
              * @default false
@@ -3419,23 +4005,17 @@ export interface components {
              * @enum {string}
              */
             ssl_cert_validation: "enabled" | "disabled" | "disabled-for-local";
-            /** Tags */
-            tags?: unknown[] | null;
             /**
              * Timeout Seconds
              * @default 60
              */
             timeout_seconds: number;
-            type: components["schemas"]["ClientType"];
-            /** Url Base */
-            url_base?: string | null;
-            /**
-             * Use Ssl
-             * @default false
-             */
-            use_ssl: boolean;
-            /** Username */
-            username?: string | null;
+            /** Download Root */
+            download_root?: string | null;
+            /** Remote Path */
+            remote_path?: string | null;
+            /** Local Path */
+            local_path?: string | null;
         };
         /**
          * DownloadClientRead
@@ -3446,54 +4026,58 @@ export interface components {
          *     field is computed at projection time, not stored.
          */
         DownloadClientRead: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Type */
+            type: string;
+            /** Host */
+            host: string;
+            /** Port */
+            port: number;
+            /** Use Ssl */
+            use_ssl: boolean;
+            /** Url Base */
+            url_base: string | null;
+            /** Username */
+            username: string | null;
+            /** Is Configured */
+            is_configured: boolean;
             /** Category Default */
             category_default: string;
-            /** Client Version Seen */
-            client_version_seen: string | null;
-            /** Download Root */
-            download_root?: string | null;
+            /** Tags */
+            tags: unknown[] | null;
+            /** Priority */
+            priority: number;
             /** Enable For Torrents */
             enable_for_torrents: boolean;
             /** Enable For Usenet */
             enable_for_usenet: boolean;
             /** Enabled */
             enabled: boolean;
-            /** Host */
-            host: string;
-            /** Id */
-            id: number;
-            /** Is Configured */
-            is_configured: boolean;
-            /** Last Health At */
-            last_health_at: string | null;
-            /** Last Health Error */
-            last_health_error: string | null;
-            /** Last Health Ok */
-            last_health_ok: boolean | null;
-            /** Name */
-            name: string;
-            /** Port */
-            port: number;
-            /** Priority */
-            priority: number;
             /** Remove Completed Downloads */
             remove_completed_downloads: boolean;
             /** Remove Failed Downloads */
             remove_failed_downloads: boolean;
             /** Ssl Cert Validation */
             ssl_cert_validation: string;
-            /** Tags */
-            tags: unknown[] | null;
+            /** Last Health At */
+            last_health_at: string | null;
+            /** Last Health Ok */
+            last_health_ok: boolean | null;
+            /** Last Health Error */
+            last_health_error: string | null;
+            /** Client Version Seen */
+            client_version_seen: string | null;
             /** Timeout Seconds */
             timeout_seconds: number;
-            /** Type */
-            type: string;
-            /** Url Base */
-            url_base: string | null;
-            /** Use Ssl */
-            use_ssl: boolean;
-            /** Username */
-            username: string | null;
+            /** Download Root */
+            download_root?: string | null;
+            /** Remote Path */
+            remote_path?: string | null;
+            /** Local Path */
+            local_path?: string | null;
         };
         /**
          * DownloadClientSchema
@@ -3504,6 +4088,9 @@ export interface components {
          *     field shape so the UI can render the right add-client form.
          */
         DownloadClientSchema: {
+            implementation: components["schemas"]["ClientType"];
+            /** Implementation Name */
+            implementation_name: string;
             /** Available */
             available: boolean;
             /** Config Contract */
@@ -3512,9 +4099,6 @@ export interface components {
             fields?: {
                 [key: string]: unknown;
             }[];
-            implementation: components["schemas"]["ClientType"];
-            /** Implementation Name */
-            implementation_name: string;
         };
         /**
          * DownloadClientUpdate
@@ -3529,74 +4113,78 @@ export interface components {
          *     validation against the merged final state before persisting.
          */
         DownloadClientUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Host */
+            host?: string | null;
+            /** Port */
+            port?: number | null;
+            /** Use Ssl */
+            use_ssl?: boolean | null;
+            /** Url Base */
+            url_base?: string | null;
+            /** Username */
+            username?: string | null;
+            /** Password */
+            password?: string | null;
             /** Api Key */
             api_key?: string | null;
             /** Category Default */
             category_default?: string | null;
-            /** Download Root */
-            download_root?: string | null;
+            /** Tags */
+            tags?: unknown[] | null;
+            /** Priority */
+            priority?: number | null;
             /** Enable For Torrents */
             enable_for_torrents?: boolean | null;
             /** Enable For Usenet */
             enable_for_usenet?: boolean | null;
             /** Enabled */
             enabled?: boolean | null;
-            /** Host */
-            host?: string | null;
-            /** Name */
-            name?: string | null;
-            /** Password */
-            password?: string | null;
-            /** Port */
-            port?: number | null;
-            /** Priority */
-            priority?: number | null;
             /** Remove Completed Downloads */
             remove_completed_downloads?: boolean | null;
             /** Remove Failed Downloads */
             remove_failed_downloads?: boolean | null;
             /** Ssl Cert Validation */
             ssl_cert_validation?: ("enabled" | "disabled" | "disabled-for-local") | null;
-            /** Tags */
-            tags?: unknown[] | null;
             /** Timeout Seconds */
             timeout_seconds?: number | null;
-            /** Url Base */
-            url_base?: string | null;
-            /** Use Ssl */
-            use_ssl?: boolean | null;
-            /** Username */
-            username?: string | null;
+            /** Download Root */
+            download_root?: string | null;
+            /** Remote Path */
+            remote_path?: string | null;
+            /** Local Path */
+            local_path?: string | null;
         };
         /** DumpProfileRead */
         DumpProfileRead: {
-            /** Allow Hacks */
-            allow_hacks: boolean;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Allowed Dump Status */
+            allowed_dump_status: string[];
             /** Allow Proto Beta */
             allow_proto_beta: boolean;
+            /** Allow Hacks */
+            allow_hacks: boolean;
             /** Allow Trainers */
             allow_trainers: boolean;
             /** Allow Translations */
             allow_translations: boolean;
-            /** Allowed Dump Status */
-            allowed_dump_status: string[];
+            /** Prefer Revision */
+            prefer_revision: string;
+            /** Is Factory Default */
+            is_factory_default: boolean;
+            /** Is User Modified */
+            is_user_modified: boolean;
+            /** Seed Key */
+            seed_key: string | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
-            /** Id */
-            id: number;
-            /** Is Factory Default */
-            is_factory_default: boolean;
-            /** Is User Modified */
-            is_user_modified: boolean;
-            /** Name */
-            name: string;
-            /** Prefer Revision */
-            prefer_revision: string;
-            /** Seed Key */
-            seed_key: string | null;
             /**
              * Updated At
              * Format: date-time
@@ -3605,32 +4193,33 @@ export interface components {
         };
         /** DumpRead */
         DumpRead: {
+            /** Release Id */
+            release_id: number;
+            /** Path */
+            path: string;
+            /** Original Filename */
+            original_filename: string;
+            /** Size Bytes */
+            size_bytes: number;
+            /** Format */
+            format: string;
             /** Crc32 */
             crc32: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Dat Entry Id */
-            dat_entry_id?: number | null;
-            /** Dat Entry Name */
-            dat_entry_name?: string | null;
-            /** Dat Entry Size Bytes */
-            dat_entry_size_bytes?: number | null;
-            /** Dat Entry Status */
-            dat_entry_status?: string | null;
-            /** Dat Source */
-            dat_source?: string | null;
+            /** Md5 */
+            md5: string;
+            /** Sha1 */
+            sha1: string;
+            /** Sha256 */
+            sha256?: string | null;
             /**
              * Dat Verified
              * @default false
              */
             dat_verified: boolean;
-            /** Format */
-            format: string;
-            /** Id */
-            id: number;
+            /** Dat Source */
+            dat_source?: string | null;
+            /** Dat Entry Id */
+            dat_entry_id?: number | null;
             /** Imported At */
             imported_at?: string | null;
             /**
@@ -3640,25 +4229,24 @@ export interface components {
             imported_by: string;
             /** Imported Via */
             imported_via?: string | null;
-            /** Md5 */
-            md5: string;
-            /** Original Filename */
-            original_filename: string;
-            /** Path */
-            path: string;
-            /** Release Id */
-            release_id: number;
-            /** Sha1 */
-            sha1: string;
-            /** Sha256 */
-            sha256?: string | null;
-            /** Size Bytes */
-            size_bytes: number;
+            /** Id */
+            id: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
             /**
              * Updated At
              * Format: date-time
              */
             updated_at: string;
+            /** Dat Entry Name */
+            dat_entry_name?: string | null;
+            /** Dat Entry Size Bytes */
+            dat_entry_size_bytes?: number | null;
+            /** Dat Entry Status */
+            dat_entry_status?: string | null;
         };
         /**
          * DumpStatus
@@ -3670,12 +4258,49 @@ export interface components {
          */
         DumpStatus: "verified" | "good" | "proto" | "beta" | "demo" | "sample" | "hack" | "trainer" | "translation" | "baddump" | "overdump" | "unknown";
         /**
+         * Entry
+         * @description One directory in a listing.
+         */
+        Entry: {
+            /** Name */
+            name: string;
+            /** Path */
+            path: string;
+            /**
+             * Is Dir
+             * @default true
+             */
+            is_dir: boolean;
+            /**
+             * Is Mount
+             * @default false
+             */
+            is_mount: boolean;
+        };
+        /**
+         * ExportRequest
+         * @description Body de `POST /api/v3/backup/export`.
+         */
+        ExportRequest: {
+            /**
+             * Resources
+             * @description Types de ressources à inclure dans le bundle. Au moins un requis — sinon exporter tout la DB n'a pas de sens.
+             */
+            resources: components["schemas"]["ResourceKey"][];
+            /**
+             * Include Secrets
+             * @description Si True, les blobs chiffrés (Fernet) sont inclus. L'install cible DOIT partager le même ROMARR_AUTH_SECRET_KEY pour les déchiffrer, sinon les secrets seront perdus au flush.
+             * @default false
+             */
+            include_secrets: boolean;
+        };
+        /**
          * ExporterRead
          * @description One exporter row in the catalog.
          */
         ExporterRead: {
-            /** Available */
-            available: boolean;
+            /** Name */
+            name: string;
             /** Description */
             description: string;
             /**
@@ -3683,8 +4308,8 @@ export interface components {
              * @enum {string}
              */
             format: "xml" | "txt" | "http";
-            /** Name */
-            name: string;
+            /** Available */
+            available: boolean;
         };
         /** ExporterRunRequest */
         ExporterRunRequest: {
@@ -3695,14 +4320,14 @@ export interface components {
         };
         /** ExporterRunResponse */
         ExporterRunResponse: {
-            /** Games Written */
-            games_written: number;
-            /** Library Id */
-            library_id: number;
             /** Name */
             name: string;
+            /** Library Id */
+            library_id: number;
             /** Platform Slug */
             platform_slug: string;
+            /** Games Written */
+            games_written: number;
             /** Written */
             written: boolean;
         };
@@ -3721,14 +4346,14 @@ export interface components {
          *     refresh is exactly the bug the constitution forbids.
          */
         FieldEditRequest: {
+            field: components["schemas"]["ProviderField"];
+            /** Value */
+            value?: string | null;
             /**
              * Auto Lock
              * @default true
              */
             auto_lock: boolean;
-            field: components["schemas"]["ProviderField"];
-            /** Value */
-            value?: string | null;
         };
         /**
          * FieldLockRequest
@@ -3758,23 +4383,23 @@ export interface components {
             extension: string;
             /** Format Type */
             format_type: string;
-            /** Max Size Bytes */
-            max_size_bytes?: number | null;
             /** Min Size Bytes */
             min_size_bytes?: number | null;
+            /** Max Size Bytes */
+            max_size_bytes?: number | null;
         };
         /** FormatRead */
         FormatRead: {
+            /** Id */
+            id: number;
             /** Extension */
             extension: string;
             /** Format Type */
             format_type: string;
-            /** Id */
-            id: number;
-            /** Max Size Bytes */
-            max_size_bytes: number | null;
             /** Min Size Bytes */
             min_size_bytes: number | null;
+            /** Max Size Bytes */
+            max_size_bytes: number | null;
             /** Pack Source */
             pack_source: string;
         };
@@ -3784,10 +4409,10 @@ export interface components {
             extension?: string | null;
             /** Format Type */
             format_type?: string | null;
-            /** Max Size Bytes */
-            max_size_bytes?: number | null;
             /** Min Size Bytes */
             min_size_bytes?: number | null;
+            /** Max Size Bytes */
+            max_size_bytes?: number | null;
         };
         /**
          * GameLookupRow
@@ -3801,106 +4426,121 @@ export interface components {
          *     the one-click Add path stays unambiguous.
          */
         GameLookupRow: {
-            /** Confidence */
-            confidence: number;
-            /** Coverurl */
-            coverUrl?: string | null;
-            /** Platformmanufacturer */
-            platformManufacturer?: string | null;
-            /** Platformname */
-            platformName?: string | null;
-            /** Platformslug */
-            platformSlug?: string | null;
-            /** Providergameid */
-            providerGameId: string;
-            /** Providername */
-            providerName: string;
-            /** Providers */
-            providers?: components["schemas"]["ProviderHit"][];
             /** Rank */
             rank: number;
-            /** Releaseyear */
-            releaseYear?: number | null;
+            /** Providername */
+            providerName: string;
+            /** Providergameid */
+            providerGameId: string;
             /** Title */
             title: string;
+            /** Confidence */
+            confidence: number;
+            /** Platformslug */
+            platformSlug?: string | null;
+            /** Platformname */
+            platformName?: string | null;
+            /** Platformmanufacturer */
+            platformManufacturer?: string | null;
+            /** Releaseyear */
+            releaseYear?: number | null;
+            /** Coverurl */
+            coverUrl?: string | null;
+            /** Providers */
+            providers?: components["schemas"]["ProviderHit"][];
         };
         /**
          * GameMetadataProviderRead
          * @description One per-provider snapshot for a Game's metadata audit page.
          */
         GameMetadataProviderRead: {
+            /** Providername */
+            providerName: string;
+            /** Providergameid */
+            providerGameId?: string | null;
             /** Cachedprovidergameid */
             cachedProviderGameId?: string | null;
-            /** Coverurl */
-            coverUrl?: string | null;
-            /** Expiresat */
-            expiresAt?: string | null;
-            /** Fetchedat */
-            fetchedAt?: string | null;
             /** Fields */
             fields?: {
                 [key: string]: unknown;
             };
-            /** Providergameid */
-            providerGameId?: string | null;
-            /** Providername */
-            providerName: string;
+            /** Coverurl */
+            coverUrl?: string | null;
+            /** Fetchedat */
+            fetchedAt?: string | null;
+            /** Expiresat */
+            expiresAt?: string | null;
         };
         /**
          * GameMetadataRead
          * @description Aggregate metadata payload for the game's Metadata tab.
          */
         GameMetadataRead: {
-            /** Filehashes */
-            fileHashes?: {
-                [key: string]: string[];
-            };
             /** Gameid */
             gameId: number;
             /** Providers */
             providers?: components["schemas"]["GameMetadataProviderRead"][];
+            /** Filehashes */
+            fileHashes?: {
+                [key: string]: string[];
+            };
         };
         /** GameRead */
         GameRead: {
-            /** Achievements Count */
-            achievements_count?: number | null;
-            /** Acquired */
-            acquired?: boolean | null;
-            /** Age Rating */
-            age_rating?: string | null;
+            /** Platform Id */
+            platform_id: number;
+            /** Slug */
+            slug: string;
+            /** Title */
+            title: string;
+            /** Sort Title */
+            sort_title?: string | null;
+            /** Summary */
+            summary?: string | null;
             /** Cover Path */
             cover_path?: string | null;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
+            /** Igdb Id */
+            igdb_id?: number | null;
+            /** Mobygames Id */
+            mobygames_id?: number | null;
+            /** Screenscraper Id */
+            screenscraper_id?: number | null;
+            /** Launchbox Id */
+            launchbox_id?: number | null;
+            /** Retroachievements Id */
+            retroachievements_id?: number | null;
+            /** Release Date */
+            release_date?: string | null;
+            /** Developer */
+            developer?: string | null;
+            /** Publisher */
+            publisher?: string | null;
+            /** Rating */
+            rating?: number | null;
+            /** Age Rating */
+            age_rating?: string | null;
+            /** Players Min */
+            players_min?: number | null;
+            /** Players Max */
+            players_max?: number | null;
+            /** Hltb Main */
+            hltb_main?: number | null;
+            /** Achievements Count */
+            achievements_count?: number | null;
+            /** Genres */
+            genres?: string[];
+            /** Themes */
+            themes?: string[];
+            /** Franchises */
+            franchises?: string[];
+            /** Tags */
+            tags?: number[];
+            /** Locked Fields */
+            locked_fields?: string[];
             /** Custom Metadata */
             custom_metadata?: {
                 [key: string]: unknown;
             };
-            /** Dat Verified Dump Count */
-            dat_verified_dump_count?: number | null;
-            /** Developer */
-            developer?: string | null;
-            /** Franchises */
-            franchises?: string[];
-            /** Genres */
-            genres?: string[];
-            /** Hltb Main */
-            hltb_main?: number | null;
-            /** Id */
-            id: number;
-            /** Igdb Id */
-            igdb_id?: number | null;
-            /** Launchbox Id */
-            launchbox_id?: number | null;
-            /** Library Id */
-            library_id?: number | null;
-            /** Locked Fields */
-            locked_fields?: string[];
-            /** Mobygames Id */
-            mobygames_id?: number | null;
             /**
              * Monitored
              * @default true
@@ -3913,52 +4553,41 @@ export interface components {
             needs_metadata_refresh: boolean;
             /** Notes */
             notes?: string | null;
-            /** Platform Id */
-            platform_id: number;
-            /** Players Max */
-            players_max?: number | null;
-            /** Players Min */
-            players_min?: number | null;
-            /** Publisher */
-            publisher?: string | null;
-            /** Rating */
-            rating?: number | null;
-            /** Release Date */
-            release_date?: string | null;
-            /** Retroachievements Id */
-            retroachievements_id?: number | null;
-            /** Screenscraper Id */
-            screenscraper_id?: number | null;
-            /** Slug */
-            slug: string;
-            /** Sort Title */
-            sort_title?: string | null;
-            /** Summary */
-            summary?: string | null;
-            /** Tags */
-            tags?: number[];
-            /** Themes */
-            themes?: string[];
-            /** Title */
-            title: string;
+            /** Library Id */
+            library_id?: number | null;
+            /** Id */
+            id: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
             /**
              * Updated At
              * Format: date-time
              */
             updated_at: string;
+            /** Acquired */
+            acquired?: boolean | null;
+            /** Dat Verified Dump Count */
+            dat_verified_dump_count?: number | null;
         };
         /**
          * GameToggleRequest
          * @description PATCH /api/v3/game/{id} — operator-toggle subset.
          *
          *     Only fields that are NOT owned by the metadata aggregator
-         *     are mutable here. Today: just ``monitored``. Adding more
-         *     operator-toggleable bits is straightforward — they go in
-         *     this schema.
+         *     are mutable here. Today: ``monitored`` (always required) +
+         *     ``library_id`` (optional — present when the operator picks
+         *     a different library / profile cascade for the game).
+         *     Adding more operator-toggleable bits is straightforward —
+         *     they go in this schema.
          */
         GameToggleRequest: {
             /** Monitored */
             monitored: boolean;
+            /** Library Id */
+            library_id?: number | null;
         };
         /**
          * GrabRequest
@@ -3969,44 +4598,44 @@ export interface components {
          *     profile gates still apply.
          */
         GrabRequest: {
-            /** Download Url */
-            download_url: string;
-            /** Game Id */
-            game_id?: number | null;
-            /** Indexer Guid */
-            indexer_guid: string;
             /** Indexer Id */
             indexer_id: number;
-            /** Release Id */
-            release_id?: number | null;
+            /** Indexer Guid */
+            indexer_guid: string;
+            /** Download Url */
+            download_url: string;
             /** Title */
             title: string;
+            /** Game Id */
+            game_id?: number | null;
+            /** Release Id */
+            release_id?: number | null;
         };
         /**
          * GrabarrWizardRequest
          * @description POST body for the atomic Add-Grabarr flow.
          */
         GrabarrWizardRequest: {
-            /** Api Key */
-            api_key: string;
-            /** Base Url */
-            base_url: string;
-            /** Download Root */
-            download_root?: string | null;
             /** Name */
             name: string;
+            /** Base Url */
+            base_url: string;
             /** Profile Slug */
             profile_slug: string;
+            /** Api Key */
+            api_key: string;
             /**
              * Timeout Seconds
              * @default 60
              */
             timeout_seconds: number;
+            /** Download Root */
+            download_root?: string | null;
         };
         /** GrabarrWizardResponse */
         GrabarrWizardResponse: {
-            download_client: components["schemas"]["DownloadClientRead"];
             indexer: components["schemas"]["IndexerRead"];
+            download_client: components["schemas"]["DownloadClientRead"];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -4018,123 +4647,192 @@ export interface components {
          * @description One unified history entry.
          */
         HistoryEvent: {
-            /** Chosenindexerguid */
-            chosenIndexerGuid?: string | null;
-            /** Correlationid */
-            correlationId?: string | null;
+            /** Eventtype */
+            eventType: string;
+            /** Id */
+            id: number;
             /**
              * Date
              * Format: date-time
              */
             date: string;
-            /** Destpath */
-            destPath?: string | null;
-            /** Downloadclientid */
-            downloadClientId?: number | null;
-            /** Downloadclientname */
-            downloadClientName?: string | null;
-            /** Durationms */
-            durationMs?: number | null;
-            /** Eventtype */
-            eventType: string;
             /** Finishedat */
             finishedAt?: string | null;
+            /** Durationms */
+            durationMs?: number | null;
             /** Gameid */
             gameId?: number | null;
             /** Gametitle */
             gameTitle?: string | null;
-            /** Id */
-            id: number;
-            /** Importedvia */
-            importedVia?: string | null;
-            /** Outputsummary */
-            outputSummary?: {
-                [key: string]: unknown;
-            } | null;
-            /** Query */
-            query?: string | null;
-            /** Reason */
-            reason?: string | null;
             /** Releaseid */
             releaseId?: number | null;
+            /** Successful */
+            successful: boolean;
+            /** Summary */
+            summary?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /** Query */
+            query?: string | null;
+            /** Chosenindexerguid */
+            chosenIndexerGuid?: string | null;
             /** Score */
             score?: number | null;
             /** Scorebreakdown */
             scoreBreakdown?: {
                 [key: string]: unknown;
             }[] | null;
+            /** Correlationid */
+            correlationId?: string | null;
+            /** Outputsummary */
+            outputSummary?: {
+                [key: string]: unknown;
+            } | null;
+            /** Destpath */
+            destPath?: string | null;
+            /** Downloadclientid */
+            downloadClientId?: number | null;
+            /** Downloadclientname */
+            downloadClientName?: string | null;
+            /** Importedvia */
+            importedVia?: string | null;
             /** Sizebytes */
             sizeBytes?: number | null;
-            /** Successful */
-            successful: boolean;
-            /** Summary */
-            summary?: string | null;
         };
         /**
          * ImportHistoryRead
          * @description Read shape for the ``GET /api/v3/rom/import/history`` endpoint.
          */
         ImportHistoryRead: {
-            /** Coalesced */
-            coalesced: boolean;
-            /** Confidence */
-            confidence: number | null;
-            /** Correlation Id */
-            correlation_id: string;
+            /** Id */
+            id: number;
+            /** Source Path */
+            source_path: string;
             /** Dest Path */
             dest_path: string | null;
             /** Download Client Id */
             download_client_id: number | null;
             /** Download Client Native Id */
             download_client_native_id: string | null;
-            /** Dump Id */
-            dump_id: number | null;
-            /** Duration Ms */
-            duration_ms: number | null;
-            /** Error Msg */
-            error_msg: string | null;
-            /** Finished At */
-            finished_at: string | null;
             /** Game Id */
             game_id: number | null;
-            /** Id */
-            id: number;
-            /** Imported By */
-            imported_by: string | null;
+            /** Release Id */
+            release_id: number | null;
+            /** Dump Id */
+            dump_id: number | null;
+            /** Source Hash Sha1 */
+            source_hash_sha1: string | null;
+            /** Confidence */
+            confidence: number | null;
             /**
              * Imported Via
              * @enum {string}
              */
             imported_via: "automatic" | "manual" | "rss" | "api" | "webhook";
-            /** Release Id */
-            release_id: number | null;
-            /** Source Hash Sha1 */
-            source_hash_sha1: string | null;
-            /** Source Path */
-            source_path: string;
+            /** Success */
+            success: boolean;
+            /** Coalesced */
+            coalesced: boolean;
+            /** Warning */
+            warning: string | null;
+            /** Error Msg */
+            error_msg: string | null;
+            /** Imported By */
+            imported_by: string | null;
+            /** Correlation Id */
+            correlation_id: string;
             /**
              * Started At
              * Format: date-time
              */
             started_at: string;
-            /** Success */
-            success: boolean;
-            /** Warning */
-            warning: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /** Duration Ms */
+            duration_ms: number | null;
+        };
+        /**
+         * ImportMode
+         * @description Comportement à l'import quand un item avec le même `name` existe.
+         * @enum {string}
+         */
+        ImportMode: "upsert" | "merge" | "replace";
+        /**
+         * ImportOutcome
+         * @description Bilan par ressource après import.
+         */
+        ImportOutcome: {
+            key: components["schemas"]["ResourceKey"];
+            /**
+             * Created
+             * @default 0
+             */
+            created: number;
+            /**
+             * Updated
+             * @default 0
+             */
+            updated: number;
+            /**
+             * Skipped
+             * @default 0
+             */
+            skipped: number;
+            /** Errors */
+            errors?: string[];
+        };
+        /**
+         * ImportRequest
+         * @description Body de `POST /api/v3/backup/import`.
+         */
+        ImportRequest: {
+            bundle: components["schemas"]["Bundle"];
+            /**
+             * Resources
+             * @description Sous-ensemble des ressources du bundle à importer. None = tout ce qui est présent dans le bundle.
+             */
+            resources?: components["schemas"]["ResourceKey"][] | null;
+            /** @default upsert */
+            mode: components["schemas"]["ImportMode"];
+        };
+        /**
+         * ImportResult
+         * @description Retourné par `POST /api/v3/backup/import`.
+         */
+        ImportResult: {
+            /** Outcomes */
+            outcomes: components["schemas"]["ImportOutcome"][];
         };
         /** IndexerCreate */
         IndexerCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Implementation
+             * @enum {string}
+             */
+            implementation: "newznab" | "torznab" | "grabarr";
+            /** Url */
+            url: string;
             /** Api Key */
             api_key?: string | null;
             /** Categories */
             categories?: number[];
             /**
-             * Discount Only
-             * @default false
+             * Priority
+             * @default 25
              */
-            discount_only: boolean;
-            /** Download Client Id */
-            download_client_id?: number | null;
+            priority: number;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Enable Rss
+             * @default true
+             */
+            enable_rss: boolean;
             /**
              * Enable Automatic Search
              * @default true
@@ -4145,124 +4843,107 @@ export interface components {
              * @default true
              */
             enable_interactive_search: boolean;
-            /**
-             * Enable Rss
-             * @default true
-             */
-            enable_rss: boolean;
-            /**
-             * Enabled
-             * @default true
-             */
-            enabled: boolean;
-            /**
-             * Implementation
-             * @enum {string}
-             */
-            implementation: "newznab" | "torznab" | "grabarr";
-            /**
-             * Min Seeders
-             * @default 1
-             */
-            min_seeders: number;
-            /** Name */
-            name: string;
-            /**
-             * Priority
-             * @default 25
-             */
-            priority: number;
-            /**
-             * Priority Indexer
-             * @default false
-             */
-            priority_indexer: boolean;
-            /** Prowlarr App Id */
-            prowlarr_app_id?: number | null;
+            /** Tags */
+            tags?: number[] | null;
             /**
              * Rate Limit Seconds
              * @default 5
              */
             rate_limit_seconds: number;
             /**
-             * Result Limit
-             * @default 100
+             * Min Seeders
+             * @default 1
              */
-            result_limit: number;
-            /** Seed Ratio */
-            seed_ratio?: number | null;
-            /** Seed Time Minutes */
-            seed_time_minutes?: number | null;
+            min_seeders: number;
+            /** Download Client Id */
+            download_client_id?: number | null;
             /**
              * Source
              * @default manual
              * @enum {string}
              */
             source: "manual" | "prowlarr";
-            /** Tags */
-            tags?: number[] | null;
+            /** Prowlarr App Id */
+            prowlarr_app_id?: number | null;
+            /** Seed Ratio */
+            seed_ratio?: number | null;
+            /** Seed Time Minutes */
+            seed_time_minutes?: number | null;
+            /**
+             * Discount Only
+             * @default false
+             */
+            discount_only: boolean;
+            /**
+             * Priority Indexer
+             * @default false
+             */
+            priority_indexer: boolean;
             /**
              * Timeout Seconds
              * @default 30
              */
             timeout_seconds: number;
-            /** Url */
-            url: string;
+            /**
+             * Result Limit
+             * @default 100
+             */
+            result_limit: number;
         };
         /** IndexerRead */
         IndexerRead: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Implementation */
+            implementation: string;
+            /** Url */
+            url: string;
+            /** Is Configured */
+            is_configured: boolean;
             /** Categories */
             categories: number[];
-            /** Discount Only */
-            discount_only: boolean;
-            /** Download Client Id */
-            download_client_id: number | null;
+            /** Priority */
+            priority: number;
+            /** Enabled */
+            enabled: boolean;
+            /** Enable Rss */
+            enable_rss: boolean;
             /** Enable Automatic Search */
             enable_automatic_search: boolean;
             /** Enable Interactive Search */
             enable_interactive_search: boolean;
-            /** Enable Rss */
-            enable_rss: boolean;
-            /** Enabled */
-            enabled: boolean;
-            /** Id */
-            id: number;
-            /** Implementation */
-            implementation: string;
-            /** Is Configured */
-            is_configured: boolean;
-            /** Last Health At */
-            last_health_at: string | null;
-            /** Last Health Error */
-            last_health_error: string | null;
-            /** Last Health Ok */
-            last_health_ok: boolean | null;
-            /** Min Seeders */
-            min_seeders: number;
-            /** Name */
-            name: string;
-            /** Priority */
-            priority: number;
-            /** Priority Indexer */
-            priority_indexer: boolean;
-            /** Prowlarr App Id */
-            prowlarr_app_id: number | null;
+            /** Tags */
+            tags: number[] | null;
             /** Rate Limit Seconds */
             rate_limit_seconds: number;
-            /** Result Limit */
-            result_limit: number;
+            /** Min Seeders */
+            min_seeders: number;
+            /** Download Client Id */
+            download_client_id: number | null;
+            /** Source */
+            source: string;
+            /** Prowlarr App Id */
+            prowlarr_app_id: number | null;
             /** Seed Ratio */
             seed_ratio: number | null;
             /** Seed Time Minutes */
             seed_time_minutes: number | null;
-            /** Source */
-            source: string;
-            /** Tags */
-            tags: number[] | null;
+            /** Discount Only */
+            discount_only: boolean;
+            /** Priority Indexer */
+            priority_indexer: boolean;
             /** Timeout Seconds */
             timeout_seconds: number;
-            /** Url */
-            url: string;
+            /** Result Limit */
+            result_limit: number;
+            /** Last Health At */
+            last_health_at: string | null;
+            /** Last Health Ok */
+            last_health_ok: boolean | null;
+            /** Last Health Error */
+            last_health_error: string | null;
         };
         /**
          * IndexerSchemaEntry
@@ -4273,59 +4954,117 @@ export interface components {
          *     Newznab and Torznab.
          */
         IndexerSchemaEntry: {
+            /** Implementation */
+            implementation: string;
+            /** Implementation Name */
+            implementation_name: string;
             /** Config Contract */
             config_contract: string;
             /** Fields */
             fields: {
                 [key: string]: unknown;
             }[];
-            /** Implementation */
-            implementation: string;
-            /** Implementation Name */
-            implementation_name: string;
         };
         /** IndexerUpdate */
         IndexerUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Implementation */
+            implementation?: ("newznab" | "torznab" | "grabarr") | null;
+            /** Url */
+            url?: string | null;
             /** Api Key */
             api_key?: string | null;
             /** Categories */
             categories?: number[] | null;
-            /** Discount Only */
-            discount_only?: boolean | null;
-            /** Download Client Id */
-            download_client_id?: number | null;
+            /** Priority */
+            priority?: number | null;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Enable Rss */
+            enable_rss?: boolean | null;
             /** Enable Automatic Search */
             enable_automatic_search?: boolean | null;
             /** Enable Interactive Search */
             enable_interactive_search?: boolean | null;
-            /** Enable Rss */
-            enable_rss?: boolean | null;
-            /** Enabled */
-            enabled?: boolean | null;
-            /** Implementation */
-            implementation?: ("newznab" | "torznab" | "grabarr") | null;
-            /** Min Seeders */
-            min_seeders?: number | null;
-            /** Name */
-            name?: string | null;
-            /** Priority */
-            priority?: number | null;
-            /** Priority Indexer */
-            priority_indexer?: boolean | null;
+            /** Tags */
+            tags?: number[] | null;
             /** Rate Limit Seconds */
             rate_limit_seconds?: number | null;
-            /** Result Limit */
-            result_limit?: number | null;
+            /** Min Seeders */
+            min_seeders?: number | null;
+            /** Download Client Id */
+            download_client_id?: number | null;
             /** Seed Ratio */
             seed_ratio?: number | null;
             /** Seed Time Minutes */
             seed_time_minutes?: number | null;
-            /** Tags */
-            tags?: number[] | null;
+            /** Discount Only */
+            discount_only?: boolean | null;
+            /** Priority Indexer */
+            priority_indexer?: boolean | null;
             /** Timeout Seconds */
             timeout_seconds?: number | null;
-            /** Url */
-            url?: string | null;
+            /** Result Limit */
+            result_limit?: number | null;
+        };
+        /**
+         * IntegrationGameRequest
+         * @description POST body for ``/api/v3/game/integrations/request``.
+         *
+         *     IGDB-native: the caller passes the IGDB game id + the IGDB
+         *     *platform* id; Romarr maps the platform to its own catalogue via
+         *     ``Platform.igdb_id`` and binds the game to the first library.
+         */
+        IntegrationGameRequest: {
+            /** Igdbid */
+            igdbId: number;
+            /** Igdbplatformid */
+            igdbPlatformId: number;
+            /** Title */
+            title: string;
+            /**
+             * Monitored
+             * @default true
+             */
+            monitored: boolean;
+        };
+        /**
+         * IntegrationGameResult
+         * @description Response envelope for the integration request endpoint.
+         */
+        IntegrationGameResult: {
+            /** Status */
+            status: string;
+            game: components["schemas"]["GameRead"];
+        };
+        /**
+         * IntegrationPlatform
+         * @description One IGDB platform Romarr can acquire games for.
+         */
+        IntegrationPlatform: {
+            /** Igdbid */
+            igdbId: number;
+            /** Name */
+            name: string;
+        };
+        /**
+         * IntegrationPlatformsResult
+         * @description Response for the integration platforms listing.
+         */
+        IntegrationPlatformsResult: {
+            /** Platforms */
+            platforms: components["schemas"]["IntegrationPlatform"][];
+        };
+        /**
+         * IntegrationStatusResult
+         * @description Response for the integration status check.
+         */
+        IntegrationStatusResult: {
+            /** Present */
+            present: boolean;
+            /** Games */
+            games: components["schemas"]["GameRead"][];
         };
         /**
          * JobRead
@@ -4335,54 +5074,60 @@ export interface components {
          *     ``current_run_id`` is populated when a run is in flight.
          */
         JobRead: {
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Current Run Id */
-            current_run_id?: number | null;
-            /** Enabled */
-            enabled: boolean;
             /** Id */
             id: string;
-            /** Is Factory Default */
-            is_factory_default: boolean;
+            /** Name */
+            name: string;
             /**
-             * Is Paused By Health
-             * @default false
+             * Type
+             * @enum {string}
              */
-            is_paused_by_health: boolean;
-            /** Last Error */
-            last_error: string | null;
+            type: "rss_sync" | "cutoff_search" | "missing_search" | "refresh_metadata" | "dat_update" | "backup" | "health_check" | "library_scan" | "auto_check_added" | "custom";
+            /** Schedule Cron */
+            schedule_cron: string | null;
+            /** Schedule Interval Seconds */
+            schedule_interval_seconds: number | null;
+            /** Enabled */
+            enabled: boolean;
+            /** Next Run At */
+            next_run_at: string | null;
             /** Last Run At */
             last_run_at: string | null;
             /** Last Run Duration Ms */
             last_run_duration_ms: number | null;
             /** Last Run Status */
             last_run_status: ("success" | "failed" | "partial" | "cancelled") | null;
+            /** Last Error */
+            last_error: string | null;
             /** Max Concurrent Instances */
             max_concurrent_instances: number;
             /** Max Retries */
             max_retries: number;
-            /** Name */
-            name: string;
-            /** Next Run At */
-            next_run_at: string | null;
-            /** Schedule Cron */
-            schedule_cron: string | null;
-            /** Schedule Interval Seconds */
-            schedule_interval_seconds: number | null;
+            /** Is Factory Default */
+            is_factory_default: boolean;
             /**
-             * Type
-             * @enum {string}
+             * Created At
+             * Format: date-time
              */
-            type: "rss_sync" | "cutoff_search" | "missing_search" | "refresh_metadata" | "dat_update" | "backup" | "health_check" | "library_scan" | "auto_check_added" | "custom";
+            created_at: string;
             /**
              * Updated At
              * Format: date-time
              */
             updated_at: string;
+            /**
+             * Is Paused By Health
+             * @default false
+             */
+            is_paused_by_health: boolean;
+            /** Current Run Id */
+            current_run_id?: number | null;
+            /** Current Run Items Processed */
+            current_run_items_processed?: number | null;
+            /** Current Run Summary */
+            current_run_summary?: {
+                [key: string]: unknown;
+            } | null;
         };
         /**
          * JobRunRead
@@ -4390,33 +5135,33 @@ export interface components {
          *     these rows.
          */
         JobRunRead: {
-            /** Cancellation Forced */
-            cancellation_forced: boolean;
-            /** Duration Ms */
-            duration_ms: number | null;
-            /** Error Message */
-            error_message: string | null;
-            /** Finished At */
-            finished_at: string | null;
             /** Id */
             id: number;
-            /** Items Processed */
-            items_processed: number;
             /** Job Id */
             job_id: string;
-            /** Output Summary */
-            output_summary: {
-                [key: string]: unknown;
-            } | null;
             /**
              * Started At
              * Format: date-time
              */
             started_at: string;
+            /** Finished At */
+            finished_at: string | null;
+            /** Duration Ms */
+            duration_ms: number | null;
             status: components["schemas"]["JobStatus"];
+            /** Items Processed */
+            items_processed: number;
+            /** Error Message */
+            error_message: string | null;
+            /** Output Summary */
+            output_summary: {
+                [key: string]: unknown;
+            } | null;
             triggered_by: components["schemas"]["TriggerKind"];
             /** Triggered By User Id */
             triggered_by_user_id: number | null;
+            /** Cancellation Forced */
+            cancellation_forced: boolean;
         };
         /**
          * JobStatus
@@ -4435,40 +5180,40 @@ export interface components {
          *     ``is_factory_default``).
          */
         JobUpdate: {
+            /** Schedule Cron */
+            schedule_cron?: string | null;
+            /** Schedule Interval Seconds */
+            schedule_interval_seconds?: number | null;
             /** Enabled */
             enabled?: boolean | null;
             /** Max Concurrent Instances */
             max_concurrent_instances?: number | null;
             /** Max Retries */
             max_retries?: number | null;
-            /** Schedule Cron */
-            schedule_cron?: string | null;
-            /** Schedule Interval Seconds */
-            schedule_interval_seconds?: number | null;
         };
         /** LanguageProfileRead */
         LanguageProfileRead: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Required Languages */
+            required_languages: string[];
+            /** Preferred Languages */
+            preferred_languages: string[];
+            /** Exclude Japanese Only */
+            exclude_japanese_only: boolean;
+            /** Is Factory Default */
+            is_factory_default: boolean;
+            /** Is User Modified */
+            is_user_modified: boolean;
+            /** Seed Key */
+            seed_key: string | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
-            /** Exclude Japanese Only */
-            exclude_japanese_only: boolean;
-            /** Id */
-            id: number;
-            /** Is Factory Default */
-            is_factory_default: boolean;
-            /** Is User Modified */
-            is_user_modified: boolean;
-            /** Name */
-            name: string;
-            /** Preferred Languages */
-            preferred_languages: string[];
-            /** Required Languages */
-            required_languages: string[];
-            /** Seed Key */
-            seed_key: string | null;
             /**
              * Updated At
              * Format: date-time
@@ -4486,18 +5231,18 @@ export interface components {
         };
         /** LibraryExporterRunRead */
         LibraryExporterRunRead: {
-            /** Exporter Name */
-            exporter_name: string;
-            /** Last Error */
-            last_error?: string | null;
-            /** Last Run At */
-            last_run_at?: unknown | null;
-            /** Last Status */
-            last_status: string;
             /** Library Id */
             library_id: number;
+            /** Exporter Name */
+            exporter_name: string;
+            /** Last Run At */
+            last_run_at?: unknown | null;
             /** Run Count */
             run_count: number;
+            /** Last Status */
+            last_status: string;
+            /** Last Error */
+            last_error?: string | null;
         };
         /**
          * LibraryRead
@@ -4505,23 +5250,83 @@ export interface components {
          *     instead carries ``is_romm_configured`` derived from the blob.
          */
         LibraryRead: {
+            /** Name */
+            name: string;
+            /** Path */
+            path: string;
             /**
-             * Created At
-             * Format: date-time
+             * Platform Subfolders
+             * @default true
              */
-            created_at: string;
+            platform_subfolders: boolean;
+            /**
+             * Platforms Restricted
+             * @default false
+             */
+            platforms_restricted: boolean;
+            /** Quality Profile Id */
+            quality_profile_id: number;
+            /** Region Profile Id */
+            region_profile_id: number;
+            /** Dump Profile Id */
+            dump_profile_id: number;
+            /** Language Profile Id */
+            language_profile_id: number;
+            /** Naming Profile Id */
+            naming_profile_id: number;
+            /**
+             * Monitored Default
+             * @default true
+             */
+            monitored_default: boolean;
+            /**
+             * Use Hardlinks
+             * @default true
+             */
+            use_hardlinks: boolean;
+            /**
+             * Lifecycle Policy
+             * @default hardlink_and_seed
+             * @enum {string}
+             */
+            lifecycle_policy: "hardlink_and_seed" | "move_and_remove" | "copy_and_keep";
             /**
              * Delete After Import
              * @default false
              */
             delete_after_import: boolean;
-            /** Dump Profile Id */
-            dump_profile_id: number;
+            /**
+             * Keep Dump History
+             * @default false
+             */
+            keep_dump_history: boolean;
+            /**
+             * Min Disk Free Gb
+             * @default 5
+             */
+            min_disk_free_gb: number;
+            /**
+             * Preserve Archive
+             * @default false
+             */
+            preserve_archive: boolean;
+            /**
+             * Exporter Romm Enabled
+             * @default false
+             */
+            exporter_romm_enabled: boolean;
+            /** Exporter Romm Url */
+            exporter_romm_url?: string | null;
             /**
              * Exporter Esde Enabled
              * @default false
              */
             exporter_esde_enabled: boolean;
+            /**
+             * Exporter Pegasus Enabled
+             * @default false
+             */
+            exporter_pegasus_enabled: boolean;
             /**
              * Exporter Launchbox Enabled
              * @default false
@@ -4533,17 +5338,10 @@ export interface components {
              */
             exporter_launchbox_per_platform: boolean;
             /**
-             * Exporter Pegasus Enabled
-             * @default false
+             * Scan Poll Seconds
+             * @default 3600
              */
-            exporter_pegasus_enabled: boolean;
-            /**
-             * Exporter Romm Enabled
-             * @default false
-             */
-            exporter_romm_enabled: boolean;
-            /** Exporter Romm Url */
-            exporter_romm_url?: string | null;
+            scan_poll_seconds: number;
             /**
              * Heartbeat Seconds
              * @default 30
@@ -4551,117 +5349,74 @@ export interface components {
             heartbeat_seconds: number;
             /** Id */
             id: number;
-            /** Is Romm Configured */
-            is_romm_configured: boolean;
-            /**
-             * Keep Dump History
-             * @default false
-             */
-            keep_dump_history: boolean;
-            /** Language Profile Id */
-            language_profile_id: number;
-            /** Last Full Scan At */
-            last_full_scan_at?: string | null;
-            /** Last Heartbeat At */
-            last_heartbeat_at?: string | null;
-            /** Last Incremental Scan At */
-            last_incremental_scan_at?: string | null;
-            /** Last Scan Status */
-            last_scan_status?: ("success" | "partial" | "failed") | null;
-            /**
-             * Lifecycle Policy
-             * @default hardlink_and_seed
-             * @enum {string}
-             */
-            lifecycle_policy: "hardlink_and_seed" | "move_and_remove" | "copy_and_keep";
-            /**
-             * Min Disk Free Gb
-             * @default 5
-             */
-            min_disk_free_gb: number;
-            /**
-             * Monitored Default
-             * @default true
-             */
-            monitored_default: boolean;
-            /** Name */
-            name: string;
-            /** Naming Profile Id */
-            naming_profile_id: number;
-            /** Path */
-            path: string;
-            /** Platform Ids */
-            platform_ids?: number[];
-            /**
-             * Platform Subfolders
-             * @default true
-             */
-            platform_subfolders: boolean;
-            /**
-             * Platforms Restricted
-             * @default false
-             */
-            platforms_restricted: boolean;
-            /**
-             * Preserve Archive
-             * @default false
-             */
-            preserve_archive: boolean;
-            /** Quality Profile Id */
-            quality_profile_id: number;
-            /** Region Profile Id */
-            region_profile_id: number;
-            /**
-             * Scan Poll Seconds
-             * @default 3600
-             */
-            scan_poll_seconds: number;
             /**
              * Status
              * @enum {string}
              */
             status: "ok" | "unavailable";
+            /** Is Romm Configured */
+            is_romm_configured: boolean;
+            /** Last Full Scan At */
+            last_full_scan_at?: string | null;
+            /** Last Incremental Scan At */
+            last_incremental_scan_at?: string | null;
+            /** Last Scan Status */
+            last_scan_status?: ("success" | "partial" | "failed") | null;
+            /** Last Heartbeat At */
+            last_heartbeat_at?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
             /**
              * Updated At
              * Format: date-time
              */
             updated_at: string;
-            /**
-             * Use Hardlinks
-             * @default true
-             */
-            use_hardlinks: boolean;
+            /** Platform Ids */
+            platform_ids?: number[];
+        };
+        /**
+         * ListingResponse
+         * @description One directory listing.
+         */
+        ListingResponse: {
+            /** Path */
+            path: string;
+            /** Parent */
+            parent: string | null;
+            /** Entries */
+            entries: components["schemas"]["Entry"][];
         };
         /**
          * LogEntry
          * @description One structured log entry — Sonarr-shape camelCase JSON.
          */
         LogEntry: {
-            /** Exception */
-            exception?: string | null;
-            /** Exceptiontype */
-            exceptionType?: string | null;
             /** Id */
             id: number;
+            /**
+             * Time
+             * Format: date-time
+             */
+            time: string;
             /** Level */
             level: string;
             /** Logger */
             logger: string;
             /** Message */
             message: string;
-            /**
-             * Time
-             * Format: date-time
-             */
-            time: string;
+            /** Exception */
+            exception?: string | null;
+            /** Exceptiontype */
+            exceptionType?: string | null;
         };
         /**
          * LogFileEntry
          * @description One log file's metadata.
          */
         LogFileEntry: {
-            /** Contentssize */
-            contentsSize: number;
             /** Filename */
             filename: string;
             /**
@@ -4669,13 +5424,15 @@ export interface components {
              * Format: date-time
              */
             lastWriteTime: string;
+            /** Contentssize */
+            contentsSize: number;
         };
         /** LoginRequest */
         LoginRequest: {
-            /** Password */
-            password: string;
             /** Username */
             username: string;
+            /** Password */
+            password: string;
         };
         /**
          * LookupAddRequest
@@ -4686,6 +5443,14 @@ export interface components {
          *     operator input from the Add modal.
          */
         LookupAddRequest: {
+            /** Providername */
+            providerName: string;
+            /** Providergameid */
+            providerGameId: string;
+            /** Title */
+            title: string;
+            /** Platformid */
+            platformId: number;
             /** Libraryid */
             libraryId?: number | null;
             /**
@@ -4693,14 +5458,28 @@ export interface components {
              * @default true
              */
             monitored: boolean;
-            /** Platformid */
-            platformId: number;
-            /** Providergameid */
-            providerGameId: string;
-            /** Providername */
-            providerName: string;
-            /** Title */
-            title: string;
+        };
+        /**
+         * Manifest
+         * @description Retourné par `GET /api/v3/backup/manifest` — l'UI en dérive les
+         *     checkboxes disponibles + les compteurs.
+         */
+        Manifest: {
+            /** Resources */
+            resources: components["schemas"]["ManifestEntry"][];
+        };
+        /**
+         * ManifestEntry
+         * @description Une ligne du manifest — dit à l'UI ce qui est backupable + combien.
+         */
+        ManifestEntry: {
+            key: components["schemas"]["ResourceKey"];
+            /** Label */
+            label: string;
+            /** Count */
+            count: number;
+            /** Has Secrets */
+            has_secrets: boolean;
         };
         /**
          * ManualImportEntry
@@ -4709,41 +5488,41 @@ export interface components {
          */
         ManualImportEntry: {
             /**
-             * Force
-             * @default false
-             */
-            force: boolean;
-            /** Game Id */
-            game_id: number;
-            /**
              * Path
              * Format: path
              */
             path: string;
+            /** Game Id */
+            game_id: number;
             /** Release Id */
             release_id?: number | null;
+            /**
+             * Force
+             * @default false
+             */
+            force: boolean;
         };
         /**
          * ManualImportListingRead
          * @description Wire shape for one candidate row.
          */
         ManualImportListingRead: {
-            /** Parsed Convention */
-            parsed_convention?: string | null;
-            /** Parsed Languages */
-            parsed_languages?: string[];
-            /** Parsed Regions */
-            parsed_regions?: string[];
-            /** Parsed Title */
-            parsed_title?: string | null;
             /** Path */
             path: string;
             /** Size Bytes */
             size_bytes: number;
-            /** Suggested Game Id */
-            suggested_game_id?: number | null;
+            /** Parsed Title */
+            parsed_title?: string | null;
+            /** Parsed Convention */
+            parsed_convention?: string | null;
+            /** Parsed Regions */
+            parsed_regions?: string[];
+            /** Parsed Languages */
+            parsed_languages?: string[];
             /** Suggested Platform Id */
             suggested_platform_id?: number | null;
+            /** Suggested Game Id */
+            suggested_game_id?: number | null;
         };
         /**
          * ManualImportRequest
@@ -4759,6 +5538,10 @@ export interface components {
          * @description One row in the bulk-import POST body.
          */
         ManualImportRequestPayload: {
+            /** Path */
+            path: string;
+            /** Library Id */
+            library_id?: number | null;
             /**
              * Action
              * @default import
@@ -4767,33 +5550,29 @@ export interface components {
             action: "import" | "skip";
             /** Game Id Override */
             game_id_override?: number | null;
-            /** Library Id */
-            library_id?: number | null;
-            /** Path */
-            path: string;
         };
         /**
          * ManualImportResultRead
          * @description Per-entry outcome on the bulk-import response.
          */
         ManualImportResultRead: {
+            /** Path */
+            path: string;
             /**
              * Action
              * @enum {string}
              */
             action: "import" | "skip";
-            /** Correlation Id */
-            correlation_id?: string | null;
+            /** Success */
+            success: boolean;
+            /** History Id */
+            history_id?: number | null;
             /** Error Code */
             error_code?: string | null;
             /** Error Message */
             error_message?: string | null;
-            /** History Id */
-            history_id?: number | null;
-            /** Path */
-            path: string;
-            /** Success */
-            success: boolean;
+            /** Correlation Id */
+            correlation_id?: string | null;
         };
         /**
          * ManualMatchRequest
@@ -4812,26 +5591,26 @@ export interface components {
          * @description POST /api/v3/rom/search/manual.
          */
         ManualSearchRequest: {
-            /** Game Id */
-            game_id?: number | null;
+            /** Query */
+            query: string;
             /** Indexer Ids */
             indexer_ids?: number[] | null;
             /** Platform Id */
             platform_id?: number | null;
-            /** Query */
-            query: string;
             /**
              * Strict
              * @default false
              */
             strict: boolean;
+            /** Game Id */
+            game_id?: number | null;
         };
         /**
          * NamingConvention
          * @description Filename naming convention recognised by the parsers.
          * @enum {string}
          */
-        NamingConvention: "no-intro" | "redump" | "tosec" | "goodtools" | "scene" | "unknown";
+        NamingConvention: "no-intro" | "redump" | "tosec" | "goodtools" | "mame" | "scene" | "unknown";
         /** NamingPreviewRequest */
         NamingPreviewRequest: {
             profile: components["schemas"]["NamingProfileCreate"];
@@ -4848,18 +5627,15 @@ export interface components {
         };
         /** NamingProfileCreate */
         NamingProfileCreate: {
+            /** Name */
+            name: string;
             /**
              * Convention
              * @enum {string}
              */
             convention: "no-intro" | "redump" | "tosec" | "es-de" | "romm" | "custom";
-            /**
-             * Multi Disc Subfolder
-             * @default true
-             */
-            multi_disc_subfolder: boolean;
-            /** Name */
-            name: string;
+            /** Template */
+            template: string;
             /**
              * Platform Subfolder
              * @default true
@@ -4870,36 +5646,39 @@ export interface components {
              * @default true
              */
             replace_illegal_chars: boolean;
-            /** Template */
-            template: string;
+            /**
+             * Multi Disc Subfolder
+             * @default true
+             */
+            multi_disc_subfolder: boolean;
         };
         /** NamingProfileRead */
         NamingProfileRead: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
             /** Convention */
             convention: string;
+            /** Template */
+            template: string;
+            /** Platform Subfolder */
+            platform_subfolder: boolean;
+            /** Replace Illegal Chars */
+            replace_illegal_chars: boolean;
+            /** Multi Disc Subfolder */
+            multi_disc_subfolder: boolean;
+            /** Is Factory Default */
+            is_factory_default: boolean;
+            /** Is User Modified */
+            is_user_modified: boolean;
+            /** Seed Key */
+            seed_key: string | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
-            /** Id */
-            id: number;
-            /** Is Factory Default */
-            is_factory_default: boolean;
-            /** Is User Modified */
-            is_user_modified: boolean;
-            /** Multi Disc Subfolder */
-            multi_disc_subfolder: boolean;
-            /** Name */
-            name: string;
-            /** Platform Subfolder */
-            platform_subfolder: boolean;
-            /** Replace Illegal Chars */
-            replace_illegal_chars: boolean;
-            /** Seed Key */
-            seed_key: string | null;
-            /** Template */
-            template: string;
             /**
              * Updated At
              * Format: date-time
@@ -4928,79 +5707,79 @@ export interface components {
          *     handing the row to the model layer.
          */
         NotificationCreate: {
+            /** Name */
+            name: string;
             /**
-             * Apprise Url
-             * Format: password
+             * On Grab
+             * @default false
              */
-            apprise_url: string;
+            on_grab: boolean;
+            /**
+             * On Import
+             * @default true
+             */
+            on_import: boolean;
+            /**
+             * On Upgrade
+             * @default true
+             */
+            on_upgrade: boolean;
+            /**
+             * On Fail
+             * @default true
+             */
+            on_fail: boolean;
+            /**
+             * On Health Issue
+             * @default true
+             */
+            on_health_issue: boolean;
+            /**
+             * On Dat Update
+             * @default false
+             */
+            on_dat_update: boolean;
+            /**
+             * On Game Added
+             * @default false
+             */
+            on_game_added: boolean;
+            /** Tags */
+            tags?: string[];
             /**
              * Enabled
              * @default true
              */
             enabled: boolean;
             /**
-             * Include Health Errors
-             * @default true
-             */
-            include_health_errors: boolean;
-            /**
              * Include Health Warnings
              * @default true
              */
             include_health_warnings: boolean;
-            /** Name */
-            name: string;
             /**
-             * On Dat Update
-             * @default false
-             */
-            on_dat_update: boolean;
-            /** On Dat Update Format */
-            on_dat_update_format?: string | null;
-            /**
-             * On Fail
+             * Include Health Errors
              * @default true
              */
-            on_fail: boolean;
+            include_health_errors: boolean;
+            /** On Grab Format */
+            on_grab_format?: string | null;
+            /** On Import Format */
+            on_import_format?: string | null;
+            /** On Upgrade Format */
+            on_upgrade_format?: string | null;
             /** On Fail Format */
             on_fail_format?: string | null;
-            /**
-             * On Game Added
-             * @default false
-             */
-            on_game_added: boolean;
+            /** On Health Issue Format */
+            on_health_issue_format?: string | null;
+            /** On Dat Update Format */
+            on_dat_update_format?: string | null;
             /** On Game Added Format */
             on_game_added_format?: string | null;
             /**
-             * On Grab
-             * @default false
+             * Apprise Url
+             * Format: password
              */
-            on_grab: boolean;
-            /** On Grab Format */
-            on_grab_format?: string | null;
-            /**
-             * On Health Issue
-             * @default true
-             */
-            on_health_issue: boolean;
-            /** On Health Issue Format */
-            on_health_issue_format?: string | null;
-            /**
-             * On Import
-             * @default true
-             */
-            on_import: boolean;
-            /** On Import Format */
-            on_import_format?: string | null;
-            /**
-             * On Upgrade
-             * @default true
-             */
-            on_upgrade: boolean;
-            /** On Upgrade Format */
-            on_upgrade_format?: string | null;
-            /** Tags */
-            tags?: string[];
+            apprise_url: string;
         };
         /**
          * NotificationRead
@@ -5010,89 +5789,89 @@ export interface components {
          *     URL's host / token.
          */
         NotificationRead: {
-            /** Apprise Url Redacted */
-            apprise_url_redacted: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Enabled
-             * @default true
-             */
-            enabled: boolean;
-            /** Id */
-            id: number;
-            /**
-             * Include Health Errors
-             * @default true
-             */
-            include_health_errors: boolean;
-            /**
-             * Include Health Warnings
-             * @default true
-             */
-            include_health_warnings: boolean;
-            /** Last Error */
-            last_error?: string | null;
-            /** Last Status */
-            last_status?: ("success" | "partial" | "failed") | null;
-            /** Last Used At */
-            last_used_at?: string | null;
             /** Name */
             name: string;
-            /**
-             * On Dat Update
-             * @default false
-             */
-            on_dat_update: boolean;
-            /** On Dat Update Format */
-            on_dat_update_format?: string | null;
-            /**
-             * On Fail
-             * @default true
-             */
-            on_fail: boolean;
-            /** On Fail Format */
-            on_fail_format?: string | null;
-            /**
-             * On Game Added
-             * @default false
-             */
-            on_game_added: boolean;
-            /** On Game Added Format */
-            on_game_added_format?: string | null;
             /**
              * On Grab
              * @default false
              */
             on_grab: boolean;
-            /** On Grab Format */
-            on_grab_format?: string | null;
-            /**
-             * On Health Issue
-             * @default true
-             */
-            on_health_issue: boolean;
-            /** On Health Issue Format */
-            on_health_issue_format?: string | null;
             /**
              * On Import
              * @default true
              */
             on_import: boolean;
-            /** On Import Format */
-            on_import_format?: string | null;
             /**
              * On Upgrade
              * @default true
              */
             on_upgrade: boolean;
-            /** On Upgrade Format */
-            on_upgrade_format?: string | null;
+            /**
+             * On Fail
+             * @default true
+             */
+            on_fail: boolean;
+            /**
+             * On Health Issue
+             * @default true
+             */
+            on_health_issue: boolean;
+            /**
+             * On Dat Update
+             * @default false
+             */
+            on_dat_update: boolean;
+            /**
+             * On Game Added
+             * @default false
+             */
+            on_game_added: boolean;
             /** Tags */
             tags?: string[];
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Include Health Warnings
+             * @default true
+             */
+            include_health_warnings: boolean;
+            /**
+             * Include Health Errors
+             * @default true
+             */
+            include_health_errors: boolean;
+            /** On Grab Format */
+            on_grab_format?: string | null;
+            /** On Import Format */
+            on_import_format?: string | null;
+            /** On Upgrade Format */
+            on_upgrade_format?: string | null;
+            /** On Fail Format */
+            on_fail_format?: string | null;
+            /** On Health Issue Format */
+            on_health_issue_format?: string | null;
+            /** On Dat Update Format */
+            on_dat_update_format?: string | null;
+            /** On Game Added Format */
+            on_game_added_format?: string | null;
+            /** Id */
+            id: number;
+            /** Apprise Url Redacted */
+            apprise_url_redacted: string;
+            /** Last Used At */
+            last_used_at?: string | null;
+            /** Last Status */
+            last_status?: ("success" | "partial" | "failed") | null;
+            /** Last Error */
+            last_error?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
             /**
              * Updated At
              * Format: date-time
@@ -5104,49 +5883,61 @@ export interface components {
          * @description All fields optional; ``extra='forbid'`` so typos surface.
          */
         NotificationUpdate: {
-            /** Apprise Url */
-            apprise_url?: string | null;
-            /** Enabled */
-            enabled?: boolean | null;
-            /** Include Health Errors */
-            include_health_errors?: boolean | null;
-            /** Include Health Warnings */
-            include_health_warnings?: boolean | null;
             /** Name */
             name?: string | null;
-            /** On Dat Update */
-            on_dat_update?: boolean | null;
-            /** On Dat Update Format */
-            on_dat_update_format?: string | null;
-            /** On Fail */
-            on_fail?: boolean | null;
-            /** On Fail Format */
-            on_fail_format?: string | null;
-            /** On Game Added */
-            on_game_added?: boolean | null;
-            /** On Game Added Format */
-            on_game_added_format?: string | null;
+            /** Apprise Url */
+            apprise_url?: string | null;
             /** On Grab */
             on_grab?: boolean | null;
-            /** On Grab Format */
-            on_grab_format?: string | null;
-            /** On Health Issue */
-            on_health_issue?: boolean | null;
-            /** On Health Issue Format */
-            on_health_issue_format?: string | null;
             /** On Import */
             on_import?: boolean | null;
-            /** On Import Format */
-            on_import_format?: string | null;
             /** On Upgrade */
             on_upgrade?: boolean | null;
-            /** On Upgrade Format */
-            on_upgrade_format?: string | null;
+            /** On Fail */
+            on_fail?: boolean | null;
+            /** On Health Issue */
+            on_health_issue?: boolean | null;
+            /** On Dat Update */
+            on_dat_update?: boolean | null;
+            /** On Game Added */
+            on_game_added?: boolean | null;
             /** Tags */
             tags?: string[] | null;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Include Health Warnings */
+            include_health_warnings?: boolean | null;
+            /** Include Health Errors */
+            include_health_errors?: boolean | null;
+            /** On Grab Format */
+            on_grab_format?: string | null;
+            /** On Import Format */
+            on_import_format?: string | null;
+            /** On Upgrade Format */
+            on_upgrade_format?: string | null;
+            /** On Fail Format */
+            on_fail_format?: string | null;
+            /** On Health Issue Format */
+            on_health_issue_format?: string | null;
+            /** On Dat Update Format */
+            on_dat_update_format?: string | null;
+            /** On Game Added Format */
+            on_game_added_format?: string | null;
         };
         /** PackDetail */
         PackDetail: {
+            /** Pack Version */
+            pack_version: string;
+            /** Schema Version */
+            schema_version: number;
+            /** Description */
+            description: string | null;
+            /** Author */
+            author: string | null;
+            /** Pack Source */
+            pack_source: string;
+            /** Contents Hash */
+            contents_hash: string;
             /**
              * Applied At
              * Format: date-time
@@ -5154,46 +5945,34 @@ export interface components {
             applied_at: string;
             /** Applied By */
             applied_by: string;
-            /** Author */
-            author: string | null;
-            /** Contents Hash */
-            contents_hash: string;
-            /** Description */
-            description: string | null;
-            /** History */
-            history?: components["schemas"]["PackHistoryRow"][];
-            /** Pack Source */
-            pack_source: string;
-            /** Pack Version */
-            pack_version: string;
-            /** Schema Version */
-            schema_version: number;
             /** Source Url */
             source_url: string | null;
+            /** History */
+            history?: components["schemas"]["PackHistoryRow"][];
         };
         /** PackHistoryRow */
         PackHistoryRow: {
-            /** Action */
-            action: string;
-            /** Applied By */
-            applied_by: string | null;
-            /** Error Message */
-            error_message: string | null;
-            /** Finished At */
-            finished_at: string | null;
             /** Id */
             id: number;
-            /** Parsing Strategies Affected */
-            parsing_strategies_affected: string[];
-            /** Platforms Affected */
-            platforms_affected: string[];
+            /** Action */
+            action: string;
+            /** Status */
+            status: string;
             /**
              * Started At
              * Format: date-time
              */
             started_at: string;
-            /** Status */
-            status: string;
+            /** Finished At */
+            finished_at: string | null;
+            /** Platforms Affected */
+            platforms_affected: string[];
+            /** Parsing Strategies Affected */
+            parsing_strategies_affected: string[];
+            /** Error Message */
+            error_message: string | null;
+            /** Applied By */
+            applied_by: string | null;
         };
         /**
          * PackPlatformDiff
@@ -5204,20 +5983,32 @@ export interface components {
          *     (e.g., ``"user-overridden"``).
          */
         PackPlatformDiff: {
+            /** Slug */
+            slug: string;
             /**
              * Action
              * @enum {string}
              */
             action: "inserted" | "updated" | "skipped";
-            /** Fields Changed */
-            fields_changed?: string[];
             /** Reason */
             reason?: string | null;
-            /** Slug */
-            slug: string;
+            /** Fields Changed */
+            fields_changed?: string[];
         };
         /** PackSummary */
         PackSummary: {
+            /** Pack Version */
+            pack_version: string;
+            /** Schema Version */
+            schema_version: number;
+            /** Description */
+            description: string | null;
+            /** Author */
+            author: string | null;
+            /** Pack Source */
+            pack_source: string;
+            /** Contents Hash */
+            contents_hash: string;
             /**
              * Applied At
              * Format: date-time
@@ -5225,39 +6016,23 @@ export interface components {
             applied_at: string;
             /** Applied By */
             applied_by: string;
-            /** Author */
-            author: string | null;
-            /** Contents Hash */
-            contents_hash: string;
-            /** Description */
-            description: string | null;
-            /** Pack Source */
-            pack_source: string;
-            /** Pack Version */
-            pack_version: string;
-            /** Schema Version */
-            schema_version: number;
         };
         /**
          * PackUploadResult
          * @description Returned by the upload + apply / re-apply endpoints.
          */
         PackUploadResult: {
+            /** Pack Version */
+            pack_version: string;
+            /** Contents Hash */
+            contents_hash: string;
             /**
              * Action
              * @enum {string}
              */
             action: "applied" | "reapplied" | "skipped" | "failed";
-            /** Contents Hash */
-            contents_hash: string;
             /** Diff */
             diff?: components["schemas"]["PackPlatformDiff"][];
-            /** Error Message */
-            error_message?: string | null;
-            /** Finished At */
-            finished_at?: string | null;
-            /** Pack Version */
-            pack_version: string;
             /** Parsing Strategies Affected */
             parsing_strategies_affected?: string[];
             /**
@@ -5265,6 +6040,10 @@ export interface components {
              * Format: date-time
              */
             started_at: string;
+            /** Finished At */
+            finished_at?: string | null;
+            /** Error Message */
+            error_message?: string | null;
         };
         /** PaginationEnvelope[HistoryEvent] */
         PaginationEnvelope_HistoryEvent_: {
@@ -5272,17 +6051,17 @@ export interface components {
             page: number;
             /** Pagesize */
             pageSize: number;
-            /** Records */
-            records: components["schemas"]["HistoryEvent"][];
+            /** Sortkey */
+            sortKey: string;
             /**
              * Sortdirection
              * @enum {string}
              */
             sortDirection: "asc" | "desc";
-            /** Sortkey */
-            sortKey: string;
             /** Totalrecords */
             totalRecords: number;
+            /** Records */
+            records: components["schemas"]["HistoryEvent"][];
         };
         /** PaginationEnvelope[LogEntry] */
         PaginationEnvelope_LogEntry_: {
@@ -5290,17 +6069,17 @@ export interface components {
             page: number;
             /** Pagesize */
             pageSize: number;
-            /** Records */
-            records: components["schemas"]["LogEntry"][];
+            /** Sortkey */
+            sortKey: string;
             /**
              * Sortdirection
              * @enum {string}
              */
             sortDirection: "asc" | "desc";
-            /** Sortkey */
-            sortKey: string;
             /** Totalrecords */
             totalRecords: number;
+            /** Records */
+            records: components["schemas"]["LogEntry"][];
         };
         /** PaginationEnvelope[QueueEntryRead] */
         PaginationEnvelope_QueueEntryRead_: {
@@ -5308,17 +6087,17 @@ export interface components {
             page: number;
             /** Pagesize */
             pageSize: number;
-            /** Records */
-            records: components["schemas"]["QueueEntryRead"][];
+            /** Sortkey */
+            sortKey: string;
             /**
              * Sortdirection
              * @enum {string}
              */
             sortDirection: "asc" | "desc";
-            /** Sortkey */
-            sortKey: string;
             /** Totalrecords */
             totalRecords: number;
+            /** Records */
+            records: components["schemas"]["QueueEntryRead"][];
         };
         /** PaginationEnvelope[WantedReleaseRead] */
         PaginationEnvelope_WantedReleaseRead_: {
@@ -5326,56 +6105,57 @@ export interface components {
             page: number;
             /** Pagesize */
             pageSize: number;
-            /** Records */
-            records: components["schemas"]["WantedReleaseRead"][];
+            /** Sortkey */
+            sortKey: string;
             /**
              * Sortdirection
              * @enum {string}
              */
             sortDirection: "asc" | "desc";
-            /** Sortkey */
-            sortKey: string;
             /** Totalrecords */
             totalRecords: number;
+            /** Records */
+            records: components["schemas"]["WantedReleaseRead"][];
         };
         /** PlatformOverrideResponse */
         PlatformOverrideResponse: {
             /** Id */
             id: number;
+            /** Slug */
+            slug: string;
             /** Pack Source */
             pack_source: string;
             /** Pack Version */
             pack_version: string | null;
-            /** Slug */
-            slug: string;
         };
         /** PlatformRead */
         PlatformRead: {
-            /** Aliases */
-            aliases?: string[];
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Extra Meta */
-            extra_meta?: {
-                [key: string]: unknown;
-            };
-            /** Id */
-            id: number;
-            /** Igdb Id */
-            igdb_id?: number | null;
-            /** Launchbox Id */
-            launchbox_id?: number | null;
-            /** Manufacturer */
-            manufacturer?: string | null;
-            /** Mobygames Id */
-            mobygames_id?: number | null;
+            /** Slug */
+            slug: string;
             /** Name */
             name: string;
+            /** Short Name */
+            short_name?: string | null;
+            /** Manufacturer */
+            manufacturer?: string | null;
+            /** Release Year */
+            release_year?: number | null;
+            /** Parent Platform Id */
+            parent_platform_id?: number | null;
+            /** Igdb Id */
+            igdb_id?: number | null;
+            /** Screenscraper Id */
+            screenscraper_id?: number | null;
+            /** Mobygames Id */
+            mobygames_id?: number | null;
+            /** Launchbox Id */
+            launchbox_id?: number | null;
+            /** Retroachievements Id */
+            retroachievements_id?: number | null;
             /** Newznab Category Ids */
             newznab_category_ids?: number[];
+            /** Aliases */
+            aliases?: string[];
             /**
              * Pack Source
              * @default builtin
@@ -5383,18 +6163,17 @@ export interface components {
             pack_source: string;
             /** Pack Version */
             pack_version?: string | null;
-            /** Parent Platform Id */
-            parent_platform_id?: number | null;
-            /** Release Year */
-            release_year?: number | null;
-            /** Retroachievements Id */
-            retroachievements_id?: number | null;
-            /** Screenscraper Id */
-            screenscraper_id?: number | null;
-            /** Short Name */
-            short_name?: string | null;
-            /** Slug */
-            slug: string;
+            /** Extra Meta */
+            extra_meta?: {
+                [key: string]: unknown;
+            };
+            /** Id */
+            id: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
             /**
              * Updated At
              * Format: date-time
@@ -5414,52 +6193,120 @@ export interface components {
             platformId: number;
             /** Platformname */
             platformName: string;
-            /** Totaldumps */
-            totalDumps: number;
             /** Totalgames */
             totalGames: number;
             /** Totalreleases */
             totalReleases: number;
+            /** Totaldumps */
+            totalDumps: number;
             /** Totalsizebytes */
             totalSizeBytes: number;
         };
+        /**
+         * PreviewItem
+         * @description One YAML's dry-run outcome from a preview call.
+         */
+        PreviewItem: {
+            /** Filename */
+            filename: string;
+            /** Source Url */
+            source_url: string;
+            /** Pack Version */
+            pack_version: string;
+            /** Action */
+            action: string;
+            /** Diff */
+            diff?: components["schemas"]["PackPlatformDiff"][];
+            /** Parsing Strategies Affected */
+            parsing_strategies_affected?: string[];
+            /** Error Message */
+            error_message?: string | null;
+        };
+        /** PreviewResult */
+        PreviewResult: {
+            /** Source Id */
+            source_id: number;
+            /**
+             * Fetched At
+             * Format: date-time
+             */
+            fetched_at: string;
+            /** Items */
+            items?: components["schemas"]["PreviewItem"][];
+        };
+        /**
+         * ProviderCandidate
+         * @description One row in the per-provider relink picker.
+         */
+        ProviderCandidate: {
+            /** Providername */
+            providerName: string;
+            /** Providergameid */
+            providerGameId: string;
+            /** Title */
+            title: string;
+            /** Confidence */
+            confidence: number;
+            /** Platformslug */
+            platformSlug?: string | null;
+            /** Platformname */
+            platformName?: string | null;
+            /** Releaseyear */
+            releaseYear?: number | null;
+            /** Coverurl */
+            coverUrl?: string | null;
+        };
+        /**
+         * ProviderCandidatesResponse
+         * @description The candidate list + the variants tried so the operator can
+         *     see which query actually hit (useful when the auto-strip is
+         *     over-eager).
+         */
+        ProviderCandidatesResponse: {
+            /** Providername */
+            providerName: string;
+            /** Queriestried */
+            queriesTried: string[];
+            /** Candidates */
+            candidates: components["schemas"]["ProviderCandidate"][];
+        };
         /** ProviderConfigRead */
         ProviderConfigRead: {
-            /** Cache Ttl Seconds */
-            cache_ttl_seconds: number;
+            /** Provider Name */
+            provider_name: string;
             /** Enabled */
             enabled: boolean;
             /** Is Configured */
             is_configured: boolean;
+            /** Priority Global */
+            priority_global: number;
+            /** Cache Ttl Seconds */
+            cache_ttl_seconds: number;
+            /** Rate Limit Rps */
+            rate_limit_rps: number;
+            /** Rate Limit Burst */
+            rate_limit_burst: number;
             /** Last Health Check At */
             last_health_check_at: string | null;
             /** Last Health Check Ok */
             last_health_check_ok: boolean | null;
-            /** Priority Global */
-            priority_global: number;
-            /** Provider Name */
-            provider_name: string;
-            /** Rate Limit Burst */
-            rate_limit_burst: number;
-            /** Rate Limit Rps */
-            rate_limit_rps: number;
         };
         /** ProviderConfigUpdate */
         ProviderConfigUpdate: {
-            /** Cache Ttl Seconds */
-            cache_ttl_seconds?: number | null;
+            /** Enabled */
+            enabled?: boolean | null;
             /** Config */
             config?: {
                 [key: string]: unknown;
             } | null;
-            /** Enabled */
-            enabled?: boolean | null;
             /** Priority Global */
             priority_global?: number | null;
-            /** Rate Limit Burst */
-            rate_limit_burst?: number | null;
+            /** Cache Ttl Seconds */
+            cache_ttl_seconds?: number | null;
             /** Rate Limit Rps */
             rate_limit_rps?: number | null;
+            /** Rate Limit Burst */
+            rate_limit_burst?: number | null;
         };
         /**
          * ProviderField
@@ -5479,37 +6326,37 @@ export interface components {
          *     ``providers`` list enumerates every provider that found it.
          */
         ProviderHit: {
-            /** Confidence */
-            confidence: number;
-            /** Gameid */
-            gameId: string;
             /** Name */
             name: string;
+            /** Gameid */
+            gameId: string;
+            /** Confidence */
+            confidence: number;
         };
         /** ProviderTestResponse */
         ProviderTestResponse: {
-            /** Error */
-            error?: string | null;
-            /** Ok */
-            ok: boolean;
             /** Provider Name */
             provider_name: string;
+            /** Ok */
+            ok: boolean;
+            /** Error */
+            error?: string | null;
         };
         /**
          * QualityDefinitionFormat
          * @description One ``PlatformFormat`` row in the aggregated summary.
          */
         QualityDefinitionFormat: {
+            /** Id */
+            id: number;
             /** Extension */
             extension: string;
             /** Format Type */
             format_type: string;
-            /** Id */
-            id: number;
-            /** Max Size Bytes */
-            max_size_bytes: number | null;
             /** Min Size Bytes */
             min_size_bytes: number | null;
+            /** Max Size Bytes */
+            max_size_bytes: number | null;
             /** Pack Source */
             pack_source: string;
         };
@@ -5518,87 +6365,87 @@ export interface components {
          * @description One platform with its formats nested.
          */
         QualityDefinitionPlatform: {
-            /** Formats */
-            formats?: components["schemas"]["QualityDefinitionFormat"][];
             /** Platform Id */
             platform_id: number;
-            /** Platform Name */
-            platform_name: string;
             /** Platform Slug */
             platform_slug: string;
+            /** Platform Name */
+            platform_name: string;
+            /** Formats */
+            formats?: components["schemas"]["QualityDefinitionFormat"][];
         };
         /** QualityProfileRead */
         QualityProfileRead: {
-            /** Allow Archive Double Compression */
-            allow_archive_double_compression: boolean;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
             /** Allowed Formats */
             allowed_formats: string[];
+            /** Preferred Format */
+            preferred_format: string;
+            /** Require Dat Verified */
+            require_dat_verified: boolean;
+            /** Allow Archive Double Compression */
+            allow_archive_double_compression: boolean;
+            /** Upgrade Until Format */
+            upgrade_until_format: string;
             /** Auto Grab Min Score */
             auto_grab_min_score: number;
+            /** Is Factory Default */
+            is_factory_default: boolean;
+            /** Is User Modified */
+            is_user_modified: boolean;
+            /** Seed Key */
+            seed_key: string | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
-            /** Id */
-            id: number;
-            /** Is Factory Default */
-            is_factory_default: boolean;
-            /** Is User Modified */
-            is_user_modified: boolean;
-            /** Name */
-            name: string;
-            /** Preferred Format */
-            preferred_format: string;
-            /** Require Dat Verified */
-            require_dat_verified: boolean;
-            /** Seed Key */
-            seed_key: string | null;
             /**
              * Updated At
              * Format: date-time
              */
             updated_at: string;
-            /** Upgrade Until Format */
-            upgrade_until_format: string;
         };
         /**
          * QueueEntryRead
          * @description One queue entry — Sonarr-shape camelCase JSON.
          */
         QueueEntryRead: {
-            /** Attemptcount */
-            attemptCount: number;
-            /** Createdat */
-            createdAt: unknown;
-            /** Downloadclientid */
-            downloadClientId: number;
-            /** Downloadclientnativeid */
-            downloadClientNativeId: string;
-            /** Errormsg */
-            errorMsg?: string | null;
-            /** Etaseconds */
-            etaSeconds?: number | null;
-            /** Gameid */
-            gameId?: number | null;
-            /** Gametitle */
-            gameTitle?: string | null;
             /** Id */
             id: number;
-            /** Lastattemptat */
-            lastAttemptAt?: unknown;
-            /** Lastupdatedat */
-            lastUpdatedAt: unknown;
-            /** Progress */
-            progress: number;
             /** Releaseid */
             releaseId?: number | null;
-            /** Sizebytes */
-            sizeBytes?: number | null;
-            /** State */
-            state: string;
+            /** Gameid */
+            gameId?: number | null;
             /** Title */
             title?: string | null;
+            /** Gametitle */
+            gameTitle?: string | null;
+            /** Downloadclientid */
+            downloadClientId?: number | null;
+            /** Downloadclientnativeid */
+            downloadClientNativeId: string;
+            /** State */
+            state: string;
+            /** Progress */
+            progress: number;
+            /** Sizebytes */
+            sizeBytes?: number | null;
+            /** Etaseconds */
+            etaSeconds?: number | null;
+            /** Lastupdatedat */
+            lastUpdatedAt: unknown;
+            /** Errormsg */
+            errorMsg?: string | null;
+            /** Attemptcount */
+            attemptCount: number;
+            /** Lastattemptat */
+            lastAttemptAt?: unknown;
+            /** Createdat */
+            createdAt: unknown;
         };
         /**
          * RefreshMetadataResponse
@@ -5609,30 +6456,26 @@ export interface components {
          *     badges (FR-008 visibility).
          */
         RefreshMetadataResponse: {
-            /** Cover Path */
-            cover_path: string | null;
+            /** Game Id */
+            game_id: number;
             /** Fields */
             fields: {
                 [key: string]: {
                     [key: string]: unknown;
                 };
             };
-            /** Game Id */
-            game_id: number;
-            /** Needs Metadata Refresh */
-            needs_metadata_refresh: boolean;
             /** Skipped Locked */
             skipped_locked: string[];
+            /** Cover Path */
+            cover_path: string | null;
+            /** Needs Metadata Refresh */
+            needs_metadata_refresh: boolean;
         };
         /**
          * RefreshOutcome
          * @description Per-source result returned by /refresh + /refresh-all.
          */
         RefreshOutcome: {
-            /** Entries Ingested */
-            entries_ingested?: number | null;
-            /** Error */
-            error?: string | null;
             /** Id */
             id: number;
             /** Name */
@@ -5642,30 +6485,34 @@ export interface components {
              * @enum {string}
              */
             status: "ok" | "failed" | "running";
+            /** Entries Ingested */
+            entries_ingested?: number | null;
+            /** Error */
+            error?: string | null;
         };
         /** RegionProfileRead */
         RegionProfileRead: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Priorities */
+            priorities: string[];
             /** Allow Fallback Outside Priorities */
             allow_fallback_outside_priorities: boolean;
+            /** Exclude Regions */
+            exclude_regions: string[];
+            /** Is Factory Default */
+            is_factory_default: boolean;
+            /** Is User Modified */
+            is_user_modified: boolean;
+            /** Seed Key */
+            seed_key: string | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
-            /** Exclude Regions */
-            exclude_regions: string[];
-            /** Id */
-            id: number;
-            /** Is Factory Default */
-            is_factory_default: boolean;
-            /** Is User Modified */
-            is_user_modified: boolean;
-            /** Name */
-            name: string;
-            /** Priorities */
-            priorities: string[];
-            /** Seed Key */
-            seed_key: string | null;
             /**
              * Updated At
              * Format: date-time
@@ -5694,22 +6541,24 @@ export interface components {
         RejectionCode: "no_game_match" | "region_excluded" | "region_out_of_priorities" | "language_required" | "japanese_only_excluded" | "dump_status_disallowed" | "hack_disallowed" | "trainer_disallowed" | "translation_disallowed" | "proto_beta_disallowed" | "format_not_allowed" | "dat_required" | "custom_format_reject" | "blocklisted_guid" | "blocklisted_hash" | "size_out_of_bounds" | "seeders_below_threshold" | "platform_mismatch";
         /** ReleaseRead */
         ReleaseRead: {
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Cutoff Met
-             * @default false
-             */
-            cutoff_met: boolean;
-            /** Dat Entry Name */
-            dat_entry_name?: string | null;
-            /** Dat Source */
-            dat_source?: string | null;
-            /** Dat Verified */
-            dat_verified?: boolean | null;
+            /** Game Id */
+            game_id: number;
+            /** Name */
+            name: string;
+            /** Original Name */
+            original_name?: string | null;
+            /** Regions */
+            regions?: string[];
+            /** Languages */
+            languages?: string[];
+            /** Revision */
+            revision?: string | null;
+            /** @default unknown */
+            dump_status: components["schemas"]["DumpStatus"];
+            /** @default unknown */
+            naming_convention: components["schemas"]["NamingConvention"];
+            /** Tags */
+            tags?: string[];
             /**
              * Disc Number
              * @default 1
@@ -5720,43 +6569,41 @@ export interface components {
              * @default 1
              */
             disc_total: number;
-            /** @default unknown */
-            dump_status: components["schemas"]["DumpStatus"];
-            /** Game Id */
-            game_id: number;
-            /** Id */
-            id: number;
-            /** Languages */
-            languages?: string[];
-            /**
-             * Monitored
-             * @default true
-             */
-            monitored: boolean;
-            /** Name */
-            name: string;
-            /** @default unknown */
-            naming_convention: components["schemas"]["NamingConvention"];
-            /** Original Name */
-            original_name?: string | null;
             /** Parent Release Id */
             parent_release_id?: number | null;
-            /** Regions */
-            regions?: string[];
-            /** Revision */
-            revision?: string | null;
             /**
              * Status
              * @default wanted
              */
             status: string;
-            /** Tags */
-            tags?: string[];
+            /**
+             * Monitored
+             * @default true
+             */
+            monitored: boolean;
+            /**
+             * Cutoff Met
+             * @default false
+             */
+            cutoff_met: boolean;
+            /** Id */
+            id: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
             /**
              * Updated At
              * Format: date-time
              */
             updated_at: string;
+            /** Dat Verified */
+            dat_verified?: boolean | null;
+            /** Dat Source */
+            dat_source?: string | null;
+            /** Dat Entry Name */
+            dat_entry_name?: string | null;
         };
         /**
          * ReleaseSearchRequest
@@ -5787,16 +6634,34 @@ export interface components {
             /** Monitored */
             monitored: boolean;
         };
+        /**
+         * RelinkRequest
+         * @description Payload for ``POST /provider/{name}/relink``.
+         */
+        RelinkRequest: {
+            /**
+             * Providergameid
+             * @description The provider's id for the chosen game (string for generality; integer-id providers parse it server-side).
+             */
+            providerGameId: string;
+        };
         /** ResetTokenResponse */
         ResetTokenResponse: {
+            /** Plaintext */
+            plaintext: string;
             /**
              * Expires At
              * Format: date-time
              */
             expires_at: string;
-            /** Plaintext */
-            plaintext: string;
         };
+        /**
+         * ResourceKey
+         * @description Types de ressources exportables. Ajouter un membre → enregistrer
+         *     un handler dans `registry` pour l'activer.
+         * @enum {string}
+         */
+        ResourceKey: "dat_sources" | "quality_profiles" | "region_profiles" | "dump_profiles" | "language_profiles" | "naming_profiles" | "custom_formats" | "indexers" | "download_clients" | "notifications" | "platform_packs" | "pack_sources" | "platform_pack_config";
         /**
          * RetryResponse
          * @description Response to POST ``/api/v3/rom/import/retry/{import_id}``.
@@ -5805,16 +6670,247 @@ export interface components {
         RetryResponse: {
             history: components["schemas"]["ImportHistoryRead"];
         };
+        /**
+         * RomPackConfigRead
+         * @description Global ROM-pack defaults (the singleton config row).
+         */
+        RomPackConfigRead: {
+            /** Download Dir */
+            download_dir: string;
+            /** Default Max Size Bytes */
+            default_max_size_bytes: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** RomPackConfigUpdate */
+        RomPackConfigUpdate: {
+            /** Download Dir */
+            download_dir?: string | null;
+            /** Default Max Size Bytes */
+            default_max_size_bytes?: number | null;
+        };
+        /**
+         * RomPackCreate
+         * @description Slice 460 only exposes ``url``-sourced packs; ``grab``
+         *     packs are created by the watcher in slice 463.
+         */
+        RomPackCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Url
+             * Format: uri
+             */
+            url: string;
+            /** Platform Id */
+            platform_id?: number | null;
+            /** Max Size Bytes */
+            max_size_bytes?: number | null;
+            /**
+             * Import Mode
+             * @default all
+             * @enum {string}
+             */
+            import_mode: "all" | "dat_verified";
+            /**
+             * Unknown Action
+             * @default triage
+             * @enum {string}
+             */
+            unknown_action: "triage" | "park" | "delete";
+        };
+        /**
+         * RomPackGrabRequest
+         * @description Grab one indexer result as a ROM content pack.
+         *
+         *     Mirrors the manual-search :class:`GrabRequest` shape — the
+         *     operator picked an exact result from a manual search — plus
+         *     the pack metadata (``name`` / ``platform_id`` / size cap).
+         *     The result is dispatched to a download client; the watcher
+         *     routes the completed download to the pack ingest pipeline
+         *     (slice 463) instead of the single-file importer.
+         */
+        RomPackGrabRequest: {
+            /** Name */
+            name: string;
+            /** Platform Id */
+            platform_id?: number | null;
+            /** Max Size Bytes */
+            max_size_bytes?: number | null;
+            /**
+             * Import Mode
+             * @default all
+             * @enum {string}
+             */
+            import_mode: "all" | "dat_verified";
+            /**
+             * Unknown Action
+             * @default triage
+             * @enum {string}
+             */
+            unknown_action: "triage" | "park" | "delete";
+            /** Indexer Id */
+            indexer_id: number;
+            /** Indexer Guid */
+            indexer_guid: string;
+            /** Download Url */
+            download_url: string;
+            /** Title */
+            title: string;
+        };
+        /**
+         * RomPackItemAssociate
+         * @description Manual association payload — the operator picked the Game
+         *     this unmatched ROM belongs to.
+         */
+        RomPackItemAssociate: {
+            /** Game Id */
+            game_id: number;
+        };
+        /** RomPackItemRead */
+        RomPackItemRead: {
+            /** Id */
+            id: number;
+            /** Rom Pack Id */
+            rom_pack_id: number;
+            /** Original Filename */
+            original_filename: string;
+            /** Extracted Path */
+            extracted_path: string | null;
+            /** Size Bytes */
+            size_bytes: number | null;
+            /** Crc32 */
+            crc32: string | null;
+            /** Md5 */
+            md5: string | null;
+            /** Sha1 */
+            sha1: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "imported" | "unmatched" | "parked" | "deleted" | "failed";
+            /** Dat Entry Id */
+            dat_entry_id: number | null;
+            /** Game Id */
+            game_id: number | null;
+            /** Dump Id */
+            dump_id: number | null;
+            /** Error Msg */
+            error_msg: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** RomPackRead */
+        RomPackRead: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /**
+             * Source Kind
+             * @enum {string}
+             */
+            source_kind: "url" | "grab";
+            /** Url */
+            url: string | null;
+            /** Download Client Id */
+            download_client_id: number | null;
+            /** Download Client Native Id */
+            download_client_native_id: string | null;
+            /** Platform Id */
+            platform_id: number | null;
+            /** Platform Slug */
+            platform_slug?: string | null;
+            /** Platform Name */
+            platform_name?: string | null;
+            /** Max Size Bytes */
+            max_size_bytes: number | null;
+            /**
+             * Import Mode
+             * @enum {string}
+             */
+            import_mode: "all" | "dat_verified";
+            /**
+             * Unknown Action
+             * @enum {string}
+             */
+            unknown_action: "triage" | "park" | "delete";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "downloading" | "extracting" | "importing" | "awaiting_triage" | "done" | "failed";
+            /** Downloaded Path */
+            downloaded_path: string | null;
+            /** Size Bytes */
+            size_bytes: number | null;
+            /** Total Files */
+            total_files: number;
+            /** Imported Count */
+            imported_count: number;
+            /** Unmatched Count */
+            unmatched_count: number;
+            /** Parked Count */
+            parked_count: number;
+            /** Failed Count */
+            failed_count: number;
+            /** Last Error */
+            last_error: string | null;
+            /** Last Ingest At */
+            last_ingest_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** RomPackUpdate */
+        RomPackUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Url */
+            url?: string | null;
+            /** Platform Id */
+            platform_id?: number | null;
+            /** Max Size Bytes */
+            max_size_bytes?: number | null;
+            /** Import Mode */
+            import_mode?: ("all" | "dat_verified") | null;
+            /** Unknown Action */
+            unknown_action?: ("triage" | "park" | "delete") | null;
+        };
         /** RootFolderRead */
         RootFolderRead: {
-            /** Accessible */
-            accessible: boolean;
-            /** Freespace */
-            freeSpace: number;
             /** Id */
             id: number;
             /** Path */
             path: string;
+            /** Accessible */
+            accessible: boolean;
+            /** Freespace */
+            freeSpace: number;
             /** Unmappedfolders */
             unmappedFolders?: unknown[];
         };
@@ -5826,10 +6922,10 @@ export interface components {
          *     the pipeline + tests both enforce that invariant.
          */
         ScoreBreakdown: {
-            /** Contributions */
-            contributions?: components["schemas"]["ScoreContribution"][];
             /** Total */
             total: number;
+            /** Contributions */
+            contributions?: components["schemas"]["ScoreContribution"][];
         };
         /**
          * ScoreContribution
@@ -5840,55 +6936,55 @@ export interface components {
          *     Verified Dump +100, size_bonus: -10").
          */
         ScoreContribution: {
-            /** Name */
-            name: string;
             /**
              * Source
              * @enum {string}
              */
             source: "region" | "language" | "custom_format" | "dat_match" | "size_bonus" | "dump_status" | "quality" | "size" | "seeders" | "already_owned";
+            /** Name */
+            name: string;
             /** Value */
             value: number;
         };
         /** SearchHistoryRead */
         SearchHistoryRead: {
-            /** Chosen Indexer Guid */
-            chosen_indexer_guid: string | null;
-            /** Correlation Id */
-            correlation_id: string;
-            /** Duration Ms */
-            duration_ms: number | null;
-            /** Finished At */
-            finished_at: string | null;
-            /** Game Id */
-            game_id: number | null;
-            /** Grabbed Release Id */
-            grabbed_release_id: number | null;
             /** Id */
             id: number;
-            /** Indexer Id */
-            indexer_id: number | null;
-            /** No Grab Reason */
-            no_grab_reason: string | null;
+            /** Search Type */
+            search_type: string;
             /** Query */
             query: string | null;
+            /** Indexer Id */
+            indexer_id: number | null;
+            /** Game Id */
+            game_id: number | null;
             /** Release Id */
             release_id: number | null;
             /** Results Count */
             results_count: number;
+            /** Grabbed Release Id */
+            grabbed_release_id: number | null;
+            /** Chosen Indexer Guid */
+            chosen_indexer_guid: string | null;
             /** Score */
             score: number | null;
+            /** No Grab Reason */
+            no_grab_reason: string | null;
             /** Score Breakdown */
             score_breakdown: {
                 [key: string]: unknown;
             }[] | null;
-            /** Search Type */
-            search_type: string;
             /**
              * Started At
              * Format: date-time
              */
             started_at: string;
+            /** Finished At */
+            finished_at: string | null;
+            /** Duration Ms */
+            duration_ms: number | null;
+            /** Correlation Id */
+            correlation_id: string;
         };
         /**
          * SearchRoundReport
@@ -5898,27 +6994,25 @@ export interface components {
          *     history view can show the full picture, plus the subset that
          *     won and were dispatched. ``overcap_indexers`` lists indexers
          *     whose responses exceeded FR-029's hard cap and were truncated.
+         *
+         *     ``profile_expected_conventions`` snapshots every
+         *     ``naming_convention`` value the active library's custom-format
+         *     set explicitly rewards (the ``no-intro-convention`` /
+         *     ``redump-convention`` / … CFs). The UI uses it to color the
+         *     convention chip:
+         *       - candidate's convention IS in the list → green
+         *       - the list is non-empty and candidate's convention is NOT in
+         *         it (or unknown) → red (the profile cares but this release
+         *         doesn't satisfy any of the expected authorities)
+         *       - the list is empty → grey (profile is indifferent to the
+         *         naming convention)
          */
         SearchRoundReport: {
-            /** Candidates */
-            candidates?: components["schemas"]["Candidate"][];
             /**
              * Correlation Id
              * Format: uuid
              */
             correlation_id: string;
-            /** Duration Ms */
-            duration_ms?: number | null;
-            /** Finished At */
-            finished_at?: string | null;
-            /** Grabs */
-            grabs?: components["schemas"]["Candidate"][];
-            /** Indexer Outcomes */
-            indexer_outcomes?: {
-                [key: string]: "ok" | "failed" | "rate_limited" | "cache-hit" | "cache-miss";
-            };
-            /** Overcap Indexers */
-            overcap_indexers?: number[];
             /**
              * Search Type
              * @enum {string}
@@ -5929,17 +7023,111 @@ export interface components {
              * Format: date-time
              */
             started_at: string;
+            /** Finished At */
+            finished_at?: string | null;
+            /** Duration Ms */
+            duration_ms?: number | null;
+            /** Candidates */
+            candidates?: components["schemas"]["Candidate"][];
+            /** Grabs */
+            grabs?: components["schemas"]["Candidate"][];
+            /** Indexer Outcomes */
+            indexer_outcomes?: {
+                [key: string]: "ok" | "failed" | "rate_limited" | "cache-hit" | "cache-miss";
+            };
+            /** Overcap Indexers */
+            overcap_indexers?: number[];
+            /** Profile Expected Conventions */
+            profile_expected_conventions?: string[];
         };
         /** SetupRequest */
         SetupRequest: {
-            /** Password */
-            password: string;
             /** Username */
             username: string;
+            /** Password */
+            password: string;
         };
         /** SetupResponse */
         SetupResponse: {
             user: components["schemas"]["UserPublic"];
+        };
+        /** SourceCreate */
+        SourceCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Url
+             * Format: uri
+             */
+            url: string;
+            /**
+             * Kind
+             * @description Override the auto-detected kind ('raw' | 'github_dir'). Leave null to let the server guess from the URL shape.
+             */
+            kind?: string | null;
+        };
+        /** SourceSummary */
+        SourceSummary: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Url */
+            url: string;
+            /** Kind */
+            kind: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Last Synced At */
+            last_synced_at: string | null;
+            /** Last Status */
+            last_status: string | null;
+            /** Last Error */
+            last_error: string | null;
+            /** Last Applied Count */
+            last_applied_count: number;
+        };
+        /** SourceUpdate */
+        SourceUpdate: {
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Name */
+            name?: string | null;
+        };
+        /**
+         * SyncItemOutcome
+         * @description One YAML body processed during a sync run.
+         */
+        SyncItemOutcome: {
+            /** Filename */
+            filename: string;
+            /** Source Url */
+            source_url: string;
+            /** Outcome */
+            outcome: string;
+            /** Pack Version */
+            pack_version?: string | null;
+            /** Error */
+            error?: string | null;
+        };
+        /** SyncResult */
+        SyncResult: {
+            /** Source Id */
+            source_id: number;
+            /**
+             * Fetched At
+             * Format: date-time
+             */
+            fetched_at: string;
+            /** Status */
+            status: string;
+            /** Items */
+            items?: components["schemas"]["SyncItemOutcome"][];
+            /**
+             * Applied Count
+             * @default 0
+             */
+            applied_count: number;
         };
         /**
          * SystemStats
@@ -5953,22 +7141,22 @@ export interface components {
          *     per-platform breakdown for the disk-usage panel.
          */
         SystemStats: {
-            /** Byplatform */
-            byPlatform?: components["schemas"]["PlatformStats"][];
-            /** Imports24H */
-            imports24h: number;
-            /** Importssuccess24H */
-            importsSuccess24h: number;
-            /** Monitoredgames */
-            monitoredGames: number;
-            /** Totaldumps */
-            totalDumps: number;
             /** Totalgames */
             totalGames: number;
             /** Totalreleases */
             totalReleases: number;
+            /** Totaldumps */
+            totalDumps: number;
+            /** Monitoredgames */
+            monitoredGames: number;
             /** Wantedreleases */
             wantedReleases: number;
+            /** Imports24H */
+            imports24h: number;
+            /** Importssuccess24H */
+            importsSuccess24h: number;
+            /** Byplatform */
+            byPlatform?: components["schemas"]["PlatformStats"][];
         };
         /**
          * TagDetail
@@ -5978,14 +7166,14 @@ export interface components {
          *     via Pydantic aliases.
          */
         TagDetail: {
-            /** Gameids */
-            gameIds: number[];
             /** Id */
             id: number;
-            /** Indexerids */
-            indexerIds: number[];
             /** Label */
             label: string;
+            /** Gameids */
+            gameIds: number[];
+            /** Indexerids */
+            indexerIds: number[];
             /** Notificationids */
             notificationIds: number[];
             /** Releaseids */
@@ -6002,14 +7190,14 @@ export interface components {
          *     spot stale tags at a glance.
          */
         TagRead: {
-            /** Color */
-            color: string;
             /** Id */
             id: number;
-            /** Label */
-            label: string;
             /** Name */
             name: string;
+            /** Label */
+            label: string;
+            /** Color */
+            color: string;
             /**
              * Usagecount
              * @default 0
@@ -6021,10 +7209,10 @@ export interface components {
          * @description Response body for ``POST /api/v3/notification/{id}/test``.
          */
         TestNotificationResponse: {
-            /** Error Message */
-            error_message?: string | null;
             /** Success */
             success: boolean;
+            /** Error Message */
+            error_message?: string | null;
         };
         /**
          * TriggerKind
@@ -6063,37 +7251,37 @@ export interface components {
          *     ``/api/v3/rom/unidentified``.
          */
         UnidentifiedDumpRead: {
-            /** Attempt Count */
-            attempt_count: number;
-            /** Crc32 */
-            crc32: string | null;
+            /** Id */
+            id: number;
+            /** Path */
+            path: string;
+            /** Size Bytes */
+            size_bytes: number;
             /**
              * Discovered At
              * Format: date-time
              */
             discovered_at: string;
-            /** Id */
-            id: number;
+            /** Crc32 */
+            crc32: string | null;
+            /** Md5 */
+            md5: string | null;
+            /** Sha1 */
+            sha1: string | null;
+            /** Attempt Count */
+            attempt_count: number;
             /** Last Attempt At */
             last_attempt_at: string | null;
             /** Last Error */
             last_error: string | null;
-            /** Library Id */
-            library_id: number | null;
-            /** Md5 */
-            md5: string | null;
-            /** Path */
-            path: string;
-            /** Rejection Reason */
-            rejection_reason: string | null;
-            /** Sha1 */
-            sha1: string | null;
-            /** Size Bytes */
-            size_bytes: number;
-            /** Suggested Game Id */
-            suggested_game_id: number | null;
             /** Suggested Platform Id */
             suggested_platform_id: number | null;
+            /** Rejection Reason */
+            rejection_reason: string | null;
+            /** Library Id */
+            library_id: number | null;
+            /** Suggested Game Id */
+            suggested_game_id: number | null;
         };
         /** UpdateFieldPriorityRequest */
         UpdateFieldPriorityRequest: {
@@ -6109,10 +7297,10 @@ export interface components {
          *     user-CRUD endpoints (next slice).
          */
         UpdateMeRequest: {
-            /** Email */
-            email?: string | null;
             /** Password */
             password?: string | null;
+            /** Email */
+            email?: string | null;
             /** Preferences */
             preferences?: {
                 [key: string]: unknown;
@@ -6120,51 +7308,51 @@ export interface components {
         };
         /** UpdateTagRequest */
         UpdateTagRequest: {
-            /** Color */
-            color?: string | null;
             /** Label */
             label?: string | null;
+            /** Color */
+            color?: string | null;
         };
         /** UpdateUserRequest */
         UpdateUserRequest: {
+            /** Role */
+            role?: string | null;
             /** Email */
             email?: string | null;
             /** Is Active */
             is_active?: boolean | null;
-            /** Role */
-            role?: string | null;
         };
         /**
          * UserPublic
          * @description Public-facing User shape — never carries hashed_password.
          */
         UserPublic: {
+            /** Id */
+            id: number;
+            /** Username */
+            username: string;
+            /** Email */
+            email?: string | null;
+            /** Role */
+            role: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Preferences */
+            preferences?: {
+                [key: string]: unknown;
+            };
+            /** Last Login At */
+            last_login_at?: string | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
-            /** Email */
-            email?: string | null;
-            /** Id */
-            id: number;
-            /** Is Active */
-            is_active: boolean;
-            /** Last Login At */
-            last_login_at?: string | null;
-            /** Preferences */
-            preferences?: {
-                [key: string]: unknown;
-            };
-            /** Role */
-            role: string;
             /**
              * Updated At
              * Format: date-time
              */
             updated_at: string;
-            /** Username */
-            username: string;
         };
         /**
          * ValidateResult
@@ -6173,29 +7361,17 @@ export interface components {
          *     untouched and ``action`` carries the would-be outcome.
          */
         ValidateResult: {
+            /** Pack Version */
+            pack_version: string;
+            /** Contents Hash */
+            contents_hash: string;
             /**
              * Action
              * @enum {string}
              */
             action: "would_apply" | "would_skip" | "would_fail";
-            /** Contents Hash */
-            contents_hash: string;
-            /**
-             * Database State Unchanged
-             * @default true
-             */
-            database_state_unchanged: boolean;
             /** Diff */
             diff?: components["schemas"]["PackPlatformDiff"][];
-            /** Error Message */
-            error_message?: string | null;
-            /**
-             * Finished At
-             * Format: date-time
-             */
-            finished_at: string;
-            /** Pack Version */
-            pack_version: string;
             /** Parsing Strategies Affected */
             parsing_strategies_affected?: string[];
             /**
@@ -6203,19 +7379,31 @@ export interface components {
              * Format: date-time
              */
             started_at: string;
+            /**
+             * Finished At
+             * Format: date-time
+             */
+            finished_at: string;
+            /**
+             * Database State Unchanged
+             * @default true
+             */
+            database_state_unchanged: boolean;
+            /** Error Message */
+            error_message?: string | null;
         };
         /** ValidationError */
         ValidationError: {
-            /** Context */
-            ctx?: Record<string, never>;
-            /** Input */
-            input?: unknown;
             /** Location */
             loc: (string | number)[];
             /** Message */
             msg: string;
             /** Error Type */
             type: string;
+            /** Input */
+            input?: unknown;
+            /** Context */
+            ctx?: Record<string, never>;
         };
         /**
          * WantedReleaseRead
@@ -6230,40 +7418,40 @@ export interface components {
          *     fetch.
          */
         WantedReleaseRead: {
-            /** Createdat */
-            createdAt: unknown;
+            /** Id */
+            id: number;
+            /** Gameid */
+            gameId: number;
+            /** Platformid */
+            platformId: number;
+            /** Name */
+            name: string;
+            /** Regions */
+            regions: string[];
+            /** Languages */
+            languages: string[];
+            /** Revision */
+            revision?: string | null;
+            /** Dumpstatus */
+            dumpStatus: string;
+            /** Namingconvention */
+            namingConvention: string;
+            /** Status */
+            status: string;
+            /** Monitored */
+            monitored: boolean;
             /** Cutoffmet */
             cutoffMet: boolean;
+            /** Libraryid */
+            libraryId?: number | null;
             /** Discnumber */
             discNumber: number;
             /** Disctotal */
             discTotal: number;
-            /** Dumpstatus */
-            dumpStatus: string;
-            /** Gameid */
-            gameId: number;
-            /** Id */
-            id: number;
-            /** Languages */
-            languages: string[];
-            /** Libraryid */
-            libraryId?: number | null;
-            /** Monitored */
-            monitored: boolean;
-            /** Name */
-            name: string;
-            /** Namingconvention */
-            namingConvention: string;
             /** Parentreleaseid */
             parentReleaseId?: number | null;
-            /** Platformid */
-            platformId: number;
-            /** Regions */
-            regions: string[];
-            /** Revision */
-            revision?: string | null;
-            /** Status */
-            status: string;
+            /** Createdat */
+            createdAt: unknown;
             /** Updatedat */
             updatedAt: unknown;
         };
@@ -6284,21 +7472,36 @@ export interface components {
          * WebhookPayload
          * @description Common shape every supported download client posts.
          *
-         *     qBittorrent and SABnzbd have different native shapes; for
-         *     MVP we accept the lowest-common-denominator fields and rely
-         *     on the operator's hook script to render them. Future client
-         *     variants (Transmission, Deluge, NZBGet) will land as a
-         *     discriminated union.
+         *     qBittorrent, SABnzbd et Deluge ont chacun leur mécanisme natif
+         *     d'exécution de script au download-complete :
+         *     - qBit : Settings → Downloads → « Run external program »
+         *     - SABnzbd : Settings → Categories → « Script »
+         *     - Deluge : plugin Execute (Preferences → Plugins → Execute) qui
+         *       appelle un script bash sur ``Torrent Complete``. Le script hit
+         *       cet endpoint avec l'info-hash en tant que
+         *       ``download_client_native_id``.
+         *
+         *     On accepte les 3 kinds. Les prochains (Transmission, NZBGet)
+         *     landent dans une slice ultérieure.
          */
         WebhookPayload: {
+            /** Download Client Native Id */
+            download_client_native_id: string;
             /**
              * Download Client Kind
              * @default qbittorrent
              * @enum {string}
              */
-            download_client_kind: "qbittorrent" | "sabnzbd";
-            /** Download Client Native Id */
-            download_client_native_id: string;
+            download_client_kind: "qbittorrent" | "sabnzbd" | "deluge";
+        };
+        /**
+         * _IndexerSecretsRead
+         * @description Just the decrypted secret bag — kept off IndexerRead so the
+         *     list endpoint never accidentally leaks the key.
+         */
+        _IndexerSecretsRead: {
+            /** Api Key */
+            api_key?: string | null;
         };
         /**
          * _TestProbePayload
@@ -6309,8 +7512,6 @@ export interface components {
          *     the URL + key combo before saving.
          */
         _TestProbePayload: {
-            /** Api Key */
-            api_key?: string | null;
             /**
              * Implementation
              * @enum {string}
@@ -6318,6 +7519,8 @@ export interface components {
             implementation: "newznab" | "torznab";
             /** Url */
             url: string;
+            /** Api Key */
+            api_key?: string | null;
         };
         /**
          * ConnectivityTestResult
@@ -6328,14 +7531,14 @@ export interface components {
          *     through the same JSON envelope (FR-008, SC-006).
          */
         romarr__downloaders__types__ConnectivityTestResult: {
-            /** Client Version */
-            client_version?: string | null;
+            /** Ok */
+            ok: boolean;
             /** Error Code */
             error_code?: ("connection" | "auth" | "tls" | "version" | "internal") | null;
             /** Error Message */
             error_message?: string | null;
-            /** Ok */
-            ok: boolean;
+            /** Client Version */
+            client_version?: string | null;
             /** Warnings */
             warnings?: components["schemas"]["ConnectivityWarning"][];
         };
@@ -6344,18 +7547,18 @@ export interface components {
          * @description Outcome of a single connectivity probe.
          */
         romarr__indexers__connectivity__ConnectivityTestResult: {
-            /** Caps Ok */
-            caps_ok: boolean;
-            /** Category */
-            category?: ("auth" | "protocol" | "connectivity" | "circuit_open" | "ok") | null;
-            /** Message */
-            message?: string | null;
             /** Ok */
             ok: boolean;
+            /** Caps Ok */
+            caps_ok: boolean;
             /** Search Ok */
             search_ok: boolean | null;
             /** Server */
             server?: string | null;
+            /** Category */
+            category?: ("auth" | "protocol" | "connectivity" | "circuit_open" | "ok") | null;
+            /** Message */
+            message?: string | null;
         };
     };
     responses: never;
@@ -6366,27 +7569,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    list_applications_api_v3_applications_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApplicationRead"][];
-                };
-            };
-        };
-    };
-    register_application_api_v3_applications_post: {
+    setup_api_v3_auth_setup_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -6395,7 +7578,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ApplicationCreate"];
+                "application/json": components["schemas"]["SetupRequest"];
             };
         };
         responses: {
@@ -6405,7 +7588,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApplicationCreateResult"];
+                    "application/json": components["schemas"]["SetupResponse"];
                 };
             };
             /** @description Validation Error */
@@ -6419,47 +7602,18 @@ export interface operations {
             };
         };
     };
-    read_application_api_v3_applications__application_id__get: {
+    login_api_v3_auth_login_post: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                application_id: number;
-            };
+            path?: never;
             cookie?: never;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApplicationRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
             };
         };
-    };
-    unregister_application_api_v3_applications__application_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                application_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
         responses: {
             /** @description Successful Response */
             204: {
@@ -6479,13 +7633,29 @@ export interface operations {
             };
         };
     };
-    rotate_application_token_api_v3_applications__application_id__rotate_token_post: {
+    logout_api_v3_auth_logout_post: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                application_id: number;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
+        };
+    };
+    get_auth_config_api_v3_auth_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -6496,7 +7666,53 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApplicationCreateResult"];
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    get_me_api_v3_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserPublic"];
+                };
+            };
+        };
+    };
+    update_me_api_v3_auth_me_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserPublic"];
                 };
             };
             /** @description Validation Error */
@@ -6569,5429 +7785,6 @@ export interface operations {
             header?: never;
             path: {
                 api_key_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_auth_config_api_v3_auth_config_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
-    };
-    login_api_v3_auth_login_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LoginRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    logout_api_v3_auth_logout_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    get_me_api_v3_auth_me_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserPublic"];
-                };
-            };
-        };
-    };
-    update_me_api_v3_auth_me_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateMeRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UserPublic"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    setup_api_v3_auth_setup_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SetupRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SetupResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_blocklist_api_v3_blocklist_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BlocklistRead"][];
-                };
-            };
-        };
-    };
-    add_to_blocklist_api_v3_blocklist_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BlocklistRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    remove_from_blocklist_api_v3_blocklist__entry_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entry_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_calendar_api_v3_calendar_get: {
-        parameters: {
-            query: {
-                /** @description ISO-8601 datetime; only events with ``releaseDateUtc >= start`` are returned. */
-                start: string;
-                /** @description ISO-8601 datetime; only events with ``releaseDateUtc < end`` are returned. */
-                end: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CalendarEvent"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    post_command_api_v3_command_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_known_commands_api_v3_command__known_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": string[];
-                };
-            };
-        };
-    };
-    get_command_status_api_v3_command__command_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                command_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    cancel_command_api_v3_command__command_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                command_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_cover_api_v3_cover__game_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                game_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    put_cover_api_v3_cover__game_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                game_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CoverOverrideRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GameRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_cover_api_v3_cover__game_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                game_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GameRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_rows_api_v3_customformat_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomFormatRead"][];
-                };
-            };
-        };
-    };
-    create_row_api_v3_customformat_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomFormatRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_schema_api_v3_customformat_schema_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
-    };
-    read_row_api_v3_customformat__row_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                row_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomFormatRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_row_api_v3_customformat__row_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                row_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomFormatRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_row_api_v3_customformat__row_id__delete: {
-        parameters: {
-            query?: {
-                /** @description Future-extension flag. The current cascade implementation still 409s when bound (NOT NULL FKs prevent NULL-out). */
-                force?: boolean;
-            };
-            header?: never;
-            path: {
-                row_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Deleted. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description No row with this id. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Profile is bound by one or more libraries. Detail carries the blocking library names so the operator can rebind manually. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    summary_api_v3_dat_source_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DatSourceSummary"][];
-                };
-            };
-        };
-    };
-    list_sources_api_v3_dat_source_sources_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DatSourceRead"][];
-                };
-            };
-        };
-    };
-    create_source_api_v3_dat_source_sources_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DatSourceCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DatSourceRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    refresh_all_api_v3_dat_source_sources_refresh_all_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RefreshOutcome"][];
-                };
-            };
-        };
-    };
-    update_source_api_v3_dat_source_sources__source_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                source_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DatSourceUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DatSourceRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_source_api_v3_dat_source_sources__source_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                source_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    refresh_source_api_v3_dat_source_sources__source_id__refresh_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                source_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RefreshOutcome"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_clients_api_v3_downloadclient_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DownloadClientRead"][];
-                };
-            };
-        };
-    };
-    create_client_api_v3_downloadclient_post: {
-        parameters: {
-            query?: {
-                test?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DownloadClientCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DownloadClientRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    schema_endpoint_api_v3_downloadclient_schema_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DownloadClientSchema"][];
-                };
-            };
-        };
-    };
-    probe_client_payload_api_v3_downloadclient_test_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DownloadClientCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["romarr__downloaders__types__ConnectivityTestResult"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_client_api_v3_downloadclient__client_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                client_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DownloadClientRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_client_api_v3_downloadclient__client_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                client_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DownloadClientUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DownloadClientRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_client_api_v3_downloadclient__client_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                client_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    test_client_api_v3_downloadclient__client_id__test_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                client_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["romarr__downloaders__types__ConnectivityTestResult"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_games_api_v3_game_get: {
-        parameters: {
-            query?: {
-                /** @description Case-insensitive substring filter on the game title. Trimmed; empty/whitespace-only ignored. */
-                q?: string | null;
-                /** @description Restrict to one platform. */
-                platform_id?: number | null;
-                /** @description Restrict to games carrying a specific tag id. Matched against the Game.tags JSON list. */
-                tag_id?: number | null;
-                /** @description Restrict to games with at least one Release bound to this Library id (slice 166). */
-                library_id?: number | null;
-                /** @description Filter on the `monitored` flag. `true` is the most common operator workflow ("show me what I'm tracking"). */
-                monitored?: boolean | null;
-                /** @description Restrict to games carrying this genre tag in ``Game.genres`` (case-insensitive exact match against any element of the JSON list). */
-                genre?: string | null;
-                /** @description Restrict to games carrying this region code in ``Game.regions`` (case-insensitive exact match against any element of the JSON list — e.g. ``US``, ``EU``, ``JP``). */
-                region?: string | null;
-                /** @description Restrict to games whose ``release_date`` falls in this calendar year. Year-bounded between 1970 (the oldest plausible commercial release) and 2100. */
-                year?: number | null;
-                /** @description Sort key — `title` (default), `added_at` (Game.created_at), `release_date`, or `rating`. */
-                sort?: "title" | "added_at" | "release_date" | "rating";
-                /** @description Sort direction (asc default). */
-                direction?: "asc" | "desc";
-                limit?: number;
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GameRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    bulk_delete_api_v3_game_bulk_delete_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BulkDeleteRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BulkDeleteResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    bulk_monitor_api_v3_game_bulk_monitor_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BulkMonitorRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BulkMonitorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    bulk_tag_api_v3_game_bulk_tag_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BulkTagRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BulkTagResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    lookup_games_api_v3_game_lookup_get: {
-        parameters: {
-            query: {
-                /** @description Title substring to look up. */
-                q: string;
-                /** @description Optional platform slug filter — providers that honour platform mapping use it to scope results. */
-                platformSlug?: string | null;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GameLookupRow"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    add_game_from_lookup_api_v3_game_lookup_add_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LookupAddRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GameRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_game_api_v3_game__game_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                game_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GameRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_game_api_v3_game__game_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                game_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    patch_game_api_v3_game__game_id__patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                game_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["GameToggleRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GameRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_dumps_for_game_api_v3_game__game_id__dump_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                game_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DumpRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    patch_field_api_v3_game__game_id__field_patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                game_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["FieldEditRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GameRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    patch_locked_fields_api_v3_game__game_id__locked_fields_patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                game_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["FieldLockRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GameRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_game_metadata_api_v3_game__game_id__metadata_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                game_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GameMetadataRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    put_notes_api_v3_game__game_id__notes_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                game_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["NotesUpdateRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GameRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    refresh_metadata_endpoint_api_v3_game__game_id__refresh_metadata_post: {
-        parameters: {
-            query?: {
-                force?: boolean;
-            };
-            header?: never;
-            path: {
-                game_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RefreshMetadataResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_releases_for_game_api_v3_game__game_id__release_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                game_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ReleaseRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_health_api_v3_health_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
-    };
-    refresh_health_api_v3_health_refresh_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
-    };
-    list_history_api_v3_history_get: {
-        parameters: {
-            query?: {
-                /** @description Filter to entries whose ``gameId`` matches. Job-run rows (which carry no game_id) are excluded when this is set. */
-                gameId?: number | null;
-                /** @description Filter to one of the three documented event types. Drives the Activity > History filter chips. */
-                eventType?: ("import" | "search" | "job_run") | null;
-                /** @description Filter on the derived ``successful`` flag — `true` for successes, `false` for the failure subset. The failure-only view is the most common operator workflow. */
-                successful?: boolean | null;
-                /** @description ISO-8601 datetime — only entries whose ``date`` is at or after this value are returned. Drives the Activity > History time-range chips. */
-                since?: string | null;
-                page?: number;
-                pageSize?: number;
-                sortKey?: string | null;
-                sortDirection?: "asc" | "desc";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginationEnvelope_HistoryEvent_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_history_since_api_v3_history_since_get: {
-        parameters: {
-            query: {
-                /** @description ISO-8601 datetime; only events with ``date >= since`` are returned. */
-                date: string;
-                page?: number;
-                pageSize?: number;
-                sortKey?: string | null;
-                sortDirection?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginationEnvelope_HistoryEvent_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_indexers_api_v3_indexer_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IndexerRead"][];
-                };
-            };
-        };
-    };
-    create_indexer_api_v3_indexer_post: {
-        parameters: {
-            query?: {
-                test?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["IndexerCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IndexerRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    add_grabarr_api_v3_indexer_grabarr_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["GrabarrWizardRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GrabarrWizardResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    schema_endpoint_api_v3_indexer_schema_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IndexerSchemaEntry"][];
-                };
-            };
-        };
-    };
-    probe_indexer_payload_api_v3_indexer_test_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["_TestProbePayload"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["romarr__indexers__connectivity__ConnectivityTestResult"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_indexer_api_v3_indexer__indexer_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                indexer_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IndexerRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_indexer_api_v3_indexer__indexer_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                indexer_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["IndexerUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IndexerRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_indexer_api_v3_indexer__indexer_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                indexer_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    test_indexer_api_v3_indexer__indexer_id__test_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                indexer_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["romarr__indexers__connectivity__ConnectivityTestResult"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_languages_api_v3_language_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LanguageRead"][];
-                };
-            };
-        };
-    };
-    list_field_priority_api_v3_metadata_field_priority_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["FieldPriorityEntry"][];
-                };
-            };
-        };
-    };
-    update_field_priority_api_v3_metadata_field_priority__field_name__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                field_name: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateFieldPriorityRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["FieldPriorityEntry"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_providers_api_v3_metadata_provider_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProviderConfigRead"][];
-                };
-            };
-        };
-    };
-    read_provider_api_v3_metadata_provider__provider_name__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                provider_name: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProviderConfigRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_provider_api_v3_metadata_provider__provider_name__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                provider_name: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ProviderConfigUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProviderConfigRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    test_provider_api_v3_metadata_provider__provider_name__test_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                provider_name: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProviderTestResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_notifications_api_v3_notification_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotificationRead"][];
-                };
-            };
-        };
-    };
-    create_notification_api_v3_notification_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["NotificationCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotificationRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_implementations_api_v3_notification_schema_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
-                };
-            };
-        };
-    };
-    webhook_payloads_md_api_v3_notification_webhook_payloads_md_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    read_notification_api_v3_notification__notification_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                notification_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotificationRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_notification_api_v3_notification__notification_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                notification_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["NotificationUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotificationRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_notification_api_v3_notification__notification_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                notification_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    test_notification_api_v3_notification__notification_id__test_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                notification_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TestNotificationResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_quality_definitions_api_v3_quality_definition_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QualityDefinitionPlatform"][];
-                };
-            };
-        };
-    };
-    list_rows_api_v3_qualityprofile_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QualityProfileRead"][];
-                };
-            };
-        };
-    };
-    create_row_api_v3_qualityprofile_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QualityProfileRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_schema_api_v3_qualityprofile_schema_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
-    };
-    read_row_api_v3_qualityprofile__row_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                row_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QualityProfileRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_row_api_v3_qualityprofile__row_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                row_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QualityProfileRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_row_api_v3_qualityprofile__row_id__delete: {
-        parameters: {
-            query?: {
-                /** @description Future-extension flag. The current cascade implementation still 409s when bound (NOT NULL FKs prevent NULL-out). */
-                force?: boolean;
-            };
-            header?: never;
-            path: {
-                row_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Deleted. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description No row with this id. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Profile is bound by one or more libraries. Detail carries the blocking library names so the operator can rebind manually. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_queue_api_v3_queue_get: {
-        parameters: {
-            query?: {
-                /** @description Filter to entries whose Release belongs to the given Game (joined via release_id → release.game_id). */
-                gameId?: number | null;
-                /** @description Filter to a single Release. */
-                releaseId?: number | null;
-                /** @description Filter to one of the documented queue states (queued / downloading / paused / completed / stuck / failed / pending_retry). Drives the Activity > Queue state-filter chips. */
-                state?: ("queued" | "downloading" | "paused" | "completed" | "stuck" | "failed" | "pending_retry") | null;
-                page?: number;
-                pageSize?: number;
-                sortKey?: string | null;
-                sortDirection?: "asc" | "desc";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginationEnvelope_QueueEntryRead_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_queue_entry_api_v3_queue__entry_id__delete: {
-        parameters: {
-            query?: {
-                /** @description When true, also call ``DownloadClient.remove`` on the originating client so the download + its on-disk files are dropped. Default false: only the Romarr-side mirror is cleared. */
-                removeFromClient?: boolean;
-            };
-            header?: never;
-            path: {
-                entry_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Removed. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description No queue entry with this id. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Download client refused the remove request (connection / auth / version error). The Romarr row is preserved so a retry is meaningful. */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    retry_queue_entry_api_v3_queue__entry_id__retry_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entry_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QueueEntryRead"];
-                };
-            };
-            /** @description No queue entry with this id. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Entry is in a terminal-success state (``completed``) and can't be retried. Issue a fresh grab instead. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_rows_api_v3_rom_dumpprofile_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DumpProfileRead"][];
-                };
-            };
-        };
-    };
-    create_row_api_v3_rom_dumpprofile_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DumpProfileRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_schema_api_v3_rom_dumpprofile_schema_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
-    };
-    read_row_api_v3_rom_dumpprofile__row_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                row_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DumpProfileRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_row_api_v3_rom_dumpprofile__row_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                row_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DumpProfileRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_row_api_v3_rom_dumpprofile__row_id__delete: {
-        parameters: {
-            query?: {
-                /** @description Future-extension flag. The current cascade implementation still 409s when bound (NOT NULL FKs prevent NULL-out). */
-                force?: boolean;
-            };
-            header?: never;
-            path: {
-                row_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Deleted. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description No row with this id. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Profile is bound by one or more libraries. Detail carries the blocking library names so the operator can rebind manually. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_exporters_endpoint_api_v3_rom_exporters_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExporterRead"][];
-                };
-            };
-        };
-    };
-    list_library_exporter_runs_api_v3_rom_exporters_runs__library_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                library_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LibraryExporterRunRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_exporter_api_v3_rom_exporters__name__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                name: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExporterRead"];
-                };
-            };
-            /** @description Unknown exporter name. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "detail": {
-                     *         "errorCode": "exporter_not_found",
-                     *         "errorMessage": "exporter_not_found"
-                     *       }
-                     *     }
-                     */
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    run_exporter_api_v3_rom_exporters__name__run_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                name: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ExporterRunRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExporterRunResponse"];
-                };
-            };
-            /** @description Unknown exporter / library / platform. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Exporter is disabled for this library (``exporter_<name>_enabled=False``). */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Exporter is documented but its run path isn't wired yet. Today only ``esde`` is wired. */
-            501: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    list_history_api_v3_rom_import_history_get: {
-        parameters: {
-            query?: {
-                game_id?: number | null;
-                release_id?: number | null;
-                imported_via?: ("automatic" | "manual" | "rss" | "api" | "webhook") | null;
-                success?: boolean | null;
-                limit?: number;
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ImportHistoryRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    post_import_manual_api_v3_rom_import_manual_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ManualImportRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ImportHistoryRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    post_import_retry_api_v3_rom_import_retry__import_history_id__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                import_history_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RetryResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_rows_api_v3_rom_languageprofile_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LanguageProfileRead"][];
-                };
-            };
-        };
-    };
-    create_row_api_v3_rom_languageprofile_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LanguageProfileRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_schema_api_v3_rom_languageprofile_schema_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
-    };
-    read_row_api_v3_rom_languageprofile__row_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                row_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LanguageProfileRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_row_api_v3_rom_languageprofile__row_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                row_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LanguageProfileRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_row_api_v3_rom_languageprofile__row_id__delete: {
-        parameters: {
-            query?: {
-                /** @description Future-extension flag. The current cascade implementation still 409s when bound (NOT NULL FKs prevent NULL-out). */
-                force?: boolean;
-            };
-            header?: never;
-            path: {
-                row_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Deleted. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description No row with this id. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Profile is bound by one or more libraries. Detail carries the blocking library names so the operator can rebind manually. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_libraries_api_v3_rom_library_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LibraryRead"][];
-                };
-            };
-        };
-    };
-    create_library_api_v3_rom_library_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LibraryRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_library_api_v3_rom_library__library_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                library_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LibraryRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_library_api_v3_rom_library__library_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                library_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LibraryRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_library_api_v3_rom_library__library_id__delete: {
-        parameters: {
-            query?: {
-                /** @description Unbind attached Releases before deleting */
-                force?: boolean;
-            };
-            header?: never;
-            path: {
-                library_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    post_scan_library_api_v3_rom_library__library_id__scan_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                library_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_manual_import_listing_api_v3_rom_manual_import_get: {
-        parameters: {
-            query: {
-                /** @description Absolute path to walk. */
-                folder: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ManualImportListingRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    post_manual_import_bulk_api_v3_rom_manual_import_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BulkImportPayload"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ManualImportResultRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_rows_api_v3_rom_namingprofile_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NamingProfileRead"][];
-                };
-            };
-        };
-    };
-    create_row_api_v3_rom_namingprofile_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NamingProfileRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    preview_template_api_v3_rom_namingprofile_preview_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["NamingPreviewRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NamingPreviewResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_schema_api_v3_rom_namingprofile_schema_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
-    };
-    read_row_api_v3_rom_namingprofile__row_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                row_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NamingProfileRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_row_api_v3_rom_namingprofile__row_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                row_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NamingProfileRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_row_api_v3_rom_namingprofile__row_id__delete: {
-        parameters: {
-            query?: {
-                /** @description Future-extension flag. The current cascade implementation still 409s when bound (NOT NULL FKs prevent NULL-out). */
-                force?: boolean;
-            };
-            header?: never;
-            path: {
-                row_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Deleted. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description No row with this id. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Profile is bound by one or more libraries. Detail carries the blocking library names so the operator can rebind manually. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_platforms_api_v3_rom_platform_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PlatformRead"][];
-                };
-            };
-        };
-    };
-    list_packs_api_v3_rom_platform_pack_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PackSummary"][];
-                };
-            };
-        };
-    };
-    upload_pack_api_v3_rom_platform_pack_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_upload_pack_api_v3_rom_platform_pack_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PackUploadResult"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    validate_only_api_v3_rom_platform_pack_validate_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_validate_only_api_v3_rom_platform_pack_validate_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ValidateResult"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_pack_api_v3_rom_platform_pack__pack_version__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                pack_version: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PackDetail"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    reapply_pack_api_v3_rom_platform_pack__pack_version__apply_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                pack_version: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PackUploadResult"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_formats_api_v3_rom_platform__platform_id__format_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                platform_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["FormatRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    post_format_api_v3_rom_platform__platform_id__format_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                platform_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["FormatCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["FormatRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    put_format_api_v3_rom_platform__platform_id__format__format_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                platform_id: number;
-                format_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["FormatUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["FormatRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_format_endpoint_api_v3_rom_platform__platform_id__format__format_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                platform_id: number;
-                format_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    post_override_api_v3_rom_platform__platform_id__override_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                platform_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PlatformOverrideResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_override_api_v3_rom_platform__platform_id__override_delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                platform_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PlatformOverrideResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_rows_api_v3_rom_regionprofile_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RegionProfileRead"][];
-                };
-            };
-        };
-    };
-    create_row_api_v3_rom_regionprofile_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RegionProfileRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_schema_api_v3_rom_regionprofile_schema_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
-    };
-    read_row_api_v3_rom_regionprofile__row_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                row_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RegionProfileRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_row_api_v3_rom_regionprofile__row_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                row_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RegionProfileRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_row_api_v3_rom_regionprofile__row_id__delete: {
-        parameters: {
-            query?: {
-                /** @description Future-extension flag. The current cascade implementation still 409s when bound (NOT NULL FKs prevent NULL-out). */
-                force?: boolean;
-            };
-            header?: never;
-            path: {
-                row_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Deleted. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description No row with this id. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Profile is bound by one or more libraries. Detail carries the blocking library names so the operator can rebind manually. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    bulk_delete_releases_api_v3_rom_release_bulk_delete_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BulkReleaseDeleteRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BulkReleaseDeleteResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    bulk_monitor_releases_api_v3_rom_release_bulk_monitor_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BulkReleaseMonitorRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BulkReleaseMonitorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    manual_grab_api_v3_rom_release_grab_post: {
-        parameters: {
-            query?: {
-                /** @description Override the blocklist gate */
-                force?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["GrabRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_release_api_v3_rom_release__release_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                release_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    patch_release_api_v3_rom_release__release_id__patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                release_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReleaseToggleRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ReleaseRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    post_scan_all_api_v3_rom_scan_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
-    };
-    list_history_api_v3_rom_search_history_get: {
-        parameters: {
-            query?: {
-                /** @description Filter by Game id */
-                game_id?: number | null;
-                /** @description Filter by search mode */
-                search_type?: ("manual" | "auto_added" | "missing_scheduled" | "cutoff_scheduled" | "rss") | null;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SearchHistoryRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    manual_search_api_v3_rom_search_manual_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ManualSearchRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SearchRoundReport"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    release_search_api_v3_rom_search_release__release_id__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                release_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["ReleaseSearchRequest"] | null;
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SearchRoundReport"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_unidentified_api_v3_rom_unidentified_get: {
-        parameters: {
-            query?: {
-                library_id?: number | null;
-                limit?: number;
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UnidentifiedDumpRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_unidentified_api_v3_rom_unidentified__entry_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entry_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    match_unidentified_api_v3_rom_unidentified__entry_id__match_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entry_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ManualMatchRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ImportHistoryRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_root_folders_api_v3_rootfolder_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RootFolderRead"][];
-                };
-            };
-        };
-    };
-    list_backups_api_v3_system_backup_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BackupFileEntry"][];
-                };
-            };
-        };
-    };
-    delete_backup_api_v3_system_backup__filename__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                filename: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_log_entries_api_v3_system_log_get: {
-        parameters: {
-            query?: {
-                /** @description Minimum level to keep — debug / info / warn / error / fatal. Default: include everything. */
-                level?: string | null;
-                /** @description Case-insensitive substring match on the logger name (e.g. ``importer`` to scope the view to every ``romarr.importer.*`` line). */
-                logger?: string | null;
-                page?: number;
-                pageSize?: number;
-                sortKey?: string | null;
-                sortDirection?: "asc" | "desc";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginationEnvelope_LogEntry_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_log_files_api_v3_system_log_file_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LogFileEntry"][];
-                };
-            };
-        };
-    };
-    download_log_file_api_v3_system_log_file__filename__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                filename: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_stats_api_v3_system_stats_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SystemStats"];
-                };
-            };
-        };
-    };
-    get_status_api_v3_system_status_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    list_tasks_api_v3_system_tasks_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["JobRead"][];
-                };
-            };
-        };
-    };
-    get_task_api_v3_system_tasks__job_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["JobRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    patch_task_api_v3_system_tasks__job_id__patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["JobUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["JobRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_runs_api_v3_system_tasks__job_id__runs_get: {
-        parameters: {
-            query?: {
-                /** @description Filter by terminal status — running / success / failed / partial / cancelled */
-                status?: string | null;
-                /** @description Filter by trigger kind — scheduled / manual / command / event */
-                triggered_by?: string | null;
-                limit?: number;
-                offset?: number;
-            };
-            header?: never;
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["JobRunRead"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    cancel_run_api_v3_system_tasks__job_id__runs__run_id__cancel_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                job_id: string;
-                run_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    trigger_task_api_v3_system_tasks__job_id__trigger_post: {
-        parameters: {
-            query?: {
-                force?: boolean;
-            };
-            header?: never;
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TriggerRequest"] | null;
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TriggerResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_tags_api_v3_tag_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TagRead"][];
-                };
-            };
-        };
-    };
-    create_tag_api_v3_tag_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateTagRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TagRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    tag_detail_api_v3_tag_detail__tag_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tag_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TagDetail"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_tag_api_v3_tag__tag_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tag_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TagRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_tag_api_v3_tag__tag_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                tag_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateTagRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TagRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_tag_api_v3_tag__tag_id__delete: {
-        parameters: {
-            query?: {
-                /** @description Cascade-delete any TagAssignment rows. */
-                force?: boolean;
-            };
-            header?: never;
-            path: {
-                tag_id: number;
             };
             cookie?: never;
         };
@@ -12194,14 +7987,438 @@ export interface operations {
             };
         };
     };
-    list_cutoff_api_v3_wanted_cutoff_get: {
+    get_status_api_v3_system_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_stats_api_v3_system_stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemStats"];
+                };
+            };
+        };
+    };
+    list_directory_api_v3_system_filesystem_get: {
+        parameters: {
+            query?: {
+                path?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListingResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_root_folders_api_v3_rootfolder_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RootFolderRead"][];
+                };
+            };
+        };
+    };
+    list_languages_api_v3_language_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LanguageRead"][];
+                };
+            };
+        };
+    };
+    list_tags_api_v3_tag_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagRead"][];
+                };
+            };
+        };
+    };
+    create_tag_api_v3_tag_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTagRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tag_detail_api_v3_tag_detail__tag_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tag_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_tag_api_v3_tag__tag_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tag_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_tag_api_v3_tag__tag_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tag_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTagRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_tag_api_v3_tag__tag_id__delete: {
+        parameters: {
+            query?: {
+                /** @description Cascade-delete any TagAssignment rows. */
+                force?: boolean;
+            };
+            header?: never;
+            path: {
+                tag_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_queue_api_v3_queue_get: {
+        parameters: {
+            query?: {
+                /** @description Filter to entries whose Release belongs to the given Game (joined via release_id → release.game_id). */
+                gameId?: number | null;
+                /** @description Filter to a single Release. */
+                releaseId?: number | null;
+                /** @description Filter to one of the documented queue states (queued / downloading / paused / completed / stuck / failed / pending_retry). Drives the Activity > Queue state-filter chips. */
+                state?: ("queued" | "downloading" | "paused" | "completed" | "stuck" | "failed" | "pending_retry") | null;
+                page?: number;
+                pageSize?: number;
+                sortKey?: string | null;
+                sortDirection?: "asc" | "desc";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginationEnvelope_QueueEntryRead_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_queue_entry_api_v3_queue__entry_id__delete: {
+        parameters: {
+            query?: {
+                /** @description When true, also call ``DownloadClient.remove`` on the originating client so the download + its on-disk files are dropped. Default false: only the Romarr-side mirror is cleared. */
+                removeFromClient?: boolean;
+            };
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No queue entry with this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Download client refused the remove request (connection / auth / version error). The Romarr row is preserved so a retry is meaningful. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    retry_queue_entry_api_v3_queue__entry_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueueEntryRead"];
+                };
+            };
+            /** @description No queue entry with this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Entry is in a terminal-success state (``completed``) and can't be retried. Issue a fresh grab instead. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_missing_api_v3_wanted_missing_get: {
         parameters: {
             query?: {
                 /** @description Restrict to one platform (joined via Game). */
                 platformId?: number | null;
                 /** @description Restrict to releases whose joined Game carries this tag id (matched against Game.tags JSON list). */
                 tagId?: number | null;
-                /** @description Restrict to releases bound to a specific Library (matches Release.library_id). */
+                /** @description Restrict to releases bound to a specific Library (matches Release.library_id). Releases with no library are excluded by this filter. */
                 libraryId?: number | null;
                 /** @description Case-insensitive substring filter on Release.name. Trimmed; empty/whitespace-only ignored. */
                 q?: string | null;
@@ -12236,14 +8453,14 @@ export interface operations {
             };
         };
     };
-    list_missing_api_v3_wanted_missing_get: {
+    list_cutoff_api_v3_wanted_cutoff_get: {
         parameters: {
             query?: {
                 /** @description Restrict to one platform (joined via Game). */
                 platformId?: number | null;
                 /** @description Restrict to releases whose joined Game carries this tag id (matched against Game.tags JSON list). */
                 tagId?: number | null;
-                /** @description Restrict to releases bound to a specific Library (matches Release.library_id). Releases with no library are excluded by this filter. */
+                /** @description Restrict to releases bound to a specific Library (matches Release.library_id). */
                 libraryId?: number | null;
                 /** @description Case-insensitive substring filter on Release.name. Trimmed; empty/whitespace-only ignored. */
                 q?: string | null;
@@ -12310,6 +8527,5247 @@ export interface operations {
             };
         };
     };
+    list_calendar_api_v3_calendar_get: {
+        parameters: {
+            query: {
+                /** @description ISO-8601 datetime; only events with ``releaseDateUtc >= start`` are returned. */
+                start: string;
+                /** @description ISO-8601 datetime; only events with ``releaseDateUtc < end`` are returned. */
+                end: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarEvent"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_quality_definitions_api_v3_quality_definition_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QualityDefinitionPlatform"][];
+                };
+            };
+        };
+    };
+    summary_api_v3_dat_source_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatSourceSummary"][];
+                };
+            };
+        };
+    };
+    list_sources_api_v3_dat_source_sources_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatSourceRead"][];
+                };
+            };
+        };
+    };
+    create_source_api_v3_dat_source_sources_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DatSourceCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatSourceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_source_api_v3_dat_source_sources__source_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DatSourceUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatSourceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_source_api_v3_dat_source_sources__source_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_source_api_v3_dat_source_sources__source_id__refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefreshOutcome"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_all_api_v3_dat_source_sources_refresh_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefreshOutcome"][];
+                };
+            };
+        };
+    };
+    lookup_games_api_v3_game_lookup_get: {
+        parameters: {
+            query: {
+                /** @description Title substring to look up. */
+                q: string;
+                /** @description Optional platform slug filter — providers that honour platform mapping use it to scope results. */
+                platformSlug?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameLookupRow"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_game_from_lookup_api_v3_game_lookup_add_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LookupAddRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    integration_request_game_api_v3_game_integrations_request_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntegrationGameRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrationGameResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    integration_game_status_api_v3_game_integrations_status_get: {
+        parameters: {
+            query: {
+                igdbId: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrationStatusResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    integration_platforms_api_v3_game_integrations_platforms_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntegrationPlatformsResult"];
+                };
+            };
+        };
+    };
+    list_games_api_v3_game_get: {
+        parameters: {
+            query?: {
+                /** @description Case-insensitive substring filter on the game title. Trimmed; empty/whitespace-only ignored. */
+                q?: string | null;
+                /** @description Restrict to one platform. */
+                platform_id?: number | null;
+                /** @description Restrict to games carrying a specific tag id. Matched against the Game.tags JSON list. */
+                tag_id?: number | null;
+                /** @description Restrict to games with at least one Release bound to this Library id (slice 166). */
+                library_id?: number | null;
+                /** @description Filter on the `monitored` flag. `true` is the most common operator workflow ("show me what I'm tracking"). */
+                monitored?: boolean | null;
+                /** @description Restrict to games carrying this genre tag in ``Game.genres`` (case-insensitive exact match against any element of the JSON list). */
+                genre?: string | null;
+                /** @description Restrict to games carrying this region code in ``Game.regions`` (case-insensitive exact match against any element of the JSON list — e.g. ``US``, ``EU``, ``JP``). */
+                region?: string | null;
+                /** @description Restrict to games whose ``release_date`` falls in this calendar year. Year-bounded between 1970 (the oldest plausible commercial release) and 2100. */
+                year?: number | null;
+                /** @description Sort key — `title` (default), `added_at` (Game.created_at), `release_date`, or `rating`. */
+                sort?: "title" | "added_at" | "release_date" | "rating";
+                /** @description Sort direction (asc default). */
+                direction?: "asc" | "desc";
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_monitor_api_v3_game_bulk_monitor_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkMonitorRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkMonitorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_delete_api_v3_game_bulk_delete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkDeleteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkDeleteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_tag_api_v3_game_bulk_tag_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkTagRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkTagResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_game_api_v3_game__game_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_game_api_v3_game__game_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_game_api_v3_game__game_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GameToggleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_game_metadata_api_v3_game__game_id__metadata_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameMetadataRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_releases_for_game_api_v3_game__game_id__release_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReleaseRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_locked_fields_api_v3_game__game_id__locked_fields_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldLockRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_field_api_v3_game__game_id__field_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldEditRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_notes_api_v3_game__game_id__notes_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotesUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_dumps_for_game_api_v3_game__game_id__dump_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DumpRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_cover_api_v3_cover__game_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_cover_api_v3_cover__game_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CoverOverrideRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_cover_api_v3_cover__game_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_monitor_releases_api_v3_rom_release_bulk_monitor_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkReleaseMonitorRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkReleaseMonitorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_delete_releases_api_v3_rom_release_bulk_delete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkReleaseDeleteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkReleaseDeleteResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_release_api_v3_rom_release__release_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                release_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_release_api_v3_rom_release__release_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                release_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReleaseToggleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReleaseRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_history_api_v3_history_get: {
+        parameters: {
+            query?: {
+                /** @description Filter to entries whose ``gameId`` matches. Job-run rows (which carry no game_id) are excluded when this is set. */
+                gameId?: number | null;
+                /** @description Filter to one of the three documented event types. Drives the Activity > History filter chips. */
+                eventType?: ("import" | "search" | "job_run") | null;
+                /** @description Filter on the derived ``successful`` flag — `true` for successes, `false` for the failure subset. The failure-only view is the most common operator workflow. */
+                successful?: boolean | null;
+                /** @description ISO-8601 datetime — only entries whose ``date`` is at or after this value are returned. Drives the Activity > History time-range chips. */
+                since?: string | null;
+                page?: number;
+                pageSize?: number;
+                sortKey?: string | null;
+                sortDirection?: "asc" | "desc";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginationEnvelope_HistoryEvent_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_history_since_api_v3_history_since_get: {
+        parameters: {
+            query: {
+                /** @description ISO-8601 datetime; only events with ``date >= since`` are returned. */
+                date: string;
+                page?: number;
+                pageSize?: number;
+                sortKey?: string | null;
+                sortDirection?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginationEnvelope_HistoryEvent_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_log_entries_api_v3_system_log_get: {
+        parameters: {
+            query?: {
+                /** @description Minimum level to keep — debug / info / warn / error / fatal. Default: include everything. */
+                level?: string | null;
+                /** @description Case-insensitive substring match on the logger name (e.g. ``importer`` to scope the view to every ``romarr.importer.*`` line). */
+                logger?: string | null;
+                page?: number;
+                pageSize?: number;
+                sortKey?: string | null;
+                sortDirection?: "asc" | "desc";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginationEnvelope_LogEntry_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_log_files_api_v3_system_log_file_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LogFileEntry"][];
+                };
+            };
+        };
+    };
+    download_log_file_api_v3_system_log_file__filename__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                filename: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_backups_api_v3_system_backup_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupFileEntry"][];
+                };
+            };
+        };
+    };
+    delete_backup_api_v3_system_backup__filename__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                filename: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_manifest_api_v3_backup_manifest_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Manifest"];
+                };
+            };
+        };
+    };
+    post_export_api_v3_backup_export_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Bundle"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_import_api_v3_backup_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_providers_api_v3_metadata_provider_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderConfigRead"][];
+                };
+            };
+        };
+    };
+    read_provider_api_v3_metadata_provider__provider_name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderConfigRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_provider_api_v3_metadata_provider__provider_name__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderConfigUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderConfigRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_provider_secrets_api_v3_metadata_provider__provider_name__secrets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_provider_api_v3_metadata_provider__provider_name__test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderTestResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_field_priority_api_v3_metadata_field_priority_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldPriorityEntry"][];
+                };
+            };
+        };
+    };
+    update_field_priority_api_v3_metadata_field_priority__field_name__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                field_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateFieldPriorityRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldPriorityEntry"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_metadata_endpoint_api_v3_game__game_id__refresh_metadata_post: {
+        parameters: {
+            query?: {
+                force?: boolean;
+            };
+            header?: never;
+            path: {
+                game_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefreshMetadataResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_relink_candidates_api_v3_game__game_id__provider__provider_name__candidates_get: {
+        parameters: {
+            query?: {
+                /** @description Override the search query. Defaults to the game's title with No-Intro / Redump tags stripped. */
+                q?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                game_id: number;
+                provider_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderCandidatesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    relink_provider_api_v3_game__game_id__provider__provider_name__relink_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+                provider_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RelinkRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefreshMetadataResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clear_provider_api_v3_game__game_id__provider__provider_name__clear_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                game_id: number;
+                provider_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefreshMetadataResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_packs_api_v3_rom_platform_pack_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackSummary"][];
+                };
+            };
+        };
+    };
+    upload_pack_api_v3_rom_platform_pack_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_pack_api_v3_rom_platform_pack_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackUploadResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_pack_api_v3_rom_platform_pack__pack_version__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reapply_pack_api_v3_rom_platform_pack__pack_version__apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_version: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackUploadResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_only_api_v3_rom_platform_pack_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_validate_only_api_v3_rom_platform_pack_validate_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidateResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_sources_api_v3_rom_platform_pack_source_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceSummary"][];
+                };
+            };
+        };
+    };
+    create_source_api_v3_rom_platform_pack_source_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_source_api_v3_rom_platform_pack_source__source_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_source_api_v3_rom_platform_pack_source__source_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_source_api_v3_rom_platform_pack_source__source_id__sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_source_api_v3_rom_platform_pack_source__source_id__preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_config_api_v3_rom_platform_pack_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigResponse"];
+                };
+            };
+        };
+    };
+    update_config_api_v3_rom_platform_pack_config_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfigUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_platforms_api_v3_rom_platform_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformRead"][];
+                };
+            };
+        };
+    };
+    post_override_api_v3_rom_platform__platform_id__override_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                platform_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformOverrideResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_override_api_v3_rom_platform__platform_id__override_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                platform_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformOverrideResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_formats_api_v3_rom_platform__platform_id__format_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                platform_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormatRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_format_api_v3_rom_platform__platform_id__format_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                platform_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FormatCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormatRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_format_api_v3_rom_platform__platform_id__format__format_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                platform_id: number;
+                format_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FormatUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormatRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_format_endpoint_api_v3_rom_platform__platform_id__format__format_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                platform_id: number;
+                format_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_config_api_v3_rom_pack_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RomPackConfigRead"];
+                };
+            };
+        };
+    };
+    update_config_api_v3_rom_pack_config_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RomPackConfigUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RomPackConfigRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_packs_api_v3_rom_pack_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RomPackRead"][];
+                };
+            };
+        };
+    };
+    create_pack_api_v3_rom_pack_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RomPackCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RomPackRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_pack_api_v3_rom_pack__pack_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RomPackRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_pack_api_v3_rom_pack__pack_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RomPackUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RomPackRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_pack_api_v3_rom_pack__pack_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_pack_items_api_v3_rom_pack__pack_id__items_get: {
+        parameters: {
+            query?: {
+                status_filter?: ("imported" | "unmatched" | "parked" | "deleted" | "failed") | null;
+            };
+            header?: never;
+            path: {
+                pack_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RomPackItemRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_pack_api_v3_rom_pack__pack_id__reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RomPackRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    grab_pack_api_v3_rom_pack_grab_post: {
+        parameters: {
+            query?: {
+                /** @description Override the blocklist gate */
+                force?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RomPackGrabRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RomPackRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ingest_pack_api_v3_rom_pack__pack_id__ingest_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RomPackRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    associate_item_api_v3_rom_pack__pack_id__items__item_id__associate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_id: number;
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RomPackItemAssociate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RomPackItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    park_item_api_v3_rom_pack__pack_id__items__item_id__park_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_id: number;
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RomPackItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_item_api_v3_rom_pack__pack_id__items__item_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_id: number;
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RomPackItemRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_applications_api_v3_applications_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationRead"][];
+                };
+            };
+        };
+    };
+    register_application_api_v3_applications_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplicationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationCreateResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_application_api_v3_applications__application_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unregister_application_api_v3_applications__application_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rotate_application_token_api_v3_applications__application_id__rotate_token_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                application_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationCreateResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_grabarr_api_v3_indexer_grabarr_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GrabarrWizardRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GrabarrWizardResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    schema_endpoint_api_v3_indexer_schema_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexerSchemaEntry"][];
+                };
+            };
+        };
+    };
+    list_indexers_api_v3_indexer_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexerRead"][];
+                };
+            };
+        };
+    };
+    create_indexer_api_v3_indexer_post: {
+        parameters: {
+            query?: {
+                test?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IndexerCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexerRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_indexer_api_v3_indexer__indexer_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                indexer_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexerRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_indexer_api_v3_indexer__indexer_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                indexer_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IndexerUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexerRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_indexer_api_v3_indexer__indexer_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                indexer_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_indexer_secrets_api_v3_indexer__indexer_id__secrets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                indexer_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["_IndexerSecretsRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_indexer_api_v3_indexer__indexer_id__test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                indexer_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["romarr__indexers__connectivity__ConnectivityTestResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    probe_indexer_payload_api_v3_indexer_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["_TestProbePayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["romarr__indexers__connectivity__ConnectivityTestResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_libraries_api_v3_rom_library_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryRead"][];
+                };
+            };
+        };
+    };
+    create_library_api_v3_rom_library_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_library_api_v3_rom_library__library_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                library_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_library_api_v3_rom_library__library_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                library_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_library_api_v3_rom_library__library_id__delete: {
+        parameters: {
+            query?: {
+                /** @description Unbind attached Releases before deleting */
+                force?: boolean;
+            };
+            header?: never;
+            path: {
+                library_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_scan_all_api_v3_rom_scan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    post_scan_library_api_v3_rom_library__library_id__scan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                library_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_exporters_endpoint_api_v3_rom_exporters_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExporterRead"][];
+                };
+            };
+        };
+    };
+    read_exporter_api_v3_rom_exporters__name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExporterRead"];
+                };
+            };
+            /** @description Unknown exporter name. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "errorMessage": "exporter_not_found",
+                     *         "errorCode": "exporter_not_found"
+                     *       }
+                     *     }
+                     */
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_exporter_api_v3_rom_exporters__name__run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExporterRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExporterRunResponse"];
+                };
+            };
+            /** @description Unknown exporter / library / platform. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Exporter is disabled for this library (``exporter_<name>_enabled=False``). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Exporter is documented but its run path isn't wired yet. Today only ``esde`` is wired. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_library_exporter_runs_api_v3_rom_exporters_runs__library_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                library_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryExporterRunRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_manual_import_listing_api_v3_rom_manual_import_get: {
+        parameters: {
+            query: {
+                /** @description Absolute path to walk. */
+                folder: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualImportListingRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_manual_import_bulk_api_v3_rom_manual_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkImportPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualImportResultRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    schema_endpoint_api_v3_downloadclient_schema_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DownloadClientSchema"][];
+                };
+            };
+        };
+    };
+    list_clients_api_v3_downloadclient_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DownloadClientRead"][];
+                };
+            };
+        };
+    };
+    create_client_api_v3_downloadclient_post: {
+        parameters: {
+            query?: {
+                test?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DownloadClientCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DownloadClientRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_client_api_v3_downloadclient__client_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DownloadClientRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_client_api_v3_downloadclient__client_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DownloadClientUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DownloadClientRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_client_api_v3_downloadclient__client_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_client_api_v3_downloadclient__client_id__test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["romarr__downloaders__types__ConnectivityTestResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    probe_client_payload_api_v3_downloadclient_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DownloadClientCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["romarr__downloaders__types__ConnectivityTestResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_schema_api_v3_qualityprofile_schema_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    list_rows_api_v3_qualityprofile_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QualityProfileRead"][];
+                };
+            };
+        };
+    };
+    create_row_api_v3_qualityprofile_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QualityProfileRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_row_api_v3_qualityprofile__row_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QualityProfileRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_row_api_v3_qualityprofile__row_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QualityProfileRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_row_api_v3_qualityprofile__row_id__delete: {
+        parameters: {
+            query?: {
+                /** @description Future-extension flag. The current cascade implementation still 409s when bound (NOT NULL FKs prevent NULL-out). */
+                force?: boolean;
+            };
+            header?: never;
+            path: {
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No row with this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Profile is bound by one or more libraries. Detail carries the blocking library names so the operator can rebind manually. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_schema_api_v3_rom_regionprofile_schema_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    list_rows_api_v3_rom_regionprofile_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegionProfileRead"][];
+                };
+            };
+        };
+    };
+    create_row_api_v3_rom_regionprofile_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegionProfileRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_row_api_v3_rom_regionprofile__row_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegionProfileRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_row_api_v3_rom_regionprofile__row_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegionProfileRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_row_api_v3_rom_regionprofile__row_id__delete: {
+        parameters: {
+            query?: {
+                /** @description Future-extension flag. The current cascade implementation still 409s when bound (NOT NULL FKs prevent NULL-out). */
+                force?: boolean;
+            };
+            header?: never;
+            path: {
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No row with this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Profile is bound by one or more libraries. Detail carries the blocking library names so the operator can rebind manually. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_schema_api_v3_rom_dumpprofile_schema_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    list_rows_api_v3_rom_dumpprofile_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DumpProfileRead"][];
+                };
+            };
+        };
+    };
+    create_row_api_v3_rom_dumpprofile_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DumpProfileRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_row_api_v3_rom_dumpprofile__row_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DumpProfileRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_row_api_v3_rom_dumpprofile__row_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DumpProfileRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_row_api_v3_rom_dumpprofile__row_id__delete: {
+        parameters: {
+            query?: {
+                /** @description Future-extension flag. The current cascade implementation still 409s when bound (NOT NULL FKs prevent NULL-out). */
+                force?: boolean;
+            };
+            header?: never;
+            path: {
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No row with this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Profile is bound by one or more libraries. Detail carries the blocking library names so the operator can rebind manually. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_schema_api_v3_rom_languageprofile_schema_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    list_rows_api_v3_rom_languageprofile_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LanguageProfileRead"][];
+                };
+            };
+        };
+    };
+    create_row_api_v3_rom_languageprofile_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LanguageProfileRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_row_api_v3_rom_languageprofile__row_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LanguageProfileRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_row_api_v3_rom_languageprofile__row_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LanguageProfileRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_row_api_v3_rom_languageprofile__row_id__delete: {
+        parameters: {
+            query?: {
+                /** @description Future-extension flag. The current cascade implementation still 409s when bound (NOT NULL FKs prevent NULL-out). */
+                force?: boolean;
+            };
+            header?: never;
+            path: {
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No row with this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Profile is bound by one or more libraries. Detail carries the blocking library names so the operator can rebind manually. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_schema_api_v3_rom_namingprofile_schema_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    list_rows_api_v3_rom_namingprofile_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamingProfileRead"][];
+                };
+            };
+        };
+    };
+    create_row_api_v3_rom_namingprofile_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamingProfileRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_row_api_v3_rom_namingprofile__row_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamingProfileRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_row_api_v3_rom_namingprofile__row_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamingProfileRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_row_api_v3_rom_namingprofile__row_id__delete: {
+        parameters: {
+            query?: {
+                /** @description Future-extension flag. The current cascade implementation still 409s when bound (NOT NULL FKs prevent NULL-out). */
+                force?: boolean;
+            };
+            header?: never;
+            path: {
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No row with this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Profile is bound by one or more libraries. Detail carries the blocking library names so the operator can rebind manually. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_template_api_v3_rom_namingprofile_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NamingPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NamingPreviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_schema_api_v3_customformat_schema_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    list_rows_api_v3_customformat_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFormatRead"][];
+                };
+            };
+        };
+    };
+    create_row_api_v3_customformat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFormatRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_row_api_v3_customformat__row_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFormatRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_row_api_v3_customformat__row_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFormatRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_row_api_v3_customformat__row_id__delete: {
+        parameters: {
+            query?: {
+                /** @description Future-extension flag. The current cascade implementation still 409s when bound (NOT NULL FKs prevent NULL-out). */
+                force?: boolean;
+            };
+            header?: never;
+            path: {
+                row_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No row with this id. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Profile is bound by one or more libraries. Detail carries the blocking library names so the operator can rebind manually. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_search_api_v3_rom_search_manual_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualSearchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchRoundReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    release_search_api_v3_rom_search_release__release_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                release_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReleaseSearchRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchRoundReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    manual_grab_api_v3_rom_release_grab_post: {
+        parameters: {
+            query?: {
+                /** @description Override the blocklist gate */
+                force?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GrabRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_history_api_v3_rom_search_history_get: {
+        parameters: {
+            query?: {
+                /** @description Filter by Game id */
+                game_id?: number | null;
+                /** @description Filter by search mode */
+                search_type?: ("manual" | "auto_added" | "missing_scheduled" | "cutoff_scheduled" | "rss") | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchHistoryRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_blocklist_api_v3_blocklist_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BlocklistRead"][];
+                };
+            };
+        };
+    };
+    add_to_blocklist_api_v3_blocklist_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BlocklistRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_from_blocklist_api_v3_blocklist__entry_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     download_complete_api_v3_webhook_download_complete_post: {
         parameters: {
             query?: never;
@@ -12332,6 +13790,784 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WebhookAcceptedResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_history_api_v3_rom_import_history_get: {
+        parameters: {
+            query?: {
+                game_id?: number | null;
+                release_id?: number | null;
+                imported_via?: ("automatic" | "manual" | "rss" | "api" | "webhook") | null;
+                success?: boolean | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportHistoryRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_unidentified_api_v3_rom_unidentified_get: {
+        parameters: {
+            query?: {
+                library_id?: number | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnidentifiedDumpRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    match_unidentified_api_v3_rom_unidentified__entry_id__match_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualMatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportHistoryRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_unidentified_api_v3_rom_unidentified__entry_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_import_manual_api_v3_rom_import_manual_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportHistoryRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_import_retry_api_v3_rom_import_retry__import_history_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_history_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    webhook_payloads_md_api_v3_notification_webhook_payloads_md_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_implementations_api_v3_notification_schema_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
+    list_notifications_api_v3_notification_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationRead"][];
+                };
+            };
+        };
+    };
+    create_notification_api_v3_notification_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_notification_api_v3_notification__notification_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_notification_api_v3_notification__notification_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_notification_api_v3_notification__notification_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_notification_api_v3_notification__notification_id__test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestNotificationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_health_api_v3_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    refresh_health_api_v3_health_refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    list_tasks_api_v3_system_tasks_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRead"][];
+                };
+            };
+        };
+    };
+    get_task_api_v3_system_tasks__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_task_api_v3_system_tasks__job_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trigger_task_api_v3_system_tasks__job_id__trigger_post: {
+        parameters: {
+            query?: {
+                force?: boolean;
+            };
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TriggerRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TriggerResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_runs_api_v3_system_tasks__job_id__runs_get: {
+        parameters: {
+            query?: {
+                /** @description Filter by terminal status — running / success / failed / partial / cancelled */
+                status?: string | null;
+                /** @description Filter by trigger kind — scheduled / manual / command / event */
+                triggered_by?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobRunRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_run_api_v3_system_tasks__job_id__runs__run_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+                run_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_known_commands_api_v3_command__known_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+        };
+    };
+    post_command_api_v3_command_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_command_status_api_v3_command__command_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                command_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_command_api_v3_command__command_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                command_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

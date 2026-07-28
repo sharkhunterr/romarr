@@ -157,6 +157,9 @@ class DownloadClientRead(_Base):
     # client type. Read-only in the API; mutated only via the
     # "Add Grabarr" wizard endpoint.
     download_root: str | None = None
+    # Radarr-style remote path mapping.
+    remote_path: str | None = None
+    local_path: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -193,6 +196,12 @@ class DownloadClientCreate(_Base):
     # Optional override of the streamer base path; only relevant
     # to type='grabarr_direct'. Other types leave it None.
     download_root: Annotated[str | None, Field(default=None, max_length=512)] = None
+    # Radarr-style remote path mapping. Set BOTH when the client
+    # sees the volume at a different mount than Romarr does
+    # (typical: qBit in Docker sees /downloads; Romarr on the host
+    # sees /mnt/qbit/downloads). Both NULL = no remap.
+    remote_path: Annotated[str | None, Field(default=None, max_length=512)] = None
+    local_path: Annotated[str | None, Field(default=None, max_length=512)] = None
 
     _normalize_host_field = field_validator("host", mode="before")(
         classmethod(lambda cls, v: _normalize_host(v) if isinstance(v, str) else v)
@@ -249,6 +258,8 @@ class DownloadClientUpdate(_Base):
     ssl_cert_validation: _SslValidation | None = None
     timeout_seconds: Annotated[int | None, Field(default=None, ge=5, le=600)] = None
     download_root: Annotated[str | None, Field(default=None, max_length=512)] = None
+    remote_path: Annotated[str | None, Field(default=None, max_length=512)] = None
+    local_path: Annotated[str | None, Field(default=None, max_length=512)] = None
 
     _normalize_host_field = field_validator("host", mode="before")(
         classmethod(lambda cls, v: _normalize_host(v) if isinstance(v, str) else v)
