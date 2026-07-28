@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.30](https://github.com/sharkhunterr/romarr/-/compare/v0.14.29...v0.14.30) (2026-07-28)
+
+
+### Features
+
+* **activity:** Retry + Manual match actions on failed queue rows ([c65a8d4](https://github.com/sharkhunterr/romarr/-/commit/c65a8d4d8d212def0b186f8fa4691817bfc5dcf9))
+* **downloaders:** Radarr-style remote path mapping (fixes 'completed file missing on disk') ([eb8bdf0](https://github.com/sharkhunterr/romarr/-/commit/eb8bdf0d26ade4299e985255dfc2f31c375b83e5))
+* **profiles:** CF conditions over URLs / notes + rename misleading 'Rev 0' seed ([d361801](https://github.com/sharkhunterr/romarr/-/commit/d361801839370ad0081d3d9d93c038fa432ec1bf))
+* **profiles:** merge Quality Definitions into Platforms + per-CF score breakdown ([f16c5a5](https://github.com/sharkhunterr/romarr/-/commit/f16c5a50a78426a3e5be32c8af698d27ebc9c875))
+* **profiles:** Radarr-style Quality + Custom Format editors + title-field CF condition ([c0dc589](https://github.com/sharkhunterr/romarr/-/commit/c0dc58998017fccc4780bdec871f137be1bb07e2))
+* **profiles:** seed 'MiNERVA Archive (preferred source)' CF + preset dropdown in the editor ([4dfd646](https://github.com/sharkhunterr/romarr/-/commit/4dfd64622b11d8cc708ea26f023388557b6f040f))
+
+
+### Bug Fixes
+
+* **downloaders:** surface qBit stalled/error reason in queue error_msg (was silent) ([df2bb77](https://github.com/sharkhunterr/romarr/-/commit/df2bb770a732d45a2b3019b8fe72c385b694ca52))
+* **importer:** enrich opaque 'match:no_game' failure with actionable diagnostic ([2fe3176](https://github.com/sharkhunterr/romarr/-/commit/2fe31766090c178d351cf91e313d1efd2d5a7aa2))
+* **qbittorrent:** tracker-aware diagnostic in error/stalled state (all-fail vs 0-peers) ([7c7c942](https://github.com/sharkhunterr/romarr/-/commit/7c7c942f702fdbcc9a4cb72a7ce774b2ff67d906))
+* **search:** fuzzy matcher strips bracket tags before scoring ([a0b88cb](https://github.com/sharkhunterr/romarr/-/commit/a0b88cb0b49531acfe6de2f46df495365965bfb1))
+
 ### [0.14.29](https://github.com/sharkhunterr/romarr/-/compare/v0.14.28...v0.14.29) (2026-07-27)
 
 
