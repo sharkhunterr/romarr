@@ -36,6 +36,11 @@ interface CustomFormatEditorModalProps {
 
 const _FIELDS: ReadonlyArray<CustomFormatField> = [
   "title",
+  "info_url",
+  "nfo_url",
+  "download_url",
+  "description",
+  "indexer_guid",
   "tags",
   "region",
   "format",
@@ -116,6 +121,19 @@ const _PRESETS: readonly CFPreset[] = [
         field: "title",
         operator: "matches_regex",
         raw: "\\[MiNERVA Archive\\]",
+      },
+    ],
+  },
+  {
+    key: "urlDomain",
+    labelKey: "urlDomain",
+    name: "Prefer source by URL domain",
+    score: 20,
+    conditions: [
+      {
+        field: "info_url",
+        operator: "matches_regex",
+        raw: "minerva-archive\\.org|archive\\.org",
       },
     ],
   },
@@ -213,14 +231,29 @@ function _draftsFromFormat(fmt: CustomFormat): DraftCondition[] {
   return drafts.length > 0 ? drafts : [_emptyCondition()];
 }
 
+// Fields whose value is a single free-form string — the preview
+// panel can test regex/equals/contains against a sample the operator
+// types. Structured / list fields (tags, languages, release_size, …)
+// need actual release facts the modal doesn't have, so we show "?"
+// for them.
+const _TEXT_FIELDS: readonly string[] = [
+  "title",
+  "info_url",
+  "nfo_url",
+  "download_url",
+  "description",
+  "indexer_guid",
+  "release_group",
+  "indexer_source",
+  "revision",
+];
+
 // Given a sample string, does this projected condition match it?
-// Only meaningful for `title` — other fields need per-release facts
-// the modal doesn't have, so we surface a "?" indicator instead.
 function _previewMatches(
   cond: CustomFormatConditionInput,
   sample: string,
 ): "match" | "no-match" | "n/a" {
-  if (cond.field !== "title") return "n/a";
+  if (!_TEXT_FIELDS.includes(cond.field)) return "n/a";
   const value = String(cond.values);
   if (cond.operator === "matches_regex") {
     try {

@@ -36,7 +36,12 @@ export type CustomFormatField =
   | "languages"
   | "revision"
   | "naming_convention"
-  | "release_size";
+  | "release_size"
+  | "info_url"
+  | "nfo_url"
+  | "download_url"
+  | "description"
+  | "indexer_guid";
 
 export type CustomFormatOperator =
   | "matches_regex"

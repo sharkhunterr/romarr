@@ -872,6 +872,7 @@
       "presets": {
         "musicOst": "Reject Music/OST/Manual",
         "minervaSource": "Prefer MiNERVA (+30)",
+        "urlDomain": "Prefer source by URL domain",
         "sourceRegex": "Preferred sources (regex)",
         "releaseGroup": "Preferred team / release group",
         "freeleech": "Freeleech (+10)"
@@ -882,6 +883,11 @@
       "regexError": "Invalid regex",
       "fieldName": {
         "title": "Title",
+        "info_url": "Tracker page URL",
+        "nfo_url": "NFO URL",
+        "download_url": "Download URL",
+        "description": "Description / notes",
+        "indexer_guid": "Indexer GUID",
         "tags": "Tags",
         "region": "Region",
         "format": "Format",

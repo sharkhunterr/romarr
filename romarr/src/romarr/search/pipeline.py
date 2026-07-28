@@ -743,6 +743,15 @@ def _release_facts_from_result(
         indexer_source=None,
         release_size=result.size_bytes,
         release_group=None,
+        # Free-form projections so Custom Formats can regex over the
+        # URLs / notes the operator sees in the manual-search
+        # detail. Populated from the indexer's SearchResult when
+        # the extended attrs surfaced them.
+        info_url=getattr(result, "info_url", None) or "",
+        nfo_url=getattr(result, "nfo_url", None) or "",
+        download_url=getattr(result, "link", None) or "",
+        description=getattr(result, "description", None) or "",
+        indexer_guid=getattr(result, "guid", None) or "",
     )
 
 

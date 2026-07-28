@@ -85,7 +85,7 @@
   },
   {
     "seed_key": "original-release-rev0",
-    "name": "Original Release (Rev 0)",
+    "name": "Original Release (no revision marker)",
     "score": 20,
     "conditions": [
       {"field": "revision", "operator": "in", "values": ["", "Rev 0", "Rev 00"]}

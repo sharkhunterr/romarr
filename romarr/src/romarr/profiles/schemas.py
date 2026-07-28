@@ -296,6 +296,11 @@ class CustomFormatCondition(_Base):
         "revision",
         "naming_convention",
         "release_size",
+        "info_url",
+        "nfo_url",
+        "download_url",
+        "description",
+        "indexer_guid",
     ]
     operator: Literal[
         "matches_regex",

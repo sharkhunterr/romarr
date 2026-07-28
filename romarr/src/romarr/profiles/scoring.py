@@ -132,6 +132,21 @@ def _extract(field_name: str, facts: ReleaseFacts) -> Any:
         # regex-based Custom Formats that reject non-ROM content by
         # bracket markers the parser can't semantically classify.
         return facts.title or ""
+    if field_name == "info_url":
+        # The tracker's "Comments" / "InfoUrl" — often reveals the
+        # underlying source domain (minerva-archive.org, vimm.net, …).
+        return facts.info_url or ""
+    if field_name == "nfo_url":
+        return facts.nfo_url or ""
+    if field_name == "download_url":
+        # The direct download link. Useful when the source origin is
+        # in the URL path but not in the title (e.g.
+        # ``.../roms_all/download/{token}.torrent``).
+        return facts.download_url or ""
+    if field_name == "description":
+        return facts.description or ""
+    if field_name == "indexer_guid":
+        return facts.indexer_guid or ""
     if field_name == "tags":
         return list(facts.tags)
     if field_name == "region":

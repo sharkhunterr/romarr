@@ -139,6 +139,24 @@ class ReleaseFacts(_Base):
     """Bytes — used by ``release_size`` Custom Format conditions."""
     release_group: str | None = None
 
+    # Free-form text fields projected from the indexer's SearchResult
+    # so Custom Formats can regex-match on anything the operator sees
+    # in the search-result detail (URLs, notes, description). Enables
+    # patterns like "boost anything whose info_url points to
+    # minerva-archive.org" or "reject candidates whose description
+    # mentions 'demo' / 'trial'".
+    info_url: str = ""
+    """The indexer's ``comments`` / ``infoUrl`` — tracker page URL."""
+    nfo_url: str = ""
+    """The indexer's ``nfo`` URL when present (torznab-ext attribute)."""
+    download_url: str = ""
+    """The direct download URL for the release."""
+    description: str = ""
+    """The indexer's ``description`` field (multi-line notes)."""
+    indexer_guid: str = ""
+    """The indexer-native id — sometimes carries source information
+    (e.g. a filesystem path fragment for Grabarr's slug/token pair)."""
+
 
 __all__ = [
     "ConditionField",
