@@ -2005,6 +2005,38 @@ async def _diagnose_no_match(
     """
     parts: list[str] = []
 
+    # Detect the "torrent completed on paper but 0 bytes actually
+    # downloaded" case FIRST — typical for MiNERVA magnets with
+    # ``so=`` file selection where qBit can't connect to peers.
+    # A dir source with no importable content is a much stronger
+    # signal than "fuzzy match missed", so surface it separately.
+    if source_path.exists() and source_path.is_dir():
+        try:
+            eligible = [
+                p for p in source_path.rglob("*")
+                if p.is_file() and not p.name.startswith(".")
+            ]
+        except OSError:
+            eligible = []
+        if not eligible:
+            return (
+                f"source dir {source_path.name!r} is empty — the "
+                "torrent hasn't downloaded any file yet. Check the "
+                "download client's peer / tracker health "
+                "(torrent likely stuck at 0%)."
+            )
+        total_bytes = sum(
+            (p.stat().st_size for p in eligible if p.exists()),
+            0,
+        )
+        if total_bytes == 0:
+            return (
+                f"source dir {source_path.name!r} contains "
+                f"{len(eligible)} file(s) but all are empty "
+                "(0 bytes) — the torrent hasn't downloaded any "
+                "content yet. Check download client peer / tracker."
+            )
+
     # 1. Parser guess
     try:
         parsed = default_dispatcher().parse(source_path.name)
