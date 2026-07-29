@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.32](https://github.com/sharkhunterr/romarr/-/compare/v0.14.31...v0.14.32) (2026-07-29)
+
+
+### Features
+
+* **system:** version-check endpoint + UI badge + Settings About section ([60f90f4](https://github.com/sharkhunterr/romarr/-/commit/60f90f460dcab144e1b7f77f30ffe8f6a05eda21))
+
 ### [0.14.31](https://github.com/sharkhunterr/romarr/-/compare/v0.14.30...v0.14.31) (2026-07-29)
 
 
