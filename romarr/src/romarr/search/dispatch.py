@@ -224,7 +224,10 @@ async def dispatch_winner(
                 reason=f"magnet re-route client build failed: {alt_exc}",
             )
         try:
-            magnet_source = TorrentMagnet(magnet_uri=exc.magnet_uri)
+            magnet_source = TorrentMagnet(
+                magnet_uri=exc.magnet_uri,
+                internal_file_path=exc.internal_file_path,
+            )
             native_id = await alt_client.add_torrent(
                 magnet_source, category="romarr", tags=tags
             )

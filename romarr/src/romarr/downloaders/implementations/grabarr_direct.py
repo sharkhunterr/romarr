@@ -298,8 +298,11 @@ class GrabarrDirectClient(DownloadClient):
             # carried on the exception so the dispatcher doesn't have
             # to re-hit ``/resolve``.
             magnet_uri = resolve.get("magnet_uri", "")
+            internal_file_path = (
+                resolve.get("internal_file_path") or None
+            )
             self._pending.pop(native_id, None)
-            raise NeedsMagnetClientError(magnet_uri)
+            raise NeedsMagnetClientError(magnet_uri, internal_file_path)
 
         if resolve["method"] != "http_direct":
             raise DownloaderError(

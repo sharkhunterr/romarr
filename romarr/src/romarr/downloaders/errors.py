@@ -70,15 +70,22 @@ class NeedsMagnetClientError(DownloaderError):
     as a :class:`~romarr.downloaders.types.TorrentMagnet` source.
 
     Carries the resolved ``magnet_uri`` so the dispatcher can build
-    the new source without re-hitting ``/resolve``.
+    the new source without re-hitting ``/resolve``. ``internal_file_path``
+    (optional) is the specific file path INSIDE a bundle meta-torrent
+    (Minerva / …) — the dispatcher forwards it on the
+    ``TorrentMagnet.internal_file_path`` field so qBit can prioritise
+    the right file via ``filePrio`` after metadata comes in.
     """
 
-    def __init__(self, magnet_uri: str) -> None:
+    def __init__(
+        self, magnet_uri: str, internal_file_path: str | None = None
+    ) -> None:
         super().__init__(
             "grabarr_direct resolved to torrent_magnet — needs a "
             "magnet-capable client (qBittorrent)"
         )
         self.magnet_uri = magnet_uri
+        self.internal_file_path = internal_file_path
 
 
 __all__ = [

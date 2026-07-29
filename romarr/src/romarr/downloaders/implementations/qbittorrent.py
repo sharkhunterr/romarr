@@ -369,11 +369,151 @@ class QBittorrentClient(DownloadClient):
                 save_path=save_path,
             )
             if magnet_hash:
-                return magnet_hash.lower()
-            return await self._discover_added_hash(client, source)
+                native_id = magnet_hash.lower()
+            else:
+                native_id = await self._discover_added_hash(client, source)
+
+            # BEP-53 file selection for meta-torrent bundles. When the
+            # source is a MiNERVA / Vimm / … bundle magnet with a
+            # specific internal file the operator wants, qBit adds
+            # the torrent with 0 / N files selected (its default when
+            # ``so=`` doesn't apply until metadata arrives). Fire a
+            # background task that waits for metadata + POSTs
+            # ``filePrio=0`` on every file except the target, then
+            # ``filePrio=1`` on the target so the download actually
+            # starts. Best-effort — a scheduling failure never
+            # invalidates the add.
+            if (
+                isinstance(source, TorrentMagnet)
+                and source.internal_file_path
+            ):
+                asyncio.create_task(
+                    self._apply_bundle_file_priority(
+                        native_id, source.internal_file_path
+                    )
+                )
+            return native_id
 
     async def add_nzb(self, source: NzbSource, *, category: str) -> str:
         raise NotImplementedError("qBittorrent does not handle NZB sources")
+
+    async def _apply_bundle_file_priority(
+        self, native_id: str, target_file_path: str
+    ) -> None:
+        """Background task — wait for meta-torrent metadata + prioritise
+        only the file the operator actually wants.
+
+        Meta-torrent magnets (MiNERVA / Vimm / …) land with 0 / N
+        files selected because qBit can't apply BEP-53 ``so=`` until
+        the ``.torrent`` metadata comes in from the swarm. Once the
+        file list is available, we POST ``filePrio=0`` on every
+        file except the one whose relative path matches
+        ``target_file_path`` (leading ``./`` stripped for tolerance),
+        then ``filePrio=1`` on the target so the download starts on
+        the ~few-MB file instead of trying (and failing at 0 files
+        selected) to hold the operator's hand on the 78 GB bundle.
+
+        Best-effort: any polling / API failure logs a warning and
+        exits — the operator still has the Content tab in qBit as a
+        manual fallback.
+        """
+        import logging as _logging
+
+        log = _logging.getLogger(__name__)
+        # Normalise the target path once so the compare below is
+        # cheap. qBit reports file names without a leading ``./``.
+        wanted = target_file_path.lstrip("./").lstrip("/")
+        # Poll every 3 s up to ~2 min for metadata. Typical MiNERVA
+        # bundle metadata arrives inside 30 s once at least one peer
+        # answers; the cap keeps a stuck-forever torrent from leaking
+        # a background task.
+        deadline_ticks = 40
+        try:
+            async with self._new_client() as client:
+                await self._login(client)
+                files: list[dict[str, Any]] = []
+                for _ in range(deadline_ticks):
+                    await asyncio.sleep(3)
+                    try:
+                        resp = await self._get(
+                            client,
+                            "/torrents/files",
+                            hash=native_id.lower(),
+                        )
+                        payload = resp.json()
+                    except (ValueError, Exception):  # noqa: BLE001
+                        continue
+                    if isinstance(payload, list) and payload:
+                        files = [
+                            f for f in payload if isinstance(f, dict)
+                        ]
+                        break
+                if not files:
+                    log.warning(
+                        "qbittorrent: metadata never arrived for %s "
+                        "(bundle file selection skipped)",
+                        native_id,
+                    )
+                    return
+                # Find the index of the target file. qBit returns
+                # ``name`` = relative path inside the torrent
+                # (``Minerva_Myrient/No-Intro/.../Sonic Advance 2
+                # (USA).zip``). The operator-supplied path is scoped
+                # to the collection root (starts under No-Intro / …);
+                # do a suffix match so both shapes align.
+                target_idx: int | None = None
+                for f in files:
+                    name = str(f.get("name") or "")
+                    if not name:
+                        continue
+                    if name == wanted or name.endswith("/" + wanted):
+                        target_idx = _coerce_int(f.get("index"))
+                        break
+                if target_idx is None:
+                    log.warning(
+                        "qbittorrent: internal_file_path %r not found "
+                        "in bundle %s (%d files) — leaving file "
+                        "priorities as-is",
+                        wanted, native_id, len(files),
+                    )
+                    return
+                # Two POSTs: bulk-zero every index, then bump the
+                # target. qBit's ``filePrio`` accepts a comma-list
+                # for ``id``.
+                all_ids = ",".join(
+                    str(_coerce_int(f.get("index")) or 0)
+                    for f in files
+                    if _coerce_int(f.get("index")) is not None
+                    and _coerce_int(f.get("index")) != target_idx
+                )
+                if all_ids:
+                    await self._post(
+                        client,
+                        "/torrents/filePrio",
+                        data={
+                            "hash": native_id.lower(),
+                            "id": all_ids,
+                            "priority": "0",
+                        },
+                    )
+                await self._post(
+                    client,
+                    "/torrents/filePrio",
+                    data={
+                        "hash": native_id.lower(),
+                        "id": str(target_idx),
+                        "priority": "1",
+                    },
+                )
+                log.info(
+                    "qbittorrent: bundle %s — prioritised file idx=%d (%r)",
+                    native_id, target_idx, wanted,
+                )
+        except Exception as exc:  # noqa: BLE001
+            log.warning(
+                "qbittorrent: bundle file priority failed for %s: %s",
+                native_id, exc,
+            )
 
     async def get_status(self, client_native_id: str) -> DownloadStatus:
         async with self._new_client() as client:

@@ -59,6 +59,17 @@ class TorrentUrl(_Base):
 class TorrentMagnet(_Base):
     kind: Literal["torrent_magnet"] = "torrent_magnet"
     magnet_uri: str
+    # Optional BEP-53 file selection hint — path INSIDE the
+    # meta-torrent the operator actually wants (e.g. MiNERVA's
+    # ``./No-Intro/Nintendo - Game Boy Advance/Sonic Advance 2 (USA)
+    # .zip``). Set only when the source is a multi-file bundle
+    # where we know the target file. Clients that support per-file
+    # priority (qBit) use it to POST ``filePrio=0`` on everything
+    # except the matching file after metadata comes in — otherwise
+    # a bundle magnet lands with 0/N files selected (qBit's default
+    # for ``so=`` magnets is to WAIT and select nothing until the
+    # operator picks manually).
+    internal_file_path: str | None = None
 
 
 class TorrentBytes(_Base):
