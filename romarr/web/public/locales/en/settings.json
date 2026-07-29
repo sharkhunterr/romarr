@@ -1085,6 +1085,19 @@
   "general": {
     "title": "General",
     "subtitle": "Operator account settings. Today's slice covers personal API keys; richer surfaces (password change, OIDC unlink, login history) land as their endpoints surface.",
+    "about": {
+      "title": "About",
+      "checkNow": "Check now",
+      "checking": "Checking…",
+      "loading": "Loading…",
+      "current": "Installed version",
+      "latest": "Latest GitHub release",
+      "repo": "Repository",
+      "status": "Status",
+      "updateAvailable": "Update available",
+      "viewRelease": "View release",
+      "upToDate": "Up to date"
+    },
     "apiKeys": {
       "section": "API keys",
       "empty": {

@@ -237,6 +237,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/system/version-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Version Check
+         * @description Compare the running version against the latest GitHub release.
+         *
+         *     Returns ``{current, latest, updateAvailable, releaseUrl,
+         *     publishedAt, error}``. ``force=true`` bypasses the 1-hour
+         *     in-process cache (attach to a "Check now" button).
+         *
+         *     Public callers get the same payload — the version data itself is
+         *     already exposed via ``/system/status``; keeping this endpoint public
+         *     lets a mobile Settings widget show update state without an API key.
+         */
+        get: operations["get_version_check_api_v3_system_version_check_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/system/stats": {
         parameters: {
             query?: never;
@@ -8003,6 +8031,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_version_check_api_v3_system_version_check_get: {
+        parameters: {
+            query?: {
+                force?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -107,6 +107,43 @@ async def get_status(
     }
 
 
+_GITHUB_REPO = "sharkhunterr/romarr"
+
+
+@router.get("/version-check")
+async def get_version_check(
+    principal: Annotated[Principal | None, Depends(get_current_principal)],
+    force: bool = False,
+) -> dict[str, Any]:
+    """Compare the running version against the latest GitHub release.
+
+    Returns ``{current, latest, updateAvailable, releaseUrl,
+    publishedAt, error}``. ``force=true`` bypasses the 1-hour
+    in-process cache (attach to a "Check now" button).
+
+    Public callers get the same payload — the version data itself is
+    already exposed via ``/system/status``; keeping this endpoint public
+    lets a mobile Settings widget show update state without an API key.
+    """
+    _ = principal  # accessible unauth to mirror /status public tier
+    from romarr.api.version_check import check_latest_release
+
+    info = await check_latest_release(
+        current_version=__version__,
+        github_repo=_GITHUB_REPO,
+        force=force,
+    )
+    return {
+        "current": info.current,
+        "latest": info.latest,
+        "updateAvailable": info.update_available,
+        "releaseUrl": info.release_url,
+        "publishedAt": info.published_at,
+        "error": info.error,
+        "repo": _GITHUB_REPO,
+    }
+
+
 class PlatformStats(BaseModel):
     """Per-platform breakdown row (slice 105).
 

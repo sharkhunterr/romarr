@@ -1081,6 +1081,19 @@
   "general": {
     "title": "Général",
     "subtitle": "Paramètres du compte opérateur. Le slice du jour couvre les clés API personnelles ; les surfaces plus riches (changement de mot de passe, dissociation OIDC, historique de connexion) arriveront avec leurs endpoints.",
+    "about": {
+      "title": "À propos",
+      "checkNow": "Vérifier maintenant",
+      "checking": "Vérification…",
+      "loading": "Chargement…",
+      "current": "Version installée",
+      "latest": "Dernière release GitHub",
+      "repo": "Dépôt",
+      "status": "Statut",
+      "updateAvailable": "Mise à jour disponible",
+      "viewRelease": "Voir la release",
+      "upToDate": "À jour"
+    },
     "apiKeys": {
       "section": "Clés API",
       "empty": {

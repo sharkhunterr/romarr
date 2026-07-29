@@ -2,6 +2,10 @@
   "app": {
     "title": "Romarr"
   },
+  "versionBadge": {
+    "upToDate": "Version {{version}} — up to date",
+    "updateAvailableTooltip": "v{{current}} installed → v{{latest}} available. Click to view the release."
+  },
   "nav": {
     "primary": "Primary navigation",
     "home": "Home",

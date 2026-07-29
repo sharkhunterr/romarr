@@ -38,6 +38,7 @@ import { useThemeStore, type Theme } from "@/lib/store/theme";
 
 import { ConnectionIndicator } from "./ConnectionIndicator";
 import { LanguageToggle } from "./LanguageToggle";
+import { VersionBadge } from "./VersionBadge";
 
 /** Activity badge data shared with the mobile BottomNav.
  *
@@ -150,6 +151,7 @@ export function Header(): ReactElement {
           <span className="font-mono text-sm font-semibold tracking-tight text-zinc-100">
             {t("app.title")}
           </span>
+          <VersionBadge />
         </div>
 
         {/* Desktop primary nav — hidden on mobile where the

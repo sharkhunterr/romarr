@@ -19,6 +19,7 @@ import { useUsers } from "@/lib/api/queries/users";
 import { ApiKeyRow } from "./ApiKeyRow";
 import { CreateApiKeyForm } from "./CreateApiKeyForm";
 import { CreateUserForm } from "./CreateUserForm";
+import { AboutSection } from "./AboutSection";
 import { UserRow } from "./UserRow";
 
 export function GeneralPage(): ReactElement {
@@ -36,6 +37,8 @@ export function GeneralPage(): ReactElement {
         </h2>
         <p className="mt-1 text-sm text-zinc-400">{t("general.subtitle")}</p>
       </header>
+
+      <AboutSection />
 
       <section className="space-y-3">
         <h3 className="text-xs font-medium uppercase tracking-wider text-zinc-400">
