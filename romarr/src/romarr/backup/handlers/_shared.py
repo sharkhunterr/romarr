@@ -100,19 +100,80 @@ class SimpleModelHandler:
     ) -> ImportOutcome:
         outcome = ImportOutcome(key=self.key)
 
-        # Mode REPLACE : nuke tout avant d'insérer. Une seule requête
-        # `DELETE FROM {table}` — les cascades ON DELETE des FKs
-        # s'occupent des enfants (attention : dat_source cascade sur
-        # dat_entry qui perd son cache — expected par l'opérateur).
+        # Mode REPLACE : purger les rows existantes puis insérer les
+        # items du bundle. Row-par-row (pas un ``DELETE FROM {table}``
+        # global) parce que certaines rows peuvent être référencées
+        # par des FKs sans ON DELETE CASCADE — typique : une Library
+        # pointe sur un QualityProfile via ``library.quality_profile_id``.
+        # Un DELETE global 400 IntegrityError et rollback TOUT le
+        # batch (bug pré-slice : 0 profil importé, message opaque).
+        # Fix : on skip individuellement les rows FK-verrouillées
+        # (le nom réapparaît en UPSERT via la boucle d'insert
+        # ci-dessous — les items du bundle qui matchent l'existant
+        # sont écrasés par ``_update_existing``, ceux qui n'existent
+        # pas sont créés). Une row DB non présente dans le bundle
+        # ET non référencée est supprimée. Une row référencée par
+        # une FK et absente du bundle est préservée avec un warning
+        # explicite.
         if mode is ImportMode.REPLACE:
-            await session.execute(delete(self.model_class))
-            for item in items:
+            name_col = getattr(self.model_class, self.name_column)
+            existing_by_name: dict[Any, Any] = {
+                getattr(r, self.name_column): r
+                for r in (
+                    await session.execute(select(self.model_class))
+                ).scalars().all()
+            }
+            bundle_names = {
+                item.get(self.name_column)
+                for item in items
+                if item.get(self.name_column)
+            }
+            # 1. Delete rows not in the bundle. FK-referenced ones
+            # raise IntegrityError → we catch, rollback the aborted
+            # savepoint, and record a warning; the row survives.
+            for name, row in list(existing_by_name.items()):
+                if name in bundle_names:
+                    continue  # will be updated below
+                sp = await session.begin_nested()
                 try:
-                    self._insert_new(session, item)
-                    outcome.created += 1
-                except Exception as e:
-                    outcome.errors.append(f"insert {item.get('name','?')}: {e}")
+                    await session.delete(row)
+                    await session.flush()
+                    await sp.commit()
+                    existing_by_name.pop(name, None)
+                except Exception as exc:  # noqa: BLE001
+                    await sp.rollback()
+                    outcome.errors.append(
+                        f"kept {name!r} — referenced by another row "
+                        f"(FK constraint): {exc}"
+                    )
+            # 2. Insert / update from the bundle.
+            for item in items:
+                item_name = item.get(self.name_column)
+                if not item_name:
+                    outcome.errors.append(
+                        f"item missing {self.name_column!r} — skipped"
+                    )
+                    outcome.skipped += 1
+                    continue
+                existing = existing_by_name.get(item_name)
+                if existing is None:
+                    try:
+                        self._insert_new(session, item)
+                        outcome.created += 1
+                    except Exception as e:  # noqa: BLE001
+                        outcome.errors.append(
+                            f"insert {item_name!r}: {e}"
+                        )
+                else:
+                    try:
+                        self._update_existing(existing, item)
+                        outcome.updated += 1
+                    except Exception as e:  # noqa: BLE001
+                        outcome.errors.append(
+                            f"update {item_name!r}: {e}"
+                        )
             await session.flush()
+            _ = name_col
             return outcome
 
         # Modes UPSERT / MERGE : dedup par la colonne `name_column`
