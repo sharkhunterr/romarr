@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.31](https://github.com/sharkhunterr/romarr/-/compare/v0.14.30...v0.14.31) (2026-07-29)
+
+
+### Features
+
+* **qbittorrent:** wire BEP-53 file selection for bundle magnets (fixes 0/N files selected) ([9dbf9df](https://github.com/sharkhunterr/romarr/-/commit/9dbf9dfed55c54459fdb78a8e72abea41133440d))
+
+
+### Bug Fixes
+
+* **backup:** REPLACE mode row-by-row delete with FK-catch (was 0-row nuke on IntegrityError) ([093c29f](https://github.com/sharkhunterr/romarr/-/commit/093c29fc04119268d1707ea8a49d546854c98e63))
+* **importer:** 'match:no_game' now flags empty-source-dir explicitly (torrent-stuck case) ([5c6db4b](https://github.com/sharkhunterr/romarr/-/commit/5c6db4b7093d747642b2d646bbe57c017204a9bb))
+
 ### [0.14.30](https://github.com/sharkhunterr/romarr/-/compare/v0.14.29...v0.14.30) (2026-07-28)
 
 

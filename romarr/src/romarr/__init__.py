@@ -1,3 +1,3 @@
 """Romarr — self-hosted ROM acquisition manager."""
 
-__version__ = "0.14.30"
+__version__ = "0.14.31"
