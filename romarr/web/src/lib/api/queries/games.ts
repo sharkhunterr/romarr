@@ -171,6 +171,18 @@ export interface ToggleMonitorVariables {
   monitored: boolean;
 }
 
+export interface UpdateGameVariables {
+  gameId: number;
+  /**
+   * Fields to PATCH. Omitted fields are not sent — the backend
+   * distinguishes "not sent" from "explicit null" via
+   * ``model_fields_set``, so ``libraryId: null`` unbinds and
+   * ``libraryId: undefined`` leaves the current binding alone.
+   */
+  monitored?: boolean;
+  libraryId?: number | null;
+}
+
 export interface RefreshMetadataVariables {
   gameId: number;
   /**
@@ -449,6 +461,39 @@ export function useToggleGameMonitor(): UseMutationResult<
         method: "PATCH",
         json: { monitored },
       }),
+    onSuccess: (game) => {
+      void qc.invalidateQueries({ queryKey: ["games", "detail", game.id] });
+      void qc.invalidateQueries({ queryKey: ["games", "list"] });
+    },
+  });
+}
+
+/**
+ * PATCH /api/v3/game/{id} — update ``monitored`` and/or the
+ * library binding in one round-trip. Backs the "Modifier le jeu"
+ * modal on the game detail page (post-add editing).
+ *
+ * Only fields explicitly set on the variables are sent. The
+ * backend uses ``model_fields_set`` to distinguish "not sent"
+ * from "explicit unbind" — passing ``libraryId: null`` unbinds,
+ * ``libraryId: undefined`` (omitted) leaves it alone.
+ */
+export function useUpdateGame(): UseMutationResult<
+  Game,
+  ApiError,
+  UpdateGameVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<Game, ApiError, UpdateGameVariables>({
+    mutationFn: ({ gameId, monitored, libraryId }) => {
+      const body: Record<string, unknown> = {};
+      if (monitored !== undefined) body.monitored = monitored;
+      if (libraryId !== undefined) body.library_id = libraryId;
+      return apiFetch<Game>(`/api/v3/game/${gameId}`, {
+        method: "PATCH",
+        json: body,
+      });
+    },
     onSuccess: (game) => {
       void qc.invalidateQueries({ queryKey: ["games", "detail", game.id] });
       void qc.invalidateQueries({ queryKey: ["games", "list"] });

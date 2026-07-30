@@ -132,6 +132,7 @@ describe("OverviewTab", () => {
     renderWithProviders(
       <GameHeader
         game={_baseGame()}
+        onEditClick={() => undefined}
         onSearchClick={() => undefined}
         onDeleteClick={() => undefined}
       />,

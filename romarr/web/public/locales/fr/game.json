@@ -62,6 +62,26 @@
   "delete": {
     "button": "Supprimer le jeu"
   },
+  "edit": {
+    "button": "Modifier",
+    "modalTitle": "Modifier « {{title}} »",
+    "subtitle": "Change la ludothèque, le profil qualité (via la ludothèque) et le suivi de ce jeu.",
+    "libraryLabel": "Ludothèque",
+    "libraryUnbound": "— Aucune —",
+    "loadingLibraries": "Chargement des ludothèques…",
+    "noLibraries": "Aucune ludothèque configurée.",
+    "profileLabel": "Profil qualité (de la ludothèque)",
+    "profileMinScore": "score mini auto-grab {{score}}",
+    "profileFromLibrary": "Défini par la ludothèque sélectionnée.",
+    "monitoredLabel": "Surveiller pour les mises à niveau",
+    "monitoredHint": "Décoche pour que Romarr arrête de re-télécharger ce jeu (utile si tu possèdes déjà une copie que tu veux garder telle quelle).",
+    "cancel": "Annuler",
+    "submit": "Enregistrer",
+    "submitting": "Enregistrement…",
+    "successTitle": "Jeu mis à jour",
+    "successBody": "« {{title}} » a été enregistré.",
+    "errorTitle": "Échec de la mise à jour"
+  },
   "header": {
     "summary": {
       "showMore": "Afficher plus",

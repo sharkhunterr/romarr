@@ -20,6 +20,7 @@ import { DetailSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useGame } from "@/lib/api/queries/games";
 import { BulkDeleteModal } from "@/pages/Library/BulkDeleteModal";
 
+import { EditGameModal } from "./EditGameModal";
 import { FilesTab } from "./FilesTab";
 import { GameHeader } from "./GameHeader";
 import { HistoryTab } from "./HistoryTab";
@@ -90,6 +91,7 @@ export function GameDetailPage(): ReactElement {
   const tab = parseTabParam(searchParams.get("tab"));
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const setTab = (next: Tab): void => {
     setSearchParams(
@@ -126,6 +128,7 @@ export function GameDetailPage(): ReactElement {
           <PendingDownloads gameId={gameId} />
           <GameHeader
             game={game.data}
+            onEditClick={() => setEditOpen(true)}
             onSearchClick={() => setSearchOpen(true)}
             onDeleteClick={() => setDeleteOpen(true)}
           />
@@ -164,6 +167,13 @@ export function GameDetailPage(): ReactElement {
               games={[game.data]}
               onClose={() => setDeleteOpen(false)}
               onSuccess={() => navigate("/library")}
+            />
+          )}
+
+          {editOpen && (
+            <EditGameModal
+              game={game.data}
+              onClose={() => setEditOpen(false)}
             />
           )}
 

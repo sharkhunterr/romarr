@@ -62,6 +62,26 @@
   "delete": {
     "button": "Delete game"
   },
+  "edit": {
+    "button": "Edit",
+    "modalTitle": "Edit \"{{title}}\"",
+    "subtitle": "Change the library, quality profile (via the library), and monitoring for this game.",
+    "libraryLabel": "Library",
+    "libraryUnbound": "— None —",
+    "loadingLibraries": "Loading libraries…",
+    "noLibraries": "No libraries configured.",
+    "profileLabel": "Quality profile (from library)",
+    "profileMinScore": "auto-grab min score {{score}}",
+    "profileFromLibrary": "Set by the selected library.",
+    "monitoredLabel": "Monitor for upgrades",
+    "monitoredHint": "Uncheck to stop Romarr from re-grabbing this game (handy when you already own a copy you want to keep as-is).",
+    "cancel": "Cancel",
+    "submit": "Save",
+    "submitting": "Saving…",
+    "successTitle": "Game updated",
+    "successBody": "\"{{title}}\" was saved.",
+    "errorTitle": "Update failed"
+  },
   "header": {
     "summary": {
       "showMore": "Show more",

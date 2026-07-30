@@ -20,7 +20,7 @@
  * sticky-top so it stays in reach as the operator scrolls.
  */
 
-import { Check, Clock, Search, ShieldCheck, Trash2 } from "lucide-react";
+import { Check, Clock, Pencil, Search, ShieldCheck, Trash2 } from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -39,13 +39,14 @@ import {
 
 interface GameHeaderProps {
   game: Game;
+  onEditClick: () => void;
   onSearchClick: () => void;
   onDeleteClick: () => void;
 }
 
 export function GameHeader(props: GameHeaderProps): ReactElement {
   const { t } = useTranslation("game");
-  const { game, onSearchClick, onDeleteClick } = props;
+  const { game, onEditClick, onSearchClick, onDeleteClick } = props;
   const platformsById = usePlatformsById();
   const platform = platformsById.get(game.platform_id);
   const platformLabel = platform
@@ -214,6 +215,14 @@ export function GameHeader(props: GameHeaderProps): ReactElement {
           <div className="flex flex-wrap gap-1.5 pt-0.5">
             <RefreshMetadataButton game={game} />
             <MonitorToggle game={game} />
+            <button
+              type="button"
+              onClick={onEditClick}
+              className="inline-flex items-center gap-1 rounded-md border border-zinc-700 px-2.5 py-1 text-[0.7rem] font-medium text-zinc-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              <Pencil size={12} aria-hidden="true" />
+              {t("edit.button")}
+            </button>
             <button
               type="button"
               onClick={onSearchClick}
