@@ -25,6 +25,8 @@
     "title": "Community updates",
     "subtitle": "Register manifest URLs (custom formats, platforms, …). Romarr checks periodically and notifies you when a new version is available.",
     "loading": "Loading sources…",
+    "loadErrorTitle": "Cannot load sources",
+    "loadErrorHint": "If Romarr was just upgraded, the DB migration may not have run yet. Restart the backend with ROMARR_AUTO_MIGRATE=true or run `alembic upgrade head` manually.",
     "addSource": "Add URL",
     "addModalTitle": "Add community source",
     "addModalHint": "URL must point to a manifest.json following the Romarr contract. First check is auto-run after add.",

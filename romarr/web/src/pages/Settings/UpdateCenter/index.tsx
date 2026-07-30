@@ -56,9 +56,20 @@ export function UpdateCenterPage(): ReactElement {
         <p className="text-xs text-zinc-500">{t("updateCenter.loading")}</p>
       )}
       {sources.isError && (
-        <p className="text-xs text-red-400" role="alert">
-          {sources.error.message}
-        </p>
+        <div
+          role="alert"
+          className="rounded-md border border-amber-800/50 bg-amber-950/30 p-4 text-xs"
+        >
+          <p className="font-medium text-amber-200">
+            {t("updateCenter.loadErrorTitle")}
+          </p>
+          <p className="mt-1 text-amber-300/80">
+            {sources.error.message}
+          </p>
+          <p className="mt-2 text-[0.65rem] text-zinc-400">
+            {t("updateCenter.loadErrorHint")}
+          </p>
+        </div>
       )}
       {sources.isSuccess && sources.data.length === 0 && (
         <div className="rounded-md border border-dashed border-zinc-800 bg-zinc-900/40 p-6 text-center">

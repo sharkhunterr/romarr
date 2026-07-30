@@ -21,6 +21,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 from sqlalchemy import select
+from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import romarr.community  # noqa: F401 — registers adapters
@@ -33,6 +34,23 @@ from romarr.community.versioning import is_newer
 from romarr.platform_packs.models import PackSource
 
 router = APIRouter(prefix="/api/v3/community", tags=["Community"])
+
+
+_MIGRATION_HINT = (
+    "Update Center schema missing — run `romarr serve` (auto-migrate) "
+    "or `alembic upgrade head` to apply migration 0040."
+)
+
+
+def _friendly_schema_error(exc: Exception) -> HTTPException:
+    """Convert a raw ORM column-missing error into a 503 with an
+    actionable message. Fires when the operator restarted the app
+    against a DB that predates migration 0040 (adding
+    resource_type / auto_check / trust_status / version columns)."""
+    return HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=f"{_MIGRATION_HINT} (underlying error: {exc})",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -153,7 +171,10 @@ async def list_sources(
     stmt = select(PackSource).order_by(PackSource.id.asc())
     if resource_type is not None:
         stmt = stmt.where(PackSource.resource_type == resource_type)
-    rows = (await db.execute(stmt)).scalars().all()
+    try:
+        rows = (await db.execute(stmt)).scalars().all()
+    except (OperationalError, ProgrammingError) as exc:
+        raise _friendly_schema_error(exc) from exc
     return [SourceRead.from_row(r) for r in rows]
 
 
@@ -300,11 +321,14 @@ async def updates_feed(
         error=romarr_info.error,
     )
 
-    rows = (
-        (await db.execute(select(PackSource).order_by(PackSource.id.asc())))
-        .scalars()
-        .all()
-    )
+    try:
+        rows = (
+            (await db.execute(select(PackSource).order_by(PackSource.id.asc())))
+            .scalars()
+            .all()
+        )
+    except (OperationalError, ProgrammingError) as exc:
+        raise _friendly_schema_error(exc) from exc
     sources = [SourceRead.from_row(r) for r in rows]
     community_updates = sum(1 for s in sources if s.update_available)
     total = community_updates + (1 if romarr.update_available else 0)

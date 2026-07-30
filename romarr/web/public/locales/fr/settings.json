@@ -25,6 +25,8 @@
     "title": "Mises à jour communautaires",
     "subtitle": "Ajoute des URL de manifests (custom formats, plateformes, …). Romarr vérifie régulièrement et te prévient quand une nouvelle version est disponible.",
     "loading": "Chargement des sources…",
+    "loadErrorTitle": "Impossible de charger les sources",
+    "loadErrorHint": "Si Romarr vient d'être mis à jour, la migration DB n'a peut-être pas encore été appliquée. Redémarre le backend avec ROMARR_AUTO_MIGRATE=true ou lance manuellement `alembic upgrade head`.",
     "addSource": "Ajouter une URL",
     "addModalTitle": "Ajouter une source communautaire",
     "addModalHint": "L'URL doit pointer vers un manifest.json respectant le contrat Romarr. Après ajout, un premier check est lancé automatiquement.",
