@@ -32,6 +32,7 @@ from __future__ import annotations
 import logging
 from datetime import UTC, datetime
 
+import yaml
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -50,6 +51,31 @@ from romarr.platform_packs.remote import (
 )
 
 _LOG = logging.getLogger(__name__)
+
+
+def _ensure_pack_version(body: bytes, fallback_version: str) -> bytes:
+    """If the YAML body has no top-level ``pack_version`` key, inject
+    ``fallback_version`` (typically ``manifest.version``) so the
+    operator can maintain the version in a single place — the
+    manifest — instead of duplicating it across every YAML.
+
+    Malformed YAML falls through untouched — the ingestor's own
+    validator will surface the parse error with the right message.
+    """
+    try:
+        parsed = yaml.safe_load(body)
+    except yaml.YAMLError:
+        return body
+    if not isinstance(parsed, dict):
+        return body
+    if parsed.get("pack_version"):
+        return body
+    parsed["pack_version"] = fallback_version
+    # ``sort_keys=False`` keeps ``pack_version`` near the top-level
+    # ordering the operator's YAML already had — no cosmetic churn.
+    return yaml.safe_dump(parsed, sort_keys=False, allow_unicode=True).encode(
+        "utf-8"
+    )
 
 
 class PlatformPackAdapter:
@@ -135,10 +161,14 @@ class PlatformPackAdapter:
             for item in manifest.items:
                 item_url = resolve_item_url(source.url, item.path)
                 try:
-                    body = (await fetch_text(item_url)).encode("utf-8")
+                    raw = (await fetch_text(item_url)).encode("utf-8")
                 except FetchError as exc:
                     warnings.append(f"{item.path}: {exc}")
                     continue
+                # Manifest-driven versioning: if the YAML omits
+                # ``pack_version``, inject the manifest's version so
+                # the operator maintains a single source of truth.
+                body = _ensure_pack_version(raw, manifest.version)
                 try:
                     await ingest_pack(
                         session,
