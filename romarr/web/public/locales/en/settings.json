@@ -91,6 +91,7 @@
     "disable": "Disable",
     "delete": "Delete",
     "cancel": "Cancel",
+    "close": "Close",
     "deleteConfirm": "Delete source \"{{name}}\"? Items already applied stay in place.",
     "deleteErrorTitle": "Cannot delete",
     "checkErrorTitle": "Cannot check",

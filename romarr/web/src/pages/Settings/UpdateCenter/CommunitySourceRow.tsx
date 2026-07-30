@@ -1,7 +1,21 @@
 /**
  * One row of the Update Center sources table.
+ *
+ * Actions column uses compact icon buttons with tooltips instead
+ * of a stack of text pills — 7 wrapped labels ate the row height
+ * and made the table unreadable on desktop AND mobile.
  */
 
+import {
+  Download,
+  Eye,
+  Pencil,
+  Power,
+  RefreshCw,
+  ShieldCheck,
+  Trash2,
+  type LucideIcon,
+} from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -19,6 +33,42 @@ import { PreviewModal } from "./PreviewModal";
 
 interface Props {
   source: CommunitySource;
+}
+
+interface IconButtonProps {
+  Icon: LucideIcon;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  variant?: "default" | "brand" | "amber" | "danger";
+}
+
+function IconButton(props: IconButtonProps): ReactElement {
+  const { Icon, label, onClick, disabled = false, variant = "default" } = props;
+  const base =
+    "inline-flex h-7 w-7 items-center justify-center rounded border transition-colors disabled:cursor-not-allowed disabled:opacity-40";
+  const themes = {
+    default:
+      "border-zinc-700 text-zinc-200 hover:bg-zinc-800 hover:text-zinc-100",
+    brand:
+      "border-brand/60 bg-brand/10 text-brand hover:bg-brand/20",
+    amber:
+      "border-amber-700/60 bg-amber-950/40 text-amber-200 hover:bg-amber-950/60",
+    danger:
+      "border-red-800/60 text-red-300 hover:bg-red-950/40",
+  };
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+      className={`${base} ${themes[variant]}`}
+    >
+      <Icon size={14} aria-hidden="true" />
+    </button>
+  );
 }
 
 export function CommunitySourceRow(props: Props): ReactElement {
@@ -149,71 +199,61 @@ export function CommunitySourceRow(props: Props): ReactElement {
           {source.last_seen_version ?? "—"}
         </span>
       </td>
-      <td className="px-3 py-2 align-top text-right">
-        <div className="inline-flex flex-wrap justify-end gap-1">
-          <button
-            type="button"
+      <td className="px-3 py-2 align-top">
+        <div className="flex items-center justify-end gap-1">
+          <IconButton
+            Icon={RefreshCw}
+            label={t("updateCenter.check")}
             onClick={handleCheck}
             disabled={check.isPending}
-            className="rounded border border-zinc-700 px-2 py-0.5 text-[0.65rem] text-zinc-200 hover:bg-zinc-800 disabled:opacity-50"
-          >
-            {t("updateCenter.check")}
-          </button>
-          <button
-            type="button"
+          />
+          <IconButton
+            Icon={Eye}
+            label={t("updateCenter.preview")}
             onClick={() => setPreviewOpen(true)}
-            className="rounded border border-zinc-700 px-2 py-0.5 text-[0.65rem] text-zinc-200 hover:bg-zinc-800"
-          >
-            {t("updateCenter.preview")}
-          </button>
-          <button
-            type="button"
+          />
+          <IconButton
+            Icon={Pencil}
+            label={t("updateCenter.edit")}
             onClick={() => setEditOpen(true)}
-            className="rounded border border-zinc-700 px-2 py-0.5 text-[0.65rem] text-zinc-200 hover:bg-zinc-800"
-          >
-            {t("updateCenter.edit")}
-          </button>
+          />
           {source.trust_status === "pending" && (
-            <button
-              type="button"
+            <IconButton
+              Icon={ShieldCheck}
+              label={t("updateCenter.trust")}
               onClick={handleTrust}
               disabled={patch.isPending}
-              className="rounded border border-amber-700/60 bg-amber-950/40 px-2 py-0.5 text-[0.65rem] text-amber-200 hover:bg-amber-950/60"
-            >
-              {t("updateCenter.trust")}
-            </button>
+              variant="amber"
+            />
           )}
-          <button
-            type="button"
-            onClick={handleApply}
-            disabled={apply.isPending || source.trust_status === "pending"}
-            className="rounded border border-brand/60 bg-brand/10 px-2 py-0.5 text-[0.65rem] text-brand hover:bg-brand/20 disabled:cursor-not-allowed disabled:opacity-50"
-            title={
+          <IconButton
+            Icon={Download}
+            label={
               source.trust_status === "pending"
                 ? t("updateCenter.trustPendingHint")
-                : undefined
+                : t("updateCenter.apply")
             }
-          >
-            {t("updateCenter.apply")}
-          </button>
-          <button
-            type="button"
+            onClick={handleApply}
+            disabled={apply.isPending || source.trust_status === "pending"}
+            variant="brand"
+          />
+          <IconButton
+            Icon={Power}
+            label={
+              source.enabled
+                ? t("updateCenter.disable")
+                : t("updateCenter.enable")
+            }
             onClick={handleToggleEnabled}
             disabled={patch.isPending}
-            className="rounded border border-zinc-700 px-2 py-0.5 text-[0.65rem] text-zinc-300 hover:bg-zinc-800"
-          >
-            {source.enabled
-              ? t("updateCenter.disable")
-              : t("updateCenter.enable")}
-          </button>
-          <button
-            type="button"
+          />
+          <IconButton
+            Icon={Trash2}
+            label={t("updateCenter.delete")}
             onClick={handleDelete}
             disabled={del.isPending}
-            className="rounded border border-red-800/60 px-2 py-0.5 text-[0.65rem] text-red-300 hover:bg-red-950/40 disabled:opacity-50"
-          >
-            {t("updateCenter.delete")}
-          </button>
+            variant="danger"
+          />
         </div>
         {previewOpen && (
           <PreviewModal

@@ -91,6 +91,7 @@
     "disable": "Désactiver",
     "delete": "Supprimer",
     "cancel": "Annuler",
+    "close": "Fermer",
     "deleteConfirm": "Supprimer la source « {{name}} » ? Les éléments déjà appliqués restent en place.",
     "deleteErrorTitle": "Suppression impossible",
     "checkErrorTitle": "Vérification impossible",
