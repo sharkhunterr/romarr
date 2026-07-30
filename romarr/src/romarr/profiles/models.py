@@ -187,6 +187,22 @@ class CustomFormat(Base, _ProfileMixin):
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     score: Mapped[int] = mapped_column(Integer, nullable=False)
     conditions: Mapped[list[Any]] = mapped_column(JSON, nullable=False)
+    # Migration 0041 — enabled flag + source tracking.
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True
+    )
+    """When false, the pipeline ignores this CF when aggregating
+    scores. Row stays in the table so the operator can flip it
+    back on without losing the conditions."""
+    source_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("pack_sources.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    """FK to the community source that ingested this CF. NULL when
+    the CF is either a built-in factory seed
+    (``is_factory_default=true``) or operator-created via the UI
+    (``is_factory_default=false``)."""
 
     __table_args__ = (
         UniqueConstraint("name", name="uq_custom_format_name"),

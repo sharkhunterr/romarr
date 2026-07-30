@@ -14,10 +14,54 @@ import { useTranslation } from "react-i18next";
 
 import {
   useDeleteCustomFormat,
+  useToggleCustomFormatEnabled,
   type CustomFormat,
 } from "@/lib/api/queries/custom-formats";
+import { useToastStore } from "@/lib/store/toast";
 
 import { CustomFormatEditorModal } from "./CustomFormatEditorModal";
+
+type Origin = "factory" | "community" | "user";
+
+function detectOrigin(format: CustomFormat): Origin {
+  if (format.source_id) return "community";
+  if (format.is_factory_default) return "factory";
+  return "user";
+}
+
+function OriginBadge(props: { format: CustomFormat }): ReactElement {
+  const { t } = useTranslation("settings");
+  const origin = detectOrigin(props.format);
+  if (origin === "community") {
+    return (
+      <span
+        className="inline-flex items-center gap-1 rounded border border-brand/50 bg-brand/10 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-brand"
+        title={t("customFormats.originCommunityTooltip", {
+          name: props.format.source_name ?? "?",
+        })}
+      >
+        {t("customFormats.originCommunity")}
+        {props.format.source_name && (
+          <span className="font-normal normal-case tracking-normal text-brand/80">
+            · {props.format.source_name}
+          </span>
+        )}
+      </span>
+    );
+  }
+  if (origin === "factory") {
+    return (
+      <span className="rounded border border-zinc-700 bg-zinc-800/60 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-zinc-400">
+        {t("customFormats.originFactory")}
+      </span>
+    );
+  }
+  return (
+    <span className="rounded border border-sky-800/60 bg-sky-950/40 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-sky-300">
+      {t("customFormats.originUser")}
+    </span>
+  );
+}
 
 interface CustomFormatRowProps {
   format: CustomFormat;
@@ -72,31 +116,76 @@ export function CustomFormatRow(props: CustomFormatRowProps): ReactElement {
   const { format } = props;
   const { t } = useTranslation("settings");
   const del = useDeleteCustomFormat();
+  const toggle = useToggleCustomFormatEnabled();
+  const pushToast = useToastStore((s) => s.push);
 
   const [confirming, setConfirming] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
+  const enabled = format.enabled ?? true;
+
   function confirmDelete(): void {
     del.mutate(format.id);
   }
 
+  function toggleEnabled(): void {
+    toggle.mutate(
+      { id: format.id, enabled: !enabled },
+      {
+        onError: (err) =>
+          pushToast({
+            kind: "error",
+            title: t("customFormats.toggleErrorTitle"),
+            description: err.message,
+          }),
+      },
+    );
+  }
+
   return (
-    <li className="rounded-md border border-zinc-800 bg-zinc-900/40 p-3">
+    <li
+      className={`rounded-md border border-zinc-800 bg-zinc-900/40 p-3 ${
+        enabled ? "" : "opacity-60"
+      }`}
+    >
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleEnabled}
+              disabled={toggle.isPending}
+              role="switch"
+              aria-checked={enabled}
+              title={
+                enabled
+                  ? t("customFormats.toggleDisableHint")
+                  : t("customFormats.toggleEnableHint")
+              }
+              className={[
+                "inline-flex h-4 w-8 shrink-0 items-center rounded-full transition-colors",
+                enabled ? "bg-brand" : "bg-zinc-700",
+                "disabled:cursor-not-allowed disabled:opacity-50",
+              ].join(" ")}
+            >
+              <span
+                className={[
+                  "inline-block h-3 w-3 rounded-full bg-white transition-transform",
+                  enabled ? "translate-x-4" : "translate-x-0.5",
+                ].join(" ")}
+              />
+            </button>
             <p className="truncate text-sm font-medium text-zinc-100">
               {format.name}
             </p>
             <ScoreChip score={format.score} />
-            {format.is_factory_default && (
-              <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-zinc-500">
-                {t("customFormats.factory")}
-              </span>
-            )}
+            <OriginBadge format={format} />
             {format.is_user_modified && (
-              <span className="rounded bg-amber-950/40 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-amber-400">
+              <span
+                className="rounded bg-amber-950/40 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-amber-400"
+                title={t("customFormats.modifiedTooltip")}
+              >
                 {t("customFormats.modified")}
               </span>
             )}

@@ -136,6 +136,7 @@ class CustomFormatAdapter:
                         seed_key=seed_key,
                         is_factory_default=False,
                         is_user_modified=False,
+                        source_id=source.id,
                         **payload,
                     )
                 )
@@ -151,6 +152,7 @@ class CustomFormatAdapter:
             for key, value in payload.items():
                 setattr(existing, key, value)
             existing.is_factory_default = False
+            existing.source_id = source.id
             applied += 1
 
         await session.commit()

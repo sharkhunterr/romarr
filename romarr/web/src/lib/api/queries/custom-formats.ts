@@ -135,3 +135,31 @@ export function useDeleteCustomFormat(): UseMutationResult<
     },
   });
 }
+
+export interface ToggleCustomFormatEnabledVariables {
+  id: number;
+  enabled: boolean;
+}
+
+/**
+ * Dedicated on/off toggle that does NOT flag is_user_modified —
+ * a simple enable/disable is not a content edit, so community
+ * sync keeps overwriting the seed body normally after the flip.
+ */
+export function useToggleCustomFormatEnabled(): UseMutationResult<
+  CustomFormat,
+  ApiError,
+  ToggleCustomFormatEnabledVariables
+> {
+  const qc = useQueryClient();
+  return useMutation<CustomFormat, ApiError, ToggleCustomFormatEnabledVariables>({
+    mutationFn: ({ id, enabled }) =>
+      apiFetch<CustomFormat>(`/api/v3/customformat/${id}/enabled`, {
+        method: "PATCH",
+        json: { enabled },
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: CUSTOM_FORMATS_KEY });
+    },
+  });
+}

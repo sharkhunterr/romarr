@@ -363,6 +363,13 @@ class CustomFormatRead(_Base):
     is_factory_default: bool
     is_user_modified: bool
     seed_key: str | None
+    # Migration 0041 — enabled flag + source tracking.
+    enabled: bool = True
+    source_id: int | None = None
+    source_name: str | None = None
+    """Denormalized from ``pack_sources.name`` so the UI doesn't
+    have to make a second call. Populated by the router when the
+    row's source_id is set."""
     created_at: datetime
     updated_at: datetime
 
@@ -377,6 +384,7 @@ class CustomFormatUpdate(_Base):
     name: Annotated[str | None, Field(default=None, min_length=1, max_length=128)] = None
     score: Annotated[int | None, Field(default=None, ge=-10000, le=10000)] = None
     conditions: list[CustomFormatCondition] | None = None
+    enabled: bool | None = None
 
 
 # ---------------------------------------------------------------------------
