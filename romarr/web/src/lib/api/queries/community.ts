@@ -21,6 +21,7 @@ export type CommunitySource = components["schemas"]["SourceRead"];
 export type CommunityUpdatesFeed = components["schemas"]["UpdatesFeed"];
 export type CheckResponse = components["schemas"]["CheckResponse"];
 export type ApplyResponse = components["schemas"]["ApplyResponse"];
+export type PreviewResponse = components["schemas"]["PreviewResponse"];
 
 export type CommunityResourceType = "platform_pack" | "custom_format";
 
@@ -170,6 +171,20 @@ export function useCheckCommunitySource(): UseMutationResult<
       void qc.invalidateQueries({ queryKey: SOURCES_KEY });
       void qc.invalidateQueries({ queryKey: FEED_KEY });
     },
+  });
+}
+
+export function usePreviewCommunitySource(): UseMutationResult<
+  PreviewResponse,
+  ApiError,
+  number
+> {
+  return useMutation<PreviewResponse, ApiError, number>({
+    mutationFn: (sourceId) =>
+      apiFetch<PreviewResponse>(
+        `/api/v3/community/source/${sourceId}/preview`,
+        { method: "POST" },
+      ),
   });
 }
 

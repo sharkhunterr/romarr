@@ -21,11 +21,11 @@ from __future__ import annotations
 
 from romarr.community.adapters import register_adapter
 from romarr.community.custom_format_adapter import CustomFormatAdapter
+from romarr.community.platform_pack_adapter import PlatformPackAdapter
 
 # Auto-register on module import so the API endpoints and the
-# scheduled task never have to remember to call this. Additional
-# adapters (platform_pack wrapper, Romarr release virtual…) land
-# via the same pattern.
+# scheduled task never have to remember to call this.
 register_adapter(CustomFormatAdapter())
+register_adapter(PlatformPackAdapter())
 
 __all__ = ["register_adapter"]

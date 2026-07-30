@@ -2,7 +2,7 @@
  * One row of the Update Center sources table.
  */
 
-import { type ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -13,6 +13,8 @@ import {
   type CommunitySource,
 } from "@/lib/api/queries/community";
 import { useToastStore } from "@/lib/store/toast";
+
+import { PreviewModal } from "./PreviewModal";
 
 interface Props {
   source: CommunitySource;
@@ -26,6 +28,7 @@ export function CommunitySourceRow(props: Props): ReactElement {
   const patch = usePatchCommunitySource();
   const del = useDeleteCommunitySource();
   const pushToast = useToastStore((s) => s.push);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   function handleCheck(): void {
     check.mutate(source.id, {
@@ -154,6 +157,13 @@ export function CommunitySourceRow(props: Props): ReactElement {
           >
             {t("updateCenter.check")}
           </button>
+          <button
+            type="button"
+            onClick={() => setPreviewOpen(true)}
+            className="rounded border border-zinc-700 px-2 py-0.5 text-[0.65rem] text-zinc-200 hover:bg-zinc-800"
+          >
+            {t("updateCenter.preview")}
+          </button>
           {source.trust_status === "pending" && (
             <button
               type="button"
@@ -196,6 +206,12 @@ export function CommunitySourceRow(props: Props): ReactElement {
             {t("updateCenter.delete")}
           </button>
         </div>
+        {previewOpen && (
+          <PreviewModal
+            source={source}
+            onClose={() => setPreviewOpen(false)}
+          />
+        )}
       </td>
     </tr>
   );

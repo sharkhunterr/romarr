@@ -138,6 +138,26 @@ class ApplyResponse(BaseModel):
     error: str | None
 
 
+class PreviewItem(BaseModel):
+    """One item entry from a source's manifest — displayed in the
+    preview modal before the operator commits to an apply."""
+
+    path: str
+    seed_key: str | None
+    """Adapter-provided identifier. For custom_format sources this
+    doubles as the CustomFormat.seed_key the apply will upsert."""
+
+
+class PreviewResponse(BaseModel):
+    source: SourceRead
+    manifest_name: str | None
+    manifest_description: str
+    available_version: str | None
+    item_count: int
+    items: list[PreviewItem]
+    error: str | None
+
+
 class RomarrUpdate(BaseModel):
     current: str
     latest: str | None
@@ -276,6 +296,65 @@ async def check_source_now(
         manifest_name=result.manifest_name,
         item_count=result.item_count,
         error=result.error,
+    )
+
+
+@router.post("/source/{source_id}/preview", response_model=PreviewResponse)
+async def preview_source(
+    source_id: int,
+    _principal: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> PreviewResponse:
+    """Dry-run: fetch the manifest, return name/version/items list.
+    Never mutates the DB. Backs the "Aperçu" modal in the UI so
+    operators can see what an apply would land before committing —
+    especially important on a ``trust_status='pending'`` source."""
+    from pydantic import ValidationError as _VE
+
+    from romarr.community.adapters import FetchError, parse_manifest
+
+    row = await _get_source(db, source_id)
+    try:
+        manifest = await parse_manifest(row.url)
+    except FetchError as exc:
+        return PreviewResponse(
+            source=SourceRead.from_row(row),
+            manifest_name=None,
+            manifest_description="",
+            available_version=None,
+            item_count=0,
+            items=[],
+            error=str(exc),
+        )
+    except _VE as exc:
+        return PreviewResponse(
+            source=SourceRead.from_row(row),
+            manifest_name=None,
+            manifest_description="",
+            available_version=None,
+            item_count=0,
+            items=[],
+            error=f"invalid manifest: {exc}",
+        )
+
+    kind_mismatch: str | None = None
+    if manifest.kind != row.resource_type:
+        kind_mismatch = (
+            f"manifest declares kind={manifest.kind!r} — "
+            f"row expects {row.resource_type!r}"
+        )
+
+    return PreviewResponse(
+        source=SourceRead.from_row(row),
+        manifest_name=manifest.name,
+        manifest_description=manifest.description,
+        available_version=manifest.version,
+        item_count=len(manifest.items),
+        items=[
+            PreviewItem(path=item.path, seed_key=item.seed_key)
+            for item in manifest.items
+        ],
+        error=kind_mismatch,
     )
 
 

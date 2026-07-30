@@ -1883,6 +1883,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/community/source/{source_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Source
+         * @description Dry-run: fetch the manifest, return name/version/items list.
+         *     Never mutates the DB. Backs the "Aperçu" modal in the UI so
+         *     operators can see what an apply would land before committing —
+         *     especially important on a ``trust_status='pending'`` source.
+         */
+        post: operations["preview_source_api_v3_community_source__source_id__preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/community/source/{source_id}/apply": {
         parameters: {
             query?: never;
@@ -6360,25 +6383,21 @@ export interface components {
             /** Totalsizebytes */
             totalSizeBytes: number;
         };
-        /**
-         * PreviewItem
-         * @description One YAML's dry-run outcome from a preview call.
-         */
-        PreviewItem: {
-            /** Filename */
-            filename: string;
-            /** Source Url */
-            source_url: string;
-            /** Pack Version */
-            pack_version: string;
-            /** Action */
-            action: string;
-            /** Diff */
-            diff?: components["schemas"]["PackPlatformDiff"][];
-            /** Parsing Strategies Affected */
-            parsing_strategies_affected?: string[];
-            /** Error Message */
-            error_message?: string | null;
+        /** PreviewResponse */
+        PreviewResponse: {
+            source: components["schemas"]["SourceRead"];
+            /** Manifest Name */
+            manifest_name: string | null;
+            /** Manifest Description */
+            manifest_description: string;
+            /** Available Version */
+            available_version: string | null;
+            /** Item Count */
+            item_count: number;
+            /** Items */
+            items: components["schemas"]["romarr__api__routers__community__PreviewItem"][];
+            /** Error */
+            error: string | null;
         };
         /** PreviewResult */
         PreviewResult: {
@@ -6390,7 +6409,7 @@ export interface components {
              */
             fetched_at: string;
             /** Items */
-            items?: components["schemas"]["PreviewItem"][];
+            items?: components["schemas"]["romarr__platform_packs__api__sources__PreviewItem"][];
         };
         /**
          * ProviderCandidate
@@ -7730,6 +7749,17 @@ export interface components {
             /** Api Key */
             api_key?: string | null;
         };
+        /**
+         * PreviewItem
+         * @description One item entry from a source's manifest — displayed in the
+         *     preview modal before the operator commits to an apply.
+         */
+        romarr__api__routers__community__PreviewItem: {
+            /** Path */
+            path: string;
+            /** Seed Key */
+            seed_key: string | null;
+        };
         /** SourceCreate */
         romarr__api__routers__community__SourceCreate: {
             /** Name */
@@ -7788,6 +7818,26 @@ export interface components {
             category?: ("auth" | "protocol" | "connectivity" | "circuit_open" | "ok") | null;
             /** Message */
             message?: string | null;
+        };
+        /**
+         * PreviewItem
+         * @description One YAML's dry-run outcome from a preview call.
+         */
+        romarr__platform_packs__api__sources__PreviewItem: {
+            /** Filename */
+            filename: string;
+            /** Source Url */
+            source_url: string;
+            /** Pack Version */
+            pack_version: string;
+            /** Action */
+            action: string;
+            /** Diff */
+            diff?: components["schemas"]["PackPlatformDiff"][];
+            /** Parsing Strategies Affected */
+            parsing_strategies_affected?: string[];
+            /** Error Message */
+            error_message?: string | null;
         };
         /** SourceCreate */
         romarr__platform_packs__api__sources__SourceCreate: {
@@ -11681,6 +11731,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CheckResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_source_api_v3_community_source__source_id__preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewResponse"];
                 };
             };
             /** @description Validation Error */
