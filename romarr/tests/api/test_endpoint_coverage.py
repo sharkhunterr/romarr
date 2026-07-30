@@ -61,6 +61,7 @@ PUBLIC_PATHS: set[str] = {
 # "missing require_role".
 TIERED_PATHS: set[str] = {
     "/api/v3/system/status",
+    "/api/v3/system/version-check",
     "/api/v3/health",
 }
 
