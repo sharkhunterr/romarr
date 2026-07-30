@@ -149,6 +149,103 @@ def test_bracket_heavy_title_still_matches() -> None:
     assert match[1] >= 85
 
 
+# ---------------------------------------------------------------------------
+# Subtitle-separator guard — a monitored game with a base-only title
+# ("The Legend of Zelda") must NOT match a release whose title extends
+# it via " - Subtitle" ("The Legend of Zelda - Skyward Sword"). Without
+# this guard WRatio's token_set_ratio scored ≥ 85 on the substring
+# overlap and cutoff-round auto-grab downloaded the wrong game.
+# ---------------------------------------------------------------------------
+
+
+def test_subtitle_separator_dash_rejects_wrong_sub_series() -> None:
+    """A NES-era ``The Legend of Zelda`` must NOT match a Wii U
+    ``The Legend of Zelda - Skyward Sword`` release."""
+    games = (
+        MonitoredGame(id=1, platform_id=42, title="The Legend of Zelda"),
+    )
+    match = resolve_to_game(
+        title="The Legend of Zelda - Skyward Sword [SOUE01]",
+        hash_sha1=None,
+        hash_crc32=None,
+        monitored_games=games,
+        dat_lookup=_none_dat,  # type: ignore[arg-type]
+    )
+    assert match is None
+
+
+def test_subtitle_separator_dash_rejects_minish_cap_style() -> None:
+    """``The Legend of Zelda`` must NOT match ``Legend of Zelda - The
+    Minish Cap`` (article-dropped variant with a subtitle) — that's a
+    different game (GBA) from the target (NES)."""
+    games = (
+        MonitoredGame(id=1, platform_id=42, title="The Legend of Zelda"),
+    )
+    match = resolve_to_game(
+        title="Legend of Zelda - The Minish Cap (World) (Aftermarket) (Pirate)",
+        hash_sha1=None,
+        hash_crc32=None,
+        monitored_games=games,
+        dat_lookup=_none_dat,  # type: ignore[arg-type]
+    )
+    assert match is None
+
+
+def test_subtitle_separator_colon_rejects_wrong_sub_series() -> None:
+    """The colon+space form (``Zelda: Ocarina of Time``) is treated the
+    same as the dash form."""
+    games = (
+        MonitoredGame(id=1, platform_id=42, title="The Legend of Zelda"),
+    )
+    match = resolve_to_game(
+        title="The Legend of Zelda: Ocarina of Time (USA)",
+        hash_sha1=None,
+        hash_crc32=None,
+        monitored_games=games,
+        dat_lookup=_none_dat,  # type: ignore[arg-type]
+    )
+    assert match is None
+
+
+def test_subtitle_separator_allows_base_only_release() -> None:
+    """A release with the base title only (no subtitle) still matches
+    — the guard only fires when the release ADDS a subtitle."""
+    games = (
+        MonitoredGame(id=1, platform_id=42, title="The Legend of Zelda"),
+    )
+    match = resolve_to_game(
+        title="The Legend of Zelda (USA) (Rev 1)",
+        hash_sha1=None,
+        hash_crc32=None,
+        monitored_games=games,
+        dat_lookup=_none_dat,  # type: ignore[arg-type]
+    )
+    assert match is not None
+    assert match[0].id == 1
+
+
+def test_subtitle_separator_allows_when_game_itself_has_subtitle() -> None:
+    """When the monitored game's title itself carries a subtitle
+    (``Zelda: Ocarina of Time``), a release with the same subtitle
+    must still match — the guard applies only to base-title games."""
+    games = (
+        MonitoredGame(
+            id=1,
+            platform_id=42,
+            title="The Legend of Zelda: Ocarina of Time",
+        ),
+    )
+    match = resolve_to_game(
+        title="The Legend of Zelda - Ocarina of Time (USA)",
+        hash_sha1=None,
+        hash_crc32=None,
+        monitored_games=games,
+        dat_lookup=_none_dat,  # type: ignore[arg-type]
+    )
+    assert match is not None
+    assert match[0].id == 1
+
+
 def test_picks_a_match_among_close_titles() -> None:
     """When several similar titles all clear the threshold, the matcher
     picks one deterministically. WRatio's partial-substring scoring

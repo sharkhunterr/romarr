@@ -41,10 +41,111 @@ FUZZY_THRESHOLD = 85
 # raw title for tag / region / language extraction — this scrub
 # only affects the fuzzy-name comparator.
 _BRACKET_RE = re.compile(r"\[[^\]]*\]")
+_PAREN_RE = re.compile(r"\([^)]*\)")
+
+# Anything after ``" - "`` or a colon+space in a normalised release
+# title is a subtitle — treating it as part of the title lets
+# WRatio's token_set_ratio give ``100`` when the target is the
+# BASE title ("The Legend of Zelda" vs "The Legend of Zelda -
+# Skyward Sword"), auto-grabbing an entirely different game.
+# The dash form requires spaces on both sides (release titles use
+# " - " as a segment separator; a bare "-" would false-positive on
+# hyphenated names). Colon allows no leading space so
+# ``"Zelda: Ocarina of Time"`` splits, but still requires a
+# following space so URLs / times don't split.
+_SUBTITLE_SPLIT_RE = re.compile(r"\s+-\s+|:\s+")
 
 
 def _processor(text: str) -> str:
     return _BRACKET_RE.sub(" ", text).lower().strip()
+
+
+def _base_title(text: str) -> str:
+    """Return the release/game title stripped of brackets, parens,
+    and everything after the first subtitle separator.
+
+    Used by :func:`_is_distinct_subtitle` to detect the "generic
+    franchise name matches a specific sub-title release" false
+    positive. Symmetric — applied to both sides so a monitored
+    game whose title itself carries a subtitle stays comparable
+    against its own release variants.
+    """
+    scrubbed = _PAREN_RE.sub(" ", _BRACKET_RE.sub(" ", text))
+    return _SUBTITLE_SPLIT_RE.split(scrubbed, maxsplit=1)[0].lower().strip()
+
+
+def _has_subtitle(text: str) -> bool:
+    scrubbed = _PAREN_RE.sub(" ", _BRACKET_RE.sub(" ", text))
+    return bool(_SUBTITLE_SPLIT_RE.search(scrubbed))
+
+
+# Common leading articles are noise for the base-title comparison —
+# "Legend of Zelda" vs "The Legend of Zelda" is the same base.
+_LEADING_ARTICLE_RE = re.compile(r"^(?:the|a|an)\s+")
+
+
+def _normalise_base(text: str) -> str:
+    """Base title with leading article stripped, for the guard's
+    similarity comparison."""
+    return _LEADING_ARTICLE_RE.sub("", _base_title(text)).strip()
+
+
+def _bases_align(release_base_norm: str, game_base_norm: str) -> bool:
+    """True when the two normalised bases look like the same title.
+    Uses ``token_set_ratio >= 90`` so ``legend of zelda`` matches
+    ``legend of zelda`` after article-strip even when one side
+    dropped "the"."""
+    if not release_base_norm or not game_base_norm:
+        return False
+    if release_base_norm == game_base_norm:
+        return True
+    return fuzz.token_set_ratio(release_base_norm, game_base_norm) >= 90
+
+
+def _is_distinct_subtitle(
+    release_title: str, game_title: str, game_alt_names: tuple[str, ...]
+) -> bool:
+    """True when the release adds a subtitle that the target game
+    doesn't have, and the release's *base* title (before its
+    subtitle separator) is fuzzily equal to the target's title.
+    Meaning: WRatio only cleared threshold because the target is
+    a token-subset of the release — and the release names a
+    DIFFERENT sub-series game.
+
+    Concrete cases this catches:
+
+      * game ``"The Legend of Zelda"`` (NES) vs release
+        ``"The Legend of Zelda - Skyward Sword [SOUE01]"`` — the
+        Skyward Sword release names a distinct Wii U game.
+      * game ``"The Legend of Zelda"`` vs release ``"Legend of
+        Zelda - The Minish Cap (World) (Aftermarket)"`` — the
+        Minish Cap is a distinct GBA game (leading "The" dropped
+        by the aftermarket packager, hence the fuzzy compare).
+
+    Passes through when:
+      * the target's title itself carries a subtitle
+        (``Zelda: Ocarina of Time`` — both sides align on the
+        full title, no distinctness signal from the subtitle),
+      * the release has no subtitle at all
+        (``The Legend of Zelda (USA) (Rev 1)``),
+      * one of the game's alt-names IS the release's base title
+        (operator-declared alias — trust it).
+    """
+    if _has_subtitle(game_title):
+        return False
+    if not _has_subtitle(release_title):
+        return False
+    release_base_norm = _normalise_base(release_title)
+    game_base_norm = _normalise_base(game_title)
+    if not release_base_norm or not game_base_norm:
+        return False
+    # Alt-name exact-match escape hatch: an operator-declared alias
+    # that equals the release base title means "yes, this release
+    # IS this game" even if it looks like a subtitle extension.
+    for alt in game_alt_names:
+        if _base_title(alt) == release_base_norm or _base_title(alt) == _base_title(release_title):
+            return False
+    return _bases_align(release_base_norm, game_base_norm)
 
 
 def _gather_searchable(game: MonitoredGame) -> list[str]:
@@ -99,6 +200,15 @@ def resolve_to_game(
         if result is None:
             continue
         _, score, _ = result
+        # Subtitle-separator guard: reject bases like "The Legend
+        # of Zelda" fuzzy-matching "The Legend of Zelda - Skyward
+        # Sword" (Wii Zelda) or "Legend of Zelda - The Minish
+        # Cap (Aftermarket) (Pirate)" (GBA hack). Both cleared
+        # WRatio ≥ 85 via token-subset — but the release names a
+        # different sub-series game.
+        game = monitored_games[idx]
+        if _is_distinct_subtitle(title, game.title, game.alt_names):
+            continue
         if best is None or score > best[1]:
             best = (idx, score)
 

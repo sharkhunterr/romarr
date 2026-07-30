@@ -182,5 +182,29 @@
         "values": "\\[MiNERVA Archive\\]"
       }
     ]
+  },
+  {
+    "seed_key": "aftermarket-bootleg-pirate",
+    "name": "Aftermarket / Bootleg / Pirate",
+    "score": -10000,
+    "conditions": [
+      {
+        "field": "title",
+        "operator": "matches_regex",
+        "values": "\\b(?:Aftermarket|Bootleg|Pirate|Reproduction|Repro)\\b"
+      }
+    ]
+  },
+  {
+    "seed_key": "homebrew-unlicensed",
+    "name": "Homebrew / Unlicensed",
+    "score": -1000,
+    "conditions": [
+      {
+        "field": "title",
+        "operator": "matches_regex",
+        "values": "\\b(?:Homebrew|Unlicensed|Unl|Demo)\\b"
+      }
+    ]
   }
 ]

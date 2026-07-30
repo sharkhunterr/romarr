@@ -410,15 +410,49 @@ def run_pipeline(
             title_match_score=title_match_score,
         )
 
+    # ---- 4b: File-extension platform-mismatch guard --------------------------
+    # If the release's file_format is DECLARED NATIVE for some
+    # other platform (e.g. ``.wbfs`` is Wii / Wii U only) and NOT
+    # native for the target platform, the fuzzy title match landed
+    # on the wrong game. Real case: "The Legend of Zelda" (NES)
+    # matched "The Legend of Zelda - Skyward Sword [SOUE01].wbfs"
+    # (Wii U). Hard-reject so cutoff-round auto-grab can't dispatch
+    # it. If the extension is not native ANYWHERE (unknown to
+    # PlatformFormatBounds), we stay silent — that's the pipeline's
+    # existing "no opinion" convention.
+    fmt = (file_format or result.file_format or "").lower().lstrip(".")
+    if fmt and library_state.platform_format_bounds:
+        target_native = {
+            b.platform_id
+            for b in library_state.platform_format_bounds
+            if b.extension.lower().lstrip(".") == fmt
+        }
+        if target_native and matched_game.platform_id not in target_native:
+            return _reject(
+                result=result,
+                code=RejectionCode.PLATFORM_MISMATCH,
+                field="file_format",
+                message=(
+                    f"file extension {fmt!r} is native to another "
+                    f"platform (ids={sorted(target_native)}), not the "
+                    f"target platform id={matched_game.platform_id}"
+                ),
+                matched_game_id=matched_game.id,
+                matched_release_id=matched_release_id,
+                platform_id=matched_game.platform_id,
+                title_match_score=title_match_score,
+            )
+
     # ─────────────────────────────────────────────────────────────
     # Slice 456 — soft scoring. Past this point NOTHING hard-rejects:
     # every gate that used to ``return _reject(...)`` now appends a
     # negative ScoreContribution (a malus) instead. The candidate
     # always reaches ``_accept`` with a full ``score_breakdown``;
     # ``would_auto_reject`` is derived from whether the total lands
-    # below ``AUTO_GRAB_FLOOR``. The two hard rejects above
-    # (no-game-match, blocklist) stay — wrong platform / explicitly
-    # banned content shouldn't even be ranked.
+    # below ``AUTO_GRAB_FLOOR``. The three hard rejects above
+    # (no-game-match, blocklist, extension-platform-mismatch) stay —
+    # wrong platform / explicitly banned content shouldn't even be
+    # ranked.
     # ─────────────────────────────────────────────────────────────
     contributions: list[ScoreContribution] = []
 

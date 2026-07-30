@@ -377,6 +377,175 @@ def test_blocklist_hash_short_circuits(
 
 
 # ---------------------------------------------------------------------------
+# File-extension platform-mismatch hard reject
+# ---------------------------------------------------------------------------
+
+
+def test_file_extension_native_to_other_platform_rejects(
+    make_result: Callable[..., Any],
+    make_state: Callable[..., LibraryState],
+    quality_profile: Any,
+    region_profile: Any,
+    dump_profile: Any,
+    language_profile: Any,
+    custom_formats: list[Any],
+) -> None:
+    """Real case: user monitors ``The Legend of Zelda`` on the NES
+    (platform_id=1). A search candidate ``The Legend of Zelda -
+    Skyward Sword [SOUE01].wbfs`` — WBFS is native to Wii / Wii U
+    (platform_id=2), NEVER to NES. Fuzzy title matched (subset), but
+    the pipeline must PLATFORM_MISMATCH-reject so cutoff auto-grab
+    doesn't dispatch a Wii disc image against a NES game.
+    """
+    from romarr.domain.enums import DumpStatus, NamingConvention
+    from romarr.search.state import IndexerMeta, MonitoredGame, MonitoredRelease
+
+    games = (MonitoredGame(id=1, platform_id=1, title="The Legend of Zelda"),)
+    releases = (
+        MonitoredRelease(
+            id=10,
+            game_id=1,
+            region="USA",
+            languages=("en",),
+            dump_status=DumpStatus.VERIFIED,
+            naming_convention=NamingConvention.NO_INTRO,
+            file_format="nes",
+        ),
+    )
+    # Native format table: .nes native to NES (id=1), .wbfs native
+    # to Wii (id=2). No overlap.
+    bounds = (
+        PlatformFormatBounds(platform_id=1, extension="nes"),
+        PlatformFormatBounds(platform_id=2, extension="wbfs"),
+    )
+    state = make_state(
+        games=games,
+        releases=releases,
+        bounds=bounds,
+        indexer_meta=(IndexerMeta(id=1, priority=5),),
+    )
+    candidate = run_pipeline(
+        result=make_result(
+            title="The Legend of Zelda (USA)",
+            size_bytes=8_000_000_000,
+        ),
+        library_state=state,
+        dat_lookup=none_dat,
+        quality_profile=quality_profile,
+        region_profile=region_profile,
+        dump_profile=dump_profile,
+        language_profile=language_profile,
+        custom_formats=custom_formats,
+        file_format="wbfs",
+    )
+    assert candidate.rejection is not None
+    assert candidate.rejection.code == RejectionCode.PLATFORM_MISMATCH
+    assert "wbfs" in candidate.rejection.message
+
+
+def test_file_extension_native_to_target_platform_accepts(
+    make_result: Callable[..., Any],
+    make_state: Callable[..., LibraryState],
+    quality_profile: Any,
+    region_profile: Any,
+    dump_profile: Any,
+    language_profile: Any,
+    custom_formats: list[Any],
+) -> None:
+    """Sanity: when the extension IS native to the target platform,
+    the pipeline runs normally (no PLATFORM_MISMATCH)."""
+    from romarr.domain.enums import DumpStatus, NamingConvention
+    from romarr.search.state import IndexerMeta, MonitoredGame, MonitoredRelease
+
+    games = (MonitoredGame(id=1, platform_id=1, title="Sonic the Hedgehog"),)
+    releases = (
+        MonitoredRelease(
+            id=10,
+            game_id=1,
+            region="USA",
+            languages=("en",),
+            dump_status=DumpStatus.VERIFIED,
+            naming_convention=NamingConvention.NO_INTRO,
+            file_format="md",
+        ),
+    )
+    bounds = (
+        PlatformFormatBounds(platform_id=1, extension="md"),
+        PlatformFormatBounds(platform_id=2, extension="wbfs"),
+    )
+    state = make_state(
+        games=games,
+        releases=releases,
+        bounds=bounds,
+        indexer_meta=(IndexerMeta(id=1, priority=5),),
+    )
+    candidate = run_pipeline(
+        result=make_result(size_bytes=2_000_000),
+        library_state=state,
+        dat_lookup=none_dat,
+        quality_profile=quality_profile,
+        region_profile=region_profile,
+        dump_profile=dump_profile,
+        language_profile=language_profile,
+        custom_formats=custom_formats,
+        file_format="md",
+    )
+    assert candidate.rejection is None
+
+
+def test_file_extension_unknown_to_bounds_no_opinion(
+    make_result: Callable[..., Any],
+    make_state: Callable[..., LibraryState],
+    quality_profile: Any,
+    region_profile: Any,
+    dump_profile: Any,
+    language_profile: Any,
+    custom_formats: list[Any],
+) -> None:
+    """When the extension isn't native to any known platform (e.g.
+    ``.zip`` archive), the guard stays silent — the pipeline's
+    existing "no opinion" convention on bounds carries through."""
+    from romarr.domain.enums import DumpStatus, NamingConvention
+    from romarr.search.state import IndexerMeta, MonitoredGame, MonitoredRelease
+
+    games = (MonitoredGame(id=1, platform_id=1, title="Sonic the Hedgehog"),)
+    releases = (
+        MonitoredRelease(
+            id=10,
+            game_id=1,
+            region="USA",
+            languages=("en",),
+            dump_status=DumpStatus.VERIFIED,
+            naming_convention=NamingConvention.NO_INTRO,
+            file_format="md",
+        ),
+    )
+    bounds = (PlatformFormatBounds(platform_id=1, extension="md"),)
+    state = make_state(
+        games=games,
+        releases=releases,
+        bounds=bounds,
+        indexer_meta=(IndexerMeta(id=1, priority=5),),
+    )
+    candidate = run_pipeline(
+        result=make_result(size_bytes=2_000_000),
+        library_state=state,
+        dat_lookup=none_dat,
+        quality_profile=quality_profile,
+        region_profile=region_profile,
+        dump_profile=dump_profile,
+        language_profile=language_profile,
+        custom_formats=custom_formats,
+        file_format="zip",
+    )
+    # ``.zip`` isn't native to any platform in bounds → guard silent.
+    assert (
+        candidate.rejection is None
+        or candidate.rejection.code != RejectionCode.PLATFORM_MISMATCH
+    )
+
+
+# ---------------------------------------------------------------------------
 # T021 — size bounds
 # ---------------------------------------------------------------------------
 
