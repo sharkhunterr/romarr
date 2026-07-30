@@ -33,6 +33,7 @@ from romarr.api.routers.auth import router as auth_router
 from romarr.api.routers.backup import router as backup_router
 from romarr.backup.api import router as backup_bundle_router
 from romarr.api.routers.calendar import router as calendar_router
+from romarr.api.routers.community import router as community_router
 from romarr.api.routers.filesystem import router as filesystem_router
 from romarr.api.routers.cover import router as cover_router
 from romarr.api.routers.game import router as game_router
@@ -759,6 +760,8 @@ def create_app(*, database_url: str | None = None) -> FastAPI:
     app.include_router(platform_pack_config_router)
     app.include_router(platform_pack_platforms_router)
     app.include_router(rom_packs_router)
+    # Unified Update Center — /api/v3/community/*
+    app.include_router(community_router)
     app.include_router(applications_router)
     # Grabarr wizard must mount BEFORE indexers_router so its
     # ``/api/v3/indexer/grabarr`` POST handler wins over indexers_router's
