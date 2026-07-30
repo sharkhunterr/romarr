@@ -116,6 +116,13 @@ _LAST_STATUS_CHECK = (
     + ")"
 )
 
+# Migration 0040 — the ``pack_sources`` table generalised to
+# host every community-source kind (platform packs, custom
+# formats, more later). ``resource_type`` is the discriminator.
+_RESOURCE_TYPE_VALUES = ("platform_pack", "custom_format")
+
+_TRUST_STATUS_VALUES = ("pending", "trusted")
+
 _PRIORITY_VALUES = ("builtin", "community")
 _PRIORITY_CHECK = (
     "priority IN (" + ",".join(f"'{v}'" for v in _PRIORITY_VALUES) + ")"
@@ -155,18 +162,34 @@ class PlatformPackConfig(Base, TimestampMixin):
 
 
 class PackSource(Base, TimestampMixin):
-    """Remote source (typically a GitHub URL) that ships one or more
-    platform-pack YAML bodies.
+    """Remote community source (typically a GitHub URL).
 
-    Two ``kind``s :
-      * ``raw`` — the URL points directly at a single YAML file
-        (``raw.githubusercontent.com/...``, or any HTTPS ``*.yaml``).
+    Row stores one URL the operator has registered; the Update
+    Center syncs from it periodically and tracks whether a new
+    version is available.
+
+    ``resource_type`` is the discriminator introduced by migration
+    0040 — ``platform_pack`` covers the original YAML-directory
+    format, ``custom_format`` covers the manifest-based JSON packs
+    the Update Center added. Adapters per resource_type handle the
+    parse / validate / apply pipeline.
+
+    ``kind`` distinguishes the URL shape :
+      * ``raw`` — the URL points directly at a single body file
+        (``raw.githubusercontent.com/...``, or any HTTPS resource).
       * ``github_dir`` — the URL points at a GitHub directory; the
-        sync walks it and ingests every ``*.yaml`` / ``*.yml`` child.
+        sync walks it and ingests every child that matches the
+        adapter's file convention.
 
-    ``kind`` is auto-detected at add-time via
-    :func:`romarr.platform_packs.remote.classify_url` and can be
-    overridden by the client if the heuristic misfires.
+    ``last_seen_version`` / ``installed_version`` — the two halves
+    the Update Center badge reads. A source with
+    ``last_seen_version != installed_version`` (and both non-null)
+    contributes to the "N mises à jour" counter.
+
+    ``trust_status`` — ``pending`` for a newly added source that
+    hasn't had its manifest previewed / accepted yet, ``trusted``
+    after the operator's first apply. Sync fetches happen either way
+    (they're read-only); apply is blocked while ``pending``.
     """
 
     __tablename__ = "pack_sources"
@@ -175,7 +198,16 @@ class PackSource(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     url: Mapped[str] = mapped_column(String, nullable=False)
     kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    resource_type: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="platform_pack"
+    )
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    auto_check: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True
+    )
+    trust_status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="trusted"
+    )
 
     last_synced_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -185,11 +217,29 @@ class PackSource(Base, TimestampMixin):
     last_applied_count: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0
     )
+    last_seen_version: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+    installed_version: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
 
     __table_args__ = (
         UniqueConstraint("name", name="uq_pack_sources_name"),
         CheckConstraint(_SOURCE_KIND_CHECK, name="ck_pack_sources_kind"),
         CheckConstraint(_LAST_STATUS_CHECK, name="ck_pack_sources_last_status"),
+        CheckConstraint(
+            "resource_type IN ("
+            + ",".join(f"'{v}'" for v in _RESOURCE_TYPE_VALUES)
+            + ")",
+            name="ck_pack_sources_resource_type",
+        ),
+        CheckConstraint(
+            "trust_status IN ("
+            + ",".join(f"'{v}'" for v in _TRUST_STATUS_VALUES)
+            + ")",
+            name="ck_pack_sources_trust_status",
+        ),
     )
 
 
