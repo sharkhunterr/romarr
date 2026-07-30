@@ -2723,24 +2723,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v3/customformat": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List customformat (any authenticated user). */
-        get: operations["list_rows_api_v3_customformat_get"];
-        put?: never;
-        /** Create a customformat (admin only). */
-        post: operations["create_row_api_v3_customformat_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v3/customformat/{row_id}": {
         parameters: {
             query?: never;
@@ -2755,6 +2737,58 @@ export interface paths {
         post?: never;
         /** Delete a customformat (admin only). ``?force=true`` is a future-extension knob: today the cascade detection still 409s when the profile is bound, because the library.*_profile_id columns are NOT NULL — a force-unbind would require either a schema change to allow NULL or a 'substitute with factory default' rebind. */
         delete: operations["delete_row_api_v3_customformat__row_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/customformat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List custom formats with source name enrichment (any authenticated user). */
+        get: operations["list_custom_formats_api_v3_customformat_get"];
+        put?: never;
+        /** Create a customformat (admin only). */
+        post: operations["create_row_api_v3_customformat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/customformat/{item_id}/enabled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Toggle a Custom Format on/off without flagging is_user_modified. A simple enable/disable is not a content edit — community sync keeps overwriting the seed body normally after the flip. */
+        patch: operations["toggle_enabled_api_v3_customformat__item_id__enabled_patch"];
+        trace?: never;
+    };
+    "/api/v3/customformat/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one custom format (any authenticated user). */
+        get: operations["read_custom_format_api_v3_customformat__item_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -4018,6 +4052,15 @@ export interface components {
             is_user_modified: boolean;
             /** Seed Key */
             seed_key: string | null;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Source Id */
+            source_id?: number | null;
+            /** Source Name */
+            source_name?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -7750,6 +7793,11 @@ export interface components {
             url: string;
             /** Api Key */
             api_key?: string | null;
+        };
+        /** _ToggleEnabledRequest */
+        _ToggleEnabledRequest: {
+            /** Enabled */
+            enabled: boolean;
         };
         /**
          * PreviewItem
@@ -13944,61 +13992,6 @@ export interface operations {
             };
         };
     };
-    list_rows_api_v3_customformat_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomFormatRead"][];
-                };
-            };
-        };
-    };
-    create_row_api_v3_customformat_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomFormatRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     read_row_api_v3_customformat__row_id__get: {
         parameters: {
             query?: never;
@@ -14101,6 +14094,127 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_custom_formats_api_v3_customformat_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFormatRead"][];
+                };
+            };
+        };
+    };
+    create_row_api_v3_customformat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFormatRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    toggle_enabled_api_v3_customformat__item_id__enabled_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["_ToggleEnabledRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFormatRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_custom_format_api_v3_customformat__item_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFormatRead"];
+                };
             };
             /** @description Validation Error */
             422: {

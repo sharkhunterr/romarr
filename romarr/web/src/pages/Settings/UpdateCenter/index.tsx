@@ -82,27 +82,10 @@ export function UpdateCenterPage(): ReactElement {
         </div>
       )}
       {sources.isSuccess && sources.data.length > 0 && (
-        <div className="overflow-x-auto rounded-md border border-zinc-800">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-zinc-900 text-[0.65rem] uppercase tracking-widest text-zinc-500">
-              <tr>
-                <th className="px-3 py-2">{t("updateCenter.col.name")}</th>
-                <th className="px-3 py-2">{t("updateCenter.col.type")}</th>
-                <th className="px-3 py-2">{t("updateCenter.col.status")}</th>
-                <th className="px-3 py-2">
-                  {t("updateCenter.col.version")}
-                </th>
-                <th className="px-3 py-2 text-right">
-                  {t("updateCenter.col.actions")}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-900">
-              {sources.data.map((src) => (
-                <CommunitySourceRow key={src.id} source={src} />
-              ))}
-            </tbody>
-          </table>
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {sources.data.map((src) => (
+            <CommunitySourceRow key={src.id} source={src} />
+          ))}
         </div>
       )}
 
