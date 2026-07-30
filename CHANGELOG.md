@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.35](https://github.com/sharkhunterr/romarr/-/compare/v0.14.34...v0.14.35) (2026-07-30)
+
+
+### Features
+
+* **game:** post-add edit modal for monitoring + library binding ([2f22772](https://github.com/sharkhunterr/romarr/-/commit/2f22772a0219f35cc535d952fa259decf4efe1c5))
+
+
+### Bug Fixes
+
+* **search:** platform-mismatch guards for wrong-platform files ([98bcbf3](https://github.com/sharkhunterr/romarr/-/commit/98bcbf363ea009861fb8cb4b810ba1c7ebd5d487))
+
 ### [0.14.34](https://github.com/sharkhunterr/romarr/-/compare/v0.14.33...v0.14.34) (2026-07-30)
 
 ### [0.14.33](https://github.com/sharkhunterr/romarr/-/compare/v0.14.32...v0.14.33) (2026-07-30)
