@@ -13,6 +13,8 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useCustomFormats } from "@/lib/api/queries/custom-formats";
 
+import { AddCommunitySourceModal } from "@/pages/Settings/UpdateCenter/AddCommunitySourceModal";
+
 import { CustomFormatEditorModal } from "./CustomFormatEditorModal";
 import { CustomFormatRow } from "./CustomFormatRow";
 
@@ -20,6 +22,7 @@ export function CustomFormatsTab(): ReactElement {
   const { t } = useTranslation("settings");
   const formats = useCustomFormats();
   const [createOpen, setCreateOpen] = useState(false);
+  const [addUrlOpen, setAddUrlOpen] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -27,17 +30,33 @@ export function CustomFormatsTab(): ReactElement {
         <p className="text-sm text-zinc-400">
           {t("customFormats.subtitle")}
         </p>
-        <button
-          type="button"
-          onClick={() => setCreateOpen(true)}
-          className="shrink-0 rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        >
-          {t("customFormats.create.openButton")}
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setAddUrlOpen(true)}
+            className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-800"
+            title={t("updateCenter.addSource")}
+          >
+            + {t("updateCenter.addSource")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            className="rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-zinc-900 hover:bg-brand-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            {t("customFormats.create.openButton")}
+          </button>
+        </div>
       </div>
 
       {createOpen && (
         <CustomFormatEditorModal onClose={() => setCreateOpen(false)} />
+      )}
+      {addUrlOpen && (
+        <AddCommunitySourceModal
+          prefilledResourceType="custom_format"
+          onClose={() => setAddUrlOpen(false)}
+        />
       )}
 
       {formats.isLoading && <ListSkeleton rows={4} />}

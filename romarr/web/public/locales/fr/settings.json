@@ -18,7 +18,63 @@
     "general": "Général",
     "logs": "Logs",
     "rom-packs": "Réglages des packs",
-    "backup": "Sauvegarde & Restauration"
+    "backup": "Sauvegarde & Restauration",
+    "updates": "Mises à jour"
+  },
+  "updateCenter": {
+    "title": "Mises à jour communautaires",
+    "subtitle": "Ajoute des URL de manifests (custom formats, plateformes, …). Romarr vérifie régulièrement et te prévient quand une nouvelle version est disponible.",
+    "loading": "Chargement des sources…",
+    "addSource": "Ajouter une URL",
+    "addModalTitle": "Ajouter une source communautaire",
+    "addModalHint": "L'URL doit pointer vers un manifest.json respectant le contrat Romarr. Après ajout, un premier check est lancé automatiquement.",
+    "addResourceType": "Type",
+    "addName": "Nom",
+    "addNamePlaceholder": "Ex. TRaSH-Guides ROMs",
+    "addUrl": "URL du manifest",
+    "addUrlHint": "HTTPS uniquement. Ex. https://raw.githubusercontent.com/…/manifest.json",
+    "addSubmit": "Ajouter et vérifier",
+    "addSubmitting": "Ajout…",
+    "addSuccessTitle": "Source ajoutée",
+    "addSuccessBody": "{{name}} — version {{version}}, {{count}} élément(s). Confirme depuis la ligne pour activer l'apply.",
+    "addWarnTitle": "Source ajoutée mais check impossible",
+    "addErrorTitle": "Ajout impossible",
+    "empty": {
+      "title": "Aucune source communautaire enregistrée.",
+      "hint": "Ajoute une URL de manifest depuis le bouton en haut à droite, ou depuis les pages Plateformes / Custom Formats."
+    },
+    "col": {
+      "name": "Nom",
+      "type": "Type",
+      "status": "Statut",
+      "version": "Version",
+      "actions": "Actions"
+    },
+    "type": {
+      "custom_format": "Custom Format",
+      "platform_pack": "Pack Plateforme"
+    },
+    "status": {
+      "ok": "OK",
+      "partial": "Partiel",
+      "error": "Erreur",
+      "never": "Jamais synchronisée"
+    },
+    "trustPending": "en attente",
+    "trustPendingHint": "Consulte le preview avant d'accorder ta confiance.",
+    "check": "Vérifier",
+    "trust": "Faire confiance",
+    "apply": "Appliquer",
+    "enable": "Activer",
+    "disable": "Désactiver",
+    "delete": "Supprimer",
+    "cancel": "Annuler",
+    "deleteConfirm": "Supprimer la source « {{name}} » ? Les éléments déjà appliqués restent en place.",
+    "deleteErrorTitle": "Suppression impossible",
+    "checkErrorTitle": "Vérification impossible",
+    "applySuccessTitle": "Mise à jour appliquée",
+    "applySuccessBody": "{{name}} : {{count}} élément(s) mis à jour.",
+    "applyErrorTitle": "Application impossible"
   },
   "logs": {
     "title": "Logs système",

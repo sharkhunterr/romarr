@@ -6,6 +6,26 @@
     "upToDate": "Version {{version}} — à jour",
     "updateAvailableTooltip": "v{{current}} installée → v{{latest}} disponible. Clic pour voir la release."
   },
+  "updateCenter": {
+    "upToDate": "Version {{version}} — à jour ({{sources}} sources communautaires)",
+    "upToDateShort": "à jour",
+    "error": "Erreur",
+    "count_one": "{{count}} maj",
+    "count_other": "{{count}} maj",
+    "popoverTitle": "Mises à jour disponibles",
+    "communitySection": "Sources communautaires",
+    "noCommunityUpdates": "Aucune source communautaire n'a de mise à jour.",
+    "viewRelease": "Voir la release",
+    "apply": "Appliquer",
+    "applyHint": "Appliquer cette version au système.",
+    "trustPending": "en attente",
+    "trustPendingHint": "Confirme cette source depuis Paramètres → Mises à jour avant d'appliquer.",
+    "manageSources": "Gérer les sources →",
+    "close": "Fermer",
+    "applySuccessTitle": "Mise à jour appliquée",
+    "applySuccessBody": "{{name}} : {{count}} élément(s) mis à jour.",
+    "applyErrorTitle": "Application impossible"
+  },
   "nav": {
     "primary": "Navigation principale",
     "home": "Accueil",

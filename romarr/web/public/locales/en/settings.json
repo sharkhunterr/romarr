@@ -18,7 +18,63 @@
     "general": "General",
     "logs": "Logs",
     "rom-packs": "ROM Pack Defaults",
-    "backup": "Backup & Restore"
+    "backup": "Backup & Restore",
+    "updates": "Updates"
+  },
+  "updateCenter": {
+    "title": "Community updates",
+    "subtitle": "Register manifest URLs (custom formats, platforms, …). Romarr checks periodically and notifies you when a new version is available.",
+    "loading": "Loading sources…",
+    "addSource": "Add URL",
+    "addModalTitle": "Add community source",
+    "addModalHint": "URL must point to a manifest.json following the Romarr contract. First check is auto-run after add.",
+    "addResourceType": "Type",
+    "addName": "Name",
+    "addNamePlaceholder": "e.g. TRaSH-Guides ROMs",
+    "addUrl": "Manifest URL",
+    "addUrlHint": "HTTPS only. e.g. https://raw.githubusercontent.com/…/manifest.json",
+    "addSubmit": "Add and check",
+    "addSubmitting": "Adding…",
+    "addSuccessTitle": "Source added",
+    "addSuccessBody": "{{name}} — version {{version}}, {{count}} item(s). Trust from the row to enable apply.",
+    "addWarnTitle": "Source added but check failed",
+    "addErrorTitle": "Cannot add source",
+    "empty": {
+      "title": "No community source registered yet.",
+      "hint": "Add a manifest URL from the button top-right, or from the Platforms / Custom Formats pages."
+    },
+    "col": {
+      "name": "Name",
+      "type": "Type",
+      "status": "Status",
+      "version": "Version",
+      "actions": "Actions"
+    },
+    "type": {
+      "custom_format": "Custom Format",
+      "platform_pack": "Platform Pack"
+    },
+    "status": {
+      "ok": "OK",
+      "partial": "Partial",
+      "error": "Error",
+      "never": "Never synced"
+    },
+    "trustPending": "pending",
+    "trustPendingHint": "Preview before granting trust.",
+    "check": "Check",
+    "trust": "Trust",
+    "apply": "Apply",
+    "enable": "Enable",
+    "disable": "Disable",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "deleteConfirm": "Delete source \"{{name}}\"? Items already applied stay in place.",
+    "deleteErrorTitle": "Cannot delete",
+    "checkErrorTitle": "Cannot check",
+    "applySuccessTitle": "Update applied",
+    "applySuccessBody": "{{name}}: {{count}} item(s) updated.",
+    "applyErrorTitle": "Cannot apply"
   },
   "logs": {
     "title": "System Logs",

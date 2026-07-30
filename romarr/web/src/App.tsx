@@ -51,6 +51,7 @@ import { RomPackSettingsPage } from "@/pages/Settings/RomPackSettings";
 import { SettingsLayout } from "@/pages/Settings/SettingsLayout";
 import { SettingsPlaceholder } from "@/pages/Settings/SettingsPlaceholder";
 import { TagsPage } from "@/pages/Settings/Tags";
+import { UpdateCenterPage } from "@/pages/Settings/UpdateCenter";
 import { SettingsUiPage } from "@/pages/Settings/Ui";
 import { UnidentifiedPage } from "@/pages/Settings/Unidentified";
 import { SystemPage } from "@/pages/System";
@@ -126,6 +127,7 @@ const router = createBrowserRouter([
               { path: "unidentified", element: <UnidentifiedPage /> },
               { path: "logs", element: <LogsPage /> },
               { path: "backup", element: <BackupPage /> },
+              { path: "updates", element: <UpdateCenterPage /> },
               { path: ":sub", element: <SettingsPlaceholder /> },
             ],
           },

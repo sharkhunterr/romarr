@@ -1819,6 +1819,112 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/community/source": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Sources
+         * @description List every registered community source, optionally filtered
+         *     by ``resource_type`` (query param). Order: oldest-first for
+         *     stable UI order.
+         */
+        get: operations["list_sources_api_v3_community_source_get"];
+        put?: never;
+        /**
+         * Create Source
+         * @description Register a new source. Auto-runs the first ``check`` so the
+         *     UI can preview the manifest immediately. Trust status starts
+         *     ``pending`` — the operator must click "Trust + Apply" once
+         *     before auto-apply can happen.
+         */
+        post: operations["create_source_api_v3_community_source_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/community/source/{source_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Source */
+        delete: operations["delete_source_api_v3_community_source__source_id__delete"];
+        options?: never;
+        head?: never;
+        /** Patch Source */
+        patch: operations["patch_source_api_v3_community_source__source_id__patch"];
+        trace?: never;
+    };
+    "/api/v3/community/source/{source_id}/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check Source Now */
+        post: operations["check_source_now_api_v3_community_source__source_id__check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/community/source/{source_id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply Source Now */
+        post: operations["apply_source_now_api_v3_community_source__source_id__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/community/updates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Updates Feed
+         * @description Aggregate feed the UpdateCenterBadge reads.
+         *
+         *     Combines the Romarr GitHub release check (cached 1h in-process
+         *     by :mod:`romarr.api.version_check`) with every registered
+         *     community source. Returns the full source list so the popover
+         *     can render both "up to date" and "N updates available" sections.
+         */
+        get: operations["updates_feed_api_v3_community_updates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/applications": {
         parameters: {
             query?: never;
@@ -3331,6 +3437,18 @@ export interface components {
             /** Last Sync At */
             last_sync_at: string | null;
         };
+        /** ApplyResponse */
+        ApplyResponse: {
+            source: components["schemas"]["SourceRead"];
+            /** Applied Version */
+            applied_version: string;
+            /** Applied Count */
+            applied_count: number;
+            /** Warnings */
+            warnings: string[];
+            /** Error */
+            error: string | null;
+        };
         /**
          * BackupFileEntry
          * @description One backup file's metadata.
@@ -3716,6 +3834,18 @@ export interface components {
             info_url?: string | null;
             /** Nfo Url */
             nfo_url?: string | null;
+        };
+        /** CheckResponse */
+        CheckResponse: {
+            source: components["schemas"]["SourceRead"];
+            /** Available Version */
+            available_version: string | null;
+            /** Manifest Name */
+            manifest_name: string | null;
+            /** Item Count */
+            item_count: number;
+            /** Error */
+            error: string | null;
         };
         /**
          * ClientType
@@ -6929,6 +7059,19 @@ export interface components {
             /** Unknown Action */
             unknown_action?: ("triage" | "park" | "delete") | null;
         };
+        /** RomarrUpdate */
+        RomarrUpdate: {
+            /** Current */
+            current: string;
+            /** Latest */
+            latest: string | null;
+            /** Update Available */
+            update_available: boolean;
+            /** Release Url */
+            release_url: string | null;
+            /** Error */
+            error: string | null;
+        };
         /** RootFolderRead */
         RootFolderRead: {
             /** Id */
@@ -7079,20 +7222,49 @@ export interface components {
         SetupResponse: {
             user: components["schemas"]["UserPublic"];
         };
-        /** SourceCreate */
-        SourceCreate: {
+        /** SourcePatch */
+        SourcePatch: {
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Auto Check */
+            auto_check?: boolean | null;
+            /** Trust Status */
+            trust_status?: ("pending" | "trusted") | null;
+            /** Name */
+            name?: string | null;
+        };
+        /** SourceRead */
+        SourceRead: {
+            /** Id */
+            id: number;
             /** Name */
             name: string;
-            /**
-             * Url
-             * Format: uri
-             */
+            /** Url */
             url: string;
-            /**
-             * Kind
-             * @description Override the auto-detected kind ('raw' | 'github_dir'). Leave null to let the server guess from the URL shape.
-             */
-            kind?: string | null;
+            /** Kind */
+            kind: string;
+            /** Resource Type */
+            resource_type: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Auto Check */
+            auto_check: boolean;
+            /** Trust Status */
+            trust_status: string;
+            /** Last Synced At */
+            last_synced_at: string | null;
+            /** Last Status */
+            last_status: string | null;
+            /** Last Error */
+            last_error: string | null;
+            /** Last Applied Count */
+            last_applied_count: number;
+            /** Last Seen Version */
+            last_seen_version: string | null;
+            /** Installed Version */
+            installed_version: string | null;
+            /** Update Available */
+            update_available: boolean;
         };
         /** SourceSummary */
         SourceSummary: {
@@ -7350,6 +7522,14 @@ export interface components {
             /** Is Active */
             is_active?: boolean | null;
         };
+        /** UpdatesFeed */
+        UpdatesFeed: {
+            romarr: components["schemas"]["RomarrUpdate"];
+            /** Sources */
+            sources: components["schemas"]["SourceRead"][];
+            /** Total Updates */
+            total_updates: number;
+        };
         /**
          * UserPublic
          * @description Public-facing User shape — never carries hashed_password.
@@ -7550,6 +7730,27 @@ export interface components {
             /** Api Key */
             api_key?: string | null;
         };
+        /** SourceCreate */
+        romarr__api__routers__community__SourceCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Url
+             * Format: uri
+             */
+            url: string;
+            /**
+             * Resource Type
+             * @enum {string}
+             */
+            resource_type: "platform_pack" | "custom_format";
+            /**
+             * Kind
+             * @default raw
+             * @enum {string}
+             */
+            kind: "raw" | "github_dir";
+        };
         /**
          * ConnectivityTestResult
          * @description Outcome of one ``test_connectivity(impl)`` round-trip.
@@ -7587,6 +7788,21 @@ export interface components {
             category?: ("auth" | "protocol" | "connectivity" | "circuit_open" | "ok") | null;
             /** Message */
             message?: string | null;
+        };
+        /** SourceCreate */
+        romarr__platform_packs__api__sources__SourceCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Url
+             * Format: uri
+             */
+            url: string;
+            /**
+             * Kind
+             * @description Override the auto-detected kind ('raw' | 'github_dir'). Leave null to let the server guess from the URL shape.
+             */
+            kind?: string | null;
         };
     };
     responses: never;
@@ -10470,7 +10686,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SourceCreate"];
+                "application/json": components["schemas"]["romarr__platform_packs__api__sources__SourceCreate"];
             };
         };
         responses: {
@@ -11315,6 +11531,216 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_sources_api_v3_community_source_get: {
+        parameters: {
+            query?: {
+                resource_type?: ("platform_pack" | "custom_format") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_source_api_v3_community_source_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["romarr__api__routers__community__SourceCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_source_api_v3_community_source__source_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_source_api_v3_community_source__source_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourcePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_source_now_api_v3_community_source__source_id__check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_source_now_api_v3_community_source__source_id__apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updates_feed_api_v3_community_updates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpdatesFeed"];
                 };
             };
         };

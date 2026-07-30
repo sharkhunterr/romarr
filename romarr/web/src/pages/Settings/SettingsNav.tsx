@@ -13,6 +13,7 @@
 import {
   Archive,
   Bell,
+  CloudDownload,
   Database,
   Download,
   FileQuestion,
@@ -56,6 +57,7 @@ export const SETTINGS_NAV_ENTRIES: readonly SettingsNavEntry[] = [
   { to: "/settings/ui", slug: "ui", Icon: Palette, shipped: true },
   { to: "/settings/logs", slug: "logs", Icon: FileText, shipped: true },
   { to: "/settings/backup", slug: "backup", Icon: Archive, shipped: true },
+  { to: "/settings/updates", slug: "updates", Icon: CloudDownload, shipped: true },
 ];
 
 function entryClass(isActive: boolean): string {

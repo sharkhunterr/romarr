@@ -19,6 +19,8 @@ import {
   type Platform,
 } from "@/lib/api/queries/platforms";
 
+import { AddCommunitySourceModal } from "@/pages/Settings/UpdateCenter/AddCommunitySourceModal";
+
 import { PackConfigPanel } from "./PackConfigPanel";
 import { PackRow } from "./PackRow";
 import { PackSourcesPanel } from "./PackSourcesPanel";
@@ -30,6 +32,7 @@ export function PlatformsPage(): ReactElement {
   const platforms = usePlatforms();
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<Platform | null>(null);
+  const [addUrlOpen, setAddUrlOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const list = platforms.data ?? [];
@@ -49,14 +52,30 @@ export function PlatformsPage(): ReactElement {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h2 className="text-base font-medium text-zinc-100">
-          {t("platforms.title")}
-        </h2>
-        <p className="mt-1 text-sm text-zinc-400">
-          {t("platforms.subtitle")}
-        </p>
+      <header className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-base font-medium text-zinc-100">
+            {t("platforms.title")}
+          </h2>
+          <p className="mt-1 text-sm text-zinc-400">
+            {t("platforms.subtitle")}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setAddUrlOpen(true)}
+          className="shrink-0 rounded-md border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-800"
+          title={t("updateCenter.addSource")}
+        >
+          + {t("updateCenter.addSource")}
+        </button>
       </header>
+      {addUrlOpen && (
+        <AddCommunitySourceModal
+          prefilledResourceType="platform_pack"
+          onClose={() => setAddUrlOpen(false)}
+        />
+      )}
 
       {/* Order: settings first (config + sources + history), the
           catalogue grid at the end — settings drive what lands in
