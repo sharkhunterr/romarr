@@ -7251,6 +7251,8 @@ export interface components {
             trust_status?: ("pending" | "trusted") | null;
             /** Name */
             name?: string | null;
+            /** Url */
+            url?: string | null;
         };
         /** SourceRead */
         SourceRead: {

@@ -110,6 +110,7 @@ export interface PatchSourceVars {
   autoCheck?: boolean;
   trustStatus?: "pending" | "trusted";
   name?: string;
+  url?: string;
 }
 
 export function usePatchCommunitySource(): UseMutationResult<
@@ -119,12 +120,13 @@ export function usePatchCommunitySource(): UseMutationResult<
 > {
   const qc = useQueryClient();
   return useMutation<CommunitySource, ApiError, PatchSourceVars>({
-    mutationFn: ({ sourceId, enabled, autoCheck, trustStatus, name }) => {
+    mutationFn: ({ sourceId, enabled, autoCheck, trustStatus, name, url }) => {
       const body: Record<string, unknown> = {};
       if (enabled !== undefined) body.enabled = enabled;
       if (autoCheck !== undefined) body.auto_check = autoCheck;
       if (trustStatus !== undefined) body.trust_status = trustStatus;
       if (name !== undefined) body.name = name;
+      if (url !== undefined) body.url = url;
       return apiFetch<CommunitySource>(
         `/api/v3/community/source/${sourceId}`,
         { method: "PATCH", json: body },

@@ -14,6 +14,7 @@ import {
 } from "@/lib/api/queries/community";
 import { useToastStore } from "@/lib/store/toast";
 
+import { EditCommunitySourceModal } from "./EditCommunitySourceModal";
 import { PreviewModal } from "./PreviewModal";
 
 interface Props {
@@ -29,6 +30,7 @@ export function CommunitySourceRow(props: Props): ReactElement {
   const del = useDeleteCommunitySource();
   const pushToast = useToastStore((s) => s.push);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   function handleCheck(): void {
     check.mutate(source.id, {
@@ -164,6 +166,13 @@ export function CommunitySourceRow(props: Props): ReactElement {
           >
             {t("updateCenter.preview")}
           </button>
+          <button
+            type="button"
+            onClick={() => setEditOpen(true)}
+            className="rounded border border-zinc-700 px-2 py-0.5 text-[0.65rem] text-zinc-200 hover:bg-zinc-800"
+          >
+            {t("updateCenter.edit")}
+          </button>
           {source.trust_status === "pending" && (
             <button
               type="button"
@@ -210,6 +219,12 @@ export function CommunitySourceRow(props: Props): ReactElement {
           <PreviewModal
             source={source}
             onClose={() => setPreviewOpen(false)}
+          />
+        )}
+        {editOpen && (
+          <EditCommunitySourceModal
+            source={source}
+            onClose={() => setEditOpen(false)}
           />
         )}
       </td>

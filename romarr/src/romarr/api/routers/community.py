@@ -120,6 +120,11 @@ class SourcePatch(BaseModel):
     auto_check: bool | None = None
     trust_status: Literal["pending", "trusted"] | None = None
     name: str | None = Field(default=None, min_length=1, max_length=128)
+    url: HttpUrl | None = None
+    """Editing the URL resets ``last_seen_version`` and
+    ``installed_version`` so the badge reflects the new manifest
+    from a clean slate. Trust flips back to ``pending`` too —
+    a URL change is effectively a new source."""
 
 
 class CheckResponse(BaseModel):
@@ -264,8 +269,23 @@ async def patch_source(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> SourceRead:
     row = await _get_source(db, source_id)
-    for field, value in payload.model_dump(exclude_unset=True).items():
-        setattr(row, field, value)
+    updates = payload.model_dump(exclude_unset=True)
+    url_changed = "url" in updates and str(updates["url"]) != row.url
+    for field, value in updates.items():
+        if field == "url":
+            setattr(row, field, str(value))
+        else:
+            setattr(row, field, value)
+    if url_changed:
+        # URL swap = effectively a new source: reset version tracking
+        # so the badge reflects the new manifest cleanly, and flip
+        # trust back to pending so the operator re-previews before
+        # any apply.
+        row.last_seen_version = None
+        row.installed_version = None
+        row.trust_status = "pending"
+        row.last_status = None
+        row.last_error = None
     await db.commit()
     await db.refresh(row)
     return SourceRead.from_row(row)
