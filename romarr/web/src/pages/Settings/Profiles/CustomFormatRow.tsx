@@ -1,14 +1,12 @@
 /**
- * One row in the Custom Formats list (slice 64).
+ * One row in the Custom Formats list.
  *
- * Read-only audit view: name + score chip + conditions count
- * + factory/modified pills + collapsible conditions list.
- * Delete is gated on `is_factory_default` — operators reset
- * those by re-running the seed migration. The visual condition
- * builder + create/update flow lands in a follow-up slice.
+ * Compact single-line-header layout : toggle + name + score chip
+ * + origin badge + condition count on one line, icon-only actions
+ * on the right. Conditions collapse by default (chevron toggle).
  */
 
-import { Pencil } from "lucide-react";
+import { ChevronDown, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -32,17 +30,19 @@ function detectOrigin(format: CustomFormat): Origin {
 function OriginBadge(props: { format: CustomFormat }): ReactElement {
   const { t } = useTranslation("settings");
   const origin = detectOrigin(props.format);
+  const base =
+    "inline-flex shrink-0 items-center rounded px-1.5 py-px text-[0.6rem] uppercase tracking-wider";
   if (origin === "community") {
     return (
       <span
-        className="inline-flex items-center gap-1 rounded border border-brand/50 bg-brand/10 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-brand"
+        className={`${base} border border-brand/40 bg-brand/10 text-brand`}
         title={t("customFormats.originCommunityTooltip", {
           name: props.format.source_name ?? "?",
         })}
       >
         {t("customFormats.originCommunity")}
         {props.format.source_name && (
-          <span className="font-normal normal-case tracking-normal text-brand/80">
+          <span className="ml-1 font-normal normal-case tracking-normal text-brand/80">
             · {props.format.source_name}
           </span>
         )}
@@ -51,20 +51,20 @@ function OriginBadge(props: { format: CustomFormat }): ReactElement {
   }
   if (origin === "factory") {
     return (
-      <span className="rounded border border-zinc-700 bg-zinc-800/60 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-zinc-400">
+      <span
+        className={`${base} border border-zinc-700 bg-zinc-800/60 text-zinc-400`}
+      >
         {t("customFormats.originFactory")}
       </span>
     );
   }
   return (
-    <span className="rounded border border-sky-800/60 bg-sky-950/40 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-sky-300">
+    <span
+      className={`${base} border border-sky-800/60 bg-sky-950/40 text-sky-300`}
+    >
       {t("customFormats.originUser")}
     </span>
   );
-}
-
-interface CustomFormatRowProps {
-  format: CustomFormat;
 }
 
 function ScoreChip(props: { score: number }): ReactElement {
@@ -77,7 +77,7 @@ function ScoreChip(props: { score: number }): ReactElement {
   const sign = props.score > 0 ? "+" : "";
   return (
     <span
-      className={`rounded px-1.5 py-0.5 font-mono text-[0.65rem] font-medium ${tone}`}
+      className={`shrink-0 rounded px-1.5 py-px font-mono text-[0.65rem] font-semibold tabular-nums ${tone}`}
     >
       {sign}
       {props.score}
@@ -110,6 +110,37 @@ function ConditionsList(props: {
       ))}
     </ul>
   );
+}
+
+interface IconButtonProps {
+  icon: ReactElement;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  variant?: "default" | "danger";
+}
+
+function IconButton(props: IconButtonProps): ReactElement {
+  const { icon, label, onClick, disabled = false, variant = "default" } = props;
+  const cls = variant === "danger"
+    ? "border-red-900/50 text-red-400 hover:bg-red-950/40"
+    : "border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+      className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${cls}`}
+    >
+      {icon}
+    </button>
+  );
+}
+
+interface CustomFormatRowProps {
+  format: CustomFormat;
 }
 
 export function CustomFormatRow(props: CustomFormatRowProps): ReactElement {
@@ -145,106 +176,106 @@ export function CustomFormatRow(props: CustomFormatRowProps): ReactElement {
 
   return (
     <li
-      className={`rounded-md border border-zinc-800 bg-zinc-900/40 p-3 ${
+      className={`rounded-md border border-zinc-800 bg-zinc-900/40 p-2 ${
         enabled ? "" : "opacity-60"
       }`}
     >
-      <div className="flex items-start gap-3">
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={toggleEnabled}
-              disabled={toggle.isPending}
-              role="switch"
-              aria-checked={enabled}
-              title={
-                enabled
-                  ? t("customFormats.toggleDisableHint")
-                  : t("customFormats.toggleEnableHint")
-              }
-              className={[
-                "inline-flex h-4 w-8 shrink-0 items-center rounded-full transition-colors",
-                enabled ? "bg-brand" : "bg-zinc-700",
-                "disabled:cursor-not-allowed disabled:opacity-50",
-              ].join(" ")}
-            >
-              <span
-                className={[
-                  "inline-block h-3 w-3 rounded-full bg-white transition-transform",
-                  enabled ? "translate-x-4" : "translate-x-0.5",
-                ].join(" ")}
-              />
-            </button>
-            <p className="truncate text-sm font-medium text-zinc-100">
-              {format.name}
-            </p>
-            <ScoreChip score={format.score} />
-            <OriginBadge format={format} />
-            {format.is_user_modified && (
-              <span
-                className="rounded bg-amber-950/40 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wider text-amber-400"
-                title={t("customFormats.modifiedTooltip")}
-              >
-                {t("customFormats.modified")}
-              </span>
-            )}
-          </div>
-          <p className="text-[0.65rem] text-zinc-500">
-            {t("customFormats.conditionsCount", {
-              count: format.conditions.length,
-            })}
-          </p>
-        </div>
-      </div>
+      <div className="flex items-center gap-2">
+        {/* Toggle switch — click flips enabled */}
+        <button
+          type="button"
+          onClick={toggleEnabled}
+          disabled={toggle.isPending}
+          role="switch"
+          aria-checked={enabled}
+          title={
+            enabled
+              ? t("customFormats.toggleDisableHint")
+              : t("customFormats.toggleEnableHint")
+          }
+          className={[
+            "inline-flex h-4 w-8 shrink-0 items-center rounded-full transition-colors",
+            enabled ? "bg-brand" : "bg-zinc-700",
+            "disabled:cursor-not-allowed disabled:opacity-50",
+          ].join(" ")}
+        >
+          <span
+            className={[
+              "inline-block h-3 w-3 rounded-full bg-white transition-transform",
+              enabled ? "translate-x-4" : "translate-x-0.5",
+            ].join(" ")}
+          />
+        </button>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {/* Expand chevron */}
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
           aria-expanded={expanded}
-          className={[
-            "min-h-[36px] rounded-md border border-zinc-700 px-3 text-xs font-medium",
-            "text-zinc-200 hover:bg-zinc-900",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-          ].join(" ")}
+          aria-label={t("customFormats.conditions")}
+          title={t("customFormats.conditions")}
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
         >
-          {expanded ? "▾" : "▸"} {t("customFormats.conditions")}
+          {expanded ? (
+            <ChevronDown size={14} aria-hidden="true" />
+          ) : (
+            <ChevronRight size={14} aria-hidden="true" />
+          )}
         </button>
-        <button
-          type="button"
+
+        {/* Title + score + count — the main info block */}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="truncate text-sm font-medium text-zinc-100">
+              {format.name}
+            </span>
+            <ScoreChip score={format.score} />
+            <span
+              className="shrink-0 rounded bg-zinc-800/60 px-1.5 py-px text-[0.6rem] text-zinc-500"
+              title={t("customFormats.conditionsCount", {
+                count: format.conditions.length,
+              })}
+            >
+              {format.conditions.length}c
+            </span>
+          </div>
+        </div>
+
+        {/* Action icons */}
+        <IconButton
+          icon={<Pencil size={13} strokeWidth={2.2} aria-hidden="true" />}
+          label={t("customFormats.edit.button")}
           onClick={() => setEditOpen(true)}
-          className={[
-            "flex min-h-[36px] items-center gap-1 rounded-md border border-zinc-700 px-3 text-xs font-medium",
-            "text-zinc-200 hover:bg-zinc-900",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-          ].join(" ")}
-        >
-          <Pencil size={12} strokeWidth={2.2} aria-hidden="true" />
-          {t("customFormats.edit.button")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setConfirming(true)}
-          disabled={format.is_factory_default}
-          title={
+        />
+        <IconButton
+          icon={<Trash2 size={13} strokeWidth={2.2} aria-hidden="true" />}
+          label={
             format.is_factory_default
               ? t("customFormats.delete.factoryBlocked")
-              : undefined
+              : t("customFormats.delete.button")
           }
-          className={[
-            "min-h-[36px] rounded-md border border-red-900/50 px-3 text-xs font-medium",
-            "text-red-400 hover:bg-red-950/40",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500",
-            "disabled:cursor-not-allowed disabled:opacity-40",
-          ].join(" ")}
-        >
-          {t("customFormats.delete.button")}
-        </button>
+          onClick={() => setConfirming(true)}
+          disabled={format.is_factory_default}
+          variant="danger"
+        />
+      </div>
+
+      {/* Origin + modified badges on their own line — compact, doesn't
+          fight the title for horizontal space */}
+      <div className="mt-1.5 flex flex-wrap items-center gap-1 pl-[52px]">
+        <OriginBadge format={format} />
+        {format.is_user_modified && (
+          <span
+            className="inline-flex shrink-0 items-center rounded border border-amber-800/50 bg-amber-950/40 px-1.5 py-px text-[0.6rem] uppercase tracking-wider text-amber-400"
+            title={t("customFormats.modifiedTooltip")}
+          >
+            {t("customFormats.modified")}
+          </span>
+        )}
       </div>
 
       {expanded && (
-        <div className="mt-3 space-y-2">
+        <div className="mt-2 pl-[52px]">
           <ConditionsList conditions={format.conditions} />
         </div>
       )}
@@ -257,11 +288,11 @@ export function CustomFormatRow(props: CustomFormatRowProps): ReactElement {
       )}
 
       {confirming && (
-        <div className="mt-3 rounded-md border border-red-900/50 bg-red-950/20 p-3">
-          <p className="text-sm font-medium text-zinc-100">
+        <div className="mt-2 rounded-md border border-red-900/50 bg-red-950/20 p-2.5">
+          <p className="text-xs font-medium text-zinc-100">
             {t("customFormats.delete.confirmTitle")}
           </p>
-          <p className="mt-1 text-xs text-zinc-400">
+          <p className="mt-0.5 text-[0.65rem] text-zinc-400">
             {t("customFormats.delete.confirmBody", { name: format.name })}
           </p>
           <div className="mt-2 flex items-center gap-2">
@@ -269,22 +300,14 @@ export function CustomFormatRow(props: CustomFormatRowProps): ReactElement {
               type="button"
               onClick={confirmDelete}
               disabled={del.isPending}
-              className={[
-                "min-h-[36px] rounded-md bg-red-600 px-3 text-xs font-medium text-white",
-                "hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500",
-                "disabled:cursor-not-allowed disabled:opacity-60",
-              ].join(" ")}
+              className="rounded-md bg-red-600 px-2.5 py-1 text-[0.7rem] font-medium text-white hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {t("customFormats.delete.confirm")}
             </button>
             <button
               type="button"
               onClick={() => setConfirming(false)}
-              className={[
-                "min-h-[36px] rounded-md border border-zinc-700 px-3 text-xs font-medium",
-                "text-zinc-300 hover:bg-zinc-900",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-              ].join(" ")}
+              className="rounded-md border border-zinc-700 px-2.5 py-1 text-[0.7rem] font-medium text-zinc-300 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             >
               {t("customFormats.delete.cancel")}
             </button>
