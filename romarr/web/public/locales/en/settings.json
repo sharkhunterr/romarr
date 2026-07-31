@@ -25,6 +25,11 @@
     "title": "Community updates",
     "subtitle": "Register manifest URLs (custom formats, platforms, …). Romarr checks periodically and notifies you when a new version is available.",
     "loading": "Loading sources…",
+    "panelTitle": "Community sources",
+    "panelSubtitle": "Registered manifest URLs. Also manageable from Settings → Updates.",
+    "panelSeeAll": "Manage all",
+    "panelSeeAllHint": "Open the central community-sources management page.",
+    "panelEmpty": "No source registered. Add a manifest via the top-right button.",
     "loadErrorTitle": "Cannot load sources",
     "loadErrorHint": "If Romarr was just upgraded, the DB migration may not have run yet. Restart the backend with ROMARR_AUTO_MIGRATE=true or run `alembic upgrade head` manually.",
     "addSource": "Add URL",
@@ -903,6 +908,8 @@
   "customFormats": {
     "title": "Custom Formats",
     "subtitle": "Score modifiers Romarr applies to release candidates. Each format owns a score and a list of conditions evaluated against the parsed release.",
+    "communityPanelTitle": "Community Custom Format packs",
+    "communityPanelSubtitle": "JSON manifest URLs that bulk-import Custom Formats. Also visible and manageable from Settings → Updates.",
     "empty": {
       "title": "No custom formats",
       "body": "Romarr ships a factory-default catalogue. If this list is empty, run the seed migration."
@@ -1105,6 +1112,8 @@
   "platforms": {
     "title": "Platform Packs",
     "subtitle": "Bulk platform definitions are shipped as YAML packs (built-in or community). This page audits every pack that has been applied. Upload + re-apply land in a follow-up slice.",
+    "communityPanelTitle": "Community platform packs",
+    "communityPanelSubtitle": "JSON manifest or YAML pack URLs that import platform definitions. Also visible and manageable from Settings → Updates.",
     "empty": {
       "title": "No packs applied yet",
       "body": "The built-in pack should ship with Romarr. If this list is empty, restart the server to seed it."

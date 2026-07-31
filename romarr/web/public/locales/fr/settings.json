@@ -25,6 +25,11 @@
     "title": "Mises à jour communautaires",
     "subtitle": "Ajoute des URL de manifests (custom formats, plateformes, …). Romarr vérifie régulièrement et te prévient quand une nouvelle version est disponible.",
     "loading": "Chargement des sources…",
+    "panelTitle": "Sources communautaires",
+    "panelSubtitle": "Manifests URL enregistrés. Gérables aussi depuis Paramètres → Mises à jour.",
+    "panelSeeAll": "Tout gérer",
+    "panelSeeAllHint": "Ouvrir la page centrale de gestion des sources communautaires.",
+    "panelEmpty": "Aucune source enregistrée. Ajoute un manifest via le bouton en haut à droite.",
     "loadErrorTitle": "Impossible de charger les sources",
     "loadErrorHint": "Si Romarr vient d'être mis à jour, la migration DB n'a peut-être pas encore été appliquée. Redémarre le backend avec ROMARR_AUTO_MIGRATE=true ou lance manuellement `alembic upgrade head`.",
     "addSource": "Ajouter une URL",
@@ -899,6 +904,8 @@
   "customFormats": {
     "title": "Formats personnalisés",
     "subtitle": "Modificateurs de score que Romarr applique aux candidates. Chaque format porte un score et une liste de conditions évaluées contre la release parsée.",
+    "communityPanelTitle": "Packs communautaires de Custom Formats",
+    "communityPanelSubtitle": "URLs de manifests JSON important en lot des Custom Formats. Aussi visibles et gérables depuis Paramètres → Mises à jour.",
     "empty": {
       "title": "Aucun format personnalisé",
       "body": "Romarr fournit un catalogue factory par défaut. Si cette liste est vide, lancez la migration de seed."
@@ -1101,6 +1108,8 @@
   "platforms": {
     "title": "Packs de plateformes",
     "subtitle": "Les définitions de plateformes sont distribuées en lot via des packs YAML (intégrés ou communautaires). Cette page audite chaque pack qui a été appliqué. L'envoi + la ré-application arriveront dans un slice à venir.",
+    "communityPanelTitle": "Packs communautaires de plateformes",
+    "communityPanelSubtitle": "URLs de manifests JSON ou de packs YAML qui importent des définitions de plateformes. Aussi visibles et gérables depuis Paramètres → Mises à jour.",
     "empty": {
       "title": "Aucun pack appliqué",
       "body": "Le pack intégré devrait être livré avec Romarr. Si cette liste est vide, redémarrez le serveur pour l'amorcer."
