@@ -6,7 +6,13 @@
  * on the right. Conditions collapse by default (chevron toggle).
  */
 
-import { ChevronDown, ChevronRight, Pencil, Trash2 } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  ListChecks,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -231,12 +237,15 @@ export function CustomFormatRow(props: CustomFormatRowProps): ReactElement {
             </span>
             <ScoreChip score={format.score} />
             <span
-              className="shrink-0 rounded bg-zinc-800/60 px-1.5 py-px text-[0.6rem] text-zinc-500"
+              className="inline-flex shrink-0 items-center gap-0.5 rounded bg-zinc-800/60 px-1.5 py-px text-[0.65rem] text-zinc-400"
               title={t("customFormats.conditionsCount", {
                 count: format.conditions.length,
               })}
             >
-              {format.conditions.length}c
+              <ListChecks size={11} aria-hidden="true" />
+              <span className="tabular-nums">
+                {format.conditions.length}
+              </span>
             </span>
           </div>
         </div>
