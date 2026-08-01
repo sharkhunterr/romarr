@@ -22,6 +22,8 @@ export type CommunityUpdatesFeed = components["schemas"]["UpdatesFeed"];
 export type CheckResponse = components["schemas"]["CheckResponse"];
 export type ApplyResponse = components["schemas"]["ApplyResponse"];
 export type PreviewResponse = components["schemas"]["PreviewResponse"];
+export type BindingRead = components["schemas"]["BindingRead"];
+export type BindingMode = BindingRead["mode"];
 
 export type CommunityResourceType = "platform_pack" | "custom_format";
 
@@ -207,6 +209,51 @@ export function useApplyCommunitySource(): UseMutationResult<
       void qc.invalidateQueries({ queryKey: FEED_KEY });
       void qc.invalidateQueries({ queryKey: ["custom-formats"] });
       void qc.invalidateQueries({ queryKey: ["platforms"] });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Bindings — per-(source, platform) overrides. Today only mode='skip' honoured.
+// ---------------------------------------------------------------------------
+
+const BINDINGS_KEY = ["community", "bindings"] as const;
+
+export function useCommunitySourceBindings(
+  sourceId: number | null,
+): UseQueryResult<BindingRead[], ApiError> {
+  return useQuery<BindingRead[], ApiError>({
+    queryKey: [...BINDINGS_KEY, sourceId],
+    queryFn: () =>
+      apiFetch<BindingRead[]>(
+        `/api/v3/community/source/${sourceId}/binding`,
+      ),
+    enabled: sourceId !== null,
+    staleTime: 60_000,
+  });
+}
+
+export interface ReplaceBindingsVars {
+  sourceId: number;
+  bindings: BindingRead[];
+}
+
+export function useReplaceCommunitySourceBindings(): UseMutationResult<
+  BindingRead[],
+  ApiError,
+  ReplaceBindingsVars
+> {
+  const qc = useQueryClient();
+  return useMutation<BindingRead[], ApiError, ReplaceBindingsVars>({
+    mutationFn: ({ sourceId, bindings }) =>
+      apiFetch<BindingRead[]>(
+        `/api/v3/community/source/${sourceId}/binding`,
+        { method: "PUT", json: { bindings } },
+      ),
+    onSuccess: (_, vars) => {
+      void qc.invalidateQueries({
+        queryKey: [...BINDINGS_KEY, vars.sourceId],
+      });
     },
   });
 }

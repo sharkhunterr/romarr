@@ -10,6 +10,7 @@
 import {
   Download,
   Eye,
+  Filter,
   Pencil,
   Power,
   RefreshCw,
@@ -29,6 +30,7 @@ import {
 } from "@/lib/api/queries/community";
 import { useToastStore } from "@/lib/store/toast";
 
+import { BindingsModal } from "./BindingsModal";
 import { EditCommunitySourceModal } from "./EditCommunitySourceModal";
 import { PreviewModal } from "./PreviewModal";
 import { shortenSourceUrl } from "./urlDisplay";
@@ -83,6 +85,7 @@ export function CommunitySourceRow(props: Props): ReactElement {
   const pushToast = useToastStore((s) => s.push);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [bindingsOpen, setBindingsOpen] = useState(false);
 
   function handleCheck(): void {
     check.mutate(source.id, {
@@ -293,6 +296,13 @@ export function CommunitySourceRow(props: Props): ReactElement {
           label={t("updateCenter.edit")}
           onClick={() => setEditOpen(true)}
         />
+        {source.resource_type === "platform_pack" && (
+          <IconButton
+            Icon={Filter}
+            label={t("updateCenter.bindingsButton")}
+            onClick={() => setBindingsOpen(true)}
+          />
+        )}
         {source.trust_status === "pending" && (
           <IconButton
             Icon={ShieldCheck}
@@ -343,6 +353,12 @@ export function CommunitySourceRow(props: Props): ReactElement {
         <EditCommunitySourceModal
           source={source}
           onClose={() => setEditOpen(false)}
+        />
+      )}
+      {bindingsOpen && (
+        <BindingsModal
+          source={source}
+          onClose={() => setBindingsOpen(false)}
         />
       )}
     </div>

@@ -143,6 +143,25 @@ class ApplyResponse(BaseModel):
     error: str | None
 
 
+class BindingRead(BaseModel):
+    """One row of ``platform_source_binding``."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    source_id: int
+    platform_slug: str
+    mode: Literal["skip", "prefer", "merge"]
+
+
+class BindingsReplace(BaseModel):
+    """Body for the bindings-replace PUT — full set of bindings the
+    caller wants this source to have. Missing rows are deleted."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    bindings: list[BindingRead]
+
+
 class PreviewItem(BaseModel):
     """One item entry from a source's manifest — displayed in the
     preview modal before the operator commits to an apply."""
@@ -393,6 +412,102 @@ async def apply_source_now(
         warnings=list(result.warnings),
         error=result.error,
     )
+
+
+@router.get(
+    "/source/{source_id}/binding",
+    response_model=list[BindingRead],
+    summary=(
+        "List per-(source, platform) overrides. Today only ``mode='skip'`` "
+        "is honoured by the ingester."
+    ),
+)
+async def list_bindings(
+    source_id: int,
+    _principal: Annotated[Principal, Depends(require_readonly)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[BindingRead]:
+    from romarr.platform_packs.models import PlatformSourceBinding
+
+    await _get_source(db, source_id)  # 404 if source is unknown
+    rows = (
+        (
+            await db.execute(
+                select(PlatformSourceBinding)
+                .where(PlatformSourceBinding.source_id == source_id)
+                .order_by(PlatformSourceBinding.platform_slug.asc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return [BindingRead.model_validate(r) for r in rows]
+
+
+@router.put(
+    "/source/{source_id}/binding",
+    response_model=list[BindingRead],
+    summary=(
+        "Replace the full set of bindings for this source. Any binding "
+        "not present in the body is deleted; new bindings are inserted; "
+        "existing bindings are updated. The next apply of the source "
+        "honours the new set."
+    ),
+)
+async def replace_bindings(
+    source_id: int,
+    payload: BindingsReplace,
+    _principal: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[BindingRead]:
+    from sqlalchemy import delete as sa_delete
+
+    from romarr.platform_packs.models import PlatformSourceBinding
+
+    await _get_source(db, source_id)  # 404 if source is unknown
+
+    # Reject bindings whose source_id doesn't match the path param
+    # (would silently touch another source otherwise).
+    for b in payload.bindings:
+        if b.source_id != source_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "errorMessage": (
+                        f"binding.source_id={b.source_id} does not match "
+                        f"path source_id={source_id}"
+                    ),
+                    "errorCode": "binding_source_mismatch",
+                },
+            )
+
+    # Full replace : delete then insert. Small tables, no risk.
+    await db.execute(
+        sa_delete(PlatformSourceBinding).where(
+            PlatformSourceBinding.source_id == source_id
+        )
+    )
+    for b in payload.bindings:
+        db.add(
+            PlatformSourceBinding(
+                source_id=source_id,
+                platform_slug=b.platform_slug,
+                mode=b.mode,
+            )
+        )
+    await db.commit()
+    rows = (
+        (
+            await db.execute(
+                select(PlatformSourceBinding)
+                .where(PlatformSourceBinding.source_id == source_id)
+                .order_by(PlatformSourceBinding.platform_slug.asc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return [BindingRead.model_validate(r) for r in rows]
 
 
 @router.post(

@@ -58,10 +58,23 @@ class IngestSource:
 
     ``builtin`` for the auto-applied built-in pack on first boot,
     ``community`` for operator uploads via the API.
+
+    ``source_id`` optionally carries the ``pack_sources.id`` FK when
+    the ingest is driven by a registered community source. It's used
+    to :
+
+      * stamp ``platform.pack_source_id`` on inserts / updates (row
+        provenance),
+      * look up ``platform_source_binding`` rows to filter skipped
+        slugs before writing them.
+
+    Left ``None`` for the legacy builtin and manual-upload flows —
+    both proceed unchanged.
     """
 
     pack_source: str
     applied_by: str
+    source_id: int | None = None
 
 
 def _enforce_version_order(
@@ -104,12 +117,37 @@ async def _insert_or_update_platforms(
         s: snap.id for s, snap in snapshot.platforms_by_slug.items()
     }
 
+    # Migration 0043 — per-(source, slug) skip binding. Load once
+    # per apply; empty set for the legacy source_id=None flows.
+    skipped_slugs: set[str] = set()
+    if source.source_id is not None:
+        from romarr.platform_packs.models import PlatformSourceBinding
+
+        skip_rows = (
+            (
+                await session.execute(
+                    select(PlatformSourceBinding).where(
+                        PlatformSourceBinding.source_id == source.source_id,
+                        PlatformSourceBinding.mode == "skip",
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        skipped_slugs = {b.platform_slug for b in skip_rows}
+
     for plat in parsed_platforms:
         slug = plat["slug"]
         existing = snapshot.platforms_by_slug.get(slug)
 
         if existing is not None and existing.pack_source == "user":
             # FR-012: user wins. Skip the entire platform.
+            continue
+
+        if slug in skipped_slugs:
+            # Operator flagged this (source, slug) as skip via the
+            # Update Center — respect it silently.
             continue
 
         meta_ids = plat.get("metadata_ids") or {}
@@ -130,6 +168,7 @@ async def _insert_or_update_platforms(
                 retroachievements_id=meta_ids.get("retroachievements_id"),
                 pack_source=source.pack_source,
                 pack_version=pack_version,
+                pack_source_id=source.source_id,
             )
             session.add(new_platform)
             await session.flush()
@@ -154,6 +193,7 @@ async def _insert_or_update_platforms(
             row.retroachievements_id = meta_ids.get("retroachievements_id")
             row.pack_source = source.pack_source
             row.pack_version = pack_version
+            row.pack_source_id = source.source_id
             touched.append(slug)
 
         # Apply formats: replace the full set for this platform.

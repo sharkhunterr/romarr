@@ -135,6 +135,7 @@ class PlatformPackAdapter:
         ingest_source = IngestSource(
             pack_source="community",
             applied_by=f"community_source:{source.id}",
+            source_id=source.id,
         )
 
         # Try the manifest path first.

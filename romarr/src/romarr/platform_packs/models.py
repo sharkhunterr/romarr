@@ -18,6 +18,7 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     DateTime,
+    ForeignKey,
     Index,
     Integer,
     String,
@@ -243,10 +244,59 @@ class PackSource(Base, TimestampMixin):
     )
 
 
+_BINDING_MODE_VALUES = ("skip", "prefer", "merge")
+
+
+class PlatformSourceBinding(Base, TimestampMixin):
+    """Per-(source, slug) override for community platform packs.
+
+    Introduced by migration 0043. Today only ``mode='skip'`` is
+    honoured by the ingester — the ``prefer`` / ``merge`` modes are
+    reserved for the follow-up slice that stores per-source snapshots
+    and materialises the platform row from a rank-ordered aggregate.
+
+    Semantics :
+
+      * ``skip`` — this source's contribution for ``platform_slug``
+        is ignored at ingest time. The platform stays as it was
+        (from another source, or absent if this was the only source
+        touching it).
+      * ``prefer`` *(reserved)* — this source wins scalars for the
+        slug even if another source is newer.
+      * ``merge`` *(reserved)* — union-merge list fields across
+        every source that touched the slug.
+    """
+
+    __tablename__ = "platform_source_binding"
+
+    source_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("pack_sources.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    platform_slug: Mapped[str] = mapped_column(
+        String(64), primary_key=True
+    )
+    mode: Mapped[str] = mapped_column(String(16), nullable=False)
+
+    __table_args__ = (
+        CheckConstraint(
+            "mode IN ("
+            + ",".join(f"'{v}'" for v in _BINDING_MODE_VALUES)
+            + ")",
+            name="ck_platform_source_binding_mode",
+        ),
+        Index(
+            "ix_platform_source_binding_slug", "platform_slug"
+        ),
+    )
+
+
 # Re-export for convenience in tests/code.
 __all__: list[Any] = [
     "PackSource",
     "ParsingStrategy",
     "PlatformPackApplicationLog",
     "PlatformPackConfig",
+    "PlatformSourceBinding",
 ]

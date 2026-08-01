@@ -1923,6 +1923,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/community/source/{source_id}/binding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List per-(source, platform) overrides. Today only ``mode='skip'`` is honoured by the ingester. */
+        get: operations["list_bindings_api_v3_community_source__source_id__binding_get"];
+        /** Replace the full set of bindings for this source. Any binding not present in the body is deleted; new bindings are inserted; existing bindings are updated. The next apply of the source honours the new set. */
+        put: operations["replace_bindings_api_v3_community_source__source_id__binding_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/community/source/import": {
         parameters: {
             query?: never;
@@ -3541,6 +3559,30 @@ export interface components {
             lastWriteTime: string;
             /** Size */
             size: number;
+        };
+        /**
+         * BindingRead
+         * @description One row of ``platform_source_binding``.
+         */
+        BindingRead: {
+            /** Source Id */
+            source_id: number;
+            /** Platform Slug */
+            platform_slug: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "skip" | "prefer" | "merge";
+        };
+        /**
+         * BindingsReplace
+         * @description Body for the bindings-replace PUT — full set of bindings the
+         *     caller wants this source to have. Missing rows are deleted.
+         */
+        BindingsReplace: {
+            /** Bindings */
+            bindings: components["schemas"]["BindingRead"][];
         };
         /** BlocklistRead */
         BlocklistRead: {
@@ -11869,6 +11911,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApplyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_bindings_api_v3_community_source__source_id__binding_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BindingRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    replace_bindings_api_v3_community_source__source_id__binding_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BindingsReplace"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BindingRead"][];
                 };
             };
             /** @description Validation Error */

@@ -357,6 +357,7 @@ async def _apply_platform_pack_bodies(
     ingest_source = IngestSource(
         pack_source="community",
         applied_by=f"community_source:{row.id}",
+        source_id=row.id,
     )
 
     applied = 0
