@@ -18,7 +18,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 from sqlalchemy import select
 from sqlalchemy.exc import OperationalError, ProgrammingError
@@ -386,6 +386,56 @@ async def apply_source_now(
 ) -> ApplyResponse:
     row = await _get_source(db, source_id)
     result = await apply_source(row, db)
+    return ApplyResponse(
+        source=SourceRead.from_row(row),
+        applied_version=result.applied_version,
+        applied_count=result.applied_count,
+        warnings=list(result.warnings),
+        error=result.error,
+    )
+
+
+@router.post(
+    "/source/import",
+    response_model=ApplyResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary=(
+        "Import a community pack from a local file (JSON or ZIP) — for "
+        "air-gapped installs or one-shot drops. Creates a new PackSource "
+        "row and applies its bodies via the resource_type adapter."
+    ),
+)
+async def import_source(
+    _principal: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    file: Annotated[UploadFile, File(...)],
+    name: Annotated[str, Field(min_length=1, max_length=128)] = "Local import",
+) -> ApplyResponse:
+    """Accepts either a single JSON manifest (with ``inline_items`` for
+    fully-embedded bodies) or a ZIP with ``manifest.json`` + item files."""
+    from romarr.community.local_import import (
+        LocalImportError,
+        apply_local_pack,
+        parse_upload,
+    )
+
+    content = await file.read()
+    try:
+        pack = parse_upload(file.filename or "upload.json", content)
+    except LocalImportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"errorMessage": str(exc), "errorCode": "local_import_invalid"},
+        ) from exc
+
+    try:
+        row, result = await apply_local_pack(db, name=name.strip(), pack=pack)
+    except LocalImportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"errorMessage": str(exc), "errorCode": "local_import_conflict"},
+        ) from exc
+
     return ApplyResponse(
         source=SourceRead.from_row(row),
         applied_version=result.applied_version,

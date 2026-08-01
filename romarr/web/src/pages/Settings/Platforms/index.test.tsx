@@ -16,13 +16,18 @@ const I18N_BUNDLE = {
       title: "Platforms",
       subtitle: "Per-console catalogue + Platform Packs.",
       empty: { title: "No platform packs", body: "Apply a built-in pack." },
+      emptyBanner: {
+        title: "No platforms defined",
+        body: "Community-first bootstrap runs in the background.",
+        hint: "Wait a few seconds and refresh.",
+      },
       uploadHint: "Upload a YAML pack via /api/v3/platform/pack.",
     },
   },
 };
 
 describe("PlatformsPage", () => {
-  it("renders the empty-state when usePlatformPacks returns []", () => {
+  it("renders the empty-state banner when usePlatformPacks returns []", () => {
     vi.spyOn(platformPacksQuery, "usePlatformPacks").mockReturnValue({
       data: [],
       isSuccess: true,
@@ -35,8 +40,7 @@ describe("PlatformsPage", () => {
     renderWithProviders(<PlatformsPage />, { i18nResources: I18N_BUNDLE });
 
     expect(screen.getByText("Platforms")).toBeInTheDocument();
-    expect(screen.getByText("No platform packs")).toBeInTheDocument();
-    expect(screen.getByText(/Apply a built-in pack/)).toBeInTheDocument();
+    expect(screen.getByText("No platforms defined")).toBeInTheDocument();
   });
 
   it("surfaces the API error in the EmptyState when the query fails", () => {

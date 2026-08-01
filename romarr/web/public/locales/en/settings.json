@@ -30,6 +30,17 @@
     "panelSeeAll": "Manage all",
     "panelSeeAllHint": "Open the central community-sources management page.",
     "panelEmpty": "No source registered. Add a manifest via the top-right button.",
+    "importFile": "Import file",
+    "importFileTooltip": "Local (offline) import. Accepts a JSON manifest with embedded bodies or a ZIP.",
+    "importModalTitle": "Import a pack from a local file",
+    "importModalHint": "Handy for offline installs. Accepts a .json manifest (with inline_items) or a .zip (manifest + item files).",
+    "importSubmit": "Import",
+    "importSubmitting": "Importing…",
+    "importSuccessTitle": "Pack imported",
+    "importSuccessBody": "\"{{name}}\" — {{count}} item(s) applied.",
+    "importWarnTitle": "Import finished with warnings",
+    "importErrorTitle": "Cannot import",
+    "importFileHint": "JSON (inline_items) or ZIP (manifest.json + item files). Max size 5 MiB.",
     "loadErrorTitle": "Cannot load sources",
     "loadErrorHint": "If Romarr was just upgraded, the DB migration may not have run yet. Restart the backend with ROMARR_AUTO_MIGRATE=true or run `alembic upgrade head` manually.",
     "addSource": "Add URL",
@@ -1117,6 +1128,11 @@
     "empty": {
       "title": "No packs applied yet",
       "body": "The built-in pack should ship with Romarr. If this list is empty, restart the server to seed it."
+    },
+    "emptyBanner": {
+      "title": "No platforms defined",
+      "body": "Romarr fetches platform definitions from the official community pack on first boot. If you're offline, add a URL or import a local file from the panel above.",
+      "hint": "The auto-fetch runs in the background — wait a few seconds and refresh the page."
     },
     "source": {
       "builtin": "Built-in",

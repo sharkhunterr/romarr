@@ -1923,6 +1923,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/community/source/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import a community pack from a local file (JSON or ZIP) — for air-gapped installs or one-shot drops. Creates a new PackSource row and applies its bodies via the resource_type adapter.
+         * @description Accepts either a single JSON manifest (with ``inline_items`` for
+         *     fully-embedded bodies) or a ZIP with ``manifest.json`` + item files.
+         */
+        post: operations["import_source_api_v3_community_source_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/community/updates": {
         parameters: {
             query?: never;
@@ -3544,6 +3565,11 @@ export interface components {
              * Format: date-time
              */
             added_at: string;
+        };
+        /** Body_import_source_api_v3_community_source_import_post */
+        Body_import_source_api_v3_community_source_import_post: {
+            /** File */
+            file: string;
         };
         /** Body_upload_pack_api_v3_rom_platform_pack_post */
         Body_upload_pack_api_v3_rom_platform_pack_post: {
@@ -11838,6 +11864,41 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_source_api_v3_community_source_import_post: {
+        parameters: {
+            query?: {
+                name?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_import_source_api_v3_community_source_import_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

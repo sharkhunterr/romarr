@@ -210,3 +210,52 @@ export function useApplyCommunitySource(): UseMutationResult<
     },
   });
 }
+
+// ---------------------------------------------------------------------------
+// Local file import — for air-gapped installs
+// ---------------------------------------------------------------------------
+
+export interface ImportSourceVars {
+  file: File;
+  name?: string;
+}
+
+export function useImportCommunitySource(): UseMutationResult<
+  ApplyResponse,
+  ApiError,
+  ImportSourceVars
+> {
+  const qc = useQueryClient();
+  return useMutation<ApplyResponse, ApiError, ImportSourceVars>({
+    mutationFn: async ({ file, name }) => {
+      const form = new FormData();
+      form.append("file", file);
+      if (name) form.append("name", name);
+      // apiFetch normally sets Content-Type: application/json.
+      // For multipart we use fetch directly and rely on the
+      // browser to set the boundary.
+      const resp = await fetch(
+        `/api/v3/community/source/import${name ? `?name=${encodeURIComponent(name)}` : ""}`,
+        { method: "POST", body: form, credentials: "include" },
+      );
+      if (!resp.ok) {
+        let msg = `HTTP ${resp.status}`;
+        try {
+          const body = await resp.json();
+          if (body?.detail?.errorMessage) msg = body.detail.errorMessage;
+          else if (body?.errorMessage) msg = body.errorMessage;
+        } catch {
+          /* ignore parse errors */
+        }
+        throw new ApiError(resp.status, { errorMessage: msg });
+      }
+      return (await resp.json()) as ApplyResponse;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: SOURCES_KEY });
+      void qc.invalidateQueries({ queryKey: FEED_KEY });
+      void qc.invalidateQueries({ queryKey: ["custom-formats"] });
+      void qc.invalidateQueries({ queryKey: ["platforms"] });
+    },
+  });
+}

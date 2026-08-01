@@ -302,6 +302,22 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                 extra={"error": str(exc)},
             )
 
+        # Community-first platform bootstrap — migration 0042
+        # preseeded a "Romarr Official Platforms" source. Fire a
+        # background check+apply so the server starts serving
+        # immediately while the manifest fetch runs off the hot path.
+        try:
+            import asyncio
+
+            from romarr.community.bootstrap import bootstrap_official_sources
+
+            asyncio.create_task(bootstrap_official_sources(sm))
+            bootstrap_log.info("lifespan.community_bootstrap_scheduled")
+        except Exception:
+            bootstrap_log.warning(
+                "lifespan.community_bootstrap_schedule_failed", exc_info=True
+            )
+
     # Spec 011 + spec 013 T068 / T072 (slice 274) — construct the
     # in-process EventChannel + WS bridge BEFORE the scheduler so
     # the scheduler can wire ``taskStarted`` / ``taskFinished``

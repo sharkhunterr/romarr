@@ -87,10 +87,17 @@ export function PlatformsPage(): ReactElement {
           />
         )}
         {packs.isSuccess && packs.data.length === 0 && (
-          <EmptyState
-            title={t("platforms.empty.title")}
-            description={t("platforms.empty.body")}
-          />
+          <div className="rounded-md border border-amber-800/50 bg-amber-950/20 p-4">
+            <p className="text-sm font-medium text-amber-200">
+              {t("platforms.emptyBanner.title")}
+            </p>
+            <p className="mt-1 text-xs text-amber-300/80">
+              {t("platforms.emptyBanner.body")}
+            </p>
+            <p className="mt-2 text-[0.65rem] text-zinc-400">
+              {t("platforms.emptyBanner.hint")}
+            </p>
+          </div>
         )}
         {packs.isSuccess && packs.data.length > 0 && (
           <>

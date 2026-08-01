@@ -20,6 +20,7 @@ import {
 
 import { AddCommunitySourceModal } from "./AddCommunitySourceModal";
 import { CommunitySourceRow } from "./CommunitySourceRow";
+import { ImportLocalFileModal } from "./ImportLocalFileModal";
 
 interface Props {
   resourceType: CommunityResourceType;
@@ -33,6 +34,7 @@ export function CommunitySourcesPanel(props: Props): ReactElement {
   const { t } = useTranslation("settings");
   const sources = useCommunitySources(props.resourceType);
   const [addOpen, setAddOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const count = sources.data?.length ?? 0;
 
@@ -60,6 +62,14 @@ export function CommunitySourcesPanel(props: Props): ReactElement {
           >
             {t("updateCenter.panelSeeAll")}
           </Link>
+          <button
+            type="button"
+            onClick={() => setImportOpen(true)}
+            className="rounded-md border border-zinc-700 px-2.5 py-1 text-[0.7rem] font-medium text-zinc-200 hover:bg-zinc-800"
+            title={t("updateCenter.importFileTooltip")}
+          >
+            {t("updateCenter.importFile")}
+          </button>
           <button
             type="button"
             onClick={() => setAddOpen(true)}
@@ -98,6 +108,9 @@ export function CommunitySourcesPanel(props: Props): ReactElement {
           prefilledResourceType={props.resourceType}
           onClose={() => setAddOpen(false)}
         />
+      )}
+      {importOpen && (
+        <ImportLocalFileModal onClose={() => setImportOpen(false)} />
       )}
     </section>
   );
