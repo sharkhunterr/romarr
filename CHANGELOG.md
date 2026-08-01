@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.36](https://github.com/sharkhunterr/romarr/-/compare/v0.14.35...v0.14.36) (2026-08-01)
+
+
+### Features
+
+* **community:** editable name + URL on community sources ([97bfb83](https://github.com/sharkhunterr/romarr/-/commit/97bfb83a92cd11f5e40a8767e7c0b0718bd93ea7))
+* **community:** embed community-sources panel on Custom Formats + Platforms pages ([0ba6dd1](https://github.com/sharkhunterr/romarr/-/commit/0ba6dd1715e46c5d62c0a0df7c9912ec30aa591d))
+* **community:** generalise pack_sources into unified community_source (foundation) ([adede6c](https://github.com/sharkhunterr/romarr/-/commit/adede6cb4db7ef4ca8a2ac65f509d345ec3a72c6))
+* **community:** manifest-driven pack_version for platform_pack YAMLs ([250d222](https://github.com/sharkhunterr/romarr/-/commit/250d222796eba1bbe37c2d9ab742e61cfe016b0f))
+* **community:** per-(source, slug) skip binding for platform packs ([e0e021f](https://github.com/sharkhunterr/romarr/-/commit/e0e021f3f1f89f67b596bc37ead93df62a5e921c))
+* **community:** platform_pack adapter, 6h scheduler sweep, preview endpoint + modal ([6381050](https://github.com/sharkhunterr/romarr/-/commit/63810508b5552f4d285a57ac26ad2e1bdf100870))
+* **community:** prefer binding + array fusion + source_order (Phase B.2) ([2083614](https://github.com/sharkhunterr/romarr/-/commit/20836144a7c9e08929c2e41a9f3500a432774b0d))
+* **community:** remove builtin platform auto-apply, preseed official source, add local file import ([6cb73b0](https://github.com/sharkhunterr/romarr/-/commit/6cb73b09df46b76f1dfad42eaa316c35c6f0459b))
+* **community:** sync engine + adapter pattern + CF adapter (engine) ([6397f23](https://github.com/sharkhunterr/romarr/-/commit/6397f23bc1f8a22506c282a0785e94bf23d1add7))
+* **community:** unified /api/v3/community REST surface ([2d90b61](https://github.com/sharkhunterr/romarr/-/commit/2d90b61865445efcaff0bf4233708e42f9596dd6))
+* **community:** Update Center UI — badge, popover, Settings page, per-page shortcuts ([99f51c2](https://github.com/sharkhunterr/romarr/-/commit/99f51c2fb245c1d9016a1787456ba3d9be93dacf))
+* **profiles:** CF origin badge + on/off toggle per Custom Format ([588a332](https://github.com/sharkhunterr/romarr/-/commit/588a3320571601b724719e587715296433c625d7))
+
+
+### Bug Fixes
+
+* **community:** friendly 503 when DB predates migration 0040 ([2211a10](https://github.com/sharkhunterr/romarr/-/commit/2211a1062d506c923913cb716e908844dc7e56bc))
+* **community:** missing close translation + compact icon-only action row ([386256b](https://github.com/sharkhunterr/romarr/-/commit/386256b2af4c215065fb7ed7005205ae7dccc510))
+* **platforms:** backfill snapshots + pack_source_id in idempotent skip path ([ea22564](https://github.com/sharkhunterr/romarr/-/commit/ea22564f99b77d67eeb6e84ac241f4f20e536776))
+* **profiles:** replace cryptic "Nc" chip with list-checks icon + count ([e6d6c4e](https://github.com/sharkhunterr/romarr/-/commit/e6d6c4e944e12ed99c94dc125933558a4a6df99d))
+
 ### [0.14.35](https://github.com/sharkhunterr/romarr/-/compare/v0.14.34...v0.14.35) (2026-07-30)
 
 
