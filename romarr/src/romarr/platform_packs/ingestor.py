@@ -383,18 +383,77 @@ async def _record_skipped(
     source: IngestSource,
     diff: list[PackPlatformDiff],
 ) -> PackUploadResult:
-    """Idempotent re-apply: pack_version + hash already present."""
+    """Idempotent re-apply: pack_version + hash already present.
+
+    Backfill : for community sources, walk the parsed platforms
+    and upsert a ``platform_source_contribution`` snapshot for any
+    slug missing one. This heals installs that applied the pack
+    BEFORE migration 0044 landed — without a snapshot the
+    materializer has no data to work with and the UI badges stay
+    empty. Also stamps ``platform.pack_source_id`` on rows that
+    were ingested before migration 0043.
+    """
     started = datetime.now(UTC)
     log = await start_log(
         session,
         pack_version=parsed.pack_version,
         applied_by=source.applied_by,
     )
+
+    backfilled_slugs: list[str] = []
+    if source.source_id is not None:
+        from romarr.platform_packs.materialize import (
+            _snapshot_platform,
+            materialize_all_slugs,
+            snapshot_contribution,
+        )
+        from romarr.platform_packs.models import (
+            PlatformSourceContribution,
+        )
+
+        parsed_platforms = parsed.parsed.get("platforms") or []
+        for plat in parsed_platforms:
+            slug = plat.get("slug")
+            if not slug:
+                continue
+            existing_snap = await session.get(
+                PlatformSourceContribution,
+                (source.source_id, slug),
+            )
+            if existing_snap is not None:
+                continue
+            contribution = _snapshot_platform(
+                plat,
+                formats=list(plat.get("formats") or []),
+                naming_tokens=list(plat.get("naming_tokens") or []),
+            )
+            await snapshot_contribution(
+                session,
+                source_id=source.source_id,
+                platform_slug=slug,
+                contribution=contribution,
+                pack_version=parsed.pack_version,
+            )
+            backfilled_slugs.append(slug)
+
+        # Stamp pack_source_id on rows that predate migration 0043.
+        if backfilled_slugs:
+            await session.execute(
+                Platform.__table__.update()
+                .where(
+                    Platform.slug.in_(backfilled_slugs),
+                    Platform.pack_source_id.is_(None),
+                    Platform.pack_source != "user",
+                )
+                .values(pack_source_id=source.source_id)
+            )
+            await materialize_all_slugs(session, slugs=backfilled_slugs)
+
     await complete_log(
         session,
         log,
         action="skipped",
-        platforms_affected=[],
+        platforms_affected=backfilled_slugs,
         parsing_strategies_affected=[],
     )
     await session.commit()
