@@ -18,6 +18,7 @@
 import { useMemo, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useCommunitySources } from "@/lib/api/queries/community";
 import type { Platform } from "@/lib/api/queries/platforms";
 import {
   useQualityDefinitions,
@@ -46,6 +47,21 @@ export function PlatformDetailModal(
   const { platform } = props;
   const aliases = platform.aliases ?? [];
   const qualityDefs = useQualityDefinitions();
+  const platformSources = useCommunitySources("platform_pack");
+  const contributingSources = useMemo(() => {
+    const ids = platform.contributing_source_ids ?? [];
+    const map = new Map<number, string>();
+    (platformSources.data ?? []).forEach((s) => map.set(s.id, s.name));
+    return ids.map((id) => ({
+      id,
+      name: map.get(id) ?? `#${id}`,
+      isWinner: id === platform.pack_source_id,
+    }));
+  }, [
+    platform.contributing_source_ids,
+    platform.pack_source_id,
+    platformSources.data,
+  ]);
   const formats: QualityDefinitionFormat[] = useMemo(() => {
     if (!qualityDefs.isSuccess) return [];
     const entry = qualityDefs.data.find(
@@ -78,6 +94,40 @@ export function PlatformDetailModal(
         </header>
 
         <div className="max-h-[70vh] space-y-4 overflow-auto p-4 text-xs">
+          {contributingSources.length > 0 && (
+            <Section title={t("platforms.detail.sections.contributingSources")}>
+              <ul className="space-y-1">
+                {contributingSources.map((s) => (
+                  <li
+                    key={s.id}
+                    className={`flex items-center gap-2 rounded px-2 py-1 ${
+                      s.isWinner
+                        ? "border border-brand/40 bg-brand/10"
+                        : "border border-zinc-800 bg-zinc-900/40"
+                    }`}
+                  >
+                    <span className="min-w-0 flex-1 truncate text-xs text-zinc-100">
+                      {s.name}
+                    </span>
+                    {s.isWinner && (
+                      <span className="rounded border border-brand/50 px-1.5 py-px text-[0.6rem] uppercase tracking-wider text-brand">
+                        {t(
+                          "platforms.detail.contributingSources.winnerBadge",
+                        )}
+                      </span>
+                    )}
+                    <span className="font-mono text-[0.6rem] text-zinc-500">
+                      #{s.id}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-[0.65rem] text-zinc-500">
+                {t("platforms.detail.contributingSources.hint")}
+              </p>
+            </Section>
+          )}
+
           {aliases.length > 0 && (
             <Section title={t("platforms.detail.sections.aliases")}>
               <div className="flex flex-wrap gap-1">

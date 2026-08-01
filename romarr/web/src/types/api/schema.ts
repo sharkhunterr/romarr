@@ -6489,6 +6489,10 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /** Pack Source Id */
+            pack_source_id?: number | null;
+            /** Contributing Source Ids */
+            contributing_source_ids?: number[];
         };
         /**
          * PlatformStats

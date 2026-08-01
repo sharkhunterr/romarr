@@ -1187,6 +1187,12 @@
       "heading": "Platform Packs",
       "subhead": "Définitions en masse via YAML packs. Audit log par application."
     },
+    "card": {
+      "noSource": "Aucune source communautaire n'a contribué à cette plateforme.",
+      "sourceTooltip": "Contribution de {{name}}.",
+      "moreSources_one": "+{{count}} autre source",
+      "moreSources_other": "+{{count}} autres sources"
+    },
     "detail": {
       "modalTitle": "{{name}} — détails",
       "close": "Fermer",
@@ -1196,7 +1202,12 @@
         "aliases": "Alias (utilisés par la détection grab + recherche manuelle)",
         "providerIds": "IDs fournisseurs de métadonnées",
         "newznabCategories": "Catégories Newznab",
-        "formats": "Formats reconnus"
+        "formats": "Formats reconnus",
+        "contributingSources": "Sources qui contribuent"
+      },
+      "contributingSources": {
+        "winnerBadge": "Actif",
+        "hint": "Toutes ces sources ont contribué à cette plateforme. Les listes (alias, formats) sont fusionnées ; les scalaires viennent de la source « Actif » (résolue via les bindings et l'ordre de priorité)."
       },
       "fields": {
         "slug": "Slug (nom de dossier)",

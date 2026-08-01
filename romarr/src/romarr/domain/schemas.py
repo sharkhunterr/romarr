@@ -92,6 +92,16 @@ class PlatformRead(PlatformCreate):
     id: int
     created_at: datetime
     updated_at: datetime
+    # Community-source provenance (migration 0043 + 0044).
+    pack_source_id: int | None = None
+    """FK to ``pack_sources.id`` of the community source that owns
+    the scalars of this platform (via materialize). Null for legacy
+    builtin / user-created rows."""
+    contributing_source_ids: list[int] = Field(default_factory=list)
+    """IDs of every community source that has ever contributed to
+    this platform slug via ``platform_source_contribution``. Empty
+    for platforms that pre-date the community-first model. The UI
+    renders one badge per id."""
 
 
 # ---------------------------------------------------------------------------

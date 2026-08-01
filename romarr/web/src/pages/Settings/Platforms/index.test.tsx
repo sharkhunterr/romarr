@@ -1,5 +1,5 @@
 /**
- * Settings > Platforms page test (spec 014 P-SET).
+ * Settings > Platforms page test.
  */
 
 import { describe, expect, it, vi } from "vitest";
@@ -8,34 +8,39 @@ import { screen } from "@testing-library/react";
 import { renderWithProviders } from "@/test/render";
 
 import { PlatformsPage } from "./index";
-import * as platformPacksQuery from "@/lib/api/queries/platform-packs";
+import * as platformsQuery from "@/lib/api/queries/platforms";
 
 const I18N_BUNDLE = {
   settings: {
     platforms: {
       title: "Platforms",
       subtitle: "Per-console catalogue + Platform Packs.",
-      empty: { title: "No platform packs", body: "Apply a built-in pack." },
       emptyBanner: {
         title: "No platforms defined",
         body: "Community-first bootstrap runs in the background.",
         hint: "Wait a few seconds and refresh.",
       },
-      uploadHint: "Upload a YAML pack via /api/v3/platform/pack.",
+      catalogue: {
+        heading: "Catalogue",
+        subhead: "{{count}} platforms",
+        filterPlaceholder: "Filter…",
+        noMatches: "No matches",
+        loadError: "Load error",
+      },
     },
   },
 };
 
 describe("PlatformsPage", () => {
-  it("renders the empty-state banner when usePlatformPacks returns []", () => {
-    vi.spyOn(platformPacksQuery, "usePlatformPacks").mockReturnValue({
+  it("renders the empty-state banner when usePlatforms returns []", () => {
+    vi.spyOn(platformsQuery, "usePlatforms").mockReturnValue({
       data: [],
       isSuccess: true,
       isLoading: false,
       isPending: false,
       isError: false,
       error: null,
-    } as unknown as ReturnType<typeof platformPacksQuery.usePlatformPacks>);
+    } as unknown as ReturnType<typeof platformsQuery.usePlatforms>);
 
     renderWithProviders(<PlatformsPage />, { i18nResources: I18N_BUNDLE });
 
@@ -43,18 +48,18 @@ describe("PlatformsPage", () => {
     expect(screen.getByText("No platforms defined")).toBeInTheDocument();
   });
 
-  it("surfaces the API error in the EmptyState when the query fails", () => {
-    vi.spyOn(platformPacksQuery, "usePlatformPacks").mockReturnValue({
+  it("surfaces the API error when the platforms query fails", () => {
+    vi.spyOn(platformsQuery, "usePlatforms").mockReturnValue({
       data: undefined,
       isSuccess: false,
       isLoading: false,
       isPending: false,
       isError: true,
-      error: { message: "platform pack table missing" },
-    } as unknown as ReturnType<typeof platformPacksQuery.usePlatformPacks>);
+      error: { message: "platform table missing" },
+    } as unknown as ReturnType<typeof platformsQuery.usePlatforms>);
 
     renderWithProviders(<PlatformsPage />, { i18nResources: I18N_BUNDLE });
 
-    expect(screen.getByText("platform pack table missing")).toBeInTheDocument();
+    expect(screen.getByText("platform table missing")).toBeInTheDocument();
   });
 });

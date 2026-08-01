@@ -139,12 +139,33 @@ async def list_platforms(
     _user: Annotated[Principal, Depends(require_readonly)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[PlatformRead]:
+    from romarr.platform_packs.models import PlatformSourceContribution
+
     rows = (
         await db.execute(select(Platform).order_by(Platform.name.asc()))
     ).scalars().all()
-    return [
-        PlatformRead.model_validate(row, from_attributes=True) for row in rows
-    ]
+
+    # Bulk-load contributing sources by slug so we don't do N+1.
+    contrib_rows = (
+        await db.execute(
+            select(
+                PlatformSourceContribution.platform_slug,
+                PlatformSourceContribution.source_id,
+            )
+        )
+    ).all()
+    by_slug: dict[str, list[int]] = {}
+    for slug, source_id in contrib_rows:
+        by_slug.setdefault(slug, []).append(source_id)
+
+    out: list[PlatformRead] = []
+    for row in rows:
+        data = PlatformRead.model_validate(row, from_attributes=True)
+        contributors = sorted(by_slug.get(row.slug, []))
+        out.append(
+            data.model_copy(update={"contributing_source_ids": contributors})
+        )
+    return out
 
 
 # ---------------------------------------------------------------------------

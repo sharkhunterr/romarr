@@ -1191,6 +1191,12 @@
       "heading": "Platform Packs",
       "subhead": "Bulk platform definitions are shipped as YAML packs. Audit log per pack application."
     },
+    "card": {
+      "noSource": "No community source has contributed to this platform.",
+      "sourceTooltip": "Contributed by {{name}}.",
+      "moreSources_one": "+{{count}} more source",
+      "moreSources_other": "+{{count}} more sources"
+    },
     "detail": {
       "modalTitle": "{{name}} — details",
       "close": "Close",
@@ -1200,7 +1206,12 @@
         "aliases": "Aliases (used by grab + manual search detection)",
         "providerIds": "Metadata provider IDs",
         "newznabCategories": "Newznab category IDs",
-        "formats": "Recognised formats"
+        "formats": "Recognised formats",
+        "contributingSources": "Contributing sources"
+      },
+      "contributingSources": {
+        "winnerBadge": "Active",
+        "hint": "Every source listed here contributed to this platform. Lists (aliases, formats) are merged; scalars come from the source marked Active (resolved via bindings and priority order)."
       },
       "fields": {
         "slug": "Slug (folder name)",
