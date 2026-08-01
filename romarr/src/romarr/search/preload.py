@@ -218,8 +218,21 @@ async def preload_library_profiles(
 
 
 async def preload_custom_formats(session: AsyncSession) -> list[CustomFormat]:
-    """Return every Custom Format (no library scope until spec 009)."""
-    return list((await session.execute(select(CustomFormat))).scalars().all())
+    """Return every ENABLED Custom Format (no library scope until spec 009).
+
+    Migration 0041 added ``enabled`` — a disabled CF stays in the
+    table so the operator can flip it back on, but doesn't
+    contribute to score aggregation on any search / import path.
+    """
+    return list(
+        (
+            await session.execute(
+                select(CustomFormat).where(CustomFormat.enabled.is_(True))
+            )
+        )
+        .scalars()
+        .all()
+    )
 
 
 async def preload_indexers(

@@ -68,6 +68,7 @@ def build_default_registry(
     from romarr.tasks.runners.adapters import (
         AutoCheckAddedAdapter,
         BackupAdapter,
+        CommunitySyncAdapter,
         CutoffSearchAdapter,
         DatUpdateAdapter,
         HealthCheckAdapter,
@@ -89,6 +90,7 @@ def build_default_registry(
         "LibraryScan": LibraryScanAdapter(),
         "AutoCheckAdded": AutoCheckAddedAdapter(),
         "PackSourcesSync": PackSourcesSyncAdapter(),
+        "CommunitySync": CommunitySyncAdapter(),
     }
 
 

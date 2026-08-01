@@ -151,10 +151,15 @@ async def load_library_context(
 
     custom_formats: tuple[CustomFormat, ...] = ()
     if cf_ids:
+        # Migration 0041 — a disabled CF stays in the table but
+        # doesn't contribute to scoring.
         cf_rows = (
             await session.execute(
                 select(CustomFormat)
-                .where(CustomFormat.id.in_(cf_ids))
+                .where(
+                    CustomFormat.id.in_(cf_ids),
+                    CustomFormat.enabled.is_(True),
+                )
                 .order_by(CustomFormat.score.desc())
             )
         ).scalars().all()

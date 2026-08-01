@@ -58,10 +58,23 @@ class IngestSource:
 
     ``builtin`` for the auto-applied built-in pack on first boot,
     ``community`` for operator uploads via the API.
+
+    ``source_id`` optionally carries the ``pack_sources.id`` FK when
+    the ingest is driven by a registered community source. It's used
+    to :
+
+      * stamp ``platform.pack_source_id`` on inserts / updates (row
+        provenance),
+      * look up ``platform_source_binding`` rows to filter skipped
+        slugs before writing them.
+
+    Left ``None`` for the legacy builtin and manual-upload flows —
+    both proceed unchanged.
     """
 
     pack_source: str
     applied_by: str
+    source_id: int | None = None
 
 
 def _enforce_version_order(
@@ -104,12 +117,37 @@ async def _insert_or_update_platforms(
         s: snap.id for s, snap in snapshot.platforms_by_slug.items()
     }
 
+    # Migration 0043 — per-(source, slug) skip binding. Load once
+    # per apply; empty set for the legacy source_id=None flows.
+    skipped_slugs: set[str] = set()
+    if source.source_id is not None:
+        from romarr.platform_packs.models import PlatformSourceBinding
+
+        skip_rows = (
+            (
+                await session.execute(
+                    select(PlatformSourceBinding).where(
+                        PlatformSourceBinding.source_id == source.source_id,
+                        PlatformSourceBinding.mode == "skip",
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        skipped_slugs = {b.platform_slug for b in skip_rows}
+
     for plat in parsed_platforms:
         slug = plat["slug"]
         existing = snapshot.platforms_by_slug.get(slug)
 
         if existing is not None and existing.pack_source == "user":
             # FR-012: user wins. Skip the entire platform.
+            continue
+
+        if slug in skipped_slugs:
+            # Operator flagged this (source, slug) as skip via the
+            # Update Center — respect it silently.
             continue
 
         meta_ids = plat.get("metadata_ids") or {}
@@ -130,6 +168,7 @@ async def _insert_or_update_platforms(
                 retroachievements_id=meta_ids.get("retroachievements_id"),
                 pack_source=source.pack_source,
                 pack_version=pack_version,
+                pack_source_id=source.source_id,
             )
             session.add(new_platform)
             await session.flush()
@@ -154,6 +193,7 @@ async def _insert_or_update_platforms(
             row.retroachievements_id = meta_ids.get("retroachievements_id")
             row.pack_source = source.pack_source
             row.pack_version = pack_version
+            row.pack_source_id = source.source_id
             touched.append(slug)
 
         # Apply formats: replace the full set for this platform.
@@ -170,6 +210,30 @@ async def _insert_or_update_platforms(
             tokens=plat.get("naming_tokens") or [],
             source=source,
         )
+
+        # Migration 0044 — persist the per-(source, slug) snapshot
+        # so the materializer can compose prefer + array-fusion
+        # rules across every source that touches this platform.
+        # Only for community ingest (source_id is None for legacy
+        # builtin + manual-upload flows).
+        if source.source_id is not None:
+            from romarr.platform_packs.materialize import (
+                _snapshot_platform,
+                snapshot_contribution,
+            )
+
+            contribution = _snapshot_platform(
+                plat,
+                formats=list(plat.get("formats") or []),
+                naming_tokens=list(plat.get("naming_tokens") or []),
+            )
+            await snapshot_contribution(
+                session,
+                source_id=source.source_id,
+                platform_slug=slug,
+                contribution=contribution,
+                pack_version=pack_version,
+            )
 
     return touched, slug_to_id
 
@@ -319,18 +383,77 @@ async def _record_skipped(
     source: IngestSource,
     diff: list[PackPlatformDiff],
 ) -> PackUploadResult:
-    """Idempotent re-apply: pack_version + hash already present."""
+    """Idempotent re-apply: pack_version + hash already present.
+
+    Backfill : for community sources, walk the parsed platforms
+    and upsert a ``platform_source_contribution`` snapshot for any
+    slug missing one. This heals installs that applied the pack
+    BEFORE migration 0044 landed — without a snapshot the
+    materializer has no data to work with and the UI badges stay
+    empty. Also stamps ``platform.pack_source_id`` on rows that
+    were ingested before migration 0043.
+    """
     started = datetime.now(UTC)
     log = await start_log(
         session,
         pack_version=parsed.pack_version,
         applied_by=source.applied_by,
     )
+
+    backfilled_slugs: list[str] = []
+    if source.source_id is not None:
+        from romarr.platform_packs.materialize import (
+            _snapshot_platform,
+            materialize_all_slugs,
+            snapshot_contribution,
+        )
+        from romarr.platform_packs.models import (
+            PlatformSourceContribution,
+        )
+
+        parsed_platforms = parsed.parsed.get("platforms") or []
+        for plat in parsed_platforms:
+            slug = plat.get("slug")
+            if not slug:
+                continue
+            existing_snap = await session.get(
+                PlatformSourceContribution,
+                (source.source_id, slug),
+            )
+            if existing_snap is not None:
+                continue
+            contribution = _snapshot_platform(
+                plat,
+                formats=list(plat.get("formats") or []),
+                naming_tokens=list(plat.get("naming_tokens") or []),
+            )
+            await snapshot_contribution(
+                session,
+                source_id=source.source_id,
+                platform_slug=slug,
+                contribution=contribution,
+                pack_version=parsed.pack_version,
+            )
+            backfilled_slugs.append(slug)
+
+        # Stamp pack_source_id on rows that predate migration 0043.
+        if backfilled_slugs:
+            await session.execute(
+                Platform.__table__.update()
+                .where(
+                    Platform.slug.in_(backfilled_slugs),
+                    Platform.pack_source_id.is_(None),
+                    Platform.pack_source != "user",
+                )
+                .values(pack_source_id=source.source_id)
+            )
+            await materialize_all_slugs(session, slugs=backfilled_slugs)
+
     await complete_log(
         session,
         log,
         action="skipped",
-        platforms_affected=[],
+        platforms_affected=backfilled_slugs,
         parsing_strategies_affected=[],
     )
     await session.commit()
@@ -439,6 +562,21 @@ async def ingest_pack(
             platforms_affected=touched_platforms,
             parsing_strategies_affected=touched_strategies,
         )
+
+        # Migration 0044 — after every community ingest, rebuild
+        # the live Platform row for each touched slug from the
+        # stack of snapshotted contributions. Honours prefer
+        # bindings + unions arrays across sources. No-op for
+        # non-community ingest (source_id is None).
+        if source.source_id is not None and touched_platforms:
+            from romarr.platform_packs.materialize import (
+                materialize_all_slugs,
+            )
+
+            await materialize_all_slugs(
+                session, slugs=list(touched_platforms)
+            )
+
         await session.commit()
     except Exception as exc:
         await session.rollback()

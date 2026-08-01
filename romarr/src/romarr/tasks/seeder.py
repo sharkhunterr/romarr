@@ -135,6 +135,19 @@ DEFAULT_CATALOGUE: tuple[_DefaultJob, ...] = (
         # at least one pack source.
         enabled=False,
     ),
+    _DefaultJob(
+        job_id="CommunitySync",
+        name="Update Center sync",
+        type="custom",
+        # Every 6h — the Update Center is check-only, refreshes the
+        # ``last_seen_version`` on every source so the header badge
+        # can light up amber without an operator manually clicking
+        # "Vérifier maintenant". Apply stays manual.
+        cron="0 */6 * * *",
+        # ON by default — sources are only checked when they exist,
+        # so a fresh install with 0 registered sources = 0 work.
+        enabled=True,
+    ),
 )
 
 

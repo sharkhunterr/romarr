@@ -2,6 +2,26 @@
   "app": {
     "title": "Romarr"
   },
+  "updateCenter": {
+    "upToDate": "Version {{version}} — up to date ({{sources}} community sources)",
+    "upToDateShort": "up to date",
+    "error": "Error",
+    "count_one": "{{count}} update",
+    "count_other": "{{count}} updates",
+    "popoverTitle": "Available updates",
+    "communitySection": "Community sources",
+    "noCommunityUpdates": "No community source has an update.",
+    "viewRelease": "View release",
+    "apply": "Apply",
+    "applyHint": "Apply this version to the system.",
+    "trustPending": "pending",
+    "trustPendingHint": "Confirm this source from Settings → Updates before applying.",
+    "manageSources": "Manage sources →",
+    "close": "Close",
+    "applySuccessTitle": "Update applied",
+    "applySuccessBody": "{{name}}: {{count}} item(s) updated.",
+    "applyErrorTitle": "Cannot apply"
+  },
   "versionBadge": {
     "upToDate": "Version {{version}} — up to date",
     "updateAvailableTooltip": "v{{current}} installed → v{{latest}} available. Click to view the release."

@@ -18,6 +18,7 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     DateTime,
+    ForeignKey,
     Index,
     Integer,
     String,
@@ -116,6 +117,13 @@ _LAST_STATUS_CHECK = (
     + ")"
 )
 
+# Migration 0040 — the ``pack_sources`` table generalised to
+# host every community-source kind (platform packs, custom
+# formats, more later). ``resource_type`` is the discriminator.
+_RESOURCE_TYPE_VALUES = ("platform_pack", "custom_format")
+
+_TRUST_STATUS_VALUES = ("pending", "trusted")
+
 _PRIORITY_VALUES = ("builtin", "community")
 _PRIORITY_CHECK = (
     "priority IN (" + ",".join(f"'{v}'" for v in _PRIORITY_VALUES) + ")"
@@ -147,6 +155,14 @@ class PlatformPackConfig(Base, TimestampMixin):
     priority: Mapped[str] = mapped_column(
         String(16), nullable=False, default="community"
     )
+    # Migration 0044 — JSON list of pack_sources.id in preferred
+    # order (highest priority first). Sources not listed rank
+    # below listed ones, ordered by id. Consulted by the platform
+    # materializer only when no ``prefer`` binding wins the
+    # scalar vote for a slug.
+    source_order: Mapped[list[int]] = mapped_column(
+        JSON, nullable=False, default=list
+    )
 
     __table_args__ = (
         CheckConstraint("id = 1", name="ck_platform_pack_config_singleton"),
@@ -155,18 +171,34 @@ class PlatformPackConfig(Base, TimestampMixin):
 
 
 class PackSource(Base, TimestampMixin):
-    """Remote source (typically a GitHub URL) that ships one or more
-    platform-pack YAML bodies.
+    """Remote community source (typically a GitHub URL).
 
-    Two ``kind``s :
-      * ``raw`` — the URL points directly at a single YAML file
-        (``raw.githubusercontent.com/...``, or any HTTPS ``*.yaml``).
+    Row stores one URL the operator has registered; the Update
+    Center syncs from it periodically and tracks whether a new
+    version is available.
+
+    ``resource_type`` is the discriminator introduced by migration
+    0040 — ``platform_pack`` covers the original YAML-directory
+    format, ``custom_format`` covers the manifest-based JSON packs
+    the Update Center added. Adapters per resource_type handle the
+    parse / validate / apply pipeline.
+
+    ``kind`` distinguishes the URL shape :
+      * ``raw`` — the URL points directly at a single body file
+        (``raw.githubusercontent.com/...``, or any HTTPS resource).
       * ``github_dir`` — the URL points at a GitHub directory; the
-        sync walks it and ingests every ``*.yaml`` / ``*.yml`` child.
+        sync walks it and ingests every child that matches the
+        adapter's file convention.
 
-    ``kind`` is auto-detected at add-time via
-    :func:`romarr.platform_packs.remote.classify_url` and can be
-    overridden by the client if the heuristic misfires.
+    ``last_seen_version`` / ``installed_version`` — the two halves
+    the Update Center badge reads. A source with
+    ``last_seen_version != installed_version`` (and both non-null)
+    contributes to the "N mises à jour" counter.
+
+    ``trust_status`` — ``pending`` for a newly added source that
+    hasn't had its manifest previewed / accepted yet, ``trusted``
+    after the operator's first apply. Sync fetches happen either way
+    (they're read-only); apply is blocked while ``pending``.
     """
 
     __tablename__ = "pack_sources"
@@ -175,7 +207,16 @@ class PackSource(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     url: Mapped[str] = mapped_column(String, nullable=False)
     kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    resource_type: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="platform_pack"
+    )
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    auto_check: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True
+    )
+    trust_status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="trusted"
+    )
 
     last_synced_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -185,11 +226,122 @@ class PackSource(Base, TimestampMixin):
     last_applied_count: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0
     )
+    last_seen_version: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+    installed_version: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
 
     __table_args__ = (
         UniqueConstraint("name", name="uq_pack_sources_name"),
         CheckConstraint(_SOURCE_KIND_CHECK, name="ck_pack_sources_kind"),
         CheckConstraint(_LAST_STATUS_CHECK, name="ck_pack_sources_last_status"),
+        CheckConstraint(
+            "resource_type IN ("
+            + ",".join(f"'{v}'" for v in _RESOURCE_TYPE_VALUES)
+            + ")",
+            name="ck_pack_sources_resource_type",
+        ),
+        CheckConstraint(
+            "trust_status IN ("
+            + ",".join(f"'{v}'" for v in _TRUST_STATUS_VALUES)
+            + ")",
+            name="ck_pack_sources_trust_status",
+        ),
+    )
+
+
+class PlatformSourceContribution(Base):
+    """Per-(source, platform_slug) snapshot of what a community pack
+    contributed the last time it applied.
+
+    Introduced by migration 0044. The materializer :func:`~romarr.
+    platform_packs.materialize.materialize_platform` reads the stack
+    of contributions for a slug, filters via
+    :class:`PlatformSourceBinding`, and rewrites the live
+    :class:`~romarr.domain.models.Platform` row (plus its formats
+    + naming tokens) from the aggregate.
+
+    Storage : single JSON blob per row so ingest doesn't have to
+    write to N normalised child tables. The materializer is the
+    only reader — it de-serialises the JSON into Python dicts,
+    applies the merge / prefer rules, and writes the derived
+    result back to the normalised tables.
+    """
+
+    __tablename__ = "platform_source_contribution"
+
+    source_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("pack_sources.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    platform_slug: Mapped[str] = mapped_column(
+        String(64), primary_key=True
+    )
+    contribution: Mapped[dict[str, Any]] = mapped_column(
+        JSON, nullable=False
+    )
+    pack_version: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+    applied_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_platform_source_contribution_slug", "platform_slug"
+        ),
+    )
+
+
+_BINDING_MODE_VALUES = ("skip", "prefer", "merge")
+
+
+class PlatformSourceBinding(Base, TimestampMixin):
+    """Per-(source, slug) override for community platform packs.
+
+    Introduced by migration 0043. Today only ``mode='skip'`` is
+    honoured by the ingester — the ``prefer`` / ``merge`` modes are
+    reserved for the follow-up slice that stores per-source snapshots
+    and materialises the platform row from a rank-ordered aggregate.
+
+    Semantics :
+
+      * ``skip`` — this source's contribution for ``platform_slug``
+        is ignored at ingest time. The platform stays as it was
+        (from another source, or absent if this was the only source
+        touching it).
+      * ``prefer`` *(reserved)* — this source wins scalars for the
+        slug even if another source is newer.
+      * ``merge`` *(reserved)* — union-merge list fields across
+        every source that touched the slug.
+    """
+
+    __tablename__ = "platform_source_binding"
+
+    source_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("pack_sources.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    platform_slug: Mapped[str] = mapped_column(
+        String(64), primary_key=True
+    )
+    mode: Mapped[str] = mapped_column(String(16), nullable=False)
+
+    __table_args__ = (
+        CheckConstraint(
+            "mode IN ("
+            + ",".join(f"'{v}'" for v in _BINDING_MODE_VALUES)
+            + ")",
+            name="ck_platform_source_binding_mode",
+        ),
+        Index(
+            "ix_platform_source_binding_slug", "platform_slug"
+        ),
     )
 
 
@@ -199,4 +351,6 @@ __all__: list[Any] = [
     "ParsingStrategy",
     "PlatformPackApplicationLog",
     "PlatformPackConfig",
+    "PlatformSourceBinding",
+    "PlatformSourceContribution",
 ]

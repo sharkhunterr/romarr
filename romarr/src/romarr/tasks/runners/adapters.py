@@ -647,6 +647,47 @@ class PackSourcesSyncAdapter(_AdapterBase):
         )
 
 
+class CommunitySyncAdapter(_AdapterBase):
+    """Check-only sweep of every enabled + auto_check community source.
+
+    Runs alongside :class:`PackSourcesSyncAdapter` — the legacy
+    runner keeps applying platform-pack YAMLs, this one refreshes
+    ``last_seen_version`` across every ``resource_type`` (custom_format
+    + platform_pack) so the header UpdateCenterBadge can announce
+    "N mises à jour" without applying anything.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(job_id="CommunitySync")
+
+    async def _run(self, context: JobContext) -> JobResult:
+        from romarr.tasks.runners.community_sync import run_community_sync
+
+        sessionmaker = getattr(context, "sessionmaker", None)
+        if sessionmaker is None:
+            return JobResult(
+                status=JobStatus.SUCCESS,
+                summary={"stub": True, "reason": "no sessionmaker"},
+            )
+        async with sessionmaker() as session:
+            result = await run_community_sync(
+                session, sessionmaker=sessionmaker
+            )
+
+        overall = (
+            JobStatus.PARTIAL
+            if result.errors > 0
+            else JobStatus.SUCCESS
+        )
+        return JobResult(
+            status=overall,
+            summary={
+                "sources": result.total_sources,
+                "errors": result.errors,
+            },
+        )
+
+
 class LibraryScanAdapter(_AdapterBase):
     """Wraps spec 009's library full-scan (slice 209 wires the
     real scanner). When the JobContext supplies a sessionmaker

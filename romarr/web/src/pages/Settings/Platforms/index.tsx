@@ -1,11 +1,22 @@
 /**
- * Settings > Platforms (slice 93).
+ * Settings > Platforms — the community-first catalogue view.
  *
- * Read-only Platform Pack audit. Lists every persisted pack
- * (PackSummary), expandable per-row to fetch the full
- * application history (PackHistoryRow). Upload + re-apply
- * are admin write flows that land in a follow-up slice once
- * the multipart upload form is in place.
+ * Structure :
+ *   1. Empty-state banner if zero platforms are defined (points at
+ *      the fetch / import paths above).
+ *   2. Community sources panel + global rank editor.
+ *   3. Platform catalogue grid — filterable, cards show name +
+ *      slug + manufacturer + source badges (one per source that
+ *      has contributed to the slug via
+ *      ``platform_source_contribution``). Click opens the detail
+ *      modal.
+ *
+ * Removed with the community-first model :
+ *   * "Platform Packs" application history (PackRow list) — the
+ *     Update Center now surfaces every relevant apply.
+ *   * PackConfigPanel (builtin toggle) — builtin is disabled by
+ *     default per migration 0042; the config remains reachable
+ *     via API for the rare operator who reactivates it.
  */
 
 import { useMemo, useState, type ReactElement } from "react";
@@ -13,23 +24,29 @@ import { useTranslation } from "react-i18next";
 
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
-import { usePlatformPacks } from "@/lib/api/queries/platform-packs";
+import { useCommunitySources } from "@/lib/api/queries/community";
 import {
   usePlatforms,
   type Platform,
 } from "@/lib/api/queries/platforms";
+import { CommunitySourcesPanel } from "@/pages/Settings/UpdateCenter/CommunitySourcesPanel";
+import { SourceOrderPanel } from "@/pages/Settings/UpdateCenter/SourceOrderPanel";
 
-import { PackConfigPanel } from "./PackConfigPanel";
-import { PackRow } from "./PackRow";
-import { PackSourcesPanel } from "./PackSourcesPanel";
+import { PlatformCard } from "./PlatformCard";
 import { PlatformDetailModal } from "./PlatformDetailModal";
 
 export function PlatformsPage(): ReactElement {
   const { t } = useTranslation("settings");
-  const packs = usePlatformPacks();
   const platforms = usePlatforms();
+  const platformSources = useCommunitySources("platform_pack");
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState<Platform | null>(null);
+
+  const sourcesById = useMemo(() => {
+    const m = new Map<number, string>();
+    (platformSources.data ?? []).forEach((s) => m.set(s.id, s.name));
+    return m;
+  }, [platformSources.data]);
 
   const filtered = useMemo(() => {
     const list = platforms.data ?? [];
@@ -47,6 +64,9 @@ export function PlatformsPage(): ReactElement {
     });
   }, [platforms.data, filter]);
 
+  const isEmpty =
+    platforms.isSuccess && (platforms.data ?? []).length === 0;
+
   return (
     <div className="space-y-6">
       <header>
@@ -58,53 +78,29 @@ export function PlatformsPage(): ReactElement {
         </p>
       </header>
 
-      {/* Order: settings first (config + sources + history), the
-          catalogue grid at the end — settings drive what lands in
-          the catalogue, so surfacing them above is more actionable. */}
-      <PackConfigPanel />
-
-      <PackSourcesPanel />
-
-      <section className="space-y-3">
-        <header>
-          <h3 className="text-sm font-medium text-zinc-100">
-            {t("platforms.packs.heading")}
-          </h3>
-          <p className="text-[0.65rem] text-zinc-500">
-            {t("platforms.packs.subhead")}
+      {isEmpty && (
+        <div className="rounded-md border border-amber-800/50 bg-amber-950/20 p-4">
+          <p className="text-sm font-medium text-amber-200">
+            {t("platforms.emptyBanner.title")}
           </p>
-        </header>
-        {packs.isLoading && <ListSkeleton rows={3} />}
-        {packs.isError && (
-          <EmptyState
-            title={t("platforms.empty.title")}
-            description={packs.error.message}
-          />
-        )}
-        {packs.isSuccess && packs.data.length === 0 && (
-          <EmptyState
-            title={t("platforms.empty.title")}
-            description={t("platforms.empty.body")}
-          />
-        )}
-        {packs.isSuccess && packs.data.length > 0 && (
-          <>
-            <ul className="space-y-2">
-              {packs.data.map((pack) => (
-                <PackRow key={pack.pack_version} pack={pack} />
-              ))}
-            </ul>
-            <p className="rounded-md border border-dashed border-zinc-800 bg-zinc-900/20 p-3 text-[0.7rem] text-zinc-500">
-              {t("platforms.uploadHint")}
-            </p>
-          </>
-        )}
-      </section>
+          <p className="mt-1 text-xs text-amber-300/80">
+            {t("platforms.emptyBanner.body")}
+          </p>
+          <p className="mt-2 text-[0.65rem] text-zinc-400">
+            {t("platforms.emptyBanner.hint")}
+          </p>
+        </div>
+      )}
 
-      {/* Slice 402 — catalogue grid: click a card to see every field
-          of that Platform (aliases, format extensions, provider IDs,
-          pack provenance). Moved to the bottom so the actionable
-          settings come first. */}
+      <CommunitySourcesPanel
+        resourceType="platform_pack"
+        title={t("platforms.communityPanelTitle")}
+        subtitle={t("platforms.communityPanelSubtitle")}
+      />
+
+      <SourceOrderPanel />
+
+      {/* Catalogue */}
       <section className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
@@ -133,33 +129,20 @@ export function PlatformsPage(): ReactElement {
             description={platforms.error.message}
           />
         )}
-        {platforms.isSuccess && filtered.length === 0 && (
+        {platforms.isSuccess && filtered.length === 0 && !isEmpty && (
           <p className="rounded-md border border-dashed border-zinc-800 bg-zinc-900/20 p-3 text-[0.7rem] text-zinc-500">
             {t("platforms.catalogue.noMatches")}
           </p>
         )}
         {platforms.isSuccess && filtered.length > 0 && (
-          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((p) => (
               <li key={p.id}>
-                <button
-                  type="button"
+                <PlatformCard
+                  platform={p}
+                  sourceNames={sourcesById}
                   onClick={() => setSelected(p)}
-                  className="flex h-full w-full flex-col gap-1 rounded-md border border-zinc-800 bg-zinc-900/40 p-2.5 text-left transition-colors hover:border-brand/40 hover:bg-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                >
-                  <span className="truncate text-xs font-medium text-zinc-100">
-                    {p.short_name || p.name}
-                  </span>
-                  <span className="truncate font-mono text-[0.6rem] text-zinc-500">
-                    {p.slug}
-                  </span>
-                  {p.manufacturer && (
-                    <span className="mt-auto truncate text-[0.6rem] text-zinc-500">
-                      {p.manufacturer}
-                      {p.release_year && ` · ${p.release_year}`}
-                    </span>
-                  )}
-                </button>
+                />
               </li>
             ))}
           </ul>

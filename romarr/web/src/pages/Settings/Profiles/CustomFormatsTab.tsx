@@ -1,9 +1,11 @@
 /**
  * Profiles > Custom Formats tab.
  *
- * Read-only audit list + delete (slice 64) + visual builder
- * (slice 305 / spec 014 T097): operators add a new Custom
- * Format from a structured form (name + score + conditions).
+ * Layout:
+ *   1. Community-sources panel — every URL-imported CF pack the
+ *      operator has registered, mirrored from the Update Center.
+ *   2. Local list — every CF that ended up in the DB (from seeds,
+ *      URL packs or manual creation), sorted by score desc.
  */
 
 import { useState, type ReactElement } from "react";
@@ -12,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/shared/LoadingSkeleton";
 import { useCustomFormats } from "@/lib/api/queries/custom-formats";
+import { CommunitySourcesPanel } from "@/pages/Settings/UpdateCenter/CommunitySourcesPanel";
 
 import { CustomFormatEditorModal } from "./CustomFormatEditorModal";
 import { CustomFormatRow } from "./CustomFormatRow";
@@ -23,7 +26,13 @@ export function CustomFormatsTab(): ReactElement {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
+      <CommunitySourcesPanel
+        resourceType="custom_format"
+        title={t("customFormats.communityPanelTitle")}
+        subtitle={t("customFormats.communityPanelSubtitle")}
+      />
+
+      <div className="flex items-start justify-between gap-3 border-t border-zinc-800 pt-4">
         <p className="text-sm text-zinc-400">
           {t("customFormats.subtitle")}
         </p>

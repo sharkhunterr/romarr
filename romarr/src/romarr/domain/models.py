@@ -91,6 +91,14 @@ class Platform(Base, TimestampMixin):
         String(16), nullable=False, default="builtin"
     )
     pack_version: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # Migration 0043 — FK to the specific ``pack_sources`` row that
+    # produced this platform (community-source provenance). Null for
+    # legacy builtin rows or rows created before 0043.
+    pack_source_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("pack_sources.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     # Free-form metadata (icon URL, theme color, etc.).
     extra_meta: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)

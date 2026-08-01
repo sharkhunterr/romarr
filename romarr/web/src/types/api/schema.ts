@@ -1819,6 +1819,192 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/community/source": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Sources
+         * @description List every registered community source, optionally filtered
+         *     by ``resource_type`` (query param). Order: oldest-first for
+         *     stable UI order.
+         */
+        get: operations["list_sources_api_v3_community_source_get"];
+        put?: never;
+        /**
+         * Create Source
+         * @description Register a new source. Auto-runs the first ``check`` so the
+         *     UI can preview the manifest immediately. Trust status starts
+         *     ``pending`` — the operator must click "Trust + Apply" once
+         *     before auto-apply can happen.
+         */
+        post: operations["create_source_api_v3_community_source_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/community/source/{source_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Source */
+        delete: operations["delete_source_api_v3_community_source__source_id__delete"];
+        options?: never;
+        head?: never;
+        /** Patch Source */
+        patch: operations["patch_source_api_v3_community_source__source_id__patch"];
+        trace?: never;
+    };
+    "/api/v3/community/source/{source_id}/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Check Source Now */
+        post: operations["check_source_now_api_v3_community_source__source_id__check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/community/source/{source_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Source
+         * @description Dry-run: fetch the manifest, return name/version/items list.
+         *     Never mutates the DB. Backs the "Aperçu" modal in the UI so
+         *     operators can see what an apply would land before committing —
+         *     especially important on a ``trust_status='pending'`` source.
+         */
+        post: operations["preview_source_api_v3_community_source__source_id__preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/community/source/{source_id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply Source Now */
+        post: operations["apply_source_now_api_v3_community_source__source_id__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/community/source/{source_id}/binding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List per-(source, platform) overrides. Today only ``mode='skip'`` is honoured by the ingester. */
+        get: operations["list_bindings_api_v3_community_source__source_id__binding_get"];
+        /** Replace the full set of bindings for this source. Any binding not present in the body is deleted; new bindings are inserted; existing bindings are updated. The next apply of the source honours the new set. */
+        put: operations["replace_bindings_api_v3_community_source__source_id__binding_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/community/source-order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Global ranking used by the platform materializer to pick the scalar winner for a slug when no ``prefer`` binding fires. Higher priority first. */
+        get: operations["get_source_order_api_v3_community_source_order_get"];
+        /** Replace the global source ranking. Re-materializes every platform touched by any of the sources whose rank changed so the operator sees the new winners immediately. */
+        put: operations["put_source_order_api_v3_community_source_order_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/community/source/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import a community pack from a local file (JSON or ZIP) — for air-gapped installs or one-shot drops. Creates a new PackSource row and applies its bodies via the resource_type adapter.
+         * @description Accepts either a single JSON manifest (with ``inline_items`` for
+         *     fully-embedded bodies) or a ZIP with ``manifest.json`` + item files.
+         */
+        post: operations["import_source_api_v3_community_source_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/community/updates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Updates Feed
+         * @description Aggregate feed the UpdateCenterBadge reads.
+         *
+         *     Combines the Romarr GitHub release check (cached 1h in-process
+         *     by :mod:`romarr.api.version_check`) with every registered
+         *     community source. Returns the full source list so the popover
+         *     can render both "up to date" and "N updates available" sections.
+         */
+        get: operations["updates_feed_api_v3_community_updates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/applications": {
         parameters: {
             query?: never;
@@ -2594,24 +2780,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v3/customformat": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List customformat (any authenticated user). */
-        get: operations["list_rows_api_v3_customformat_get"];
-        put?: never;
-        /** Create a customformat (admin only). */
-        post: operations["create_row_api_v3_customformat_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v3/customformat/{row_id}": {
         parameters: {
             query?: never;
@@ -2626,6 +2794,58 @@ export interface paths {
         post?: never;
         /** Delete a customformat (admin only). ``?force=true`` is a future-extension knob: today the cascade detection still 409s when the profile is bound, because the library.*_profile_id columns are NOT NULL — a force-unbind would require either a schema change to allow NULL or a 'substitute with factory default' rebind. */
         delete: operations["delete_row_api_v3_customformat__row_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/customformat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List custom formats with source name enrichment (any authenticated user). */
+        get: operations["list_custom_formats_api_v3_customformat_get"];
+        put?: never;
+        /** Create a customformat (admin only). */
+        post: operations["create_row_api_v3_customformat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v3/customformat/{item_id}/enabled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Toggle a Custom Format on/off without flagging is_user_modified. A simple enable/disable is not a content edit — community sync keeps overwriting the seed body normally after the flip. */
+        patch: operations["toggle_enabled_api_v3_customformat__item_id__enabled_patch"];
+        trace?: never;
+    };
+    "/api/v3/customformat/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one custom format (any authenticated user). */
+        get: operations["read_custom_format_api_v3_customformat__item_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3331,6 +3551,18 @@ export interface components {
             /** Last Sync At */
             last_sync_at: string | null;
         };
+        /** ApplyResponse */
+        ApplyResponse: {
+            source: components["schemas"]["SourceRead"];
+            /** Applied Version */
+            applied_version: string;
+            /** Applied Count */
+            applied_count: number;
+            /** Warnings */
+            warnings: string[];
+            /** Error */
+            error: string | null;
+        };
         /**
          * BackupFileEntry
          * @description One backup file's metadata.
@@ -3345,6 +3577,30 @@ export interface components {
             lastWriteTime: string;
             /** Size */
             size: number;
+        };
+        /**
+         * BindingRead
+         * @description One row of ``platform_source_binding``.
+         */
+        BindingRead: {
+            /** Source Id */
+            source_id: number;
+            /** Platform Slug */
+            platform_slug: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "skip" | "prefer" | "merge";
+        };
+        /**
+         * BindingsReplace
+         * @description Body for the bindings-replace PUT — full set of bindings the
+         *     caller wants this source to have. Missing rows are deleted.
+         */
+        BindingsReplace: {
+            /** Bindings */
+            bindings: components["schemas"]["BindingRead"][];
         };
         /** BlocklistRead */
         BlocklistRead: {
@@ -3369,6 +3625,11 @@ export interface components {
              * Format: date-time
              */
             added_at: string;
+        };
+        /** Body_import_source_api_v3_community_source_import_post */
+        Body_import_source_api_v3_community_source_import_post: {
+            /** File */
+            file: string;
         };
         /** Body_upload_pack_api_v3_rom_platform_pack_post */
         Body_upload_pack_api_v3_rom_platform_pack_post: {
@@ -3717,6 +3978,18 @@ export interface components {
             /** Nfo Url */
             nfo_url?: string | null;
         };
+        /** CheckResponse */
+        CheckResponse: {
+            source: components["schemas"]["SourceRead"];
+            /** Available Version */
+            available_version: string | null;
+            /** Manifest Name */
+            manifest_name: string | null;
+            /** Item Count */
+            item_count: number;
+            /** Error */
+            error: string | null;
+        };
         /**
          * ClientType
          * @description The set of supported download-client implementations.
@@ -3865,6 +4138,15 @@ export interface components {
             is_user_modified: boolean;
             /** Seed Key */
             seed_key: string | null;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Source Id */
+            source_id?: number | null;
+            /** Source Name */
+            source_name?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -6207,6 +6489,10 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /** Pack Source Id */
+            pack_source_id?: number | null;
+            /** Contributing Source Ids */
+            contributing_source_ids?: number[];
         };
         /**
          * PlatformStats
@@ -6230,25 +6516,21 @@ export interface components {
             /** Totalsizebytes */
             totalSizeBytes: number;
         };
-        /**
-         * PreviewItem
-         * @description One YAML's dry-run outcome from a preview call.
-         */
-        PreviewItem: {
-            /** Filename */
-            filename: string;
-            /** Source Url */
-            source_url: string;
-            /** Pack Version */
-            pack_version: string;
-            /** Action */
-            action: string;
-            /** Diff */
-            diff?: components["schemas"]["PackPlatformDiff"][];
-            /** Parsing Strategies Affected */
-            parsing_strategies_affected?: string[];
-            /** Error Message */
-            error_message?: string | null;
+        /** PreviewResponse */
+        PreviewResponse: {
+            source: components["schemas"]["SourceRead"];
+            /** Manifest Name */
+            manifest_name: string | null;
+            /** Manifest Description */
+            manifest_description: string;
+            /** Available Version */
+            available_version: string | null;
+            /** Item Count */
+            item_count: number;
+            /** Items */
+            items: components["schemas"]["romarr__api__routers__community__PreviewItem"][];
+            /** Error */
+            error: string | null;
         };
         /** PreviewResult */
         PreviewResult: {
@@ -6260,7 +6542,7 @@ export interface components {
              */
             fetched_at: string;
             /** Items */
-            items?: components["schemas"]["PreviewItem"][];
+            items?: components["schemas"]["romarr__platform_packs__api__sources__PreviewItem"][];
         };
         /**
          * ProviderCandidate
@@ -6929,6 +7211,19 @@ export interface components {
             /** Unknown Action */
             unknown_action?: ("triage" | "park" | "delete") | null;
         };
+        /** RomarrUpdate */
+        RomarrUpdate: {
+            /** Current */
+            current: string;
+            /** Latest */
+            latest: string | null;
+            /** Update Available */
+            update_available: boolean;
+            /** Release Url */
+            release_url: string | null;
+            /** Error */
+            error: string | null;
+        };
         /** RootFolderRead */
         RootFolderRead: {
             /** Id */
@@ -7079,20 +7374,68 @@ export interface components {
         SetupResponse: {
             user: components["schemas"]["UserPublic"];
         };
-        /** SourceCreate */
-        SourceCreate: {
+        /**
+         * SourceOrderRead
+         * @description The global source ranking used by the platform materializer.
+         */
+        SourceOrderRead: {
+            /** Source Order */
+            source_order: number[];
+        };
+        /**
+         * SourceOrderReplace
+         * @description Full source_order replacement. IDs not listed rank after
+         *     listed ones, ordered by id.
+         */
+        SourceOrderReplace: {
+            /** Source Order */
+            source_order: number[];
+        };
+        /** SourcePatch */
+        SourcePatch: {
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Auto Check */
+            auto_check?: boolean | null;
+            /** Trust Status */
+            trust_status?: ("pending" | "trusted") | null;
+            /** Name */
+            name?: string | null;
+            /** Url */
+            url?: string | null;
+        };
+        /** SourceRead */
+        SourceRead: {
+            /** Id */
+            id: number;
             /** Name */
             name: string;
-            /**
-             * Url
-             * Format: uri
-             */
+            /** Url */
             url: string;
-            /**
-             * Kind
-             * @description Override the auto-detected kind ('raw' | 'github_dir'). Leave null to let the server guess from the URL shape.
-             */
-            kind?: string | null;
+            /** Kind */
+            kind: string;
+            /** Resource Type */
+            resource_type: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Auto Check */
+            auto_check: boolean;
+            /** Trust Status */
+            trust_status: string;
+            /** Last Synced At */
+            last_synced_at: string | null;
+            /** Last Status */
+            last_status: string | null;
+            /** Last Error */
+            last_error: string | null;
+            /** Last Applied Count */
+            last_applied_count: number;
+            /** Last Seen Version */
+            last_seen_version: string | null;
+            /** Installed Version */
+            installed_version: string | null;
+            /** Update Available */
+            update_available: boolean;
         };
         /** SourceSummary */
         SourceSummary: {
@@ -7350,6 +7693,14 @@ export interface components {
             /** Is Active */
             is_active?: boolean | null;
         };
+        /** UpdatesFeed */
+        UpdatesFeed: {
+            romarr: components["schemas"]["RomarrUpdate"];
+            /** Sources */
+            sources: components["schemas"]["SourceRead"][];
+            /** Total Updates */
+            total_updates: number;
+        };
         /**
          * UserPublic
          * @description Public-facing User shape — never carries hashed_password.
@@ -7550,6 +7901,43 @@ export interface components {
             /** Api Key */
             api_key?: string | null;
         };
+        /** _ToggleEnabledRequest */
+        _ToggleEnabledRequest: {
+            /** Enabled */
+            enabled: boolean;
+        };
+        /**
+         * PreviewItem
+         * @description One item entry from a source's manifest — displayed in the
+         *     preview modal before the operator commits to an apply.
+         */
+        romarr__api__routers__community__PreviewItem: {
+            /** Path */
+            path: string;
+            /** Seed Key */
+            seed_key: string | null;
+        };
+        /** SourceCreate */
+        romarr__api__routers__community__SourceCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Url
+             * Format: uri
+             */
+            url: string;
+            /**
+             * Resource Type
+             * @enum {string}
+             */
+            resource_type: "platform_pack" | "custom_format";
+            /**
+             * Kind
+             * @default raw
+             * @enum {string}
+             */
+            kind: "raw" | "github_dir";
+        };
         /**
          * ConnectivityTestResult
          * @description Outcome of one ``test_connectivity(impl)`` round-trip.
@@ -7587,6 +7975,41 @@ export interface components {
             category?: ("auth" | "protocol" | "connectivity" | "circuit_open" | "ok") | null;
             /** Message */
             message?: string | null;
+        };
+        /**
+         * PreviewItem
+         * @description One YAML's dry-run outcome from a preview call.
+         */
+        romarr__platform_packs__api__sources__PreviewItem: {
+            /** Filename */
+            filename: string;
+            /** Source Url */
+            source_url: string;
+            /** Pack Version */
+            pack_version: string;
+            /** Action */
+            action: string;
+            /** Diff */
+            diff?: components["schemas"]["PackPlatformDiff"][];
+            /** Parsing Strategies Affected */
+            parsing_strategies_affected?: string[];
+            /** Error Message */
+            error_message?: string | null;
+        };
+        /** SourceCreate */
+        romarr__platform_packs__api__sources__SourceCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Url
+             * Format: uri
+             */
+            url: string;
+            /**
+             * Kind
+             * @description Override the auto-detected kind ('raw' | 'github_dir'). Leave null to let the server guess from the URL shape.
+             */
+            kind?: string | null;
         };
     };
     responses: never;
@@ -10470,7 +10893,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SourceCreate"];
+                "application/json": components["schemas"]["romarr__platform_packs__api__sources__SourceCreate"];
             };
         };
         responses: {
@@ -11315,6 +11738,401 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_sources_api_v3_community_source_get: {
+        parameters: {
+            query?: {
+                resource_type?: ("platform_pack" | "custom_format") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_source_api_v3_community_source_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["romarr__api__routers__community__SourceCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_source_api_v3_community_source__source_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_source_api_v3_community_source__source_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourcePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_source_now_api_v3_community_source__source_id__check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_source_api_v3_community_source__source_id__preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_source_now_api_v3_community_source__source_id__apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_bindings_api_v3_community_source__source_id__binding_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BindingRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    replace_bindings_api_v3_community_source__source_id__binding_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BindingsReplace"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BindingRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_source_order_api_v3_community_source_order_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceOrderRead"];
+                };
+            };
+        };
+    };
+    put_source_order_api_v3_community_source_order_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceOrderReplace"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceOrderRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_source_api_v3_community_source_import_post: {
+        parameters: {
+            query?: {
+                name?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_import_source_api_v3_community_source_import_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplyResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    updates_feed_api_v3_community_updates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpdatesFeed"];
                 };
             };
         };
@@ -13435,61 +14253,6 @@ export interface operations {
             };
         };
     };
-    list_rows_api_v3_customformat_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomFormatRead"][];
-                };
-            };
-        };
-    };
-    create_row_api_v3_customformat_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CustomFormatRead"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     read_row_api_v3_customformat__row_id__get: {
         parameters: {
             query?: never;
@@ -13592,6 +14355,127 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_custom_formats_api_v3_customformat_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFormatRead"][];
+                };
+            };
+        };
+    };
+    create_row_api_v3_customformat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFormatRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    toggle_enabled_api_v3_customformat__item_id__enabled_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["_ToggleEnabledRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFormatRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_custom_format_api_v3_customformat__item_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFormatRead"];
+                };
             };
             /** @description Validation Error */
             422: {

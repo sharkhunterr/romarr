@@ -74,10 +74,18 @@ async def run_pack_sources_sync(
     one source or one YAML doesn't rollback the previous
     successes.
     """
+    # After migration 0040 the ``pack_sources`` table also holds
+    # custom_format / future community sources. This legacy runner
+    # only knows how to apply platform-pack YAMLs, so filter on
+    # ``resource_type='platform_pack'`` to avoid picking up (and
+    # failing on) rows whose bodies aren't YAML platform packs.
     rows = (
         (
             await session.execute(
-                select(PackSource).where(PackSource.enabled.is_(True))
+                select(PackSource).where(
+                    PackSource.enabled.is_(True),
+                    PackSource.resource_type == "platform_pack",
+                )
             )
         )
         .scalars()
