@@ -155,6 +155,14 @@ class PlatformPackConfig(Base, TimestampMixin):
     priority: Mapped[str] = mapped_column(
         String(16), nullable=False, default="community"
     )
+    # Migration 0044 — JSON list of pack_sources.id in preferred
+    # order (highest priority first). Sources not listed rank
+    # below listed ones, ordered by id. Consulted by the platform
+    # materializer only when no ``prefer`` binding wins the
+    # scalar vote for a slug.
+    source_order: Mapped[list[int]] = mapped_column(
+        JSON, nullable=False, default=list
+    )
 
     __table_args__ = (
         CheckConstraint("id = 1", name="ck_platform_pack_config_singleton"),
@@ -244,6 +252,51 @@ class PackSource(Base, TimestampMixin):
     )
 
 
+class PlatformSourceContribution(Base):
+    """Per-(source, platform_slug) snapshot of what a community pack
+    contributed the last time it applied.
+
+    Introduced by migration 0044. The materializer :func:`~romarr.
+    platform_packs.materialize.materialize_platform` reads the stack
+    of contributions for a slug, filters via
+    :class:`PlatformSourceBinding`, and rewrites the live
+    :class:`~romarr.domain.models.Platform` row (plus its formats
+    + naming tokens) from the aggregate.
+
+    Storage : single JSON blob per row so ingest doesn't have to
+    write to N normalised child tables. The materializer is the
+    only reader — it de-serialises the JSON into Python dicts,
+    applies the merge / prefer rules, and writes the derived
+    result back to the normalised tables.
+    """
+
+    __tablename__ = "platform_source_contribution"
+
+    source_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("pack_sources.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    platform_slug: Mapped[str] = mapped_column(
+        String(64), primary_key=True
+    )
+    contribution: Mapped[dict[str, Any]] = mapped_column(
+        JSON, nullable=False
+    )
+    pack_version: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+    applied_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_platform_source_contribution_slug", "platform_slug"
+        ),
+    )
+
+
 _BINDING_MODE_VALUES = ("skip", "prefer", "merge")
 
 
@@ -299,4 +352,5 @@ __all__: list[Any] = [
     "PlatformPackApplicationLog",
     "PlatformPackConfig",
     "PlatformSourceBinding",
+    "PlatformSourceContribution",
 ]

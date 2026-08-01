@@ -211,6 +211,30 @@ async def _insert_or_update_platforms(
             source=source,
         )
 
+        # Migration 0044 — persist the per-(source, slug) snapshot
+        # so the materializer can compose prefer + array-fusion
+        # rules across every source that touches this platform.
+        # Only for community ingest (source_id is None for legacy
+        # builtin + manual-upload flows).
+        if source.source_id is not None:
+            from romarr.platform_packs.materialize import (
+                _snapshot_platform,
+                snapshot_contribution,
+            )
+
+            contribution = _snapshot_platform(
+                plat,
+                formats=list(plat.get("formats") or []),
+                naming_tokens=list(plat.get("naming_tokens") or []),
+            )
+            await snapshot_contribution(
+                session,
+                source_id=source.source_id,
+                platform_slug=slug,
+                contribution=contribution,
+                pack_version=pack_version,
+            )
+
     return touched, slug_to_id
 
 
@@ -479,6 +503,21 @@ async def ingest_pack(
             platforms_affected=touched_platforms,
             parsing_strategies_affected=touched_strategies,
         )
+
+        # Migration 0044 — after every community ingest, rebuild
+        # the live Platform row for each touched slug from the
+        # stack of snapshotted contributions. Honours prefer
+        # bindings + unions arrays across sources. No-op for
+        # non-community ingest (source_id is None).
+        if source.source_id is not None and touched_platforms:
+            from romarr.platform_packs.materialize import (
+                materialize_all_slugs,
+            )
+
+            await materialize_all_slugs(
+                session, slugs=list(touched_platforms)
+            )
+
         await session.commit()
     except Exception as exc:
         await session.rollback()

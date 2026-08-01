@@ -24,6 +24,7 @@ export type ApplyResponse = components["schemas"]["ApplyResponse"];
 export type PreviewResponse = components["schemas"]["PreviewResponse"];
 export type BindingRead = components["schemas"]["BindingRead"];
 export type BindingMode = BindingRead["mode"];
+export type SourceOrderRead = components["schemas"]["SourceOrderRead"];
 
 export type CommunityResourceType = "platform_pack" | "custom_format";
 
@@ -254,6 +255,39 @@ export function useReplaceCommunitySourceBindings(): UseMutationResult<
       void qc.invalidateQueries({
         queryKey: [...BINDINGS_KEY, vars.sourceId],
       });
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Global source order — used by platform materialize to break scalar ties
+// ---------------------------------------------------------------------------
+
+const SOURCE_ORDER_KEY = ["community", "source-order"] as const;
+
+export function useSourceOrder(): UseQueryResult<SourceOrderRead, ApiError> {
+  return useQuery<SourceOrderRead, ApiError>({
+    queryKey: SOURCE_ORDER_KEY,
+    queryFn: () => apiFetch<SourceOrderRead>("/api/v3/community/source-order"),
+    staleTime: 60_000,
+  });
+}
+
+export function useReplaceSourceOrder(): UseMutationResult<
+  SourceOrderRead,
+  ApiError,
+  number[]
+> {
+  const qc = useQueryClient();
+  return useMutation<SourceOrderRead, ApiError, number[]>({
+    mutationFn: (sourceIds) =>
+      apiFetch<SourceOrderRead>("/api/v3/community/source-order", {
+        method: "PUT",
+        json: { source_order: sourceIds },
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: SOURCE_ORDER_KEY });
+      void qc.invalidateQueries({ queryKey: ["platforms"] });
     },
   });
 }

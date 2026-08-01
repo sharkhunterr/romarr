@@ -162,6 +162,21 @@ class BindingsReplace(BaseModel):
     bindings: list[BindingRead]
 
 
+class SourceOrderRead(BaseModel):
+    """The global source ranking used by the platform materializer."""
+
+    source_order: list[int]
+
+
+class SourceOrderReplace(BaseModel):
+    """Full source_order replacement. IDs not listed rank after
+    listed ones, ordered by id."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    source_order: list[int]
+
+
 class PreviewItem(BaseModel):
     """One item entry from a source's manifest — displayed in the
     preview modal before the operator commits to an apply."""
@@ -482,6 +497,24 @@ async def replace_bindings(
             )
 
     # Full replace : delete then insert. Small tables, no risk.
+    # Capture the union of "before + after" slugs so materialize
+    # runs on every slug whose (source, binding) pair changed —
+    # dropped bindings need to re-materialize too.
+    from romarr.platform_packs.models import PlatformSourceContribution
+
+    before_rows = (
+        (
+            await db.execute(
+                select(PlatformSourceBinding.platform_slug).where(
+                    PlatformSourceBinding.source_id == source_id
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    slugs_to_rematerialize: set[str] = set(before_rows)
+
     await db.execute(
         sa_delete(PlatformSourceBinding).where(
             PlatformSourceBinding.source_id == source_id
@@ -495,7 +528,36 @@ async def replace_bindings(
                 mode=b.mode,
             )
         )
+        slugs_to_rematerialize.add(b.platform_slug)
+
+    # Also re-materialize every slug this source has ever
+    # contributed to — a mode change (e.g. adding 'prefer') might
+    # flip which source wins for a slug the operator didn't touch
+    # explicitly in this PUT.
+    contrib_slugs = (
+        (
+            await db.execute(
+                select(PlatformSourceContribution.platform_slug).where(
+                    PlatformSourceContribution.source_id == source_id
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    slugs_to_rematerialize.update(contrib_slugs)
+
     await db.commit()
+
+    if slugs_to_rematerialize:
+        from romarr.platform_packs.materialize import (
+            materialize_all_slugs,
+        )
+
+        await materialize_all_slugs(
+            db, slugs=sorted(slugs_to_rematerialize)
+        )
+        await db.commit()
     rows = (
         (
             await db.execute(
@@ -508,6 +570,69 @@ async def replace_bindings(
         .all()
     )
     return [BindingRead.model_validate(r) for r in rows]
+
+
+@router.get(
+    "/source-order",
+    response_model=SourceOrderRead,
+    summary=(
+        "Global ranking used by the platform materializer to pick "
+        "the scalar winner for a slug when no ``prefer`` binding fires. "
+        "Higher priority first."
+    ),
+)
+async def get_source_order(
+    _principal: Annotated[Principal, Depends(require_readonly)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> SourceOrderRead:
+    from romarr.platform_packs.config import (
+        get_or_create_platform_pack_config,
+    )
+
+    cfg = await get_or_create_platform_pack_config(db)
+    await db.commit()
+    return SourceOrderRead(source_order=list(cfg.source_order))
+
+
+@router.put(
+    "/source-order",
+    response_model=SourceOrderRead,
+    summary=(
+        "Replace the global source ranking. Re-materializes every "
+        "platform touched by any of the sources whose rank changed "
+        "so the operator sees the new winners immediately."
+    ),
+)
+async def put_source_order(
+    payload: SourceOrderReplace,
+    _principal: Annotated[Principal, Depends(require_admin)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> SourceOrderRead:
+    from romarr.platform_packs.config import (
+        get_or_create_platform_pack_config,
+    )
+    from romarr.platform_packs.materialize import materialize_all_slugs
+    from romarr.platform_packs.models import PlatformSourceContribution
+
+    cfg = await get_or_create_platform_pack_config(db)
+    cfg.source_order = list(payload.source_order)
+    await db.commit()
+
+    # Rematerialize every slug any changed-rank source contributed to.
+    slugs = (
+        (
+            await db.execute(
+                select(PlatformSourceContribution.platform_slug).distinct()
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if slugs:
+        await materialize_all_slugs(db, slugs=sorted(set(slugs)))
+        await db.commit()
+
+    return SourceOrderRead(source_order=list(cfg.source_order))
 
 
 @router.post(

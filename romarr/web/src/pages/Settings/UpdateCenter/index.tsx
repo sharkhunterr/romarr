@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 
 import { AddCommunitySourceModal } from "./AddCommunitySourceModal";
 import { CommunitySourceRow } from "./CommunitySourceRow";
+import { SourceOrderPanel } from "./SourceOrderPanel";
 import {
   useCommunitySources,
   type CommunityResourceType,
@@ -88,6 +89,10 @@ export function UpdateCenterPage(): ReactElement {
           ))}
         </div>
       )}
+
+      {/* Global rank for the platform materializer — only renders
+          when at least 2 platform_pack sources exist. */}
+      <SourceOrderPanel />
 
       {addOpen && (
         <AddCommunitySourceModal

@@ -1,14 +1,16 @@
 /**
  * Bindings management modal — per-(source, platform) overrides.
  *
- * Today only ``mode='skip'`` is honoured by the ingester. This
- * modal surfaces every platform slug the operator can toggle
- * (union of already-registered platforms + those already skipped
- * for this source), each with a checkbox that flips the skip
- * binding. Save replaces the full binding set for this source.
+ * Three modes exposed :
  *
- * ``prefer`` / ``merge`` modes are reserved for a follow-up
- * slice and not exposed in the UI yet.
+ *   * ``use`` (default, no binding) — this source contributes to
+ *     the slug normally. Its arrays merge with other sources'; its
+ *     scalars win only if it's ranked highest in ``source_order``.
+ *   * ``prefer`` — this source wins scalar fields for the slug
+ *     even if another source is higher-ranked. Multiple ``prefer``
+ *     bindings across sources for the same slug break on rank.
+ *   * ``skip`` — this source's contribution for the slug is
+ *     dropped entirely. Not counted in the array union.
  */
 
 import { useEffect, useMemo, useState, type ReactElement } from "react";
@@ -18,6 +20,7 @@ import { usePlatforms } from "@/lib/api/queries/platforms";
 import {
   useCommunitySourceBindings,
   useReplaceCommunitySourceBindings,
+  type BindingMode,
   type CommunitySource,
 } from "@/lib/api/queries/community";
 import { useToastStore } from "@/lib/store/toast";
@@ -27,6 +30,8 @@ interface Props {
   onClose: () => void;
 }
 
+type SlugMode = Extract<BindingMode, "skip" | "prefer">;
+
 export function BindingsModal(props: Props): ReactElement {
   const { t } = useTranslation("settings");
   const { source } = props;
@@ -35,31 +40,30 @@ export function BindingsModal(props: Props): ReactElement {
   const replace = useReplaceCommunitySourceBindings();
   const pushToast = useToastStore((s) => s.push);
 
-  // Local editable state: slug → skip? (starts from server data)
-  const [skipSet, setSkipSet] = useState<Set<string>>(() => new Set());
+  // slug -> mode (absence = default 'use')
+  const [modeBySlug, setModeBySlug] = useState<Record<string, SlugMode>>({});
   const [initialised, setInitialised] = useState(false);
   const [filter, setFilter] = useState("");
 
   useEffect(() => {
     if (!bindings.isSuccess || initialised) return;
-    setSkipSet(
-      new Set(
-        bindings.data
-          .filter((b) => b.mode === "skip")
-          .map((b) => b.platform_slug),
-      ),
-    );
+    const next: Record<string, SlugMode> = {};
+    bindings.data.forEach((b) => {
+      if (b.mode === "skip" || b.mode === "prefer") {
+        next[b.platform_slug] = b.mode;
+      }
+    });
+    setModeBySlug(next);
     setInitialised(true);
   }, [bindings.isSuccess, bindings.data, initialised]);
 
-  // Universe of slugs to display : union of currently-registered
-  // platforms + already-skipped slugs (some may not exist anymore).
+  // Universe : known platforms + slugs already having a binding.
   const slugs = useMemo(() => {
     const set = new Set<string>();
     (platforms.data ?? []).forEach((p) => set.add(p.slug));
-    skipSet.forEach((s) => set.add(s));
+    Object.keys(modeBySlug).forEach((s) => set.add(s));
     return [...set].sort();
-  }, [platforms.data, skipSet]);
+  }, [platforms.data, modeBySlug]);
 
   const filteredSlugs = useMemo(() => {
     const needle = filter.trim().toLowerCase();
@@ -67,34 +71,34 @@ export function BindingsModal(props: Props): ReactElement {
     return slugs.filter((s) => s.toLowerCase().includes(needle));
   }, [slugs, filter]);
 
-  const skippedCount = skipSet.size;
+  const skippedCount = Object.values(modeBySlug).filter((m) => m === "skip").length;
+  const preferredCount = Object.values(modeBySlug).filter((m) => m === "prefer").length;
 
-  function toggle(slug: string): void {
-    setSkipSet((prev) => {
-      const next = new Set(prev);
-      if (next.has(slug)) next.delete(slug);
-      else next.add(slug);
+  function setMode(slug: string, mode: SlugMode | "use"): void {
+    setModeBySlug((prev) => {
+      const next = { ...prev };
+      if (mode === "use") delete next[slug];
+      else next[slug] = mode;
       return next;
     });
   }
 
   function submit(): void {
+    const nextBindings = Object.entries(modeBySlug).map(([slug, mode]) => ({
+      source_id: source.id,
+      platform_slug: slug,
+      mode,
+    }));
     replace.mutate(
-      {
-        sourceId: source.id,
-        bindings: [...skipSet].map((slug) => ({
-          source_id: source.id,
-          platform_slug: slug,
-          mode: "skip" as const,
-        })),
-      },
+      { sourceId: source.id, bindings: nextBindings },
       {
         onSuccess: () => {
           pushToast({
             kind: "success",
             title: t("updateCenter.bindingsSuccessTitle"),
             description: t("updateCenter.bindingsSuccessBody", {
-              count: skippedCount,
+              skip: skippedCount,
+              prefer: preferredCount,
             }),
           });
           props.onClose();
@@ -118,7 +122,7 @@ export function BindingsModal(props: Props): ReactElement {
       onClick={props.onClose}
     >
       <div
-        className="flex w-full max-w-lg max-h-[92vh] flex-col rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xl"
+        className="flex w-full max-w-xl max-h-[92vh] flex-col rounded-lg border border-zinc-800 bg-zinc-900 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <header className="border-b border-zinc-800 px-4 py-3">
@@ -159,29 +163,41 @@ export function BindingsModal(props: Props): ReactElement {
               {t("updateCenter.bindingsNoSlugs")}
             </p>
           )}
-          <ul className="grid grid-cols-1 gap-0.5 sm:grid-cols-2">
+          <ul className="space-y-1">
             {filteredSlugs.map((slug) => {
-              const skipped = skipSet.has(slug);
+              const mode = modeBySlug[slug] ?? "use";
               return (
-                <li key={slug}>
-                  <label
-                    className={`flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-zinc-800/60 ${
-                      skipped ? "text-red-300" : "text-zinc-200"
-                    }`}
+                <li
+                  key={slug}
+                  className="flex items-center justify-between gap-2 rounded px-2 py-1.5 hover:bg-zinc-800/40"
+                >
+                  <span className="min-w-0 flex-1 truncate font-mono text-xs text-zinc-200">
+                    {slug}
+                  </span>
+                  <div
+                    role="radiogroup"
+                    aria-label={slug}
+                    className="inline-flex overflow-hidden rounded-md border border-zinc-700"
                   >
-                    <input
-                      type="checkbox"
-                      checked={skipped}
-                      onChange={() => toggle(slug)}
-                      className="h-3.5 w-3.5 rounded border-zinc-700 bg-zinc-950 accent-red-500"
+                    <ModeButton
+                      label={t("updateCenter.bindingsModeUse")}
+                      active={mode === "use"}
+                      onClick={() => setMode(slug, "use")}
+                      variant="neutral"
                     />
-                    <span className="truncate font-mono">{slug}</span>
-                    {skipped && (
-                      <span className="ml-auto shrink-0 rounded bg-red-950/40 px-1 text-[0.6rem] uppercase text-red-400">
-                        {t("updateCenter.bindingsSkipTag")}
-                      </span>
-                    )}
-                  </label>
+                    <ModeButton
+                      label={t("updateCenter.bindingsModePrefer")}
+                      active={mode === "prefer"}
+                      onClick={() => setMode(slug, "prefer")}
+                      variant="brand"
+                    />
+                    <ModeButton
+                      label={t("updateCenter.bindingsModeSkip")}
+                      active={mode === "skip"}
+                      onClick={() => setMode(slug, "skip")}
+                      variant="danger"
+                    />
+                  </div>
                 </li>
               );
             })}
@@ -190,7 +206,10 @@ export function BindingsModal(props: Props): ReactElement {
 
         <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-zinc-800 px-4 py-3">
           <p className="text-[0.65rem] text-zinc-500">
-            {t("updateCenter.bindingsSkippedCount", { count: skippedCount })}
+            {t("updateCenter.bindingsCounts", {
+              prefer: preferredCount,
+              skip: skippedCount,
+            })}
           </p>
           <div className="flex items-center gap-2">
             <button
@@ -214,5 +233,33 @@ export function BindingsModal(props: Props): ReactElement {
         </footer>
       </div>
     </div>
+  );
+}
+
+interface ModeButtonProps {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  variant: "neutral" | "brand" | "danger";
+}
+
+function ModeButton(props: ModeButtonProps): ReactElement {
+  const { label, active, onClick, variant } = props;
+  let cls = "text-zinc-400 hover:bg-zinc-800/60";
+  if (active) {
+    if (variant === "brand") cls = "bg-brand/20 text-brand";
+    else if (variant === "danger") cls = "bg-red-950/40 text-red-300";
+    else cls = "bg-zinc-800 text-zinc-100";
+  }
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={active}
+      onClick={onClick}
+      className={`px-2.5 py-1 text-[0.65rem] font-medium transition-colors ${cls}`}
+    >
+      {label}
+    </button>
   );
 }

@@ -1941,6 +1941,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v3/community/source-order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Global ranking used by the platform materializer to pick the scalar winner for a slug when no ``prefer`` binding fires. Higher priority first. */
+        get: operations["get_source_order_api_v3_community_source_order_get"];
+        /** Replace the global source ranking. Re-materializes every platform touched by any of the sources whose rank changed so the operator sees the new winners immediately. */
+        put: operations["put_source_order_api_v3_community_source_order_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v3/community/source/import": {
         parameters: {
             query?: never;
@@ -7352,6 +7370,23 @@ export interface components {
         SetupResponse: {
             user: components["schemas"]["UserPublic"];
         };
+        /**
+         * SourceOrderRead
+         * @description The global source ranking used by the platform materializer.
+         */
+        SourceOrderRead: {
+            /** Source Order */
+            source_order: number[];
+        };
+        /**
+         * SourceOrderReplace
+         * @description Full source_order replacement. IDs not listed rank after
+         *     listed ones, ordered by id.
+         */
+        SourceOrderReplace: {
+            /** Source Order */
+            source_order: number[];
+        };
         /** SourcePatch */
         SourcePatch: {
             /** Enabled */
@@ -11977,6 +12012,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BindingRead"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_source_order_api_v3_community_source_order_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceOrderRead"];
+                };
+            };
+        };
+    };
+    put_source_order_api_v3_community_source_order_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceOrderReplace"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceOrderRead"];
                 };
             };
             /** @description Validation Error */
