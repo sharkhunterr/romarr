@@ -17,10 +17,131 @@
 
 # v0.15.0
 
-## 🌟 Big-picture — this release consolidates everything shipped since v0.14.11
+## 🌟 Big-picture — the community-first release
 
-A dense stretch of quality-of-life and infrastructure work
-landed between the two milestones. Grouped by theme below.
+Two headline stories : platforms + custom formats no longer ship
+as wheel-bundled seeds, they land from operator-registered
+community URLs surfaced through a **unified Update Center** in
+the header. And a dense stretch of QoL / infrastructure work
+consolidates everything shipped since v0.14.11.
+
+---
+
+## 🌐 Update Center — one hub for every community URL
+
+New central manager for URL-driven resources (Custom Formats +
+Platform Packs today, extensible per `resource_type`). Lives at
+**Paramètres → Mises à jour** and is embedded on both the
+Platforms and Custom Formats settings pages — a source added
+anywhere shows up everywhere.
+
+- **Aggregated header badge** (green / amber / red) with a
+  popover that lists every pending update from Romarr GitHub AND
+  every community source in one glance. One-click "Appliquer"
+  from the popover.
+- **Card layout per source** with an URL shortener
+  (`raw.githubusercontent.com/…` → `github.com/owner/repo`),
+  4-state version pill (never synced / new / up-to-date /
+  update available), and colour-coded action icons (Check /
+  Preview / Edit / Trust / Apply / Enable / Delete).
+- **Trust flow** — a newly added source starts `pending` : apply
+  is blocked until the operator previews the manifest and clicks
+  "Faire confiance". No silent side effects, ever.
+- **Editable name + URL** — a URL swap resets version tracking
+  and flips trust back to pending, because it's semantically a
+  new source.
+- **Preview modal** — dry-run manifest fetch (name / version /
+  item count / item list) that never touches the DB.
+- **Local file import** (`.json` with `inline_items` or `.zip`
+  with `manifest.json` + item files, 5 MiB cap) for air-gapped
+  installs — same ingest pipeline as an online apply.
+- **Background sweep every 6 h** via the new `CommunitySync` task
+  runner (seeded ON by default). Check-only : lights the badge
+  amber when a new version lands upstream, apply stays operator-
+  driven.
+
+## 🎮 Platforms — community-first bootstrap
+
+The wheel-bundled builtin platform pack no longer auto-applies
+on boot. Migration **0042** preseeds an official community
+source pointing at `sharkhunterr/romarr-plateform-pack` and the
+lifespan hook auto-fetches + auto-applies it in the background,
+so the server starts serving immediately. Offline installs get
+a clear empty-state banner pointing at the URL / file paths
+above.
+
+**Per-source conflict resolution** (migrations 0043, 0044) —
+when multiple sources declare the same slug the operator picks
+per (source, slug) between three modes :
+
+- **`use`** (default) : arrays merge across sources; scalars
+  decided by global rank.
+- **`prefer`** : this source wins scalars for the slug even if
+  another source is higher-ranked.
+- **`skip`** : this source's contribution is dropped entirely.
+
+Plus a **drag-drop `source_order`** editor to break scalar ties
+when no `prefer` fires. The materializer stores per-(source,
+slug) JSON snapshots and rewrites the live `platform` row from
+the aggregate : scalars from the winner, arrays (aliases,
+formats, naming_tokens, newznab_ids) union-merged across every
+non-skipped source.
+
+**Redesigned Platforms page** :
+
+- Old "Platform Packs" YAML application history and the built-in
+  toggle panel are gone (both obsolete with the community-first
+  model).
+- Catalogue grid becomes 1 / 2 / 3 columns with proper visual
+  hierarchy : name + up-to-3 colour-coded source-initial badges,
+  short_name pill · slug · manufacturer · year, aliases summary.
+- Detail modal gains a **"Sources qui contribuent"** section
+  showing every contributor with a highlighted "Actif" badge on
+  the source whose scalars are currently live.
+
+## 🧩 Custom Formats — community packs + per-CF control
+
+- **URL-imported CF packs** via the same Update Center
+  infrastructure. Each imported CF surfaces an **origin badge**
+  (Built-in / Community · pack name / Manual) on the settings
+  row.
+- **On/off toggle** per CF — a disabled CF stays in the table
+  but the search + importer pipelines skip it when aggregating
+  scores. Toggling doesn't flip `is_user_modified`, so community
+  sync keeps overwriting the seed body normally after the flip.
+- **Compact single-line row layout** with icon-only actions
+  (toggle switch + chevron + Pencil + Trash) — was ~180 px tall,
+  now ~48 px.
+- **Match-guards** to reject cross-franchise false positives out
+  of the box :
+  - **Subtitle-separator guard** — "The Legend of Zelda" no
+    longer fuzzy-matches "The Legend of Zelda - Skyward Sword"
+    (Wii U game that isn't the NES original) or "Zelda: Ocarina
+    of Time".
+  - **File-extension → platform guard** — a `.wbfs` release is
+    hard-rejected on a NES-target game (physically impossible)
+    via the existing `PlatformFormatBounds` mapping.
+- **New CF seeds** — `aftermarket-bootleg-pirate` (-10000) and
+  `homebrew-unlicensed` (-1000) so bootleg / pirate reproductions
+  are auto-rejected out of the box.
+- **Manifest-driven `pack_version`** for platform-pack YAMLs :
+  operators can omit the version from the YAML and let
+  `manifest.version` carry the single source of truth. The
+  adapter injects it at ingest time.
+
+## 🎯 Games — post-add edit modal
+
+New **"Modifier"** button on the game detail header lets the
+operator change monitoring + library binding after add (previously
+only possible at add time). Backed by a new `useUpdateGame` hook
+sending partial PATCH payloads.
+
+## 🔔 Version-check surface
+
+`GET /api/v3/system/version-check` hits GitHub releases with a
+1 h in-process cache; the header badge shows the current version
+and turns amber when a newer release is available. Mirrored on
+Grabarr's admin panel too.
 
 ---
 
