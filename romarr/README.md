@@ -5,6 +5,15 @@ Sonarr / Radarr but for retro video game ROMs — search, grab, identify,
 import, organize. Built in the spirit of RomM with the operational
 discipline of the *arr family.
 
+> [!WARNING]
+> **Vibe-coded project** — this application was built through
+> AI-assisted development using [Claude Code](https://claude.ai/code).
+> All architectural decisions, product direction, feature scope, UX
+> choices, DB schema, API contracts, and design tradeoffs were made by
+> the project maintainer; the AI acted as an implementation partner
+> turning those decisions into code. Every review, refactor, and
+> release call comes from a human.
+
 ## Quickstart (Docker)
 
 ```bash
@@ -54,6 +63,34 @@ The Vite dev server proxies `/api/v3/*` to the backend on port 8585.
 - `romarr metadata reencrypt` — rotate the master encryption key for
   stored provider credentials (rotation flow lands in 0.2).
 
+## Companion: Grabarr
+
+Romarr pairs perfectly with
+[Grabarr](https://github.com/sharkhunterr/grabarr) — a companion
+project that exposes ROM repositories and shadow libraries
+(Vimm's Lair, Edge Emulation, RomsFun, CDRomance, MyAbandonware,
+Internet Archive, and more) as standard **Torznab indexers**.
+
+Traditional torrent trackers cover a fraction of the retro-gaming
+catalogue; the rest lives on HTTP-only sites that Prowlarr can't
+reach natively. Grabarr bridges that gap : it scrapes those sources
+and generates seedable `.torrent` files on the fly, so from Romarr's
+perspective they behave like any other indexer returning candidates.
+
+**Recommended setup**
+
+1. Deploy Grabarr next to Romarr (same Docker network is easiest).
+2. Register Grabarr's Torznab URL in Prowlarr (one indexer slot,
+   covers every upstream Grabarr aggregates).
+3. Register Prowlarr in Romarr's **Settings → Indexers**.
+4. Add a monitored game — Romarr's cutoff-search + auto-grab
+   pipeline now reaches every source Grabarr indexes without
+   further configuration.
+
+The full flow (Romarr → Prowlarr → Grabarr → shadow source →
+BitTorrent client → Romarr importer) is documented on Grabarr's
+repository.
+
 ## Stack
 
 - **Backend**: Python 3.12+, FastAPI, SQLAlchemy 2.0 (async), Pydantic
@@ -96,6 +133,49 @@ tests/                  pytest test suite mirroring src/ layout
 .specify/               Spec-Kit configuration and templates
 Dockerfile              Multi-stage build (Node 20 SPA → Python 3.12 runtime)
 ```
+
+## Legal & responsibility
+
+Romarr is a **search, decision, and organization tool**. It does not
+host, seed, distribute, or provide ROM images, DAT files, cover art,
+or any other copyrighted material. Every byte transits between the
+operator's indexers, download clients, and storage without ever
+touching Romarr's own infrastructure.
+
+Users are solely responsible for ensuring they have the legal right
+to acquire, store, and use any content that flows through Romarr's
+indexer / downloader / importer pipelines, in accordance with the
+copyright, dumping, and preservation laws of their jurisdiction. The
+Romarr project and its maintainers assume no liability for how the
+software is used and make no representation about the legality of
+any content the operator chooses to route through it.
+
+## Acknowledgments
+
+**The Need**: the *arr ecosystem is brilliant for movies, TV, music,
+and books, but retro-game ROMs are a category of their own — with
+DAT verification, region priorities, revision tracking, and a
+sprawling ecosystem of shadow archives that traditional torrent
+indexers don't cover. Managing a serious collection by hand doesn't
+scale.
+
+**The Solution**: Romarr brings the *arr playbook to retro gaming —
+monitored games, quality profiles, custom formats, cutoff-based
+upgrades, DAT-verified imports, per-region priorities, and a
+webhook-driven importer that plays nicely with the same download
+clients the rest of the *arr family talks to.
+
+**The Approach**: as a young parent with limited time and no
+fullstack development background, traditional coding wasn't an
+option. Romarr was built with [Claude Code](https://claude.ai/code)
+as an implementation partner — every architectural decision, spec,
+DB schema, API surface, UX pattern, and review call was made by the
+project maintainer; the AI translated those calls into code, ran the
+tests, and shipped the diffs the human approved.
+
+Inspired by the *arr family (Sonarr, Radarr, Readarr, Lidarr,
+Prowlarr) and by [RomM](https://github.com/rommapp/romm) for the
+retro-gaming domain model.
 
 ## License
 
