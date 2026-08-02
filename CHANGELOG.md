@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.14.37](https://github.com/sharkhunterr/romarr/-/compare/v0.14.36...v0.14.37) (2026-08-02)
+
+
+### Features
+
+* **community:** system version card on Update Center + force refresh sync ([53e8042](https://github.com/sharkhunterr/romarr/-/commit/53e804278f2f5a03776af8cad97e7ccabea062c4))
+
 ### [0.14.36](https://github.com/sharkhunterr/romarr/-/compare/v0.14.35...v0.14.36) (2026-08-01)
 
 
