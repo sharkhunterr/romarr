@@ -48,6 +48,11 @@ export function useForceVersionCheck(): UseMutationResult<
       apiFetch<VersionCheck>("/api/v3/system/version-check?force=true"),
     onSuccess: (data) => {
       qc.setQueryData(KEY, data);
+      // Update Center popover reads from the aggregated feed, which
+      // pulls its Romarr half from the same backend cache. Force
+      // refresh means we want the badge in sync — invalidate the
+      // feed so it re-fetches.
+      void qc.invalidateQueries({ queryKey: ["community", "updates"] });
     },
   });
 }

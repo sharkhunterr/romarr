@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 import { AddCommunitySourceModal } from "./AddCommunitySourceModal";
 import { CommunitySourceRow } from "./CommunitySourceRow";
 import { SourceOrderPanel } from "./SourceOrderPanel";
+import { SystemVersionCard } from "./SystemVersionCard";
 import {
   useCommunitySources,
   type CommunityResourceType,
@@ -52,6 +53,12 @@ export function UpdateCenterPage(): ReactElement {
           {t("updateCenter.addSource")}
         </button>
       </header>
+
+      {/* Romarr system version first — same look-and-feel as the
+          community-source cards, forces refresh via the "Vérifier
+          maintenant" button (bypasses the 1h backend cache + the
+          30min client cache). */}
+      <SystemVersionCard />
 
       {sources.isPending && (
         <p className="text-xs text-zinc-500">{t("updateCenter.loading")}</p>
